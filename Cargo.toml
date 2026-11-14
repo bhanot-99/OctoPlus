@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
     "crates/neuroos-common",
+    "crates/neuroos-health",
     "crates/neuroos-ipc",
     "crates/neuroos-proto",
     "crates/neuroos-taint",

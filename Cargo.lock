@@ -337,6 +337,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "neuroos-health"
+version = "0.1.0"
+dependencies = [
+ "neuroos-ipc",
+ "neuroos-proto",
+ "proptest",
+ "rustix",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
 name = "neuroos-ipc"
 version = "0.1.0"
 dependencies = [
