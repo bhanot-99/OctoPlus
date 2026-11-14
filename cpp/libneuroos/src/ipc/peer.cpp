@@ -8,6 +8,8 @@
 #include <fstream>
 #include <sstream>
 
+#include "neuroos/v1/common.pb.h"
+
 namespace neuroos::ipc {
 
 PeerPolicy PeerPolicy::SameUser() { return Uids({::getuid()}); }
@@ -86,7 +88,8 @@ Result<PeerInfo> ReadPeer(int fd, bool with_unit) {
   ucred cred{};
   socklen_t len = sizeof(cred);
   if (::getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &cred, &len) != 0) {
-    return Error{"cannot read peer credentials", false, 5};
+    return Error{"cannot read peer credentials", false,
+                 static_cast<int>(v1::ERROR_CODE_PERMISSION_DENIED)};
   }
   PeerInfo p{cred.uid, cred.pid, std::nullopt};
   if (with_unit) {

@@ -130,8 +130,8 @@ class IpcTest : public ::testing::Test {
 };
 
 template <class Pred>
-void WaitFor(Pred pred) {
-  for (int i = 0; i < 300 && !pred(); ++i) {
+void WaitFor(Pred pred, int max_iterations = 450) {
+  for (int i = 0; i < max_iterations && !pred(); ++i) {
     std::this_thread::sleep_for(milliseconds(10));
   }
   ASSERT_TRUE(pred());
@@ -445,6 +445,51 @@ TEST_F(IpcTest, ConnectToNothingFails) {
   ASSERT_FALSE(c.ok());
   EXPECT_TRUE(c.error().retryable);
   EXPECT_FALSE(Client::Connect(root_ / std::string(200, 'y'), kMax).ok());
+}
+
+TEST_F(IpcTest, WorkerHandlesPrunedOnSingleConnection) {
+  auto srv = Start(Cfg());
+  auto c = Connect();
+  for (int i = 0; i < 500; ++i) {
+    auto r = c->Call(Ping("echo:" + std::to_string(i)), milliseconds(1000));
+    ASSERT_TRUE(r.ok()) << r.error().message;
+    EXPECT_EQ(r.value().pong().payload(), "echo:" + std::to_string(i));
+  }
+  EXPECT_LE(srv->stats().worker_handles.load(), Cfg().max_in_flight + 1);
+  c.reset();
+  WaitFor([&] { return srv->stats().worker_handles.load() == 0U; });
+}
+
+TEST_F(IpcTest, StalledWriteDoesNotBlockOtherDeadlines) {
+  auto cfg = Cfg();
+  cfg.deadline = milliseconds(200);
+  auto srv = Start(cfg);
+
+  // Client A opens a "slowstream:0" stream that floods frames and NEVER reads.
+  const int raw_fd = Raw();
+  Envelope slow_req = Ping("slowstream:0");
+  slow_req.set_schema_version(1);
+  slow_req.set_request_id(1);
+  ASSERT_TRUE(neuroos::ipc::WriteFrame(raw_fd, slow_req, kMax).ok());
+
+  // Meanwhile client B calls "sleep:3000" with a normal Client against server deadline 200 ms.
+  auto client_b = Connect();
+  const auto t0 = std::chrono::steady_clock::now();
+  auto reply_b = client_b->Call(Ping("sleep:3000"), milliseconds(5000));
+  const auto elapsed = std::chrono::steady_clock::now() - t0;
+  EXPECT_LT(elapsed, std::chrono::seconds(1));
+  ASSERT_FALSE(reply_b.ok());
+  EXPECT_EQ(reply_b.error().code, static_cast<int>(neuroos::v1::ERROR_CODE_DEADLINE_EXCEEDED));
+
+  // Client A times out its write buffer after kWriteStallTimeout (2 s), marking it dead.
+  WaitFor([&] { return srv->stats().write_stalls.load() >= 1U; });
+
+  // Client B's connection still works afterwards.
+  auto echo_b = client_b->Call(Ping("echo:alive"), milliseconds(1000));
+  ASSERT_TRUE(echo_b.ok()) << echo_b.error().message;
+  EXPECT_EQ(echo_b.value().pong().payload(), "echo:alive");
+
+  ::close(raw_fd);
 }
 
 }  // namespace

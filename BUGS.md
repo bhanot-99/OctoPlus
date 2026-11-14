@@ -7,4 +7,13 @@ Newest first. Closed bugs stay here with the commit that fixed them.
 
 | ID | Date | Severity | Part | Summary | Found by | Owner | Status | Fix |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| BUG-010 | 2026-11-14 | S4 | scripts/fetch-models.sh | Uses python3, curl, sha256sum without checking they exist (review R-10). | agy review | agy | Open — TASK 02b | — |
+| BUG-009 | 2026-11-14 | S4 | justfile | `fmt-check` checks Rust only, not C++ (review R-07). | agy review | agy | Open — TASK 02b | — |
+| BUG-008 | 2026-11-14 | S3 | SC tests | No test proves TCP, DNS and raw sockets fail inside a unit (phases.md §3.3 SC; review R-05). | agy review | agy | Open — spike S-04 | — |
+| BUG-007 | 2026-11-14 | S2 | neuroos-ipc server | Server writer has no stall bound; a non-reading peer leaves the writer and request tasks stuck (review R-06). | agy review | agy | Open — TASK 02b | — |
+| BUG-006 | 2026-11-14 | S2 | neuroos-ipc client | One unread stream blocks the reader for every request on the connection (review R-04). | agy review | agy | Open — TASK 02b | — |
+| BUG-005 | 2026-11-14 | S2 | neuroos-ipc client | ReconnectingClient locks out reconnects for 1 h if a caller is cancelled mid-connect (review R-03). | agy review | agy | Open — TASK 02b | — |
+| BUG-004 | 2026-11-14 | S4 | libneuroos peer | Literal 5 used as an error code (review R-08). | agy review | agy | Fixed | fix(p0-s03) on `p0/review-fixes` |
+| BUG-003 | 2026-11-14 | S2 | libneuroos server | One non-reading client stalls deadline enforcement for all connections (review R-02). | agy review | agy | Fixed | fix(p0-s03) on `p0/review-fixes`; test `StalledWriteDoesNotBlockOtherDeadlines` |
+| BUG-002 | 2026-11-14 | S2 | libneuroos server | Finished worker thread handles never released while a connection stays open (review R-01). | agy review | agy | Fixed | fix(p0-s03) on `p0/review-fixes`; test `WorkerHandlesPrunedOnSingleConnection` |
 | BUG-001 | 2026-11-14 | S3 | neuroos-ipc, libneuroos ipc | A client rejected by the peer check could report a bare "connection closed" instead of PERMISSION_DENIED when the server closed before the request was registered (race). | Hosted CI run 43614112139 | Claude | Fixed | fix(p0-s03) on `p0/s04-health`; regression tests `rejected_client_learns_why_even_after_the_close` (Rust) and `RejectedClientLearnsWhyEvenAfterTheClose` (C++) |

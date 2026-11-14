@@ -37,6 +37,8 @@ struct ServerStats {
   std::atomic<std::uint64_t> deadlines{0};
   std::atomic<std::uint64_t> cancels{0};
   std::atomic<std::uint64_t> requests{0};
+  std::atomic<std::uint64_t> worker_handles{0};
+  std::atomic<std::uint64_t> write_stalls{0};
 };
 
 // Set when the request is cancelled or its deadline passes. Long-running handlers

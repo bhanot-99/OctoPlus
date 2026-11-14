@@ -4,6 +4,7 @@
 #include <poll.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/un.h>
 #include <unistd.h>
 
@@ -11,6 +12,7 @@
 #include <array>
 #include <cerrno>
 #include <cstring>
+#include <list>
 #include <map>
 #include <mutex>
 #include <thread>
@@ -28,6 +30,10 @@ using Clock = std::chrono::steady_clock;
 constexpr auto kAcceptErrorPause = std::chrono::milliseconds(50);
 constexpr auto kDeadlineTick = std::chrono::milliseconds(5);
 constexpr int kListenBacklog = 128;
+
+// A peer that does not drain its socket for 2 s is treated as dead; this is a
+// mechanism constant, not a PRD product number.
+constexpr auto kWriteStallTimeout = std::chrono::seconds(2);
 
 Error MakeError(v1::ErrorCode code, const char* msg, bool retryable) {
   return Error{msg, retryable, static_cast<int>(code)};
@@ -72,6 +78,7 @@ bool IsLive(const sockaddr_un& addr) {
 struct ConnShared {
   int fd = -1;
   std::uint32_t max_frame = 0;
+  ServerStats* stats = nullptr;
   std::mutex write_mu;
   bool dead = false;  // guarded by write_mu
   std::mutex map_mu;
@@ -79,11 +86,19 @@ struct ConnShared {
 
   bool Write(const v1::Envelope& env) {
     const std::lock_guard lock(write_mu);
+    return WriteLocked(env);
+  }
+
+  bool WriteLocked(const v1::Envelope& env) {
     if (dead) {
       return false;
     }
     if (!WriteFrame(fd, env, max_frame)) {
       dead = true;
+      if (stats != nullptr) {
+        stats->write_stalls.fetch_add(1);
+      }
+      ::shutdown(fd, SHUT_RDWR);
       return false;
     }
     return true;
@@ -93,6 +108,12 @@ struct ConnShared {
     const std::lock_guard lock(map_mu);
     in_flight.erase(id);
   }
+};
+
+enum class TryFinishResult : std::uint8_t {
+  kFinished,
+  kAlreadyFinished,
+  kBusy,
 };
 
 struct RequestState {
@@ -118,6 +139,29 @@ struct RequestState {
     conn->Remove(id);
     return true;
   }
+
+  // Non-blocking finish for the deadline thread. Returns kBusy if locks are held.
+  TryFinishResult TryFinish(const v1::Envelope& end_frame) {
+    std::unique_lock req_lock(mu, std::try_to_lock);
+    if (!req_lock.owns_lock()) {
+      return TryFinishResult::kBusy;
+    }
+    if (finished) {
+      return TryFinishResult::kAlreadyFinished;
+    }
+    std::unique_lock write_lock(conn->write_mu, std::try_to_lock);
+    if (!write_lock.owns_lock()) {
+      return TryFinishResult::kBusy;
+    }
+    finished = true;
+    conn->WriteLocked(end_frame);
+    write_lock.unlock();
+    req_lock.unlock();
+
+    cancel.Cancel();
+    conn->Remove(id);
+    return TryFinishResult::kFinished;
+  }
 };
 
 bool StreamSink::Send(v1::Envelope frame) {
@@ -129,12 +173,19 @@ bool StreamSink::Send(v1::Envelope frame) {
   return state_->conn->Write(frame);
 }
 
+struct WorkerEntry {
+  WorkerEntry(std::jthread t, std::shared_ptr<std::atomic<bool>> d)
+      : thread(std::move(t)), done(std::move(d)) {}
+  std::jthread thread;
+  std::shared_ptr<std::atomic<bool>> done;
+};
+
 struct Connection {
   std::shared_ptr<ConnShared> shared;
   UniqueFd fd;
   std::atomic<bool> done{false};
   std::mutex workers_mu;
-  std::vector<std::jthread> workers;  // guarded by workers_mu
+  std::list<WorkerEntry> workers;  // guarded by workers_mu
   std::jthread reader;
 };
 
@@ -187,6 +238,10 @@ void Server::Impl::AcceptLoop() {
       std::this_thread::sleep_for(kAcceptErrorPause);
       continue;
     }
+    timeval tv{};
+    tv.tv_sec = static_cast<time_t>(kWriteStallTimeout.count());
+    tv.tv_usec = 0;
+    (void)::setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
     PruneDone();
     const std::lock_guard lock(conns_mu);
     if (conns.size() >= config.max_connections) {
@@ -199,6 +254,7 @@ void Server::Impl::AcceptLoop() {
     c->shared = std::make_shared<ConnShared>();
     c->shared->fd = fd;
     c->shared->max_frame = config.max_frame_bytes;
+    c->shared->stats = &stats;
     Connection* raw = c.get();
     c->reader = std::jthread([this, raw] { ServeConnection(raw); });
     conns.push_back(std::move(c));
@@ -222,9 +278,10 @@ void Server::Impl::DeadlineLoop(const std::stop_token& st) {
       }
     }
     for (const auto& r : expired) {
-      if (r->Finish(ErrorEnvelope(
+      if (r->TryFinish(ErrorEnvelope(
               r->id, r->trace_id,
-              MakeError(v1::ERROR_CODE_DEADLINE_EXCEEDED, "deadline exceeded", true)))) {
+              MakeError(v1::ERROR_CODE_DEADLINE_EXCEEDED, "deadline exceeded", true))) ==
+          TryFinishResult::kFinished) {
         stats.deadlines.fetch_add(1);
       }
     }
@@ -272,12 +329,14 @@ void Server::Impl::ServeConnection(Connection* c) {
   for (const auto& r : open) {
     r->Finish(v1::Envelope{});
   }
-  std::vector<std::jthread> workers;
+  std::list<WorkerEntry> workers;
   {
     const std::lock_guard lock(c->workers_mu);
     workers.swap(c->workers);
   }
+  const std::size_t remaining = workers.size();
   workers.clear();  // joins
+  stats.worker_handles.fetch_sub(remaining);
   ::shutdown(fd, SHUT_RDWR);
   c->done.store(true);
 }
@@ -329,7 +388,24 @@ bool Server::Impl::Dispatch(Connection* c, const PeerInfo& peer, v1::Envelope en
   }
   Request req{std::move(env), peer};
   const std::lock_guard lock(c->workers_mu);
-  c->workers.emplace_back([this, state, r = std::move(req)] { RunRequest(state, r); });
+  for (auto it = c->workers.begin(); it != c->workers.end();) {
+    if (it->done->load(std::memory_order_acquire)) {
+      if (it->thread.joinable()) {
+        it->thread.join();
+      }
+      it = c->workers.erase(it);
+      stats.worker_handles.fetch_sub(1);
+    } else {
+      ++it;
+    }
+  }
+  auto done = std::make_shared<std::atomic<bool>>(false);
+  c->workers.emplace_back(std::jthread([this, state, r = std::move(req), done] {
+                            RunRequest(state, r);
+                            done->store(true, std::memory_order_release);
+                          }),
+                          done);
+  stats.worker_handles.fetch_add(1);
   return true;
 }
 
