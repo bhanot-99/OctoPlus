@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-14 · **Status:** Reference, not binding. The binding form of each lesson is the rule or design decision named beside it.
 
-An earlier prototype of Semantic-NeuroOS reached a working voice pipeline before it was set aside. Its code was not kept; its documents are in `archive/v1-docs/`. This file keeps what it taught us so the rebuild does not pay for the same lessons twice.
+An earlier prototype of Semantic-NeuroOS reached a working voice pipeline before it was set aside. Its code was not kept; its documents were removed from the working tree on 2026-11-14 and remain only in git history (commit `9ec1ac7`). This file keeps what it taught us so the rebuild does not pay for the same lessons twice.
 
 Figures below are **prior evidence** from the reference machine. They are starting points to re-measure, never numbers to quote as current.
 

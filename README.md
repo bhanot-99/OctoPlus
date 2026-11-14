@@ -43,8 +43,6 @@ No cloud model, no accounts, no telemetry, no auto-update, no screen capture, no
 | [`memory.md`](memory.md) | Current state — read this first every session |
 | [`docs/lessons-from-v1.md`](docs/lessons-from-v1.md) | What an earlier prototype taught us |
 
-`archive/v1-docs/` keeps the earlier prototype's documents for reference only. Nothing in it is binding.
-
 ## Requirements
 
 Linux (kernel ≥ 6.7), Wayland (COSMIC first), PipeWire, systemd, a CPU with AVX2. A GPU is optional and only speeds up answers. Full details in [`PRD.md`](PRD.md) §4.
