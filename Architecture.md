@@ -465,6 +465,8 @@ RestartSec=2s
 
 Spike S-04 confirms which stanzas work in user scope on the reference machine. A stanza that cannot be applied is recorded in an ADR with its replacement control; it is never dropped silently.
 
+**C4 GPU path (optional, ADR-0008).** The baseline above is the CPU path and does not change. When GPU offload is enabled, C4 alone gets a device allowlist for the GPU nodes found by S-04 in place of `PrivateDevices=true`. Any other stanza the driver conflicts with is handled the same way: named in ADR-0008 with its replacement control, or the GPU path stays off.
+
 ### 8.2 Landlock rules (applied by each process before it reads any input)
 
 | Part | Read-only | Read-write |
@@ -472,7 +474,7 @@ Spike S-04 confirms which stanzas work in user scope on the reference machine. A
 | C1 | `/proc`, `/sys` (power, thermal), compositor and bus sockets, configured folders, config | own runtime folder |
 | C2 | voice models, PipeWire socket and config, config | own runtime folder |
 | C3 | embedding model, spool (read + remove), config | `storage/`, `backups/`, own runtime folder |
-| C4 | language model, config | own runtime folder |
+| C4 | language model, config; GPU path only: the driver files and device nodes listed in ADR-0008 | own runtime folder |
 | C5 | tokenizer, prompt templates, `nudges.toml`, config | own runtime folder |
 | C6 | `hmac.key`, skill manifests, notification bus socket, config | `actions.jsonl*`, `egress.jsonl*`, own runtime folder |
 | skill runner | per-skill, narrower than C6 | per-skill |
@@ -625,7 +627,7 @@ Start order: healthd → storage, inference → monitor, kernel → knowledge �
 
 **Rust crates (allowlist):** `tokio`, `prost`, `bytes`, `thiserror`, `anyhow` (binaries only), `tracing` + journald, `serde`, `toml`, `serde_json`, `clap`, `rustix`, `landlock`, `seccompiler`, `hmac`, `sha2`, `subtle`, `getrandom`, `zeroize`, `uuid`, `jiff`, `rusqlite` (bundled, FTS5), `fastembed` / `ort` (local model files only), `tokenizers`, `wayland-client`, `wayland-protocols`, `cosmic-protocols`, `zbus`, `procfs`, `notify`, `bitflags`, `gtk4` (dialog only). **C7 only:** `reqwest` (rustls), `hickory-resolver`, `ipnet`, `url`. **Tests:** `proptest`, `insta`, `criterion`, `assert_cmd`, `tempfile`.
 
-**C++ libraries:** llama.cpp (pinned submodule), whisper.cpp (pinned submodule), ONNX Runtime (pinned release, hash-checked), espeak-ng, libpipewire, libprotobuf, spdlog.
+**C++ libraries:** llama.cpp (pinned submodule; CPU build is the default, a GPU backend is an optional build preset per ADR-0008), whisper.cpp (pinned submodule), ONNX Runtime (pinned release, hash-checked), espeak-ng, libpipewire, libprotobuf, spdlog.
 
 **Quality tooling:** `cargo-nextest`, `cargo-llvm-cov`, `cargo-deny`, `cargo-machete`, `clippy`, `rustfmt`, `clang-format`, `clang-tidy`, sanitizer presets, `gcovr`, `shellcheck`, `systemd-analyze security`, `cargo-fuzz`.
 
@@ -650,6 +652,7 @@ Start order: healthd → storage, inference → monitor, kernel → knowledge �
 | 13 | Health daemon is standalone | A fault in any service must not blind monitoring. |
 | 14 | Monitor is built before storage | Storage's noise gate is tested on real recorded dumps. |
 | 15 | Safety kernel is built before knowledge | Every later feature is born behind the gate instead of being retrofitted. |
+| 16 | The GPU is an optional accelerator for C4; the CPU path is the baseline | Speed where a GPU exists, without making one a requirement or widening the sandbox for machines that do not use it (ADR-0008). |
 
 ---
 
@@ -700,9 +703,9 @@ Spikes run in Phase 0. Each ends in an ADR that states what was measured, on wha
 | Spike | Question | Decides |
 | :--- | :--- | :--- |
 | S-01 | Does an exact in-memory scan + FTS5 meet NFR-PERF-04 at the chunk cap, and what does C3 weigh? | ADR-0004 storage design, C3 budget |
-| S-02 | Which model? Candidates on upstream llama.cpp, judged on held-out answers, chat rubric, prefill and decode speed, RSS, grammar reliability and licence | ADR-0005 model, prompt layout, NFR-PERF-02/03, C4 and total budget |
+| S-02 | Which model? Candidates on upstream llama.cpp, judged on held-out answers, chat rubric, prefill and decode speed, RSS, grammar reliability and licence. Each is measured on the CPU, then with GPU offload (Vulkan and CUDA backends) | ADR-0005 model, prompt layout, NFR-PERF-02/03, C4 and total budget; ADR-0008 GPU backend and VRAM budget |
 | S-03 | Streaming text frames over the socket: added latency and behaviour on cancel | ADR-0003 IPC |
-| S-04 | Which hardening stanzas, mount-namespace socket isolation and peer-unit checks work in user-scope units here? | ADR-0002 unit mode and socket enforcement |
+| S-04 | Which hardening stanzas, mount-namespace socket isolation and peer-unit checks work in user-scope units here? What is the smallest device and file access C4 needs for the GPU path, and which stanzas does the driver conflict with? | ADR-0002 unit mode and socket enforcement; ADR-0008 C4 GPU exception |
 | S-05 | Can we read disk, battery, heat, fullscreen state and "another app is using the microphone" on this machine? | ADR-0007 sensor sources and fallbacks |
 
 | ADR | Title | Status |
@@ -714,3 +717,4 @@ Spikes run in Phase 0. Each ends in an ADR that states what was measured, on wha
 | 0005 | Model, prompt layout, latency and memory targets | After S-02 |
 | 0006 | Build order | To write in Phase 0 |
 | 0007 | Health and context sensor sources | After S-05 |
+| 0008 | Optional GPU acceleration for inference (C4) | Accepted 2026-11-14; backend and enabling after S-02 and S-04 |

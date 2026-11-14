@@ -115,10 +115,10 @@ flowchart LR
 | P0-S07 | **S-01:** storage scan speed and C3 weight at the chunk cap are measured. | NFR-PERF-04 |
 | P0-S08 | **S-02:** the model bake-off is run and the owner picks the model. | NFR-PERF-02/03, FR-INF-01 |
 | P0-S09 | **S-03:** streamed frames over the socket are measured, including cancel. | NFR-PERF-11 |
-| P0-S10 | **S-04:** hardening stanzas, socket-folder isolation and peer-unit checks are proven in user units. | NFR-SEC-01/02 |
+| P0-S10 | **S-04:** hardening stanzas, socket-folder isolation and peer-unit checks are proven in user units; the smallest GPU device access for C4 is found. | NFR-SEC-01/02, FR-INF-08 |
 | P0-S11 | **S-05:** disk, battery, heat, fullscreen and microphone-in-use signals are read on this machine. | FR-MON-01/05/06/07, FR-VOI-10 |
 
-**S-02 bake-off protocol.** Candidates: one BitNet-class model and at least two small 4-bit instruct models, all on the pinned upstream llama.cpp; the exact list and their licences are confirmed at the start of the spike. Each is scored on: a small held-out grounded-answer set and a general-chat set (owner-graded); honesty when it does not know; grammar-limited JSON reliability; prefill and decode speed at the provisional prompt layout; RSS. Floors: fits the C4 cap in PRD §6.2; licence acceptable for a personal install. The ADR then fixes the model, the prompt layout, NFR-PERF-02/03 and the memory totals together.
+**S-02 bake-off protocol.** Candidates: one BitNet-class model and at least two small 4-bit instruct models, all on the pinned upstream llama.cpp; the exact list and their licences are confirmed at the start of the spike. Each is scored on: a small held-out grounded-answer set and a general-chat set (owner-graded); honesty when it does not know; grammar-limited JSON reliability; prefill and decode speed at the provisional prompt layout; RSS. Floors, on the CPU alone: fits the C4 cap in PRD §6.2; licence acceptable for a personal install. Each candidate is then run with GPU offload (ADR-0008) on the Vulkan backend and, if the owner approves the install, the CUDA backend: prefill and decode speed, VRAM used, fallback when VRAM is short, power draw when idle with the model loaded. The ADR then fixes the model, the prompt layout, NFR-PERF-02/03 and the memory totals together.
 
 ### 3.3 Tests
 
@@ -136,7 +136,7 @@ flowchart LR
 - [ ] `just ci` green on a clean clone; hosted CI green.
 - [ ] Contracts generate and pass round-trip tests.
 - [ ] `neuroos-ipc` coverage gate met; every decision in framing and peer checking tested.
-- [ ] Spikes S-01 … S-05 complete; ADR-0001 … 0007 written and accepted by the owner.
+- [ ] Spikes S-01 … S-05 complete; ADR-0001 … 0008 written and accepted by the owner.
 - [ ] PRD §6 updated from the spike results (labels changed from target to measured where applicable).
 - [ ] Models fetched and verified.
 - [ ] Phase report written; owner sign-off.
@@ -601,4 +601,4 @@ flowchart LR
 | Model-written nudges | Only with a design that keeps R0-6's guarantees |
 | Load-on-demand speech engine | Largest known memory saving in C2 |
 | Custom wake-word model | Needed before any distribution |
-| HUD overlay, wlroots, X11, GPU | By demand |
+| HUD overlay, wlroots, X11, GPU for voice or embedding | By demand |

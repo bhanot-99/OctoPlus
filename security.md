@@ -221,6 +221,7 @@ Stated plainly so nobody relies on a protection that is not there.
 | RR-7 | A compromised fetcher can make requests nobody approved | It holds no private data; detected by capture-versus-ledger comparison; bounded by its sandbox. |
 | RR-8 | The wake word can be triggered by other audio | Only SAFE skills run hands-free; nothing is approved by voice. |
 | RR-9 | Third-party model and audio runtimes are large C++ code bases | Contained by sandboxing, no network, memory limits; pinned and hash-checked. |
+| RR-10 | With optional GPU offload on, C4 talks to a large proprietary GPU kernel driver | Only C4, only when enabled (off by default); C4 has no network, no home access and no user data on disk; device access limited to an allowlist (ADR-0008). Not present on the CPU path. |
 
 ---
 

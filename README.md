@@ -47,4 +47,4 @@ No cloud model, no accounts, no telemetry, no auto-update, no screen capture, no
 
 ## Requirements
 
-Linux (kernel ≥ 6.7), Wayland (COSMIC first), PipeWire, systemd, a CPU with AVX2. Full details in [`PRD.md`](PRD.md) §4.
+Linux (kernel ≥ 6.7), Wayland (COSMIC first), PipeWire, systemd, a CPU with AVX2. A GPU is optional and only speeds up answers. Full details in [`PRD.md`](PRD.md) §4.

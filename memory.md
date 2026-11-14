@@ -80,6 +80,7 @@ One line each. Anything architectural also gets an ADR.
 
 | Date | ID | Decision | ADR |
 | :--- | :--- | :--- | :--- |
+| 2026-11-14 | D-13 | GPU is an optional speed-up for inference only. The CPU path stays the baseline; nothing already designed may get worse. | 0008 (accepted) |
 | 2026-11-14 | D-12 | Code lives locally and on GitHub as `Semantic-NeuroOS`, in a newly created repository. | — |
 | 2026-11-14 | D-11 | Owner approved the v2.0 documents as the baseline. | 0001 (to write) |
 | 2026-11-14 | D-01 | Build on the v2.0 documents; they are the single baseline. | 0001 (to write) |
@@ -103,6 +104,7 @@ Mirror of [PRD.md](PRD.md) §12 plus anything blocking the current phase. Close 
 | :--- | :--- | :--- | :--- | :--- |
 | — | Should the GitHub repository be private or public? | Private | Phase 0 start | **Closed 2026-11-14 — private** (`github.com/bhanot-99/Semantic-NeuroOS`) |
 | — | Candidate model list for spike S-02 | Proposed at the start of the spike | P0-S08 | Open |
+| — | GPU backend: Vulkan or CUDA (CUDA needs an owner-approved install) | Vulkan if its speed is close | P0-S08 | Open |
 | OQ-01 | Buddy name and wake phrase | "hey jarvis" | Phase 7 | Open |
 | OQ-02 | Search provider | Compare in Phase 8 | Phase 8 | Open |
 | OQ-03 | Quiet hours and default nudges | 22:00–08:00; all on, break reminder as notification | Phase 6 | Open |
@@ -131,6 +133,7 @@ To be verified in P0-S01. Nothing below is confirmed yet.
 | :--- | :--- | :--- |
 | CPU | AMD Ryzen 7 5800H, 8C/16T, AVX2 | — |
 | RAM | 16 GB | — |
+| GPU (optional) | NVIDIA RTX 3050 Mobile, 4,096 MiB VRAM | Seen with `nvidia-smi` 2026-11-14, driver 595.104.02 |
 | OS / desktop | Pop!_OS 24.04 LTS, COSMIC on Wayland | — |
 | Kernel | ≥ 6.7 | — |
 | Toolchains | Rust (pinned), GCC, CMake, Ninja, just, protoc | — |
@@ -145,6 +148,7 @@ Newest first. One row per work session.
 
 | Date | Summary | Stories | Builder / Checker | Next step |
 | :--- | :--- | :--- | :--- | :--- |
+| 2026-11-14 | Owner directed optional GPU acceleration (D-13). Drafted ADR-0008 and matching edits to PRD, Architecture, security, phases, README. No code. | Planning | — / Claude | Owner accepts ADR-0008, then P0-S01 |
 | 2026-11-14 | Wrote the v2.0 baseline: PRD, Architecture, security, rules, phases, design, README, lessons. No code. | Planning | — / Claude | Owner sign-off, then P0-S01 |
 
 ---

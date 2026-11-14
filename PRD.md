@@ -72,7 +72,8 @@ Semantic-NeuroOS is a **private laptop buddy for Linux**. It runs entirely on yo
 - Screen capture, OCR, keystroke logging, or recording audio outside a conversation.
 - Professional advice. Health, legal and money answers are general information only.
 - A graphical app. v1.0 is voice, desktop notifications, one confirmation dialog and a CLI.
-- GPU acceleration; Windows, macOS, mobile, X11; multi-user installs.
+- Requiring a GPU. GPU offload is an optional speed-up for inference only (FR-INF-08, ADR-0008); everything must work on the CPU alone.
+- Windows, macOS, mobile, X11; multi-user installs.
 - Knowledge graph learning and graph view, HUD overlay, model-written nudges (all post-v1.0).
 
 ---
@@ -95,8 +96,8 @@ Semantic-NeuroOS is a **private laptop buddy for Linux**. It runs entirely on yo
 | Constraint | Value |
 | :--- | :--- |
 | OS | Linux x86_64, kernel ≥ 6.7 (Landlock ABI v4) |
-| Reference hardware | AMD Ryzen 7 5800H (8C/16T, AVX2), 16 GB RAM, Pop!_OS 24.04 LTS, COSMIC on Wayland |
-| Minimum hardware | 4 cores with AVX2, 16 GB RAM recommended; 8 GB only with a model whose RSS is ≤ 1,600 MiB; 8 GB free disk |
+| Reference hardware | AMD Ryzen 7 5800H (8C/16T, AVX2), 16 GB RAM, Pop!_OS 24.04 LTS, COSMIC on Wayland. Optional accelerator: NVIDIA RTX 3050 Mobile, 4 GB VRAM (ADR-0008) |
+| Minimum hardware | 4 cores with AVX2, 16 GB RAM recommended; 8 GB only with a model whose RSS is ≤ 1,600 MiB; 8 GB free disk. No GPU needed |
 | Display server | Wayland only; COSMIC first |
 | Audio | PipeWire ≥ 1.0 |
 | Init | systemd ≥ 255, user-scope units for everything except the fetcher |
@@ -248,6 +249,7 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | FR-INF-05 | Support grammar-constrained output for skill-call JSON. |
 | FR-INF-06 | Reuse the cached prompt prefix between turns. Reject over-long prompts before queuing. Stop cleanly when the context is full. |
 | FR-INF-07 | Ship a benchmark mode that reports time to first token, prefill and decode speed, and RSS. |
+| FR-INF-08 | **Optional GPU offload (ADR-0008).** Off by default. Same model file and prompt layout as the CPU path. Fall back to the CPU when the GPU is missing, the driver fails, free VRAM is below the VRAM budget, or the machine is on battery (default). Report the path in use in health. Every target in §6 is met on the CPU alone. |
 
 ### 5.9 SafetyGate (C6 `neuroos-kernel`)
 
@@ -353,6 +355,7 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | C2 voice | 620 MiB steady, 480 MiB idle | 768 MiB | P — re-measure over a full 4 h soak |
 | C3 storage | 240 MiB | 320 MiB | T — spike S-01 |
 | C4 inference | ≤ 3,000 MiB cap for model choice | cap + 15% | T — set by ADR after S-02 |
+| C4 VRAM (GPU path only) | set by ADR after S-02; must leave room for other programs | checked before load; fall back to CPU | T — ADR-0008 |
 | C5 knowledge | 60 MiB | 96 MiB | T |
 | C6 kernel | 15 MiB (+ 25 MiB while a dialog is open) | 64 MiB | T |
 | C7 fetcher | 15 MiB | 48 MiB | T |
@@ -487,7 +490,7 @@ The full plan is [security.md](security.md). Binding requirements:
 
 | ID | Risk | Likelihood | Impact | Mitigation |
 | :--- | :--- | :--- | :--- | :--- |
-| R-01 | No small model meets both quality and speed on this CPU | Medium | High | Spike S-02 before any feature work; budgets set from its result; shorter prompts and cached prefix as levers. |
+| R-01 | No small model meets both quality and speed on this CPU | Medium | High | Spike S-02 before any feature work; budgets set from its result; shorter prompts and cached prefix as levers. Optional GPU offload is an extra lever, never the only one (ADR-0008). |
 | R-02 | Nudges annoy the user | High | High | Rate limits, cooldowns, hold rules, "not now", per-rule off switch; KPI-9 trial before release. |
 | R-03 | A nudge or answer speaks private information in front of others | Medium | High | Generic wording by default; hold when idle, locked or fullscreen; notify-only mode. |
 | R-04 | A search query leaks personal details | Medium | High | Query shown and editable before sending; minimal queries; egress ledger; no identifying headers. |
