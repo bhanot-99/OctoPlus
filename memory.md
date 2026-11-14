@@ -28,7 +28,7 @@
 | Builder / Checker | — / — |
 | Branch | — |
 | Files being changed | — |
-| Next concrete step | Create the repository (local + GitHub `Semantic-NeuroOS`, see D-12) and start **P0-S01**, beginning with installing and verifying the toolchains. |
+| Next concrete step | Repository exists (local + private GitHub, D-12). On the owner's go, start **P0-S01**, beginning with installing and verifying the toolchains. |
 
 ---
 
@@ -101,7 +101,7 @@ Mirror of [PRD.md](PRD.md) §12 plus anything blocking the current phase. Close 
 
 | ID | Question | Default | Needed by | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| — | Should the GitHub repository be private or public? | Private | Phase 0 start | **Open — owner** |
+| — | Should the GitHub repository be private or public? | Private | Phase 0 start | **Closed 2026-11-14 — private** (`github.com/bhanot-99/Semantic-NeuroOS`) |
 | — | Candidate model list for spike S-02 | Proposed at the start of the spike | P0-S08 | Open |
 | OQ-01 | Buddy name and wake phrase | "hey jarvis" | Phase 7 | Open |
 | OQ-02 | Search provider | Compare in Phase 8 | Phase 8 | Open |
