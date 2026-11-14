@@ -36,18 +36,20 @@ build: preflight (cpp-configure cpp_preset)
 lint: build
     cargo clippy --workspace --all-targets --locked -- -D warnings
     scripts/cpp-lint.sh
-    shellcheck scripts/*.sh
+    shellcheck scripts/*.sh tests/scripts/*.sh
     cargo machete
 
 # Unit, property and contract tests.
 test: build
     cargo nextest run --workspace --locked --no-tests=fail
     cd cpp && ctest --preset {{cpp_preset}} --no-tests=error
+    tests/scripts/fetch-models-test.sh
 
 # Hosted CI subset: skips `local_*` tests that need a user session (rules.md §8.6).
 test-hosted: build
     cargo nextest run --workspace --locked --no-tests=fail --profile hosted
     cd cpp && ctest --preset {{cpp_preset}} --no-tests=error
+    tests/scripts/fetch-models-test.sh
 
 # Dependency policy (advisories, bans, licences, sources) plus the network-ban probe.
 deny:

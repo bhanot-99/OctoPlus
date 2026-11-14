@@ -1,0 +1,18 @@
+# models/manifest.toml — every model Semantic-NeuroOS may load (NFR-SEC-05, R0-9).
+#
+# `just fetch-models` (scripts/fetch-models.sh) downloads each entry over HTTPS and
+# verifies its SHA-256 before it is moved into place. A missing or wrong hash is fatal.
+# Nothing else in the project downloads anything at run time.
+#
+# Fields (all required):
+#   id         stable name used in config and health
+#   role       llm | embedding | stt | tts | wake | vad
+#   file       path under the models folder
+#   url        https:// source, pinned to an exact revision
+#   sha256     lowercase hex digest of the file
+#   size_bytes exact size, used for the disk check before downloading
+#   license    SPDX id or licence name; anything outside rules.md §5 needs an ADR
+#
+# Models are added when they are chosen: the language model by ADR-0005 after spike
+# S-02; voice, wake-word and embedding models in their phases. Until then this file
+# has no entries and `just fetch-models` verifies nothing.
