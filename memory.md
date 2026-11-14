@@ -13,7 +13,7 @@
 | Last updated | 2026-11-14 |
 | Project stage | **Phase 0 in progress.** Documents v2.0 are the approved baseline (owner sign-off 2026-11-14). |
 | Current phase | Phase 0 — Foundation and spikes (in progress since 2026-11-14) |
-| Current story | Second check of P0-S01…S06 (agy), then spikes |
+| Current story | P0-S09 spike S-03 (agy building) |
 | Overall progress | 0 / 11 phases |
 | Health | 🟦 Foundation built (P0-S01…S06), `just ci` and hosted CI green; spikes not run |
 | Next milestone | M0 — proven foundations |
@@ -24,11 +24,11 @@
 
 | Field | Value |
 | :--- | :--- |
-| Story | Second check of P0-S01…S06 |
-| Builder / Checker | Claude / agy (review), then Claude verifies the findings |
-| Branch | stacked story branches `p0/s01-repo-gate` → … → `p0/s06-models` (not merged to `main` yet) |
-| Files being changed | none (review only) |
-| Next concrete step | agy reviews P0-S01…S06; then spikes S-03, S-04, S-05, S-01 with agy building; S-02 waits for owner approval of downloads. |
+| Story | P0-S09 — spike S-03 (IPC streaming latency and cancel) |
+| Builder / Checker | agy / Claude |
+| Branch | `p0/s09-spike-s03` (stacked on `p0/review-fixes`; nothing merged to `main` yet) |
+| Files being changed | `cpp/tools/stream_bench_server.cpp`, `bench/ipc-stream/`, `scripts/bench-s03.sh`, `reports/bench/` |
+| Next concrete step | Check S-03 results → ADR-0003; then S-04 (finish, incl. BUG-008), S-05, S-01; S-02 waits for owner approval of downloads. |
 
 ---
 
@@ -58,12 +58,12 @@ Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done �
 
 | Story | Title | Status | Builder | Checker |
 | :--- | :--- | :--- | :--- | :--- |
-| P0-S01 | `just ci` green on a clean clone; hosted CI green | In Check | Claude | Claude (self) — second check pending |
-| P0-S02 | Contracts usable from Rust and C++ | In Check | Claude | Claude (self) — second check pending |
-| P0-S03 | Socket server and client library | In Check | Claude | Claude (self) — second check pending |
-| P0-S04 | Health endpoint with real status | In Check | Claude | Claude (self) — second check pending |
-| P0-S05 | Network-crate ban in the build | In Check | Claude | Claude (self) — second check pending |
-| P0-S06 | Model fetch and verify | In Check | Claude | Claude (self) — second check pending |
+| P0-S01 | `just ci` green on a clean clone; hosted CI green | Done | Claude | agy (review 2026-11-14) + Claude (verified fixes) |
+| P0-S02 | Contracts usable from Rust and C++ | Done | Claude | agy (review 2026-11-14) + Claude (verified fixes) |
+| P0-S03 | Socket server and client library | Done | Claude | agy (review 2026-11-14) + Claude (verified fixes) |
+| P0-S04 | Health endpoint with real status | Done | Claude | agy (review 2026-11-14) + Claude (verified fixes) |
+| P0-S05 | Network-crate ban in the build | Done | Claude | agy (review 2026-11-14) + Claude (verified fixes) |
+| P0-S06 | Model fetch and verify | Done | Claude | agy (review 2026-11-14) + Claude (verified fixes) |
 | P0-S07 | Spike S-01: storage scan | Backlog | — | — |
 | P0-S08 | Spike S-02: model bake-off | Backlog | — | — |
 | P0-S09 | Spike S-03: streamed frames | Backlog | — | — |
@@ -152,6 +152,7 @@ Newest first. One row per work session.
 
 | Date | Summary | Stories | Builder / Checker | Next step |
 | :--- | :--- | :--- | :--- | :--- |
+| 2026-11-15 | agy reviewed P0-S01…S06: 10 findings, 9 real (R-09 rejected as invented). agy fixed 8 (BUG-002…007, 009, 010), Claude verified each; BUG-008 goes to S-04. P0-S01…S06 Done. | P0-S01…S06 | agy / Claude | Spikes |
 | 2026-11-14 | Phase 0 started. ADR-0008 accepted. Built repo gate, contracts, Rust+C++ IPC, health, net-ban, sandbox, testkit, model fetch; ADR-0001/0006 drafted. BUG-001 found by hosted CI and fixed. All branches pushed, `just ci` + hosted CI green. | P0-S01…S06 | Claude / Claude (self) | agy second check, then spikes |
 | 2026-11-14 | Owner directed optional GPU acceleration (D-13). Drafted ADR-0008 and matching edits to PRD, Architecture, security, phases, README. No code. | Planning | — / Claude | Owner accepts ADR-0008, then P0-S01 |
 | 2026-11-14 | Wrote the v2.0 baseline: PRD, Architecture, security, rules, phases, design, README, lessons. No code. | Planning | — / Claude | Owner sign-off, then P0-S01 |
