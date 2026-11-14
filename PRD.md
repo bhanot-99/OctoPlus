@@ -343,7 +343,7 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | NFR-PERF-08 | Barge-in flush | < 1 ms | T (P: 0.015 ms) |
 | NFR-PERF-09 | Transcription of a 3 s utterance | ≤ 150 ms | T (P: 96 ms) |
 | NFR-PERF-10 | Nudge: condition holds → nudge decided | ≤ 60 s | T |
-| NFR-PERF-11 | Token frame C4 → C5 added latency | ≤ 1 ms p99 | T — spike S-03 |
+| NFR-PERF-11 | Token frame C4 → C5 added latency | ≤ 1 ms p99 | M: 0.58 ms p99 (spike S-03, ADR-0003 proposed) |
 
 **IPC deadlines:** control calls 250 ms; C3 queries 150 ms; C6 checks 50 ms (approval time excluded); generation 30 s; fetch 15 s.
 

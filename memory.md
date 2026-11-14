@@ -13,7 +13,7 @@
 | Last updated | 2026-11-14 |
 | Project stage | **Phase 0 in progress.** Documents v2.0 are the approved baseline (owner sign-off 2026-11-14). |
 | Current phase | Phase 0 — Foundation and spikes (in progress since 2026-11-14) |
-| Current story | P0-S09 spike S-03 (agy building) |
+| Current story | P0-S10 spike S-04 (agy building) |
 | Overall progress | 0 / 11 phases |
 | Health | 🟦 Foundation built (P0-S01…S06), `just ci` and hosted CI green; spikes not run |
 | Next milestone | M0 — proven foundations |
@@ -66,7 +66,7 @@ Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done �
 | P0-S06 | Model fetch and verify | Done | Claude | agy (review 2026-11-14) + Claude (verified fixes) |
 | P0-S07 | Spike S-01: storage scan | Backlog | — | — |
 | P0-S08 | Spike S-02: model bake-off | Backlog | — | — |
-| P0-S09 | Spike S-03: streamed frames | Backlog | — | — |
+| P0-S09 | Spike S-03: streamed frames | Done (ADR-0003 awaits owner) | agy | Claude (independent rerun) |
 | P0-S10 | Spike S-04: unit hardening and socket isolation | In Progress (2 findings) | Claude | — |
 | P0-S11 | Spike S-05: health and context sensors | Backlog | — | — |
 
@@ -152,6 +152,7 @@ Newest first. One row per work session.
 
 | Date | Summary | Stories | Builder / Checker | Next step |
 | :--- | :--- | :--- | :--- | :--- |
+| 2026-11-15 | S-03 done: token-frame p99 ≈ 0.58 ms (target ≤ 1 ms), cancel p99 < 0.1 ms, reproduced by Claude; ADR-0003 proposed. | P0-S09 | agy / Claude | S-04 |
 | 2026-11-15 | agy reviewed P0-S01…S06: 10 findings, 9 real (R-09 rejected as invented). agy fixed 8 (BUG-002…007, 009, 010), Claude verified each; BUG-008 goes to S-04. P0-S01…S06 Done. | P0-S01…S06 | agy / Claude | Spikes |
 | 2026-11-14 | Phase 0 started. ADR-0008 accepted. Built repo gate, contracts, Rust+C++ IPC, health, net-ban, sandbox, testkit, model fetch; ADR-0001/0006 drafted. BUG-001 found by hosted CI and fixed. All branches pushed, `just ci` + hosted CI green. | P0-S01…S06 | Claude / Claude (self) | agy second check, then spikes |
 | 2026-11-14 | Owner directed optional GPU acceleration (D-13). Drafted ADR-0008 and matching edits to PRD, Architecture, security, phases, README. No code. | Planning | — / Claude | Owner accepts ADR-0008, then P0-S01 |

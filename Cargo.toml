@@ -8,6 +8,7 @@ members = [
     "crates/neuroos-sandbox",
     "crates/neuroos-taint",
     "crates/neuroos-testkit",
+    "bench/ipc-stream",
 ]
 # The network-ban probe is its own workspace so it never enters the real build (P0-S05).
 exclude = ["tests/security/netban-probe"]
@@ -29,8 +30,9 @@ jiff = "0.2.43"
 landlock = "0.4.7"
 prost = "0.14.6"
 prost-build = "0.14.6"
-rustix = { version = "1.1.6", features = ["process", "fs", "param"] }
+rustix = { version = "1.1.6", features = ["process", "fs", "param", "time"] }
 serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
 thiserror = "2.0.21"
 tokio = { version = "1.54.1", features = ["rt", "rt-multi-thread", "net", "io-util", "time", "sync", "macros"] }
 toml = "1.2.1"

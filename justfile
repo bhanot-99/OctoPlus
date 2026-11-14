@@ -78,6 +78,10 @@ sanitize: preflight
 bench: build
     cargo bench --workspace --locked
 
+# Spike S-03: measure streamed text frames and cancel latency (P0-S09).
+bench-s03:
+    scripts/bench-s03.sh
+
 # Fetch and verify every model listed in models/manifest.toml (P0-S06).
 fetch-models *args:
     scripts/fetch-models.sh {{args}}
