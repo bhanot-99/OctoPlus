@@ -11,11 +11,11 @@
 | Field | Value |
 | :--- | :--- |
 | Last updated | 2026-11-14 |
-| Project stage | **Not started.** Documents v2.0 are the approved baseline (owner sign-off 2026-11-14). |
-| Current phase | Phase 0 — Foundation and spikes (not started) |
-| Current story | — |
+| Project stage | **Phase 0 in progress.** Documents v2.0 are the approved baseline (owner sign-off 2026-11-14). |
+| Current phase | Phase 0 — Foundation and spikes (in progress since 2026-11-14) |
+| Current story | Second check of P0-S01…S06 (agy), then spikes |
 | Overall progress | 0 / 11 phases |
-| Health | ⬜ Nothing built yet |
+| Health | 🟦 Foundation built (P0-S01…S06), `just ci` and hosted CI green; spikes not run |
 | Next milestone | M0 — proven foundations |
 
 ---
@@ -24,11 +24,11 @@
 
 | Field | Value |
 | :--- | :--- |
-| Story | — |
-| Builder / Checker | — / — |
-| Branch | — |
-| Files being changed | — |
-| Next concrete step | Repository exists (local + private GitHub, D-12). On the owner's go, start **P0-S01**, beginning with installing and verifying the toolchains. |
+| Story | Second check of P0-S01…S06 |
+| Builder / Checker | Claude / agy (review), then Claude verifies the findings |
+| Branch | stacked story branches `p0/s01-repo-gate` → … → `p0/s06-models` (not merged to `main` yet) |
+| Files being changed | none (review only) |
+| Next concrete step | agy reviews P0-S01…S06; then spikes S-03, S-04, S-05, S-01 with agy building; S-02 waits for owner approval of downloads. |
 
 ---
 
@@ -36,7 +36,7 @@
 
 | Phase | Name | Status | Started | Finished | Report |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| 0 | Foundation and spikes | ⬜ | — | — | `reports/phase-00-foundation.md` |
+| 0 | Foundation and spikes | 🟦 | 2026-11-14 | — | `reports/phase-00-foundation.md` |
 | 1 | Walking skeleton | ⬜ | — | — | `reports/phase-01-skeleton.md` |
 | 2 | Safety kernel (C6) | ⬜ | — | — | `reports/phase-02-kernel.md` |
 | 3 | Monitor (C1) | ⬜ | — | — | `reports/phase-03-monitor.md` |
@@ -58,16 +58,16 @@ Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done �
 
 | Story | Title | Status | Builder | Checker |
 | :--- | :--- | :--- | :--- | :--- |
-| P0-S01 | `just ci` green on a clean clone; hosted CI green | Backlog | — | — |
-| P0-S02 | Contracts usable from Rust and C++ | Backlog | — | — |
-| P0-S03 | Socket server and client library | Backlog | — | — |
-| P0-S04 | Health endpoint with real status | Backlog | — | — |
-| P0-S05 | Network-crate ban in the build | Backlog | — | — |
-| P0-S06 | Model fetch and verify | Backlog | — | — |
+| P0-S01 | `just ci` green on a clean clone; hosted CI green | In Check | Claude | Claude (self) — second check pending |
+| P0-S02 | Contracts usable from Rust and C++ | In Check | Claude | Claude (self) — second check pending |
+| P0-S03 | Socket server and client library | In Check | Claude | Claude (self) — second check pending |
+| P0-S04 | Health endpoint with real status | In Check | Claude | Claude (self) — second check pending |
+| P0-S05 | Network-crate ban in the build | In Check | Claude | Claude (self) — second check pending |
+| P0-S06 | Model fetch and verify | In Check | Claude | Claude (self) — second check pending |
 | P0-S07 | Spike S-01: storage scan | Backlog | — | — |
 | P0-S08 | Spike S-02: model bake-off | Backlog | — | — |
 | P0-S09 | Spike S-03: streamed frames | Backlog | — | — |
-| P0-S10 | Spike S-04: unit hardening and socket isolation | Backlog | — | — |
+| P0-S10 | Spike S-04: unit hardening and socket isolation | In Progress (2 findings) | Claude | — |
 | P0-S11 | Spike S-05: health and context sensors | Backlog | — | — |
 
 Columns: Backlog → Ready → In Progress → In Check → Done.
@@ -80,7 +80,9 @@ One line each. Anything architectural also gets an ADR.
 
 | Date | ID | Decision | ADR |
 | :--- | :--- | :--- | :--- |
-| 2026-11-14 | D-13 | GPU is an optional speed-up for inference only. The CPU path stays the baseline; nothing already designed may get worse. | 0008 (accepted) |
+| 2026-11-14 | D-15 | Owner restored the roles: agy builds, Claude plans/checks/commits. P0-S01…S06 were built by Claude alone while agy was off (owner's instruction) and get a second check by agy. | — |
+| 2026-11-14 | D-14 | Owner removed `archive/v1-docs/` from the working tree; the documents stay in git history (`9ec1ac7`). | — |
+| 2026-11-14 | D-13 | GPU is an optional speed-up for inference only. The CPU path stays the baseline; nothing already designed may get worse. | 0008 (accepted 2026-11-14) |
 | 2026-11-14 | D-12 | Code lives locally and on GitHub as `Semantic-NeuroOS`, in a newly created repository. | — |
 | 2026-11-14 | D-11 | Owner approved the v2.0 documents as the baseline. | 0001 (to write) |
 | 2026-11-14 | D-01 | Build on the v2.0 documents; they are the single baseline. | 0001 (to write) |
@@ -121,23 +123,25 @@ Bugs live in `BUGS.md` (created in Phase 0). This table is for blockers and risk
 
 | Date | Type | Item | Owner | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| 2026-11-14 | Watch | Toolchains, system packages and models must be installed and verified on the reference machine. | Claude | Open — first task of P0-S01 |
+| 2026-11-14 | Finding | S-04: `ProtectHome=tmpfs` also masks `/run/user/<uid>`; runtime folders must use `BindPaths=`. systemd 255 `@system-service` lacks `landlock_*` syscalls; the filter must add them. | Claude | For ADR-0002 |
+| 2026-11-14 | Watch | Toolchains installed and verified 2026-11-14 (see §8). Models not fetched yet (after S-02). | Claude | Open |
+| 2026-11-14 | Note | TSan needs `setarch -R` on this kernel (mmap randomisation); wired into the `tsan` preset. | Claude | Closed |
 
 ---
 
 ## 8. Environment Facts (reference machine)
 
-To be verified in P0-S01. Nothing below is confirmed yet.
+Verified 2026-11-14 during P0-S01 unless marked.
 
 | Item | Expected | Verified |
 | :--- | :--- | :--- |
-| CPU | AMD Ryzen 7 5800H, 8C/16T, AVX2 | — |
-| RAM | 16 GB | — |
+| CPU | AMD Ryzen 7 5800H, 8C/16T, AVX2 | ✅ `lscpu` |
+| RAM | 16 GB | ✅ 15 GiB usable |
 | GPU (optional) | NVIDIA RTX 3050 Mobile, 4,096 MiB VRAM | Seen with `nvidia-smi` 2026-11-14, driver 595.104.02 |
-| OS / desktop | Pop!_OS 24.04 LTS, COSMIC on Wayland | — |
-| Kernel | ≥ 6.7 | — |
-| Toolchains | Rust (pinned), GCC, CMake, Ninja, just, protoc | — |
-| System packages | PipeWire dev files, espeak-ng, GTK4 dev files, protobuf, spdlog | — |
+| OS / desktop | Pop!_OS 24.04 LTS, COSMIC on Wayland | ✅ OS; desktop not yet checked |
+| Kernel | ≥ 6.7 | ✅ 7.2.15; Landlock ABI ≥ 6 (scopes work) |
+| Toolchains | Rust (pinned), GCC, CMake, Ninja, just, protoc | ✅ Rust 1.100.0, GCC 13.3, CMake 3.28, Ninja 1.11, just 1.59, protoc 3.21.12, nextest, cargo-deny 0.20.2, llvm-cov, machete, clang-format/tidy 18, gcovr, GoogleTest |
+| System packages | PipeWire dev files, espeak-ng, GTK4 dev files, protobuf, spdlog | ✅ PipeWire 1.6.8, libespeak-ng-dev, GTK 4.14, protobuf 3.21, spdlog 1.12, Vulkan dev; systemd 255 |
 | Disk encryption | On (recommended) | — |
 
 ---
@@ -148,6 +152,7 @@ Newest first. One row per work session.
 
 | Date | Summary | Stories | Builder / Checker | Next step |
 | :--- | :--- | :--- | :--- | :--- |
+| 2026-11-14 | Phase 0 started. ADR-0008 accepted. Built repo gate, contracts, Rust+C++ IPC, health, net-ban, sandbox, testkit, model fetch; ADR-0001/0006 drafted. BUG-001 found by hosted CI and fixed. All branches pushed, `just ci` + hosted CI green. | P0-S01…S06 | Claude / Claude (self) | agy second check, then spikes |
 | 2026-11-14 | Owner directed optional GPU acceleration (D-13). Drafted ADR-0008 and matching edits to PRD, Architecture, security, phases, README. No code. | Planning | — / Claude | Owner accepts ADR-0008, then P0-S01 |
 | 2026-11-14 | Wrote the v2.0 baseline: PRD, Architecture, security, rules, phases, design, README, lessons. No code. | Planning | — / Claude | Owner sign-off, then P0-S01 |
 
