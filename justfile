@@ -82,6 +82,10 @@ bench: build
 bench-s03:
     scripts/bench-s03.sh
 
+# Spike S-04: systemd hardening, socket isolation, peer checks, and GPU access (P0-S10).
+spike-s04:
+    scripts/spike-s04.sh
+
 # Fetch and verify every model listed in models/manifest.toml (P0-S06).
 fetch-models *args:
     scripts/fetch-models.sh {{args}}

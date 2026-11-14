@@ -129,7 +129,7 @@ flowchart TB
 
 ### 5.2 Socket map — enforced, not advisory
 
-Runtime root: `$XDG_RUNTIME_DIR/neuroos/` (mode 0700). **Each server keeps its sockets in its own sub-folder.** Each unit sees an empty runtime root with only the sub-folders of the peers it may call bound in (`TemporaryFileSystem=` + `BindPaths=`). A part cannot open a socket it cannot see. Servers also check the peer's UID (`SO_PEERCRED`) and the peer's systemd unit.
+Runtime root: `$XDG_RUNTIME_DIR/neuroos/` (mode 0700). **Each server keeps its sockets in its own sub-folder.** Each unit sees an empty runtime root with only the sub-folders of the peers it may call bound in (`TemporaryFileSystem=` + `BindPaths=`). A part cannot open a socket it cannot see. Servers also check the peer's UID (`SO_PEERCRED`) and the peer's systemd unit; a server that checks units needs read access to `/proc/<pid>/cgroup` in its Landlock rules (§8.2, S-04).
 
 | Socket | Server | May connect |
 | :--- | :--- | :--- |
@@ -433,9 +433,10 @@ The threat model, control matrix and verification plan are in [security.md](secu
 [Service]
 PrivateNetwork=true                 # C7 exempt
 InaccessiblePaths=-/run/systemd/resolve   # PrivateNetwork alone does not stop DNS via the resolver socket; C7 exempt
+InaccessiblePaths=-/run/dbus/system_bus_socket  # resolve1 on the system bus also resolves names (S-04); only parts that need the system bus are exempt, and they get no network either
 NoNewPrivileges=true
 ProtectSystem=strict
-ProtectHome=tmpfs                   # then bind only this part's paths
+ProtectHome=tmpfs                   # also masks /run/user/<uid> (S-04): runtime paths must come back via BindPaths=
 TemporaryFileSystem=%t/neuroos      # empty runtime root …
 BindPaths=%t/neuroos/<self> …       # … plus own folder and allowed peers (§5.2)
 PrivateTmp=true
@@ -453,7 +454,7 @@ RestrictAddressFamilies=AF_UNIX     # C7: AF_UNIX AF_INET AF_INET6
 LockPersonality=true
 MemoryDenyWriteExecute=true
 SystemCallArchitectures=native
-SystemCallFilter=@system-service
+SystemCallFilter=@system-service landlock_create_ruleset landlock_add_rule landlock_restrict_self   # systemd 255's set lacks Landlock (S-04)
 CapabilityBoundingSet=
 AmbientCapabilities=
 LimitCORE=0                         # no core dumps of user content
@@ -463,9 +464,9 @@ Restart=on-failure
 RestartSec=2s
 ```
 
-Spike S-04 confirms which stanzas work in user scope on the reference machine. A stanza that cannot be applied is recorded in an ADR with its replacement control; it is never dropped silently.
+Spike S-04 confirmed that every stanza above applies in user scope on the reference machine (ADR-0002, with the three additions marked S-04). A stanza that cannot be applied is recorded in an ADR with its replacement control; it is never dropped silently.
 
-**C4 GPU path (optional, ADR-0008).** The baseline above is the CPU path and does not change. When GPU offload is enabled, C4 alone gets a device allowlist for the GPU nodes found by S-04 in place of `PrivateDevices=true`. Any other stanza the driver conflicts with is handled the same way: named in ADR-0008 with its replacement control, or the GPU path stays off.
+**C4 GPU path (optional, ADR-0008).** The baseline above is the CPU path and does not change. When GPU offload is enabled, C4 alone gets the GPU nodes found by S-04 bound into its private `/dev` with `BindPaths=`; `PrivateDevices=true` stays on (`DeviceAllow=` is not enforced in user scope — ADR-0002, ADR-0008 addendum). Any other stanza the driver conflicts with is handled the same way: named in ADR-0008 with its replacement control, or the GPU path stays off.
 
 ### 8.2 Landlock rules (applied by each process before it reads any input)
 
@@ -480,6 +481,8 @@ Spike S-04 confirms which stanzas work in user scope on the reference machine. A
 | skill runner | per-skill, narrower than C6 | per-skill |
 | C7 | CA bundle, config | spool, `/run/neuroos-fetcher`; network rule: connect TCP 443 only |
 | healthd | cgroup files, config | `soak/`, own runtime folder |
+
+Any server that enforces a peer-unit policy (§5.2) also gets read-only `/proc` so it can read `/proc/<peer pid>/cgroup`; with only `/proc/self` the read fails with EACCES and the check fails closed (S-04).
 
 ### 8.3 Tier evaluation
 
@@ -711,7 +714,7 @@ Spikes run in Phase 0. Each ends in an ADR that states what was measured, on wha
 | ADR | Title | Status |
 | :--- | :--- | :--- |
 | 0001 | Record decisions; documents v2.0 are the baseline | To write in Phase 0 |
-| 0002 | Unit mode and socket-map enforcement | After S-04 |
+| 0002 | Unit mode and socket-map enforcement | Proposed 2026-11-15 (S-04 done) |
 | 0003 | IPC: sockets, framing, streaming | Proposed 2026-11-15 (S-03 done) |
 | 0004 | Storage: SQLite only, exact scan | After S-01 |
 | 0005 | Model, prompt layout, latency and memory targets | After S-02 |

@@ -7,9 +7,11 @@ Newest first. Closed bugs stay here with the commit that fixed them.
 
 | ID | Date | Severity | Part | Summary | Found by | Owner | Status | Fix |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| BUG-012 | 2026-11-15 | S4 | neuroos-s04-probe | Test probe declares raw libc FFI (`unsafe extern "C"`) instead of using rustix; fine for a test fixture but against the spirit of rules.md §7. | Claude (S-04 check) | agy | Open | — |
+| BUG-011 | 2026-11-15 | S3 | scripts/spike-s04.sh | Harness hard-codes `works="yes"` for every stanza and prints the D-Bus and peer-unit findings as fixed text without measuring them; GPU conclusion (DeviceAllow) was wrong. Evidence for ADR-0002 is `reports/spikes/s04-verification-claude.md` until fixed. | Claude (S-04 check) | agy | Open | — |
 | BUG-010 | 2026-11-14 | S4 | scripts/fetch-models.sh | Uses python3, curl, sha256sum without checking they exist (review R-10). | agy review | agy | Fixed | fix(p0-s03) on `p0/review-fixes`; `fetch-models-test.sh` missing-tool check |
 | BUG-009 | 2026-11-14 | S4 | justfile | `fmt-check` checks Rust only, not C++ (review R-07). | agy review | agy | Fixed | fix(p0-s03) on `p0/review-fixes`; `just fmt-check` runs `cpp-lint.sh --check-format` |
-| BUG-008 | 2026-11-14 | S3 | SC tests | No test proves TCP, DNS and raw sockets fail inside a unit (phases.md §3.3 SC; review R-05). | agy review | agy | Open — spike S-04 | — |
+| BUG-008 | 2026-11-14 | S3 | SC tests | No test proves TCP, DNS and raw sockets fail inside a unit (phases.md §3.3 SC; review R-05). | agy review | agy | Fixed | P0-S10 (`p0/s10-spike-s04`); test `local_unit_network_and_fs_isolation` |
 | BUG-007 | 2026-11-14 | S2 | neuroos-ipc server | Server writer has no stall bound; a non-reading peer leaves the writer and request tasks stuck (review R-06). | agy review | agy | Fixed | fix(p0-s03) on `p0/review-fixes`; test `stalled_writer_times_out_and_closes_connection` |
 | BUG-006 | 2026-11-14 | S2 | neuroos-ipc client | One unread stream blocks the reader for every request on the connection (review R-04). | agy review | agy | Fixed | fix(p0-s03) on `p0/review-fixes`; test `stream_overrun_does_not_stall_reader_or_other_streams` |
 | BUG-005 | 2026-11-14 | S2 | neuroos-ipc client | ReconnectingClient locks out reconnects for 1 h if a caller is cancelled mid-connect (review R-03). | agy review | agy | Fixed | fix(p0-s03) on `p0/review-fixes`; test `attempt_claim_drop_restores_next_attempt_on_cancellation` |

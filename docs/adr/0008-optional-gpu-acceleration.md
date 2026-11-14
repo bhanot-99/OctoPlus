@@ -46,3 +46,13 @@ Owner direction: use the GPU only as an improvement to the designed project — 
 | Require a GPU | Breaks goal G-7 and the minimum hardware; no fallback when the card is busy or on battery. |
 | Pick a larger model that only works with the GPU | Makes the GPU a requirement in practice and breaks the CPU baseline. |
 | Use the GPU for voice and embedding too | Those parts already meet their targets on the CPU; more driver exposure for little gain. Revisit by demand. |
+
+---
+
+## Addendum 2026-11-15 — S-04 result (evidence, not a change of decision)
+
+Measured in user-scope units (`reports/spikes/s04-verification-claude.md` §5):
+
+- `DevicePolicy=`/`DeviceAllow=` are **not enforced in user scope**; they cannot be the C4 device control.
+- The working mechanism keeps `PrivateDevices=yes` and binds only NVIDIA nodes into the private `/dev` with `BindPaths=`. Enumeration needs `/dev/nvidia0` and `/dev/nvidiactl`; the AMD iGPU stays hidden. `MemoryDenyWriteExecute=yes` and the syscall filter did not stop enumeration.
+- Still open for S-02: whether real compute (llama.cpp Vulkan, shader compilation) works with `MemoryDenyWriteExecute=yes`, and whether it needs `/dev/nvidia-uvm` or `/dev/dri/renderD129`. Decision point 6 is answered only when that is measured.
