@@ -540,3 +540,146 @@ async fn server_close_ends_open_streams() {
     }
     assert!(ended, "stream did not end after the server went away");
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn stream_overrun_does_not_stall_reader_or_other_streams() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = sock(&dir);
+    let srv = start(&path, cfg()).await;
+    let client = Client::connect(&path, MAX).await.unwrap();
+
+    // Stream A produces 500 frames; we do NOT read it yet.
+    let mut stream_a = client
+        .stream(ping("stream:500"), Duration::from_secs(5))
+        .await
+        .unwrap();
+
+    // Stream B produces 5 frames; we read it to the end immediately.
+    // It must finish within 1 s without being blocked by stream A's full queue.
+    let start_b = tokio::time::Instant::now();
+    let mut stream_b = client
+        .stream(ping("stream:5"), Duration::from_secs(2))
+        .await
+        .unwrap();
+    let mut b_count = 0;
+    while let Some(res) = stream_b.next().await {
+        let body = res.unwrap();
+        if matches!(body, Body::Pong(_)) {
+            b_count += 1;
+        }
+    }
+    assert_eq!(b_count, 5);
+    assert!(
+        start_b.elapsed() < Duration::from_secs(1),
+        "Stream B took too long: {:?}",
+        start_b.elapsed()
+    );
+
+    // Yield briefly so stream A finishes flooding into the bounded queue and overruns.
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    // Now read Stream A: it yields some buffered Pong frames and ends with ResourceExhausted.
+    let mut a_pongs = 0;
+    let mut saw_resource_exhausted = false;
+    while let Some(res) = stream_a.next().await {
+        match res {
+            Ok(Body::Pong(_)) => a_pongs += 1,
+            Err(IpcError::Remote {
+                code,
+                message,
+                retryable,
+            }) => {
+                assert_eq!(code, ErrorCode::ResourceExhausted);
+                assert_eq!(message, "stream overrun");
+                assert!(retryable);
+                saw_resource_exhausted = true;
+                break;
+            }
+            other => panic!("unexpected result from stream_a: {other:?}"),
+        }
+    }
+    assert!(
+        a_pongs > 0,
+        "stream A should have yielded buffered pong frames before overrun"
+    );
+    assert!(
+        saw_resource_exhausted,
+        "stream A should end with ResourceExhausted error"
+    );
+
+    // The connection must still serve a new unary call afterwards.
+    let r = client
+        .call(ping("echo:still_working"), Duration::from_secs(1))
+        .await
+        .unwrap();
+    assert_eq!(
+        r,
+        Body::Pong(Pong {
+            payload: b"echo:still_working".to_vec()
+        })
+    );
+
+    srv.stop().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn stalled_writer_times_out_and_closes_connection() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = sock(&dir);
+    let srv = start(&path, cfg()).await;
+
+    // Raw UnixStream client connects, sends framed Ping "slowstream:0", and NEVER reads.
+    let mut raw = UnixStream::connect(&path).await.unwrap();
+    let raw_req = neuroos_ipc::envelope(1, "trace-stall", ping("slowstream:0"), false);
+    frame::write_frame(&mut raw, &raw_req, MAX).await.unwrap();
+
+    // Normal client on the same server keeps working.
+    let normal = Client::connect(&path, MAX).await.unwrap();
+    let r = normal
+        .call(ping("echo:alive"), Duration::from_secs(1))
+        .await
+        .unwrap();
+    assert_eq!(
+        r,
+        Body::Pong(Pong {
+            payload: b"echo:alive".to_vec()
+        })
+    );
+
+    // Within ~5 s, server stats show write_stalls >= 1 and the flooding request's task has ended.
+    let mut ok = false;
+    for _ in 0..50 {
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        if srv.stats.write_stalls.load(Ordering::Relaxed) >= 1
+            && (srv.stats.requests.load(Ordering::Relaxed) >= 2
+                || srv.stats.cancels.load(Ordering::Relaxed) >= 1)
+        {
+            ok = true;
+            break;
+        }
+    }
+    assert!(
+        ok,
+        "write_stalls: {}, requests: {}, cancels: {}",
+        srv.stats.write_stalls.load(Ordering::Relaxed),
+        srv.stats.requests.load(Ordering::Relaxed),
+        srv.stats.cancels.load(Ordering::Relaxed),
+    );
+
+    // Normal client still works.
+    let r2 = normal
+        .call(ping("echo:still_alive"), Duration::from_secs(1))
+        .await
+        .unwrap();
+    assert_eq!(
+        r2,
+        Body::Pong(Pong {
+            payload: b"echo:still_alive".to_vec()
+        })
+    );
+
+    // Server can be stopped promptly.
+    tokio::time::timeout(Duration::from_secs(2), srv.stop())
+        .await
+        .expect("server must stop promptly without hanging");
+}

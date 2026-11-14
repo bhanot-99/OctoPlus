@@ -78,6 +78,10 @@ expect "failed download is reported" fail "$fetch" --manifest "$m2" --models-dir
 entry z z.bin "$src/one.bin" "$sha1" >"$m2"
 expect "file:// refused without test switch" fail env NEUROOS_FETCH_ALLOW_FILE=0 "$fetch" --manifest "$m2" --models-dir "$dir"
 
+# Missing required tools fail cleanly.
+expect "missing tool fails with clear message" fail env PATH="/nonexistent" /bin/bash "$fetch" --manifest "$m" --models-dir "$dir"
+grep -q "fetch-models: required tool" "$tmp/out" || { echo "FAIL no required tool message"; exit 1; }
+
 # The real manifest parses.
 expect "repository manifest is valid" ok "$fetch" --verify-only
 

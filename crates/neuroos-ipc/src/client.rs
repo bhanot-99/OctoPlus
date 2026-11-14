@@ -26,8 +26,17 @@ use crate::{IpcError, envelope, frame, new_trace_id};
 const STREAM_QUEUE: usize = 64;
 /// Frames queued for writing.
 const WRITE_QUEUE: usize = 64;
+/// A peer that does not drain its socket for 2 s is treated as dead; this is a
+/// mechanism constant, not a PRD product number.
+const WRITE_STALL_TIMEOUT: Duration = Duration::from_secs(2);
 
-type Pending = Arc<Mutex<HashMap<u64, mpsc::Sender<Envelope>>>>;
+#[derive(Clone, Debug)]
+struct PendingEntry {
+    tx: mpsc::Sender<Envelope>,
+    overrun: Arc<AtomicBool>,
+}
+
+type Pending = Arc<Mutex<HashMap<u64, PendingEntry>>>;
 /// Why the server closed the connection, if it said (e.g. peer rejected).
 type CloseReason = Arc<Mutex<Option<neuroos_proto::v1::Error>>>;
 
@@ -65,6 +74,7 @@ pub struct ResponseStream {
     deadline: Instant,
     finished: bool,
     reason: CloseReason,
+    overrun: Arc<AtomicBool>,
 }
 
 impl Client {
@@ -91,17 +101,27 @@ impl Client {
         // reason the server gave, so callers always see that reason.
         tokio::spawn(async move {
             while let Some(env) = rx.recv().await {
-                if frame::write_frame(&mut writer, &env, max_frame_bytes)
-                    .await
-                    .is_err()
+                match tokio::time::timeout(
+                    WRITE_STALL_TIMEOUT,
+                    frame::write_frame(&mut writer, &env, max_frame_bytes),
+                )
+                .await
                 {
-                    break;
+                    Ok(Ok(())) => {}
+                    _ => break,
                 }
             }
         });
         let (done_tx, done_rx) = watch::channel(false);
+        let ctx = ReaderContext {
+            pending: pending_r,
+            closed: closed_r,
+            reason: reason_r,
+            writer_tx: tx.clone(),
+            max_frame_bytes,
+        };
         tokio::spawn(async move {
-            read_loop(reader, pending_r, closed_r, reason_r, max_frame_bytes).await;
+            read_loop(reader, ctx).await;
             let _ = done_tx.send(true);
         });
         Ok(Self {
@@ -143,10 +163,17 @@ impl Client {
         }
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
         let (stx, srx) = mpsc::channel(STREAM_QUEUE);
+        let overrun = Arc::new(AtomicBool::new(false));
         self.pending
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
-            .insert(id, stx);
+            .insert(
+                id,
+                PendingEntry {
+                    tx: stx,
+                    overrun: Arc::clone(&overrun),
+                },
+            );
         // The reader sets `closed` before it drops the pending senders, so a request
         // registered after that drop is caught here instead of waiting for its deadline.
         let sent = !self.is_closed()
@@ -173,6 +200,7 @@ impl Client {
             deadline: Instant::now() + deadline,
             finished: false,
             reason: Arc::clone(&self.reason),
+            overrun,
         })
     }
 
@@ -206,7 +234,15 @@ impl ResponseStream {
             }
             Ok(None) => {
                 self.finish();
-                Some(Err(closed_error(&self.reason)))
+                if self.overrun.load(Ordering::Acquire) {
+                    Some(Err(IpcError::Remote {
+                        code: neuroos_proto::v1::ErrorCode::ResourceExhausted,
+                        message: "stream overrun".into(),
+                        retryable: true,
+                    }))
+                } else {
+                    Some(Err(closed_error(&self.reason)))
+                }
             }
             Ok(Some(env)) => {
                 if env.end_of_stream {
@@ -275,47 +311,73 @@ impl Drop for ResponseStream {
     }
 }
 
-async fn read_loop(
-    mut reader: OwnedReadHalf,
+struct ReaderContext {
     pending: Pending,
     closed: Arc<AtomicBool>,
     reason: CloseReason,
-    max: u32,
-) {
+    writer_tx: mpsc::Sender<Envelope>,
+    max_frame_bytes: u32,
+}
+
+async fn read_loop(mut reader: OwnedReadHalf, ctx: ReaderContext) {
     loop {
-        match frame::read_frame(&mut reader, max).await {
+        match frame::read_frame(&mut reader, ctx.max_frame_bytes).await {
             Ok(Some(env)) => {
                 if env.request_id == 0 {
                     // Connection-level error (e.g. peer rejected, bad frame): hand it
                     // to every open request as its end frame, then close.
                     debug!("connection-level frame from server; closing");
                     if let Some(Body::Error(e)) = &env.body {
-                        *reason.lock().unwrap_or_else(PoisonError::into_inner) = Some(e.clone());
+                        *ctx.reason.lock().unwrap_or_else(PoisonError::into_inner) =
+                            Some(e.clone());
                     }
-                    let senders: Vec<_> = pending
+                    let entries: Vec<_> = ctx
+                        .pending
                         .lock()
                         .unwrap_or_else(PoisonError::into_inner)
                         .drain()
                         .collect();
-                    for (id, s) in senders {
+                    for (id, entry) in entries {
                         let mut e = env.clone();
                         e.request_id = id;
                         e.end_of_stream = true;
-                        let _ = s.send(e).await;
+                        let _ = entry.tx.try_send(e);
                     }
                     break;
                 }
-                let sender = {
-                    let mut map = pending.lock().unwrap_or_else(PoisonError::into_inner);
+                let entry = {
+                    let mut map = ctx.pending.lock().unwrap_or_else(PoisonError::into_inner);
                     if env.end_of_stream {
                         map.remove(&env.request_id)
                     } else {
                         map.get(&env.request_id).cloned()
                     }
                 };
-                if let Some(s) = sender {
-                    // A stream nobody reads any more is simply dropped.
-                    let _ = s.send(env).await;
+                if let Some(entry) = entry {
+                    match entry.tx.try_send(env) {
+                        Ok(()) => {}
+                        Err(mpsc::error::TrySendError::Full(dropped_env)) => {
+                            entry.overrun.store(true, Ordering::Release);
+                            ctx.pending
+                                .lock()
+                                .unwrap_or_else(PoisonError::into_inner)
+                                .remove(&dropped_env.request_id);
+                            let _ = ctx.writer_tx.try_send(envelope(
+                                0,
+                                &dropped_env.trace_id,
+                                Body::Cancel(Cancel {
+                                    target_request_id: dropped_env.request_id,
+                                }),
+                                false,
+                            ));
+                        }
+                        Err(mpsc::error::TrySendError::Closed(dropped_env)) => {
+                            ctx.pending
+                                .lock()
+                                .unwrap_or_else(PoisonError::into_inner)
+                                .remove(&dropped_env.request_id);
+                        }
+                    }
                 }
             }
             Ok(None) => break,
@@ -325,11 +387,38 @@ async fn read_loop(
             }
         }
     }
-    closed.store(true, Ordering::Release);
-    pending
+    ctx.closed.store(true, Ordering::Release);
+    ctx.pending
         .lock()
         .unwrap_or_else(PoisonError::into_inner)
         .clear();
+}
+
+struct AttemptClaim {
+    state: Arc<Mutex<ReconnectState>>,
+    disarmed: bool,
+}
+
+impl AttemptClaim {
+    fn new(state: Arc<Mutex<ReconnectState>>) -> Self {
+        Self {
+            state,
+            disarmed: false,
+        }
+    }
+
+    fn disarm(&mut self) {
+        self.disarmed = true;
+    }
+}
+
+impl Drop for AttemptClaim {
+    fn drop(&mut self) {
+        if !self.disarmed {
+            let mut st = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+            st.next_attempt = Instant::now();
+        }
+    }
 }
 
 /// A client that reconnects with jittered backoff and never blocks a caller
@@ -338,7 +427,7 @@ async fn read_loop(
 pub struct ReconnectingClient {
     path: PathBuf,
     max_frame_bytes: u32,
-    state: Mutex<ReconnectState>,
+    state: Arc<Mutex<ReconnectState>>,
 }
 
 #[derive(Debug)]
@@ -361,11 +450,11 @@ impl ReconnectingClient {
         Self {
             path: path.to_path_buf(),
             max_frame_bytes,
-            state: Mutex::new(ReconnectState {
+            state: Arc::new(Mutex::new(ReconnectState {
                 client: None,
                 backoff,
                 next_attempt: Instant::now(),
-            }),
+            })),
         }
     }
 
@@ -385,7 +474,7 @@ impl ReconnectingClient {
     /// # Errors
     /// [`IpcError::Unavailable`] while the server is missing.
     pub async fn get(&self) -> Result<Arc<Client>, IpcError> {
-        {
+        let mut claim = {
             let mut st = self.state.lock().unwrap_or_else(PoisonError::into_inner);
             if let Some(c) = &st.client {
                 if !c.is_closed() {
@@ -398,9 +487,11 @@ impl ReconnectingClient {
             }
             // Claim this attempt so concurrent callers do not all dial at once.
             st.next_attempt = Instant::now() + Duration::from_secs(3600);
-        }
+            AttemptClaim::new(Arc::clone(&self.state))
+        };
         let result = Client::connect(&self.path, self.max_frame_bytes).await;
         let mut st = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+        claim.disarm();
         match result {
             Ok(c) => {
                 let c = Arc::new(c);
@@ -423,5 +514,91 @@ impl ReconnectingClient {
     /// [`IpcError::Unavailable`] while disconnected, else as [`Client::call`].
     pub async fn call(&self, body: Body, deadline: Duration) -> Result<Body, IpcError> {
         self.get().await?.call(body, deadline).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Server;
+    use crate::server::{Handler, HandlerError, Request, ServerConfig, StreamSink};
+    use neuroos_proto::v1::{Ping, Pong};
+    use tokio::sync::oneshot;
+
+    struct TestEcho;
+
+    impl Handler for TestEcho {
+        async fn handle(&self, req: Request, _sink: StreamSink) -> Result<Body, HandlerError> {
+            if let Body::Ping(p) = req.body {
+                Ok(Body::Pong(Pong { payload: p.payload }))
+            } else {
+                Err(HandlerError::unsupported())
+            }
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn attempt_claim_drop_restores_next_attempt_on_cancellation() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("rt").join("reconnect.sock");
+        let client = ReconnectingClient::new(&path, 1024 * 1024);
+
+        // Simulate an in-flight attempt claim that is created and dropped without completing
+        // (as would happen if the caller's future is cancelled during Client::connect await).
+        {
+            let _claim = {
+                let mut st = client.state.lock().unwrap_or_else(PoisonError::into_inner);
+                st.next_attempt = Instant::now() + Duration::from_secs(3600);
+                AttemptClaim::new(Arc::clone(&client.state))
+            };
+            // _claim is dropped here without disarm()
+        }
+
+        // Drop must have restored next_attempt to <= Instant::now().
+        assert!(
+            client
+                .state
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .next_attempt
+                <= Instant::now(),
+            "dropped claim must restore next_attempt"
+        );
+
+        // Now start the server.
+        let server = Server::bind(
+            &path,
+            ServerConfig::new(1024 * 1024, Duration::from_secs(5)),
+        )
+        .await
+        .unwrap();
+        let (stop_tx, stop_rx) = oneshot::channel();
+        let server_task = tokio::spawn(server.serve(Arc::new(TestEcho), async move {
+            let _ = stop_rx.await;
+        }));
+
+        // The next get() must attempt to connect and succeed immediately, not return Unavailable.
+        let c = client
+            .get()
+            .await
+            .expect("must connect immediately after cancelled attempt");
+        let r = c
+            .call(
+                Body::Ping(Ping {
+                    payload: b"echo:recovered".to_vec(),
+                }),
+                Duration::from_secs(1),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            r,
+            Body::Pong(Pong {
+                payload: b"echo:recovered".to_vec()
+            })
+        );
+
+        let _ = stop_tx.send(());
+        server_task.await.unwrap();
     }
 }

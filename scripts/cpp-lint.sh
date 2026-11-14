@@ -13,6 +13,10 @@ if [[ "${1:-}" == "--fix" ]]; then
   clang-format -i "${sources[@]}"
   exit 0
 fi
+if [[ "${1:-}" == "--check-format" ]]; then
+  clang-format --dry-run --Werror "${sources[@]}"
+  exit 0
+fi
 clang-format --dry-run --Werror "${sources[@]}"
 
 if [[ ! -f "$build/compile_commands.json" ]]; then

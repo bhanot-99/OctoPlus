@@ -30,6 +30,9 @@ use crate::{IpcError, envelope, frame};
 const ACCEPT_ERROR_PAUSE: Duration = Duration::from_millis(50);
 /// Frames queued per connection before the writer applies backpressure.
 const WRITE_QUEUE: usize = 64;
+/// A peer that does not drain its socket for 2 s is treated as dead; this is a
+/// mechanism constant, not a PRD product number.
+const WRITE_STALL_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// Server limits.
 #[derive(Debug, Clone)]
@@ -161,6 +164,8 @@ pub struct ServerStats {
     pub cancels: AtomicU64,
     /// Requests completed (any outcome).
     pub requests: AtomicU64,
+    /// Connections killed because writes stalled (peer stopped reading).
+    pub write_stalls: AtomicU64,
 }
 
 /// A bound, not yet serving, server.
@@ -292,13 +297,34 @@ fn peer_info(stream: &UnixStream, policy: &PeerPolicy) -> Result<PeerInfo, IpcEr
 
 type InFlight = Arc<Mutex<HashMap<u64, oneshot::Sender<()>>>>;
 
-async fn write_loop(mut w: OwnedWriteHalf, mut rx: mpsc::Receiver<Envelope>, max: u32) {
+async fn write_loop(
+    mut w: OwnedWriteHalf,
+    mut rx: mpsc::Receiver<Envelope>,
+    max: u32,
+    stats: Arc<ServerStats>,
+    conn_closed: watch::Sender<bool>,
+) {
     while let Some(env) = rx.recv().await {
-        if let Err(e) = frame::write_frame(&mut w, &env, max).await {
-            debug!(error = %e, "write failed; closing connection");
-            break;
+        match tokio::time::timeout(WRITE_STALL_TIMEOUT, frame::write_frame(&mut w, &env, max)).await
+        {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => {
+                debug!(error = %e, "write failed; closing connection");
+                stats.write_stalls.fetch_add(1, Ordering::Relaxed);
+                break;
+            }
+            Err(_) => {
+                debug!(
+                    "write timed out after {:?}; closing connection",
+                    WRITE_STALL_TIMEOUT
+                );
+                stats.write_stalls.fetch_add(1, Ordering::Relaxed);
+                break;
+            }
         }
     }
+    let _ = tokio::io::AsyncWriteExt::shutdown(&mut w).await;
+    let _ = conn_closed.send(true);
 }
 
 async fn serve_connection<H: Handler>(
@@ -318,7 +344,14 @@ async fn serve_connection<H: Handler>(
     };
     let (mut reader, writer) = stream.into_split();
     let (tx, rx) = mpsc::channel(WRITE_QUEUE);
-    let write_task = tokio::spawn(write_loop(writer, rx, config.max_frame_bytes));
+    let (conn_closed_tx, mut conn_closed_rx) = watch::channel(false);
+    let write_task = tokio::spawn(write_loop(
+        writer,
+        rx,
+        config.max_frame_bytes,
+        Arc::clone(&stats),
+        conn_closed_tx,
+    ));
 
     if let Err(reason) = config.policy.check(&peer) {
         warn!(uid = peer.uid, reason, "peer rejected");
@@ -342,6 +375,7 @@ async fn serve_connection<H: Handler>(
         let read = tokio::select! {
             r = frame::read_frame(&mut reader, config.max_frame_bytes) => r,
             _ = closing.changed() => break,
+            _ = conn_closed_rx.changed() => break,
         };
         let env = match read {
             Ok(Some(env)) => env,

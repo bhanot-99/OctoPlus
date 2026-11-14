@@ -22,6 +22,7 @@ fmt:
 # Check formatting without changing files.
 fmt-check:
     cargo fmt --all --check
+    scripts/cpp-lint.sh --check-format
 
 # Configure the C++ build.
 cpp-configure preset=cpp_preset:

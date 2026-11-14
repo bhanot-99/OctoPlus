@@ -12,6 +12,13 @@
 # Python's tomllib is used only to read the manifest; downloads use curl.
 set -euo pipefail
 
+for tool in python3 curl sha256sum; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "fetch-models: required tool '$tool' not found in PATH" >&2
+    exit 1
+  fi
+done
+
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 manifest="$root/models/manifest.toml"
 models_dir="${NEUROOS_MODELS_DIR:-$root/models}"
