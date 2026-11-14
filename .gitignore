@@ -1,0 +1,38 @@
+# Build output
+/target/
+/build/
+/cpp/build/
+*.profraw
+*.profdata
+/coverage/
+lcov.info
+
+# Models: only the manifest is tracked (rules.md §10.2.6)
+/models/*
+!/models/manifest.toml
+*.gguf
+*.onnx
+*.bin
+*.safetensors
+
+# Keys, user data and recordings must never be committed
+*.key
+*.pem
+hmac.key
+*.sqlite3
+*.sqlite3-*
+actions.jsonl*
+egress.jsonl*
+*.wav
+*.flac
+*.ogg
+*.mp3
+*.raw
+/data/
+
+# Local tooling
+/.agy/
+/.obsidian/
+.vscode/
+.idea/
+*.swp

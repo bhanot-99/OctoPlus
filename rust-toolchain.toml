@@ -1,0 +1,5 @@
+# Pinned toolchain (Architecture §14). Change only together with an ADR-free version bump commit.
+[toolchain]
+channel = "1.100.0"
+components = ["rustfmt", "clippy", "llvm-tools-preview"]
+profile = "minimal"

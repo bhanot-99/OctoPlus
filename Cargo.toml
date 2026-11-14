@@ -1,0 +1,49 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/neuroos-common",
+    "crates/neuroos-taint",
+]
+# The network-ban probe is its own workspace so it never enters the real build (P0-S05).
+exclude = ["tests/security/netban-probe"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.100"
+license = "MIT OR Apache-2.0"
+publish = false
+
+# Only crates from the Architecture §14 allowlist, and only once a crate uses them. A new entry needs a justification (rules.md §5).
+[workspace.dependencies]
+bitflags = "2.13.2"
+jiff = "0.2.43"
+serde = { version = "1.0.229", features = ["derive"] }
+thiserror = "2.0.21"
+toml = "1.2.1"
+tracing-journald = "0.3.2"
+tracing-subscriber = { version = "0.3.23", default-features = false, features = ["std", "fmt", "env-filter", "registry"] }
+# Tests
+proptest = "1.12.0"
+tempfile = "3.27.0"
+
+[workspace.lints.rust]
+unsafe_code = "deny"            # rules.md §7: only neuroos-sandbox and FFI shims may opt out
+missing_debug_implementations = "warn"
+unused_must_use = "deny"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"            # rules.md §6.1
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unreachable = "deny"
+dbg_macro = "deny"
+print_stdout = "deny"           # rules.md §5: tracing, not println!, in services
+print_stderr = "deny"
+
+[profile.release]
+debug = "line-tables-only"
+lto = "thin"
+codegen-units = 1
+panic = "abort"

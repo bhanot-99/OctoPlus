@@ -1,0 +1,47 @@
+# Hosted CI (rules.md §3.5): format, lint, build, unit tests and dependency checks on
+# every push. Anything that needs models, audio, a desktop session or user systemd
+# units runs only in the local full gate (`just ci`) on the reference machine.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Hosted runners have less free disk than the reference machine.
+  NEUROOS_MIN_FREE_GIB: "5"
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build cmake g++ protobuf-compiler libprotobuf-dev \
+            libgtest-dev libgmock-dev clang-format clang-tidy shellcheck
+
+      - name: Rust toolchain (pinned by rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Rust tools
+        uses: taiki-e/install-action@v2
+        with:
+          tool: just@1.59.0,cargo-nextest@0.9.152,cargo-deny@0.20.2,cargo-machete@0.9.2
+
+      - name: Gate (hosted subset)
+        run: just ci-hosted
