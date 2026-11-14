@@ -86,6 +86,10 @@ bench-s03:
 spike-s04:
     scripts/spike-s04.sh
 
+# Spike S-05: sensor sources, fullscreen state, and microphone-in-use detection (P0-S11).
+spike-s05:
+    scripts/spike-s05.sh
+
 # Fetch and verify every model listed in models/manifest.toml (P0-S06).
 fetch-models *args:
     scripts/fetch-models.sh {{args}}

@@ -1,0 +1,1540 @@
+{
+  "spike": "S-05",
+  "story": "P0-S11",
+  "conditions": {
+    "date_utc": "2026-11-14T22:30:19Z",
+    "git_commit": "57d357a457c494fbac6c28d1d1c50f945681c620",
+    "kernel": "Linux 7.2.15-76070215-generic #202611011338~1793722468~24.04~d8e9a1a SMP PREEMPT_DYNAMIC Tue N x86_64",
+    "cosmic_version": "cosmic-comp 1.0.0 (git commit 66524a0da965188879119c3ce9a71dfc90826469)",
+    "pipewire_version": "pipewire"
+  },
+  "runs": {
+    "run1_plain": {
+      "probe": "neuroos-s05-sensors",
+      "sections": {
+        "battery": {
+          "battery": {
+            "capacity_pct": 100,
+            "energy_full_uwh": 34492000,
+            "energy_now_uwh": 34492000,
+            "estimate_status": "unavailable: power_now is 0 (status: Not charging)",
+            "name": "BAT0",
+            "path": "/sys/class/power_supply/BAT0",
+            "power_now_uw": 0,
+            "status": "Not charging",
+            "time_to_empty_seconds": null,
+            "time_to_full_seconds": null
+          },
+          "latency_us": 1430,
+          "ok": true,
+          "on_ac": true,
+          "source": "/sys/class/power_supply"
+        },
+        "compositor": {
+          "advertised_globals": [
+            {
+              "interface": "wl_compositor",
+              "name": 1,
+              "version": 5
+            },
+            {
+              "interface": "wl_subcompositor",
+              "name": 2,
+              "version": 1
+            },
+            {
+              "interface": "cosmic_corner_radius_manager_v1",
+              "name": 3,
+              "version": 2
+            },
+            {
+              "interface": "wl_data_device_manager",
+              "name": 4,
+              "version": 3
+            },
+            {
+              "interface": "wp_fractional_scale_manager_v1",
+              "name": 5,
+              "version": 1
+            },
+            {
+              "interface": "zwp_keyboard_shortcuts_inhibit_manager_v1",
+              "name": 6,
+              "version": 1
+            },
+            {
+              "interface": "zxdg_output_manager_v1",
+              "name": 7,
+              "version": 3
+            },
+            {
+              "interface": "zwlr_output_manager_v1",
+              "name": 8,
+              "version": 4
+            },
+            {
+              "interface": "zcosmic_output_manager_v1",
+              "name": 9,
+              "version": 3
+            },
+            {
+              "interface": "zwlr_output_power_manager_v1",
+              "name": 10,
+              "version": 1
+            },
+            {
+              "interface": "zcosmic_overlap_notify_v1",
+              "name": 11,
+              "version": 1
+            },
+            {
+              "interface": "wp_presentation",
+              "name": 12,
+              "version": 2
+            },
+            {
+              "interface": "zwp_primary_selection_device_manager_v1",
+              "name": 13,
+              "version": 1
+            },
+            {
+              "interface": "zcosmic_workspace_image_capture_source_manager_v1",
+              "name": 14,
+              "version": 1
+            },
+            {
+              "interface": "ext_output_image_capture_source_manager_v1",
+              "name": 15,
+              "version": 1
+            },
+            {
+              "interface": "ext_foreign_toplevel_image_capture_source_manager_v1",
+              "name": 16,
+              "version": 1
+            },
+            {
+              "interface": "ext_image_copy_capture_manager_v1",
+              "name": 17,
+              "version": 1
+            },
+            {
+              "interface": "wl_shm",
+              "name": 18,
+              "version": 2
+            },
+            {
+              "interface": "wp_cursor_shape_manager_v1",
+              "name": 19,
+              "version": 2
+            },
+            {
+              "interface": "wp_viewporter",
+              "name": 20,
+              "version": 1
+            },
+            {
+              "interface": "org_kde_kwin_server_decoration_manager",
+              "name": 21,
+              "version": 1
+            },
+            {
+              "interface": "zxdg_decoration_manager_v1",
+              "name": 22,
+              "version": 1
+            },
+            {
+              "interface": "ext_session_lock_manager_v1",
+              "name": 23,
+              "version": 1
+            },
+            {
+              "interface": "zwp_pointer_constraints_v1",
+              "name": 26,
+              "version": 1
+            },
+            {
+              "interface": "wp_pointer_warp_v1",
+              "name": 27,
+              "version": 1
+            },
+            {
+              "interface": "zwp_pointer_gestures_v1",
+              "name": 28,
+              "version": 3
+            },
+            {
+              "interface": "zwp_tablet_manager_v2",
+              "name": 29,
+              "version": 1
+            },
+            {
+              "interface": "wp_security_context_manager_v1",
+              "name": 30,
+              "version": 1
+            },
+            {
+              "interface": "zwp_input_method_manager_v2",
+              "name": 31,
+              "version": 1
+            },
+            {
+              "interface": "zwp_text_input_manager_v3",
+              "name": 32,
+              "version": 1
+            },
+            {
+              "interface": "zwp_virtual_keyboard_manager_v1",
+              "name": 33,
+              "version": 1
+            },
+            {
+              "interface": "wp_alpha_modifier_v1",
+              "name": 34,
+              "version": 1
+            },
+            {
+              "interface": "wp_single_pixel_buffer_manager_v1",
+              "name": 35,
+              "version": 1
+            },
+            {
+              "interface": "wl_fixes",
+              "name": 36,
+              "version": 1
+            },
+            {
+              "interface": "zcosmic_keyboard_layout_manager_v1",
+              "name": 37,
+              "version": 1
+            },
+            {
+              "interface": "ext_background_effect_manager_v1",
+              "name": 38,
+              "version": 1
+            },
+            {
+              "interface": "ext_idle_notifier_v1",
+              "name": 39,
+              "version": 2
+            },
+            {
+              "interface": "zwp_idle_inhibit_manager_v1",
+              "name": 40,
+              "version": 1
+            },
+            {
+              "interface": "ext_data_control_manager_v1",
+              "name": 41,
+              "version": 1
+            },
+            {
+              "interface": "zwlr_data_control_manager_v1",
+              "name": 42,
+              "version": 2
+            },
+            {
+              "interface": "zwlr_layer_shell_v1",
+              "name": 43,
+              "version": 5
+            },
+            {
+              "interface": "xdg_wm_base",
+              "name": 44,
+              "version": 7
+            },
+            {
+              "interface": "xdg_wm_dialog_v1",
+              "name": 45,
+              "version": 1
+            },
+            {
+              "interface": "xdg_activation_v1",
+              "name": 46,
+              "version": 1
+            },
+            {
+              "interface": "zxdg_exporter_v2",
+              "name": 47,
+              "version": 1
+            },
+            {
+              "interface": "zxdg_importer_v2",
+              "name": 48,
+              "version": 1
+            },
+            {
+              "interface": "zcosmic_toplevel_info_v1",
+              "name": 49,
+              "version": 3
+            },
+            {
+              "interface": "ext_foreign_toplevel_list_v1",
+              "name": 50,
+              "version": 1
+            },
+            {
+              "interface": "zcosmic_toplevel_manager_v1",
+              "name": 51,
+              "version": 4
+            },
+            {
+              "interface": "ext_workspace_manager_v1",
+              "name": 52,
+              "version": 1
+            },
+            {
+              "interface": "zcosmic_workspace_manager_v2",
+              "name": 53,
+              "version": 2
+            },
+            {
+              "interface": "cosmic_a11y_manager_v1",
+              "name": 54,
+              "version": 2
+            },
+            {
+              "interface": "cosmic_session_lock_layer_manager_v1",
+              "name": 55,
+              "version": 1
+            },
+            {
+              "interface": "zwp_relative_pointer_manager_v1",
+              "name": 56,
+              "version": 1
+            },
+            {
+              "interface": "wp_drm_lease_device_v1",
+              "name": 57,
+              "version": 1
+            },
+            {
+              "interface": "wp_drm_lease_device_v1",
+              "name": 58,
+              "version": 1
+            },
+            {
+              "interface": "zwp_linux_dmabuf_v1",
+              "name": 59,
+              "version": 6
+            },
+            {
+              "interface": "wl_drm",
+              "name": 60,
+              "version": 2
+            },
+            {
+              "interface": "wp_linux_drm_syncobj_manager_v1",
+              "name": 61,
+              "version": 1
+            },
+            {
+              "interface": "wl_output",
+              "name": 62,
+              "version": 4
+            },
+            {
+              "interface": "wl_seat",
+              "name": 63,
+              "version": 9
+            }
+          ],
+          "advertised_globals_count": 61,
+          "idle_notifier_offered": true,
+          "latency_us": 687,
+          "ok": true,
+          "protocol_providing_fullscreen": "zcosmic_toplevel_info_v1",
+          "session_lock_offered": true,
+          "session_lock_protocols": [
+            "ext_session_lock_manager_v1",
+            "cosmic_session_lock_layer_manager_v1"
+          ],
+          "source": "wayland: WAYLAND_DISPLAY=wayland-1",
+          "toplevels": [
+            {
+              "app_id": "<redacted>",
+              "id": 4278190083,
+              "is_activated": false,
+              "is_fullscreen": false,
+              "is_maximized": false,
+              "states": []
+            },
+            {
+              "app_id": "<redacted>",
+              "id": 4278190082,
+              "is_activated": false,
+              "is_fullscreen": false,
+              "is_maximized": false,
+              "states": []
+            },
+            {
+              "app_id": "<redacted>",
+              "id": 4278190081,
+              "is_activated": false,
+              "is_fullscreen": false,
+              "is_maximized": false,
+              "states": []
+            },
+            {
+              "app_id": "<redacted>",
+              "id": 4278190084,
+              "is_activated": false,
+              "is_fullscreen": false,
+              "is_maximized": false,
+              "states": []
+            },
+            {
+              "app_id": "<redacted>",
+              "id": 4278190080,
+              "is_activated": true,
+              "is_fullscreen": false,
+              "is_maximized": false,
+              "states": [
+                "Activated"
+              ]
+            },
+            {
+              "app_id": "<redacted>",
+              "id": 4278190085,
+              "is_activated": false,
+              "is_fullscreen": false,
+              "is_maximized": false,
+              "states": []
+            }
+          ],
+          "toplevels_count": 6
+        },
+        "disk": {
+          "filesystems": [
+            {
+              "available_bytes": 43304087552,
+              "device": "/dev/nvme0n1p6",
+              "free_bytes": 51414609920,
+              "fstype": "ext4",
+              "mount_point": "/",
+              "total_bytes": 158197100544,
+              "used_bytes": 106782490624
+            },
+            {
+              "available_bytes": 2710482944,
+              "device": "/dev/nvme0n1p5",
+              "free_bytes": 2710482944,
+              "fstype": "vfat",
+              "mount_point": "/boot/efi",
+              "total_bytes": 3214925824,
+              "used_bytes": 504442880
+            }
+          ],
+          "latency_us": 258,
+          "ok": true,
+          "source": "/proc/self/mountinfo"
+        },
+        "microphone_in_use": {
+          "capturing_nodes": [],
+          "capturing_nodes_count": 0,
+          "latency_us": 13942,
+          "mic_in_use": false,
+          "ok": true,
+          "source": "pw-dump (PipeWire)"
+        },
+        "thermal": {
+          "cpu_package_sensor": "hwmon5/temp1_input (k10temp Tctl)",
+          "cpu_package_temp_celsius": 59.625,
+          "hwmon_sensors": [
+            {
+              "hwmon": "hwmon1",
+              "is_cpu_package": false,
+              "label": "",
+              "name": "acpitz",
+              "path": "/sys/class/hwmon/hwmon1/temp1_input",
+              "temp_celsius": 58.0,
+              "temp_millicelsius": 58000
+            },
+            {
+              "hwmon": "hwmon3",
+              "is_cpu_package": false,
+              "label": "Composite",
+              "name": "nvme",
+              "path": "/sys/class/hwmon/hwmon3/temp1_input",
+              "temp_celsius": 37.85,
+              "temp_millicelsius": 37850
+            },
+            {
+              "hwmon": "hwmon4",
+              "is_cpu_package": false,
+              "label": "edge",
+              "name": "amdgpu",
+              "path": "/sys/class/hwmon/hwmon4/temp1_input",
+              "temp_celsius": 51.0,
+              "temp_millicelsius": 51000
+            },
+            {
+              "hwmon": "hwmon5",
+              "is_cpu_package": true,
+              "label": "Tctl",
+              "name": "k10temp",
+              "path": "/sys/class/hwmon/hwmon5/temp1_input",
+              "temp_celsius": 59.625,
+              "temp_millicelsius": 59625
+            },
+            {
+              "hwmon": "hwmon7",
+              "is_cpu_package": false,
+              "label": "",
+              "name": "iwlwifi_1",
+              "path": "/sys/class/hwmon/hwmon7/temp1_input",
+              "temp_celsius": 40.0,
+              "temp_millicelsius": 40000
+            }
+          ],
+          "latency_us": 4596,
+          "ok": true,
+          "source": "/sys/class/hwmon, /sys/class/thermal",
+          "thermal_zones": [
+            {
+              "path": "/sys/class/thermal/thermal_zone0",
+              "temp_celsius": 58.0,
+              "temp_millicelsius": 58000,
+              "type": "acpitz",
+              "zone": "thermal_zone0"
+            },
+            {
+              "path": "/sys/class/thermal/thermal_zone1",
+              "temp_celsius": 40.0,
+              "temp_millicelsius": 40000,
+              "type": "iwlwifi_1",
+              "zone": "thermal_zone1"
+            }
+          ]
+        }
+      },
+      "timestamp_utc": "2026-11-14T22:30:19Z",
+      "version": "0.1.0"
+    },
+    "run2_capture": {
+      "probe": "neuroos-s05-sensors",
+      "sections": {
+        "battery": {
+          "battery": {
+            "capacity_pct": 100,
+            "energy_full_uwh": 34492000,
+            "energy_now_uwh": 34492000,
+            "estimate_status": "unavailable: power_now is 0 (status: Not charging)",
+            "name": "BAT0",
+            "path": "/sys/class/power_supply/BAT0",
+            "power_now_uw": 0,
+            "status": "Not charging",
+            "time_to_empty_seconds": null,
+            "time_to_full_seconds": null
+          },
+          "latency_us": 571,
+          "ok": true,
+          "on_ac": true,
+          "source": "/sys/class/power_supply"
+        },
+        "compositor": {
+          "advertised_globals": [
+            {
+              "interface": "wl_compositor",
+              "name": 1,
+              "version": 5
+            },
+            {
+              "interface": "wl_subcompositor",
+              "name": 2,
+              "version": 1
+            },
+            {
+              "interface": "cosmic_corner_radius_manager_v1",
+              "name": 3,
+              "version": 2
+            },
+            {
+              "interface": "wl_data_device_manager",
+              "name": 4,
+              "version": 3
+            },
+            {
+              "interface": "wp_fractional_scale_manager_v1",
+              "name": 5,
+              "version": 1
+            },
+            {
+              "interface": "zwp_keyboard_shortcuts_inhibit_manager_v1",
+              "name": 6,
+              "version": 1
+            },
+            {
+              "interface": "zxdg_output_manager_v1",
+              "name": 7,
+              "version": 3
+            },
+            {
+              "interface": "zwlr_output_manager_v1",
+              "name": 8,
+              "version": 4
+            },
+            {
+              "interface": "zcosmic_output_manager_v1",
+              "name": 9,
+              "version": 3
+            },
+            {
+              "interface": "zwlr_output_power_manager_v1",
+              "name": 10,
+              "version": 1
+            },
+            {
+              "interface": "zcosmic_overlap_notify_v1",
+              "name": 11,
+              "version": 1
+            },
+            {
+              "interface": "wp_presentation",
+              "name": 12,
+              "version": 2
+            },
+            {
+              "interface": "zwp_primary_selection_device_manager_v1",
+              "name": 13,
+              "version": 1
+            },
+            {
+              "interface": "zcosmic_workspace_image_capture_source_manager_v1",
+              "name": 14,
+              "version": 1
+            },
+            {
+              "interface": "ext_output_image_capture_source_manager_v1",
+              "name": 15,
+              "version": 1
+            },
+            {
+              "interface": "ext_foreign_toplevel_image_capture_source_manager_v1",
+              "name": 16,
+              "version": 1
+            },
+            {
+              "interface": "ext_image_copy_capture_manager_v1",
+              "name": 17,
+              "version": 1
+            },
+            {
+              "interface": "wl_shm",
+              "name": 18,
+              "version": 2
+            },
+            {
+              "interface": "wp_cursor_shape_manager_v1",
+              "name": 19,
+              "version": 2
+            },
+            {
+              "interface": "wp_viewporter",
+              "name": 20,
+              "version": 1
+            },
+            {
+              "interface": "org_kde_kwin_server_decoration_manager",
+              "name": 21,
+              "version": 1
+            },
+            {
+              "interface": "zxdg_decoration_manager_v1",
+              "name": 22,
+              "version": 1
+            },
+            {
+              "interface": "ext_session_lock_manager_v1",
+              "name": 23,
+              "version": 1
+            },
+            {
+              "interface": "zwp_pointer_constraints_v1",
+              "name": 26,
+              "version": 1
+            },
+            {
+              "interface": "wp_pointer_warp_v1",
+              "name": 27,
+              "version": 1
+            },
+            {
+              "interface": "zwp_pointer_gestures_v1",
+              "name": 28,
+              "version": 3
+            },
+            {
+              "interface": "zwp_tablet_manager_v2",
+              "name": 29,
+              "version": 1
+            },
+            {
+              "interface": "wp_security_context_manager_v1",
+              "name": 30,
+              "version": 1
+            },
+            {
+              "interface": "zwp_input_method_manager_v2",
+              "name": 31,
+              "version": 1
+            },
+            {
+              "interface": "zwp_text_input_manager_v3",
+              "name": 32,
+              "version": 1
+            },
+            {
+              "interface": "zwp_virtual_keyboard_manager_v1",
+              "name": 33,
+              "version": 1
+            },
+            {
+              "interface": "wp_alpha_modifier_v1",
+              "name": 34,
+              "version": 1
+            },
+            {
+              "interface": "wp_single_pixel_buffer_manager_v1",
+              "name": 35,
+              "version": 1
+            },
+            {
+              "interface": "wl_fixes",
+              "name": 36,
+              "version": 1
+            },
+            {
+              "interface": "zcosmic_keyboard_layout_manager_v1",
+              "name": 37,
+              "version": 1
+            },
+            {
+              "interface": "ext_background_effect_manager_v1",
+              "name": 38,
+              "version": 1
+            },
+            {
+              "interface": "ext_idle_notifier_v1",
+              "name": 39,
+              "version": 2
+            },
+            {
+              "interface": "zwp_idle_inhibit_manager_v1",
+              "name": 40,
+              "version": 1
+            },
+            {
+              "interface": "ext_data_control_manager_v1",
+              "name": 41,
+              "version": 1
+            },
+            {
+              "interface": "zwlr_data_control_manager_v1",
+              "name": 42,
+              "version": 2
+            },
+            {
+              "interface": "zwlr_layer_shell_v1",
+              "name": 43,
+              "version": 5
+            },
+            {
+              "interface": "xdg_wm_base",
+              "name": 44,
+              "version": 7
+            },
+            {
+              "interface": "xdg_wm_dialog_v1",
+              "name": 45,
+              "version": 1
+            },
+            {
+              "interface": "xdg_activation_v1",
+              "name": 46,
+              "version": 1
+            },
+            {
+              "interface": "zxdg_exporter_v2",
+              "name": 47,
+              "version": 1
+            },
+            {
+              "interface": "zxdg_importer_v2",
+              "name": 48,
+              "version": 1
+            },
+            {
+              "interface": "zcosmic_toplevel_info_v1",
+              "name": 49,
+              "version": 3
+            },
+            {
+              "interface": "ext_foreign_toplevel_list_v1",
+              "name": 50,
+              "version": 1
+            },
+            {
+              "interface": "zcosmic_toplevel_manager_v1",
+              "name": 51,
+              "version": 4
+            },
+            {
+              "interface": "ext_workspace_manager_v1",
+              "name": 52,
+              "version": 1
+            },
+            {
+              "interface": "zcosmic_workspace_manager_v2",
+              "name": 53,
+              "version": 2
+            },
+            {
+              "interface": "cosmic_a11y_manager_v1",
+              "name": 54,
+              "version": 2
+            },
+            {
+              "interface": "cosmic_session_lock_layer_manager_v1",
+              "name": 55,
+              "version": 1
+            },
+            {
+              "interface": "zwp_relative_pointer_manager_v1",
+              "name": 56,
+              "version": 1
+            },
+            {
+              "interface": "wp_drm_lease_device_v1",
+              "name": 57,
+              "version": 1
+            },
+            {
+              "interface": "wp_drm_lease_device_v1",
+              "name": 58,
+              "version": 1
+            },
+            {
+              "interface": "zwp_linux_dmabuf_v1",
+              "name": 59,
+              "version": 6
+            },
+            {
+              "interface": "wl_drm",
+              "name": 60,
+              "version": 2
+            },
+            {
+              "interface": "wp_linux_drm_syncobj_manager_v1",
+              "name": 61,
+              "version": 1
+            },
+            {
+              "interface": "wl_output",
+              "name": 62,
+              "version": 4
+            },
+            {
+              "interface": "wl_seat",
+              "name": 63,
+              "version": 9
+            }
+          ],
+          "advertised_globals_count": 61,
+          "idle_notifier_offered": true,
+          "latency_us": 668,
+          "ok": true,
+          "protocol_providing_fullscreen": "zcosmic_toplevel_info_v1",
+          "session_lock_offered": true,
+          "session_lock_protocols": [
+            "ext_session_lock_manager_v1",
+            "cosmic_session_lock_layer_manager_v1"
+          ],
+          "source": "wayland: WAYLAND_DISPLAY=wayland-1",
+          "toplevels": [
+            {
+              "app_id": "<redacted>",
+              "id": 4278190083,
+              "is_activated": false,
+              "is_fullscreen": false,
+              "is_maximized": false,
+              "states": []
+            },
+            {
+              "app_id": "<redacted>",
+              "id": 4278190082,
+              "is_activated": false,
+              "is_fullscreen": false,
+              "is_maximized": false,
+              "states": []
+            },
+            {
+              "app_id": "<redacted>",
+              "id": 4278190084,
+              "is_activated": false,
+              "is_fullscreen": false,
+              "is_maximized": false,
+              "states": []
+            },
+            {
+              "app_id": "<redacted>",
+              "id": 4278190080,
+              "is_activated": true,
+              "is_fullscreen": false,
+              "is_maximized": false,
+              "states": [
+                "Activated"
+              ]
+            },
+            {
+              "app_id": "<redacted>",
+              "id": 4278190081,
+              "is_activated": false,
+              "is_fullscreen": false,
+              "is_maximized": false,
+              "states": []
+            },
+            {
+              "app_id": "<redacted>",
+              "id": 4278190085,
+              "is_activated": false,
+              "is_fullscreen": false,
+              "is_maximized": false,
+              "states": []
+            }
+          ],
+          "toplevels_count": 6
+        },
+        "disk": {
+          "filesystems": [
+            {
+              "available_bytes": 43303989248,
+              "device": "/dev/nvme0n1p6",
+              "free_bytes": 51414511616,
+              "fstype": "ext4",
+              "mount_point": "/",
+              "total_bytes": 158197100544,
+              "used_bytes": 106782588928
+            },
+            {
+              "available_bytes": 2710482944,
+              "device": "/dev/nvme0n1p5",
+              "free_bytes": 2710482944,
+              "fstype": "vfat",
+              "mount_point": "/boot/efi",
+              "total_bytes": 3214925824,
+              "used_bytes": 504442880
+            }
+          ],
+          "latency_us": 182,
+          "ok": true,
+          "source": "/proc/self/mountinfo"
+        },
+        "microphone_in_use": {
+          "capturing_nodes": [
+            {
+              "application_name": "<redacted>",
+              "id": 70,
+              "state": "running"
+            }
+          ],
+          "capturing_nodes_count": 1,
+          "latency_us": 16014,
+          "mic_in_use": true,
+          "ok": true,
+          "source": "pw-dump (PipeWire)"
+        },
+        "thermal": {
+          "cpu_package_sensor": "hwmon5/temp1_input (k10temp Tctl)",
+          "cpu_package_temp_celsius": 60.5,
+          "hwmon_sensors": [
+            {
+              "hwmon": "hwmon1",
+              "is_cpu_package": false,
+              "label": "",
+              "name": "acpitz",
+              "path": "/sys/class/hwmon/hwmon1/temp1_input",
+              "temp_celsius": 60.0,
+              "temp_millicelsius": 60000
+            },
+            {
+              "hwmon": "hwmon3",
+              "is_cpu_package": false,
+              "label": "Composite",
+              "name": "nvme",
+              "path": "/sys/class/hwmon/hwmon3/temp1_input",
+              "temp_celsius": 37.85,
+              "temp_millicelsius": 37850
+            },
+            {
+              "hwmon": "hwmon4",
+              "is_cpu_package": false,
+              "label": "edge",
+              "name": "amdgpu",
+              "path": "/sys/class/hwmon/hwmon4/temp1_input",
+              "temp_celsius": 49.0,
+              "temp_millicelsius": 49000
+            },
+            {
+              "hwmon": "hwmon5",
+              "is_cpu_package": true,
+              "label": "Tctl",
+              "name": "k10temp",
+              "path": "/sys/class/hwmon/hwmon5/temp1_input",
+              "temp_celsius": 60.5,
+              "temp_millicelsius": 60500
+            },
+            {
+              "hwmon": "hwmon7",
+              "is_cpu_package": false,
+              "label": "",
+              "name": "iwlwifi_1",
+              "path": "/sys/class/hwmon/hwmon7/temp1_input",
+              "temp_celsius": 40.0,
+              "temp_millicelsius": 40000
+            }
+          ],
+          "latency_us": 4963,
+          "ok": true,
+          "source": "/sys/class/hwmon, /sys/class/thermal",
+          "thermal_zones": [
+            {
+              "path": "/sys/class/thermal/thermal_zone0",
+              "temp_celsius": 60.0,
+              "temp_millicelsius": 60000,
+              "type": "acpitz",
+              "zone": "thermal_zone0"
+            },
+            {
+              "path": "/sys/class/thermal/thermal_zone1",
+              "temp_celsius": 40.0,
+              "temp_millicelsius": 40000,
+              "type": "iwlwifi_1",
+              "zone": "thermal_zone1"
+            }
+          ]
+        }
+      },
+      "timestamp_utc": "2026-11-14T22:30:19Z",
+      "version": "0.1.0"
+    },
+    "run3_unit": {
+      "probe": "neuroos-s05-sensors",
+      "sections": {
+        "battery": {
+          "battery": {
+            "capacity_pct": 100,
+            "energy_full_uwh": 34492000,
+            "energy_now_uwh": 34492000,
+            "estimate_status": "unavailable: power_now is 0 (status: Not charging)",
+            "name": "BAT0",
+            "path": "/sys/class/power_supply/BAT0",
+            "power_now_uw": 0,
+            "status": "Not charging",
+            "time_to_empty_seconds": null,
+            "time_to_full_seconds": null
+          },
+          "latency_us": 484,
+          "ok": true,
+          "on_ac": true,
+          "source": "/sys/class/power_supply"
+        },
+        "compositor": {
+          "advertised_globals": [
+            {
+              "interface": "wl_compositor",
+              "name": 1,
+              "version": 5
+            },
+            {
+              "interface": "wl_subcompositor",
+              "name": 2,
+              "version": 1
+            },
+            {
+              "interface": "cosmic_corner_radius_manager_v1",
+              "name": 3,
+              "version": 2
+            },
+            {
+              "interface": "wl_data_device_manager",
+              "name": 4,
+              "version": 3
+            },
+            {
+              "interface": "wp_fractional_scale_manager_v1",
+              "name": 5,
+              "version": 1
+            },
+            {
+              "interface": "zwp_keyboard_shortcuts_inhibit_manager_v1",
+              "name": 6,
+              "version": 1
+            },
+            {
+              "interface": "zxdg_output_manager_v1",
+              "name": 7,
+              "version": 3
+            },
+            {
+              "interface": "zwlr_output_manager_v1",
+              "name": 8,
+              "version": 4
+            },
+            {
+              "interface": "zcosmic_output_manager_v1",
+              "name": 9,
+              "version": 3
+            },
+            {
+              "interface": "zwlr_output_power_manager_v1",
+              "name": 10,
+              "version": 1
+            },
+            {
+              "interface": "zcosmic_overlap_notify_v1",
+              "name": 11,
+              "version": 1
+            },
+            {
+              "interface": "wp_presentation",
+              "name": 12,
+              "version": 2
+            },
+            {
+              "interface": "zwp_primary_selection_device_manager_v1",
+              "name": 13,
+              "version": 1
+            },
+            {
+              "interface": "zcosmic_workspace_image_capture_source_manager_v1",
+              "name": 14,
+              "version": 1
+            },
+            {
+              "interface": "ext_output_image_capture_source_manager_v1",
+              "name": 15,
+              "version": 1
+            },
+            {
+              "interface": "ext_foreign_toplevel_image_capture_source_manager_v1",
+              "name": 16,
+              "version": 1
+            },
+            {
+              "interface": "ext_image_copy_capture_manager_v1",
+              "name": 17,
+              "version": 1
+            },
+            {
+              "interface": "wl_shm",
+              "name": 18,
+              "version": 2
+            },
+            {
+              "interface": "wp_cursor_shape_manager_v1",
+              "name": 19,
+              "version": 2
+            },
+            {
+              "interface": "wp_viewporter",
+              "name": 20,
+              "version": 1
+            },
+            {
+              "interface": "org_kde_kwin_server_decoration_manager",
+              "name": 21,
+              "version": 1
+            },
+            {
+              "interface": "zxdg_decoration_manager_v1",
+              "name": 22,
+              "version": 1
+            },
+            {
+              "interface": "ext_session_lock_manager_v1",
+              "name": 23,
+              "version": 1
+            },
+            {
+              "interface": "zwp_pointer_constraints_v1",
+              "name": 26,
+              "version": 1
+            },
+            {
+              "interface": "wp_pointer_warp_v1",
+              "name": 27,
+              "version": 1
+            },
+            {
+              "interface": "zwp_pointer_gestures_v1",
+              "name": 28,
+              "version": 3
+            },
+            {
+              "interface": "zwp_tablet_manager_v2",
+              "name": 29,
+              "version": 1
+            },
+            {
+              "interface": "wp_security_context_manager_v1",
+              "name": 30,
+              "version": 1
+            },
+            {
+              "interface": "zwp_input_method_manager_v2",
+              "name": 31,
+              "version": 1
+            },
+            {
+              "interface": "zwp_text_input_manager_v3",
+              "name": 32,
+              "version": 1
+            },
+            {
+              "interface": "zwp_virtual_keyboard_manager_v1",
+              "name": 33,
+              "version": 1
+            },
+            {
+              "interface": "wp_alpha_modifier_v1",
+              "name": 34,
+              "version": 1
+            },
+            {
+              "interface": "wp_single_pixel_buffer_manager_v1",
+              "name": 35,
+              "version": 1
+            },
+            {
+              "interface": "wl_fixes",
+              "name": 36,
+              "version": 1
+            },
+            {
+              "interface": "zcosmic_keyboard_layout_manager_v1",
+              "name": 37,
+              "version": 1
+            },
+            {
+              "interface": "ext_background_effect_manager_v1",
+              "name": 38,
+              "version": 1
+            },
+            {
+              "interface": "ext_idle_notifier_v1",
+              "name": 39,
+              "version": 2
+            },
+            {
+              "interface": "zwp_idle_inhibit_manager_v1",
+              "name": 40,
+              "version": 1
+            },
+            {
+              "interface": "ext_data_control_manager_v1",
+              "name": 41,
+              "version": 1
+            },
+            {
+              "interface": "zwlr_data_control_manager_v1",
+              "name": 42,
+              "version": 2
+            },
+            {
+              "interface": "zwlr_layer_shell_v1",
+              "name": 43,
+              "version": 5
+            },
+            {
+              "interface": "xdg_wm_base",
+              "name": 44,
+              "version": 7
+            },
+            {
+              "interface": "xdg_wm_dialog_v1",
+              "name": 45,
+              "version": 1
+            },
+            {
+              "interface": "xdg_activation_v1",
+              "name": 46,
+              "version": 1
+            },
+            {
+              "interface": "zxdg_exporter_v2",
+              "name": 47,
+              "version": 1
+            },
+            {
+              "interface": "zxdg_importer_v2",
+              "name": 48,
+              "version": 1
+            },
+            {
+              "interface": "zcosmic_toplevel_info_v1",
+              "name": 49,
+              "version": 3
+            },
+            {
+              "interface": "ext_foreign_toplevel_list_v1",
+              "name": 50,
+              "version": 1
+            },
+            {
+              "interface": "zcosmic_toplevel_manager_v1",
+              "name": 51,
+              "version": 4
+            },
+            {
+              "interface": "ext_workspace_manager_v1",
+              "name": 52,
+              "version": 1
+            },
+            {
+              "interface": "zcosmic_workspace_manager_v2",
+              "name": 53,
+              "version": 2
+            },
+            {
+              "interface": "cosmic_a11y_manager_v1",
+              "name": 54,
+              "version": 2
+            },
+            {
+              "interface": "cosmic_session_lock_layer_manager_v1",
+              "name": 55,
+              "version": 1
+            },
+            {
+              "interface": "zwp_relative_pointer_manager_v1",
+              "name": 56,
+              "version": 1
+            },
+            {
+              "interface": "wp_drm_lease_device_v1",
+              "name": 57,
+              "version": 1
+            },
+            {
+              "interface": "wp_drm_lease_device_v1",
+              "name": 58,
+              "version": 1
+            },
+            {
+              "interface": "zwp_linux_dmabuf_v1",
+              "name": 59,
+              "version": 6
+            },
+            {
+              "interface": "wl_drm",
+              "name": 60,
+              "version": 2
+            },
+            {
+              "interface": "wp_linux_drm_syncobj_manager_v1",
+              "name": 61,
+              "version": 1
+            },
+            {
+              "interface": "wl_output",
+              "name": 62,
+              "version": 4
+            },
+            {
+              "interface": "wl_seat",
+              "name": 63,
+              "version": 9
+            }
+          ],
+          "advertised_globals_count": 61,
+          "idle_notifier_offered": true,
+          "latency_us": 595,
+          "ok": true,
+          "protocol_providing_fullscreen": "zcosmic_toplevel_info_v1",
+          "session_lock_offered": true,
+          "session_lock_protocols": [
+            "ext_session_lock_manager_v1",
+            "cosmic_session_lock_layer_manager_v1"
+          ],
+          "source": "wayland: WAYLAND_DISPLAY=wayland-1",
+          "toplevels": [
+            {
+              "app_id": "<redacted>",
+              "id": 4278190082,
+              "is_activated": false,
+              "is_fullscreen": false,
+              "is_maximized": false,
+              "states": []
+            },
+            {
+              "app_id": "<redacted>",
+              "id": 4278190085,
+              "is_activated": false,
+              "is_fullscreen": false,
+              "is_maximized": false,
+              "states": []
+            },
+            {
+              "app_id": "<redacted>",
+              "id": 4278190080,
+              "is_activated": true,
+              "is_fullscreen": false,
+              "is_maximized": false,
+              "states": [
+                "Activated"
+              ]
+            },
+            {
+              "app_id": "<redacted>",
+              "id": 4278190081,
+              "is_activated": false,
+              "is_fullscreen": false,
+              "is_maximized": false,
+              "states": []
+            },
+            {
+              "app_id": "<redacted>",
+              "id": 4278190083,
+              "is_activated": false,
+              "is_fullscreen": false,
+              "is_maximized": false,
+              "states": []
+            },
+            {
+              "app_id": "<redacted>",
+              "id": 4278190084,
+              "is_activated": false,
+              "is_fullscreen": false,
+              "is_maximized": false,
+              "states": []
+            }
+          ],
+          "toplevels_count": 6
+        },
+        "disk": {
+          "filesystems": [
+            {
+              "available_bytes": 43303874560,
+              "device": "/dev/nvme0n1p6",
+              "free_bytes": 51414396928,
+              "fstype": "ext4",
+              "mount_point": "/",
+              "total_bytes": 158197100544,
+              "used_bytes": 106782703616
+            },
+            {
+              "available_bytes": 2710482944,
+              "device": "/dev/nvme0n1p5",
+              "free_bytes": 2710482944,
+              "fstype": "vfat",
+              "mount_point": "/boot/efi",
+              "total_bytes": 3214925824,
+              "used_bytes": 504442880
+            }
+          ],
+          "latency_us": 254,
+          "ok": true,
+          "source": "/proc/self/mountinfo"
+        },
+        "microphone_in_use": {
+          "capturing_nodes": [],
+          "capturing_nodes_count": 0,
+          "latency_us": 13727,
+          "mic_in_use": false,
+          "ok": true,
+          "source": "pw-dump (PipeWire)"
+        },
+        "thermal": {
+          "cpu_package_sensor": "hwmon5/temp1_input (k10temp Tctl)",
+          "cpu_package_temp_celsius": 61.5,
+          "hwmon_sensors": [
+            {
+              "hwmon": "hwmon1",
+              "is_cpu_package": false,
+              "label": "",
+              "name": "acpitz",
+              "path": "/sys/class/hwmon/hwmon1/temp1_input",
+              "temp_celsius": 60.0,
+              "temp_millicelsius": 60000
+            },
+            {
+              "hwmon": "hwmon3",
+              "is_cpu_package": false,
+              "label": "Composite",
+              "name": "nvme",
+              "path": "/sys/class/hwmon/hwmon3/temp1_input",
+              "temp_celsius": 37.85,
+              "temp_millicelsius": 37850
+            },
+            {
+              "hwmon": "hwmon4",
+              "is_cpu_package": false,
+              "label": "edge",
+              "name": "amdgpu",
+              "path": "/sys/class/hwmon/hwmon4/temp1_input",
+              "temp_celsius": 54.0,
+              "temp_millicelsius": 54000
+            },
+            {
+              "hwmon": "hwmon5",
+              "is_cpu_package": true,
+              "label": "Tctl",
+              "name": "k10temp",
+              "path": "/sys/class/hwmon/hwmon5/temp1_input",
+              "temp_celsius": 61.5,
+              "temp_millicelsius": 61500
+            },
+            {
+              "hwmon": "hwmon7",
+              "is_cpu_package": false,
+              "label": "",
+              "name": "iwlwifi_1",
+              "path": "/sys/class/hwmon/hwmon7/temp1_input",
+              "temp_celsius": 40.0,
+              "temp_millicelsius": 40000
+            }
+          ],
+          "latency_us": 4409,
+          "ok": true,
+          "source": "/sys/class/hwmon, /sys/class/thermal",
+          "thermal_zones": [
+            {
+              "path": "/sys/class/thermal/thermal_zone0",
+              "temp_celsius": 60.0,
+              "temp_millicelsius": 60000,
+              "type": "acpitz",
+              "zone": "thermal_zone0"
+            },
+            {
+              "path": "/sys/class/thermal/thermal_zone1",
+              "temp_celsius": 40.0,
+              "temp_millicelsius": 40000,
+              "type": "iwlwifi_1",
+              "zone": "thermal_zone1"
+            }
+          ]
+        }
+      },
+      "timestamp_utc": "2026-11-14T22:30:20Z",
+      "version": "0.1.0"
+    }
+  },
+  "dynamic_evaluation": {
+    "disk_works_plain": true,
+    "disk_works_unit": true,
+    "battery_works_plain": true,
+    "battery_works_unit": true,
+    "thermal_works_plain": true,
+    "thermal_works_unit": true,
+    "compositor_works_plain": true,
+    "compositor_works_unit": true,
+    "microphone_works_plain": true,
+    "microphone_works_unit": true,
+    "mic_in_use_flipped_on_capture": true,
+    "cpu_package_sensor": "hwmon5/temp1_input (k10temp Tctl)",
+    "protocol_providing_fullscreen": "zcosmic_toplevel_info_v1",
+    "idle_notifier_offered": true,
+    "session_lock_offered": true
+  },
+  "privacy_note": "App ids, window-title lengths and title hashes removed before commit (NFR-PRIV, lessons-from-v1 \u00a75). Raw output is not kept."
+}

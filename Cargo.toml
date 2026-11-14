@@ -10,8 +10,8 @@ members = [
     "crates/neuroos-testkit",
     "bench/ipc-stream",
 ]
-# The network-ban probe is its own workspace so it never enters the real build (P0-S05).
-exclude = ["tests/security/netban-probe"]
+# The network-ban probe and spike S-05 probe are separate workspaces so they never enter the real build (P0-S05, P0-S11).
+exclude = ["tests/security/netban-probe", "tests/spikes/s05-probe"]
 
 [workspace.package]
 version = "0.1.0"

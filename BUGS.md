@@ -7,6 +7,7 @@ Newest first. Closed bugs stay here with the commit that fixed them.
 
 | ID | Date | Severity | Part | Summary | Found by | Owner | Status | Fix |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| BUG-013 | 2026-11-15 | S3 | tests/spikes/s05-probe, scripts/spike-s05.sh | Probe writes app ids, window-title lengths and **unsalted SHA-256 hashes of window titles** into its reports (guessable; R0-10, lessons-from-v1 §5). Committed copies redacted by Claude. | Claude (S-05 check) | agy | Open | — |
 | BUG-012 | 2026-11-15 | S4 | neuroos-s04-probe | Test probe declares raw libc FFI (`unsafe extern "C"`) instead of using rustix; fine for a test fixture but against the spirit of rules.md §7. | Claude (S-04 check) | agy | Open | — |
 | BUG-011 | 2026-11-15 | S3 | scripts/spike-s04.sh | Harness hard-codes `works="yes"` for every stanza and prints the D-Bus and peer-unit findings as fixed text without measuring them; GPU conclusion (DeviceAllow) was wrong. Evidence for ADR-0002 is `reports/spikes/s04-verification-claude.md` until fixed. | Claude (S-04 check) | agy | Open | — |
 | BUG-010 | 2026-11-14 | S4 | scripts/fetch-models.sh | Uses python3, curl, sha256sum without checking they exist (review R-10). | agy review | agy | Fixed | fix(p0-s03) on `p0/review-fixes`; `fetch-models-test.sh` missing-tool check |

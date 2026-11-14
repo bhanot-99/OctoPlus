@@ -1,5 +1,7 @@
 # Build output
 /target/
+# Nested workspaces (probes) build into their own target folders.
+**/target/
 /build/
 /cpp/build/
 *.profraw

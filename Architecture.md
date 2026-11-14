@@ -472,7 +472,7 @@ Spike S-04 confirmed that every stanza above applies in user scope on the refere
 
 | Part | Read-only | Read-write |
 | :--- | :--- | :--- |
-| C1 | `/proc`, `/sys` (power, thermal), compositor and bus sockets, configured folders, config | own runtime folder |
+| C1 | `/proc`, `/sys` (power, thermal), Wayland socket, session-bus socket (MPRIS) — not the system bus (ADR-0007), configured folders, config | own runtime folder |
 | C2 | voice models, PipeWire socket and config, config | own runtime folder |
 | C3 | embedding model, spool (read + remove), config | `storage/`, `backups/`, own runtime folder |
 | C4 | language model, config; GPU path only: the driver files and device nodes listed in ADR-0008 | own runtime folder |
@@ -719,5 +719,5 @@ Spikes run in Phase 0. Each ends in an ADR that states what was measured, on wha
 | 0004 | Storage: SQLite only, exact scan | After S-01 |
 | 0005 | Model, prompt layout, latency and memory targets | After S-02 |
 | 0006 | Build order | To write in Phase 0 |
-| 0007 | Health and context sensor sources | After S-05 |
+| 0007 | Health and context sensor sources | Proposed 2026-11-15 (S-05 done) |
 | 0008 | Optional GPU acceleration for inference (C4) | Accepted 2026-11-14; backend and enabling after S-02 and S-04 |
