@@ -1,0 +1,52 @@
+// C5 neuroos-knowledge (PRD §5.4–5.7). Envelope range 120–159.
+syntax = "proto3";
+package neuroos.v1;
+
+import "neuroos/v1/common.proto";
+
+// neuroosctl ask (FR-CLI-01). Answered by AnswerChunk frames and AnswerDone.
+message AskRequest {
+  string text = 1;
+  Origin origin = 2;
+}
+
+message AnswerChunk {
+  string text = 1;
+}
+
+enum Route {
+  ROUTE_UNSPECIFIED = 0;
+  ROUTE_ACTION = 1;
+  ROUTE_DESKTOP_ANSWER = 2;
+  ROUTE_GENERAL_CHAT = 3;
+  ROUTE_NUDGE_REPLY = 4;
+}
+
+message AnswerDone {
+  Route route = 1;
+  Taint taint = 2;
+  bool used_web = 3;
+}
+
+message NudgeRuleState {
+  string rule_id = 1;
+  bool enabled = 2;
+  uint64 snoozed_until_ns = 3;
+  uint64 last_fired_ns = 4;
+}
+
+message NudgeListRequest {}
+
+message NudgeList {
+  repeated NudgeRuleState rules = 1;
+}
+
+message NudgeSetEnabled {
+  string rule_id = 1;
+  bool enabled = 2;
+}
+
+// neuroosctl nudges test: deliver one rule's line now, bypassing conditions.
+message NudgeTest {
+  string rule_id = 1;
+}

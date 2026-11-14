@@ -27,4 +27,6 @@ enable_testing()
 find_package(GTest REQUIRED)
 include(GoogleTest)
 
+add_subdirectory(proto)
 add_subdirectory(libneuroos)
+add_subdirectory(tools)

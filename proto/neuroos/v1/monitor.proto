@@ -1,0 +1,125 @@
+// C1 neuroos-monitor (PRD §5.2). Envelope range 20–39.
+// C1 emits raw events and filters only by pause and the exclusion list (AB-5).
+syntax = "proto3";
+package neuroos.v1;
+
+message FocusChanged {
+  string app_id = 1;
+  string title = 2;
+  uint32 pid = 3;              // best-effort hint only (lessons-from-v1 §5)
+  bool fullscreen = 4;
+  bool fullscreen_known = 5;   // false when the compositor does not report it
+}
+
+message IdleChanged {
+  bool idle = 1;
+}
+
+message LockChanged {
+  bool locked = 1;
+}
+
+enum PlaybackState {
+  PLAYBACK_STATE_UNSPECIFIED = 0;
+  PLAYBACK_STATE_PLAYING = 1;
+  PLAYBACK_STATE_PAUSED = 2;
+  PLAYBACK_STATE_STOPPED = 3;
+}
+
+message MediaChanged {
+  string player = 1;
+  PlaybackState state = 2;
+  string title = 3;
+  string artist = 4;
+}
+
+message ResourceSample {
+  double cpu_percent = 1;
+  uint64 mem_total_bytes = 2;
+  uint64 mem_available_bytes = 3;
+  string top_process = 4;
+  uint64 top_process_rss_bytes = 5;
+}
+
+message DiskSample {
+  string mount_point = 1;
+  uint64 total_bytes = 2;
+  uint64 used_bytes = 3;
+  uint64 free_bytes = 4;
+}
+
+enum ChargeState {
+  CHARGE_STATE_UNSPECIFIED = 0;
+  CHARGE_STATE_CHARGING = 1;
+  CHARGE_STATE_DISCHARGING = 2;
+  CHARGE_STATE_FULL = 3;
+  CHARGE_STATE_NOT_CHARGING = 4;
+}
+
+message BatterySample {
+  double percent = 1;
+  ChargeState state = 2;
+  uint64 time_estimate_s = 3;
+  bool time_estimate_known = 4;
+  bool on_ac = 5;
+}
+
+message ThermalSample {
+  string sensor = 1;
+  double celsius = 2;
+}
+
+message ProcessNode {
+  uint32 pid = 1;
+  uint32 ppid = 2;
+  string name = 3;
+}
+
+message ProcessTree {
+  uint32 root_pid = 1;
+  repeated ProcessNode nodes = 2;
+}
+
+enum FileActivityKind {
+  FILE_ACTIVITY_KIND_UNSPECIFIED = 0;
+  FILE_ACTIVITY_KIND_CREATED = 1;
+  FILE_ACTIVITY_KIND_MODIFIED = 2;
+  FILE_ACTIVITY_KIND_REMOVED = 3;
+}
+
+message FileActivity {
+  string path = 1;
+  FileActivityKind kind = 2;
+}
+
+// One raw observation (FR-MON-09).
+message MonitorEvent {
+  uint64 observed_at_ns = 1;
+  oneof event {
+    FocusChanged focus = 10;
+    IdleChanged idle = 11;
+    LockChanged lock = 12;
+    MediaChanged media = 13;
+    ResourceSample resources = 14;
+    DiskSample disk = 15;
+    BatterySample battery = 16;
+    ThermalSample thermal = 17;
+    ProcessTree process_tree = 18;
+    FileActivity file = 19;
+  }
+}
+
+// C3 opens a stream of MonitorEvent frames on stream.sock.
+message MonitorSubscribe {}
+
+// Pause sensing and listening (FR-PRV-01). duration_ns 0 means until resumed.
+message PauseRequest {
+  uint64 duration_ns = 1;
+}
+
+message ResumeRequest {}
+
+message PrivacyState {
+  bool paused = 1;
+  uint64 paused_until_ns = 2;   // 0 when paused indefinitely or not paused
+}

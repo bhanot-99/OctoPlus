@@ -1,0 +1,111 @@
+// Every frame on every socket is one Envelope (Architecture §5.3).
+// Field ranges: 10–19 common · 20–39 C1 · 40–59 C2 · 60–99 C3 · 100–119 C4 ·
+// 120–159 C5 · 160–199 C6 · 200–219 C7 · 220–239 healthd.
+// Versioning (§5.4): additive changes only after Phase 1; anything else is neuroos.v2.
+syntax = "proto3";
+package neuroos.v1;
+
+import "neuroos/v1/common.proto";
+import "neuroos/v1/health.proto";
+import "neuroos/v1/monitor.proto";
+import "neuroos/v1/voice.proto";
+import "neuroos/v1/storage.proto";
+import "neuroos/v1/inference.proto";
+import "neuroos/v1/knowledge.proto";
+import "neuroos/v1/kernel.proto";
+import "neuroos/v1/fetcher.proto";
+import "neuroos/v1/healthd.proto";
+
+message Envelope {
+  uint32 schema_version = 1;
+  string trace_id = 2;      // carried end to end (NFR-OPS-01)
+  uint64 request_id = 3;    // 0 for push events
+  uint64 sent_at_ns = 4;    // UTC epoch nanoseconds
+  bool end_of_stream = 5;   // last frame of a streamed response (AB-12)
+
+  oneof body {
+    // common 10–19
+    Error error = 10;
+    Cancel cancel = 11;
+    Ping ping = 12;
+    Pong pong = 13;
+    Ack ack = 14;
+    HealthRequest health_request = 15;
+    HealthResponse health_response = 16;
+
+    // C1 monitor 20–39
+    MonitorEvent monitor_event = 20;
+    MonitorSubscribe monitor_subscribe = 21;
+    PauseRequest pause_request = 22;
+    ResumeRequest resume_request = 23;
+    PrivacyState privacy_state = 24;
+
+    // C2 voice 40–59
+    VoiceCommand voice_command = 40;
+    PreambleRequest preamble_request = 41;
+    SpeakChunk speak_chunk = 42;
+    SpeakNudge speak_nudge = 43;
+    SpeakStatus speak_status = 44;
+    BargeIn barge_in = 45;
+    VoiceStatusRequest voice_status_request = 46;
+    VoiceStatus voice_status = 47;
+
+    // C3 storage 60–99
+    QueryFocusHistory query_focus_history = 60;
+    FocusHistoryResult focus_history_result = 61;
+    QueryHybrid query_hybrid = 62;
+    HybridResult hybrid_result = 63;
+    QueryActivity query_activity = 64;
+    ActivityResult activity_result = 65;
+    QueryHealthSignals query_health_signals = 66;
+    HealthSignals health_signals = 67;
+    StoreInteraction store_interaction = 68;
+    StoreNudgeLog store_nudge_log = 69;
+    ForgetRequest forget_request = 70;
+    ForgetResult forget_result = 71;
+    ProfileListRequest profile_list_request = 72;
+    ProfileFacts profile_facts = 73;
+    ProfileAdd profile_add = 74;
+    ProfileRemove profile_remove = 75;
+    RunLifecycleJob run_lifecycle_job = 76;
+    LifecycleResult lifecycle_result = 77;
+
+    // C4 inference 100–119
+    GenerateRequest generate_request = 100;
+    TokenChunk token_chunk = 101;
+    GenerateDone generate_done = 102;
+    BenchRequest bench_request = 103;
+    BenchResult bench_result = 104;
+
+    // C5 knowledge 120–159
+    AskRequest ask_request = 120;
+    AnswerChunk answer_chunk = 121;
+    AnswerDone answer_done = 122;
+    NudgeListRequest nudge_list_request = 123;
+    NudgeList nudge_list = 124;
+    NudgeSetEnabled nudge_set_enabled = 125;
+    NudgeTest nudge_test = 126;
+
+    // C6 kernel 160–199
+    EvaluateRequest evaluate_request = 160;
+    EvaluateResult evaluate_result = 161;
+    DispatchRequest dispatch_request = 162;
+    DispatchResult dispatch_result = 163;
+    NotifyRequest notify_request = 164;
+    AuditTailRequest audit_tail_request = 165;
+    AuditRecords audit_records = 166;
+    AuditVerifyRequest audit_verify_request = 167;
+    AuditVerifyResult audit_verify_result = 168;
+    EgressListRequest egress_list_request = 169;
+    EgressRecords egress_records = 170;
+
+    // C7 fetcher 200–219
+    FetchRequest fetch_request = 200;
+    SearchRequest search_request = 201;
+    FetchResult fetch_result = 202;
+
+    // healthd 220–239
+    StatusRequest status_request = 220;
+    StatusReport status_report = 221;
+  }
+}

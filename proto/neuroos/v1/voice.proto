@@ -1,0 +1,67 @@
+// C2 neuroos-voice (PRD §5.1). Envelope range 40–59.
+syntax = "proto3";
+package neuroos.v1;
+
+import "neuroos/v1/common.proto";
+
+// C2 -> C5 after the wake word or inside the follow-up window (FR-VOI-04).
+message VoiceCommand {
+  string text = 1;
+  uint64 t_speech_start_ns = 2;
+  uint64 t_speech_end_ns = 3;
+  bool in_follow_up = 4;
+  string nudge_rule_id = 5;     // set when this replies to a nudge
+}
+
+enum PreambleKind {
+  PREAMBLE_KIND_UNSPECIFIED = 0;
+  PREAMBLE_KIND_THINKING = 1;
+  PREAMBLE_KIND_LOOKING = 2;
+  PREAMBLE_KIND_ACKNOWLEDGE = 3;
+}
+
+// C5 -> C2: play a cached preamble now (FR-VOI-05).
+message PreambleRequest {
+  PreambleKind kind = 1;
+}
+
+// C5 -> C2: one sentence of an answer, streamed (FR-VOI-06, FR-KNO-08).
+message SpeakChunk {
+  string text = 1;
+  uint32 sequence = 2;
+}
+
+// C5 -> C2: an unprompted line from a fixed template and numbers (FR-VOI-11, R0-6).
+message SpeakNudge {
+  string rule_id = 1;
+  string template_id = 2;
+  repeated TemplateArg args = 3;
+}
+
+enum StatusLine {
+  STATUS_LINE_UNSPECIFIED = 0;
+  STATUS_LINE_PART_UNAVAILABLE = 1;
+  STATUS_LINE_NOT_SURE = 2;
+  STATUS_LINE_ERROR = 3;
+}
+
+// C5 -> C2: play a cached status clip (FR-KNO-10).
+message SpeakStatus {
+  StatusLine line = 1;
+}
+
+// C2 -> C5: the user spoke during playback (FR-VOI-07).
+message BargeIn {
+  uint64 at_ns = 1;
+}
+
+message VoiceStatusRequest {}
+
+// FR-VOI-10.
+message VoiceStatus {
+  bool turn_in_progress = 1;
+  bool speaking = 2;
+  bool follow_up_open = 3;
+  bool mic_in_use_by_other = 4;
+  bool capture_running = 5;
+}

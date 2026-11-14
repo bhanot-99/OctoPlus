@@ -50,7 +50,7 @@ deny:
     scripts/check-netban.sh
 
 # Coverage gates, NFR-QA-01: Rust lines >= 80 %, C++ lines >= 70 %. Clean builds only.
-cov: preflight
+cov: build
     cargo llvm-cov clean --workspace
     cargo llvm-cov nextest --workspace --locked --fail-under-lines 80
     rm -rf cpp/build/coverage
