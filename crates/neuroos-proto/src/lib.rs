@@ -20,4 +20,4 @@ pub mod v1 {
 /// Wire schema version carried in [`v1::Envelope::schema_version`].
 pub const SCHEMA_VERSION: u32 = 1;
 
-pub use prost::Message;
+pub use prost::{DecodeError, Message};

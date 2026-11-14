@@ -1,0 +1,9 @@
+# Test fixtures (contract and IPC peer tools), never shipped: same relaxations as
+# libneuroos/tests, plus exceptions may end main() (a crash fails the calling test).
+InheritParentConfig: true
+Checks: >
+  -readability-function-cognitive-complexity,
+  -bugprone-unchecked-optional-access,
+  -bugprone-exception-escape,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -concurrency-mt-unsafe

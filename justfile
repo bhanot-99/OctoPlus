@@ -59,6 +59,13 @@ cov: build
     gcovr --root cpp --filter 'cpp/libneuroos/src/' --object-directory cpp/build/coverage \
         --gcov-ignore-parse-errors=negative_hits.warn --fail-under-line 70 --print-summary
 
+# C++ tests under AddressSanitizer+UBSan and ThreadSanitizer (Architecture §14).
+sanitize: preflight
+    cd cpp && cmake --preset asan && cmake --build --preset asan --parallel
+    cd cpp && ctest --preset asan --no-tests=error
+    cd cpp && cmake --preset tsan && cmake --build --preset tsan --parallel
+    cd cpp && ctest --preset tsan --no-tests=error
+
 # Benchmarks; results go to reports/bench/ (rules.md §9.6).
 bench: build
     cargo bench --workspace --locked
@@ -77,5 +84,5 @@ prune:
 ci-hosted: fmt-check lint test deny
 
 # Full local gate. Every step must run to the end (rules.md §2.9).
-ci: fmt-check lint test deny cov
+ci: fmt-check lint test deny cov sanitize
     @echo "just ci: ALL GREEN"

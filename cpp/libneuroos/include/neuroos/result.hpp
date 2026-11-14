@@ -8,9 +8,13 @@
 namespace neuroos {
 
 // Why an operation failed. `message` never contains user content (rules.md §6.3).
-struct Error {
+// `code` is a neuroos.v1.ErrorCode value (0 = unspecified).
+// Every field has a default; the analyzer cannot see through std::variant copies
+// and reports them as uninitialised, hence the suppression.
+struct Error {  // NOLINT(clang-analyzer-core.uninitialized.Assign)
   std::string message;
   bool retryable = false;
+  int code = 0;
 };
 
 // Either a value or an Error. Minimal on purpose; C++20 has no std::expected.

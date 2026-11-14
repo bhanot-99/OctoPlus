@@ -1,0 +1,14 @@
+# Tests only: GoogleTest macros inflate complexity and guard optionals with ASSERT in
+# ways the analyser cannot see; fixtures expose members by design. Library code keeps
+# the full rule set from the repository root.
+InheritParentConfig: true
+Checks: >
+  -readability-function-cognitive-complexity,
+  -bugprone-unchecked-optional-access,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-pro-type-vararg,
+  -cert-err33-c,
+  -concurrency-mt-unsafe,
+  -misc-use-anonymous-namespace

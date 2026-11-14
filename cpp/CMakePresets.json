@@ -20,7 +20,11 @@
     },
     {
       "name": "tsan", "inherits": "base",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "CMAKE_CXX_FLAGS": "-fsanitize=thread -fno-omit-frame-pointer" }
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS": "-fsanitize=thread -fno-omit-frame-pointer",
+        "CMAKE_CROSSCOMPILING_EMULATOR": "setarch;x86_64;-R"
+      }
     },
     {
       "name": "coverage", "inherits": "base",

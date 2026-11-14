@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
     "crates/neuroos-common",
+    "crates/neuroos-ipc",
     "crates/neuroos-proto",
     "crates/neuroos-taint",
 ]
@@ -18,12 +19,16 @@ publish = false
 # Only crates from the Architecture §14 allowlist, and only once a crate uses them. A new entry needs a justification (rules.md §5).
 [workspace.dependencies]
 bitflags = "2.13.2"
+getrandom = "0.4.3"
 jiff = "0.2.43"
 prost = "0.14.6"
 prost-build = "0.14.6"
+rustix = { version = "1.1.6", features = ["process", "fs", "param"] }
 serde = { version = "1.0.229", features = ["derive"] }
 thiserror = "2.0.21"
+tokio = { version = "1.54.1", features = ["rt", "rt-multi-thread", "net", "io-util", "time", "sync", "macros"] }
 toml = "1.2.1"
+tracing = "0.1.44"
 tracing-journald = "0.3.2"
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["std", "fmt", "env-filter", "registry"] }
 # Tests
