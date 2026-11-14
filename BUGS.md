@@ -7,6 +7,7 @@ Newest first. Closed bugs stay here with the commit that fixed them.
 
 | ID | Date | Severity | Part | Summary | Found by | Owner | Status | Fix |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| BUG-014 | 2026-11-15 | S4 | bench/storage-scan | Query "total" times both the 1-thread and the 4-thread scan, overstating the path by one scan (pessimistic). Also: agy's S-01 report omitted the required `just ci`, which was failing (coverage counted bench crates; fixed by Claude in the justfile). | Claude (S-01 check) | agy | Open | — |
 | BUG-013 | 2026-11-15 | S3 | tests/spikes/s05-probe, scripts/spike-s05.sh | Probe writes app ids, window-title lengths and **unsalted SHA-256 hashes of window titles** into its reports (guessable; R0-10, lessons-from-v1 §5). Committed copies redacted by Claude. | Claude (S-05 check) | agy | Open | — |
 | BUG-012 | 2026-11-15 | S4 | neuroos-s04-probe | Test probe declares raw libc FFI (`unsafe extern "C"`) instead of using rustix; fine for a test fixture but against the spirit of rules.md §7. | Claude (S-04 check) | agy | Open | — |
 | BUG-011 | 2026-11-15 | S3 | scripts/spike-s04.sh | Harness hard-codes `works="yes"` for every stanza and prints the D-Bus and peer-unit findings as fixed text without measuring them; GPU conclusion (DeviceAllow) was wrong. Evidence for ADR-0002 is `reports/spikes/s04-verification-claude.md` until fixed. | Claude (S-04 check) | agy | Open | — |

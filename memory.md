@@ -13,7 +13,7 @@
 | Last updated | 2026-11-14 |
 | Project stage | **Phase 0 in progress.** Documents v2.0 are the approved baseline (owner sign-off 2026-11-14). |
 | Current phase | Phase 0 — Foundation and spikes (in progress since 2026-11-14) |
-| Current story | P0-S07 spike S-01 (agy building); S-02 awaits owner approval |
+| Current story | P0-S08 spike S-02 — waiting for owner approval (downloads, long runs, model pick) |
 | Overall progress | 0 / 11 phases |
 | Health | 🟦 Foundation built (P0-S01…S06), `just ci` and hosted CI green; spikes not run |
 | Next milestone | M0 — proven foundations |
@@ -64,7 +64,7 @@ Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done �
 | P0-S04 | Health endpoint with real status | Done | Claude | agy (review 2026-11-14) + Claude (verified fixes) |
 | P0-S05 | Network-crate ban in the build | Done | Claude | agy (review 2026-11-14) + Claude (verified fixes) |
 | P0-S06 | Model fetch and verify | Done | Claude | agy (review 2026-11-14) + Claude (verified fixes) |
-| P0-S07 | Spike S-01: storage scan | Backlog | — | — |
+| P0-S07 | Spike S-01: storage scan | Done (ADR-0004 awaits owner) | agy | Claude (independent rerun) |
 | P0-S08 | Spike S-02: model bake-off | Backlog | — | — |
 | P0-S09 | Spike S-03: streamed frames | Done (ADR-0003 awaits owner) | agy | Claude (independent rerun) |
 | P0-S10 | Spike S-04: unit hardening and socket isolation | Done (ADR-0002 awaits owner) | agy (+ Claude early findings) | Claude (re-measured; corrected 4 claims) |
@@ -152,6 +152,7 @@ Newest first. One row per work session.
 
 | Date | Summary | Stories | Builder / Checker | Next step |
 | :--- | :--- | :--- | :--- | :--- |
+| 2026-11-15 | S-01 done: hybrid query at 30k chunks ≈ 13 ms p50 / 16 ms p99 warm (target 25/50); p99 40–47 ms with a concurrent writer (Phase 4 risk); C3 ≈ 205 MiB steady without embedding model. ADR-0004 proposed. Benches excluded from coverage gate. | P0-S07 | agy / Claude | S-02 (owner) |
 | 2026-11-15 | S-05 done: disk/battery/heat from /proc+/sys, window+fullscreen via zcosmic_toplevel_info_v1, idle via ext_idle_notifier_v1, mic-in-use via PipeWire — all work inside the hardened unit with no system bus. Probe leaked title hashes/app ids into reports (BUG-013), redacted before commit. ADR-0007 proposed. | P0-S11 | agy / Claude | S-01 |
 | 2026-11-15 | S-04 done: all §8.1 stanzas apply in user scope; 3 additions (landlock syscalls, hide system D-Bus — DNS leak via resolve1, BindPaths for /run/user); DeviceAllow not enforced in user scope → GPU via PrivateDevices + bound NVIDIA nodes. agy's report had 4 unmeasured/wrong claims, re-measured by Claude (BUG-011). ADR-0002 proposed. | P0-S10 | agy / Claude | S-05 |
 | 2026-11-15 | S-03 done: token-frame p99 ≈ 0.58 ms (target ≤ 1 ms), cancel p99 < 0.1 ms, reproduced by Claude; ADR-0003 proposed. | P0-S09 | agy / Claude | S-04 |

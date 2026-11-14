@@ -1,0 +1,302 @@
+{
+  "spike": "S-01",
+  "story": "P0-S07",
+  "target_nfr": "NFR-PERF-04",
+  "fts_design": "FTS5 external content table (content='chunks', content_rowid='id')",
+  "fts_rationale": "External content table references chunks(text) directly without duplicating text storage on disk, minimizing database size while enabling standard BM25 ranking.",
+  "conditions": {
+    "date_utc": "2026-11-14T23:30:01Z",
+    "git_commit": "9fb73c14071bf9ab9d5af4fcd8b6768d4e872dfe",
+    "kernel": "Linux 7.2.15-76070215-generic x86_64",
+    "cpu_model": "AMD Ryzen 7 5800H with Radeon Graphics",
+    "governor": "performance",
+    "cpu_mhz_avg": "3539.95",
+    "loadavg_before": "0.53 0.97 1.07 1/1974 487114",
+    "loadavg_after": "1.14 1.07 1.10 1/1973 499788",
+    "free_ram_before_mib": 1962.62,
+    "free_ram_after_mib": 1984.76,
+    "total_duration_secs": 57
+  },
+  "targets": {
+    "nfr_perf_04_hybrid_query_p50_ms": 25.0,
+    "nfr_perf_04_hybrid_query_p99_ms": 50.0,
+    "c3_steady_rss_budget_mib": 240.0,
+    "c3_hard_limit_rss_mib": 320.0
+  },
+  "verdicts": {
+    "nfr_perf_04_met": true,
+    "negative_control_passed": true,
+    "c3_rss_budget_met": true
+  },
+  "scales": [
+    {
+      "n_chunks": 5000,
+      "build_time_secs": 0.169330412,
+      "db_size_bytes": 8855552,
+      "db_wal_size_bytes": 4828672,
+      "load_time_ms": 16.083314,
+      "matrix_memory_bytes": 7680000,
+      "cold_first_10_queries_ms": [
+        2.4014100000000003,
+        2.056257,
+        1.864435,
+        1.964023,
+        1.85705,
+        2.000511,
+        1.9640130000000002,
+        2.0894199999999996,
+        1.8111430000000002,
+        1.942302
+      ],
+      "warm_query_stats": {
+        "scan_1t": {
+          "count": 1000,
+          "p50_ms": 1.331968,
+          "p95_ms": 1.435163,
+          "p99_ms": 1.590417,
+          "max_ms": 1.9265720000000002,
+          "min_ms": 1.307833,
+          "mean_ms": 1.345422707
+        },
+        "scan_4t": {
+          "count": 1000,
+          "p50_ms": 0.517719,
+          "p95_ms": 0.552925,
+          "p99_ms": 0.6619510000000001,
+          "max_ms": 0.958422,
+          "min_ms": 0.44145399999999996,
+          "mean_ms": 0.5225706279999999
+        },
+        "fts": {
+          "count": 1000,
+          "p50_ms": 0.542937,
+          "p95_ms": 0.874584,
+          "p99_ms": 1.0491730000000001,
+          "max_ms": 1.330565,
+          "min_ms": 0.42748800000000003,
+          "mean_ms": 0.6132083500000002
+        },
+        "fuse": {
+          "count": 1000,
+          "p50_ms": 0.004749,
+          "p95_ms": 0.006262,
+          "p99_ms": 0.007524,
+          "max_ms": 0.013175,
+          "min_ms": 0.003967,
+          "mean_ms": 0.00493216800000001
+        },
+        "fetch": {
+          "count": 1000,
+          "p50_ms": 0.019857999999999997,
+          "p95_ms": 0.026651,
+          "p99_ms": 0.037469999999999996,
+          "max_ms": 0.048833,
+          "min_ms": 0.017573,
+          "mean_ms": 0.020788440999999987
+        },
+        "total": {
+          "count": 1000,
+          "p50_ms": 2.458358,
+          "p95_ms": 2.8419830000000004,
+          "p99_ms": 3.196894,
+          "max_ms": 3.455863,
+          "min_ms": 2.263519,
+          "mean_ms": 2.5072607530000006
+        }
+      },
+      "post_burst_query_stats": null,
+      "concurrency_query_stats": null,
+      "memory_rss_after_load_mib": 34.62890625,
+      "memory_hwm_after_load_mib": 34.62890625,
+      "memory_rss_after_queries_mib": 37.75390625,
+      "memory_hwm_after_queries_mib": 37.75390625
+    },
+    {
+      "n_chunks": 15000,
+      "build_time_secs": 0.531209078,
+      "db_size_bytes": 30892032,
+      "db_wal_size_bytes": 5496112,
+      "load_time_ms": 47.58101,
+      "matrix_memory_bytes": 23040000,
+      "cold_first_10_queries_ms": [
+        6.123616,
+        6.0224459999999995,
+        4.910743,
+        6.048485,
+        4.923317,
+        5.784996,
+        5.878343,
+        6.186475000000001,
+        5.377095,
+        5.929298999999999
+      ],
+      "warm_query_stats": {
+        "scan_1t": {
+          "count": 1000,
+          "p50_ms": 3.9746340000000004,
+          "p95_ms": 4.434563,
+          "p99_ms": 4.748206,
+          "max_ms": 5.223565000000001,
+          "min_ms": 3.913648,
+          "mean_ms": 4.0293106080000065
+        },
+        "scan_4t": {
+          "count": 1000,
+          "p50_ms": 1.352157,
+          "p95_ms": 1.445071,
+          "p99_ms": 2.2821640000000003,
+          "max_ms": 2.7343889999999997,
+          "min_ms": 1.234934,
+          "mean_ms": 1.3662722619999998
+        },
+        "fts": {
+          "count": 1000,
+          "p50_ms": 1.391971,
+          "p95_ms": 2.2710339999999998,
+          "p99_ms": 2.641264,
+          "max_ms": 3.437198,
+          "min_ms": 1.0319610000000001,
+          "mean_ms": 1.5955824540000014
+        },
+        "fuse": {
+          "count": 1000,
+          "p50_ms": 0.005741,
+          "p95_ms": 0.007324,
+          "p99_ms": 0.01032,
+          "max_ms": 0.013796,
+          "min_ms": 0.004428,
+          "mean_ms": 0.005926767000000015
+        },
+        "fetch": {
+          "count": 1000,
+          "p50_ms": 0.023655,
+          "p95_ms": 0.029686,
+          "p99_ms": 0.038433,
+          "max_ms": 0.053361,
+          "min_ms": 0.021370999999999998,
+          "mean_ms": 0.024604833999999992
+        },
+        "total": {
+          "count": 1000,
+          "p50_ms": 6.793252,
+          "p95_ms": 8.002768,
+          "p99_ms": 8.904674,
+          "max_ms": 9.855812,
+          "min_ms": 6.3025340000000005,
+          "mean_ms": 7.022297324000002
+        }
+      },
+      "post_burst_query_stats": null,
+      "concurrency_query_stats": null,
+      "memory_rss_after_load_mib": 93.8203125,
+      "memory_hwm_after_load_mib": 93.8203125,
+      "memory_rss_after_queries_mib": 97.97265625,
+      "memory_hwm_after_queries_mib": 97.97265625
+    },
+    {
+      "n_chunks": 30000,
+      "build_time_secs": 1.082809866,
+      "db_size_bytes": 66228224,
+      "db_wal_size_bytes": 5516712,
+      "load_time_ms": 93.433152,
+      "matrix_memory_bytes": 46080000,
+      "cold_first_10_queries_ms": [
+        12.156452,
+        11.896661,
+        9.703674000000001,
+        11.75378,
+        9.769779,
+        11.537732,
+        12.070579,
+        12.596162,
+        10.189833,
+        10.582645999999999
+      ],
+      "warm_query_stats": {
+        "scan_1t": {
+          "count": 1000,
+          "p50_ms": 7.990584999999999,
+          "p95_ms": 8.714575,
+          "p99_ms": 9.002528,
+          "max_ms": 9.372147,
+          "min_ms": 7.871569999999999,
+          "mean_ms": 8.067375457999997
+        },
+        "scan_4t": {
+          "count": 1000,
+          "p50_ms": 2.4578059999999997,
+          "p95_ms": 2.785215,
+          "p99_ms": 4.126762,
+          "max_ms": 4.607661,
+          "min_ms": 2.2516469999999997,
+          "mean_ms": 2.5137315849999946
+        },
+        "fts": {
+          "count": 1000,
+          "p50_ms": 2.442096,
+          "p95_ms": 4.25798,
+          "p99_ms": 4.801116,
+          "max_ms": 5.285041,
+          "min_ms": 1.8552270000000002,
+          "mean_ms": 2.931781538000001
+        },
+        "fuse": {
+          "count": 1000,
+          "p50_ms": 0.006783,
+          "p95_ms": 0.008576,
+          "p99_ms": 0.014507,
+          "max_ms": 0.020729,
+          "min_ms": 0.004699,
+          "mean_ms": 0.006989851999999995
+        },
+        "fetch": {
+          "count": 1000,
+          "p50_ms": 0.024226,
+          "p95_ms": 0.031399,
+          "p99_ms": 0.043372,
+          "max_ms": 0.066084,
+          "min_ms": 0.02149,
+          "mean_ms": 0.02564188200000001
+        },
+        "total": {
+          "count": 1000,
+          "p50_ms": 13.007591000000001,
+          "p95_ms": 15.146143,
+          "p99_ms": 16.310354,
+          "max_ms": 17.153498,
+          "min_ms": 12.169386000000001,
+          "mean_ms": 13.54636356599999
+        }
+      },
+      "post_burst_query_stats": {
+        "count": 100,
+        "p50_ms": 10.882473000000001,
+        "p95_ms": 13.485494000000001,
+        "p99_ms": 13.832509,
+        "max_ms": 13.832509,
+        "min_ms": 10.126724,
+        "mean_ms": 11.502633410000001
+      },
+      "concurrency_query_stats": {
+        "count": 1000,
+        "p50_ms": 19.579725,
+        "p95_ms": 41.076934,
+        "p99_ms": 47.18403,
+        "max_ms": 49.604665,
+        "min_ms": 10.650684,
+        "mean_ms": 21.61988216300003
+      },
+      "memory_rss_after_load_mib": 179.27734375,
+      "memory_hwm_after_load_mib": 179.27734375,
+      "memory_rss_after_queries_mib": 205.671875,
+      "memory_hwm_after_queries_mib": 250.28125
+    }
+  ],
+  "negative_control": {
+    "inject_sleep_ms": 30,
+    "n_chunks": 30000,
+    "warm_queries": 100,
+    "measured_p50_ms": 43.090411,
+    "detected_latency_gt_25ms": true
+  }
+}

@@ -9,6 +9,7 @@ members = [
     "crates/neuroos-taint",
     "crates/neuroos-testkit",
     "bench/ipc-stream",
+    "bench/storage-scan",
 ]
 # The network-ban probe and spike S-05 probe are separate workspaces so they never enter the real build (P0-S05, P0-S11).
 exclude = ["tests/security/netban-probe", "tests/spikes/s05-probe"]
@@ -30,6 +31,7 @@ jiff = "0.2.43"
 landlock = "0.4.7"
 prost = "0.14.6"
 prost-build = "0.14.6"
+rusqlite = { version = "0.42.0", features = ["bundled"] }
 rustix = { version = "1.1.6", features = ["process", "fs", "param", "time"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"

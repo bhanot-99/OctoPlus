@@ -60,7 +60,8 @@ deny:
 # Coverage gates, NFR-QA-01: Rust lines >= 80 %, C++ lines >= 70 %. Clean builds only.
 cov: build
     cargo llvm-cov clean --workspace
-    cargo llvm-cov nextest --workspace --locked --fail-under-lines 80
+    # Benchmark harnesses in bench/ are measuring tools, not product code: excluded from the gate.
+    cargo llvm-cov nextest --workspace --exclude neuroos-bench-ipc-stream --exclude neuroos-bench-storage-scan --locked --fail-under-lines 80
     rm -rf cpp/build/coverage
     cd cpp && cmake --preset coverage && cmake --build --preset coverage --parallel
     cd cpp && ctest --preset coverage --no-tests=error
@@ -77,6 +78,10 @@ sanitize: preflight
 # Benchmarks; results go to reports/bench/ (rules.md §9.6).
 bench: build
     cargo bench --workspace --locked
+
+# Spike S-01: SQLite FTS5 and exact in-memory vector scan benchmark (P0-S07).
+bench-s01:
+    scripts/bench-s01.sh
 
 # Spike S-03: measure streamed text frames and cancel latency (P0-S09).
 bench-s03:
