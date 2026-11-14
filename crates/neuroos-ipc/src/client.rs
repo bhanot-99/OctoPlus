@@ -15,7 +15,7 @@ use neuroos_proto::v1::envelope::Body;
 use neuroos_proto::v1::{Cancel, Envelope};
 use tokio::net::UnixStream;
 use tokio::net::unix::OwnedReadHalf;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, watch};
 use tokio::time::Instant;
 use tracing::debug;
 
@@ -28,6 +28,17 @@ const STREAM_QUEUE: usize = 64;
 const WRITE_QUEUE: usize = 64;
 
 type Pending = Arc<Mutex<HashMap<u64, mpsc::Sender<Envelope>>>>;
+/// Why the server closed the connection, if it said (e.g. peer rejected).
+type CloseReason = Arc<Mutex<Option<neuroos_proto::v1::Error>>>;
+
+/// The error for a closed connection: the server's stated reason, else `Closed`.
+fn closed_error(reason: &CloseReason) -> IpcError {
+    reason
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .as_ref()
+        .map_or(IpcError::Closed, IpcError::from_wire)
+}
 
 /// A connected client.
 #[derive(Debug)]
@@ -36,7 +47,12 @@ pub struct Client {
     pending: Pending,
     next_id: AtomicU64,
     closed: Arc<AtomicBool>,
+    reason: CloseReason,
+    reader_done: watch::Receiver<bool>,
 }
+
+/// How long a failed send waits for the reader to record the server's reason.
+const CLOSE_REASON_WAIT: Duration = Duration::from_millis(200);
 
 /// Responses to one request, ending with the server's end frame.
 #[derive(Debug)]
@@ -48,6 +64,7 @@ pub struct ResponseStream {
     trace_id: String,
     deadline: Instant,
     finished: bool,
+    reason: CloseReason,
 }
 
 impl Client {
@@ -63,8 +80,15 @@ impl Client {
         let (tx, mut rx) = mpsc::channel::<Envelope>(WRITE_QUEUE);
         let pending: Pending = Arc::new(Mutex::new(HashMap::new()));
         let closed = Arc::new(AtomicBool::new(false));
+        let reason: CloseReason = Arc::new(Mutex::new(None));
+        let (pending_r, closed_r, reason_r) = (
+            Arc::clone(&pending),
+            Arc::clone(&closed),
+            Arc::clone(&reason),
+        );
 
-        let closed_w = Arc::clone(&closed);
+        // Only the reader decides the connection is closed, after recording any
+        // reason the server gave, so callers always see that reason.
         tokio::spawn(async move {
             while let Some(env) = rx.recv().await {
                 if frame::write_frame(&mut writer, &env, max_frame_bytes)
@@ -74,19 +98,19 @@ impl Client {
                     break;
                 }
             }
-            closed_w.store(true, Ordering::Release);
         });
-        tokio::spawn(read_loop(
-            reader,
-            Arc::clone(&pending),
-            Arc::clone(&closed),
-            max_frame_bytes,
-        ));
+        let (done_tx, done_rx) = watch::channel(false);
+        tokio::spawn(async move {
+            read_loop(reader, pending_r, closed_r, reason_r, max_frame_bytes).await;
+            let _ = done_tx.send(true);
+        });
         Ok(Self {
             tx,
             pending,
             next_id: AtomicU64::new(1),
             closed,
+            reason,
+            reader_done: done_rx,
         })
     }
 
@@ -115,7 +139,7 @@ impl Client {
         trace_id: String,
     ) -> Result<ResponseStream, IpcError> {
         if self.is_closed() {
-            return Err(IpcError::Closed);
+            return Err(closed_error(&self.reason));
         }
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
         let (stx, srx) = mpsc::channel(STREAM_QUEUE);
@@ -123,17 +147,22 @@ impl Client {
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .insert(id, stx);
-        if self
-            .tx
-            .send(envelope(id, &trace_id, body, false))
-            .await
-            .is_err()
-        {
+        // The reader sets `closed` before it drops the pending senders, so a request
+        // registered after that drop is caught here instead of waiting for its deadline.
+        let sent = !self.is_closed()
+            && self
+                .tx
+                .send(envelope(id, &trace_id, body, false))
+                .await
+                .is_ok();
+        if !sent {
             self.pending
                 .lock()
                 .unwrap_or_else(PoisonError::into_inner)
                 .remove(&id);
-            return Err(IpcError::Closed);
+            let mut done = self.reader_done.clone();
+            let _ = tokio::time::timeout(CLOSE_REASON_WAIT, done.wait_for(|d| *d)).await;
+            return Err(closed_error(&self.reason));
         }
         Ok(ResponseStream {
             rx: srx,
@@ -143,6 +172,7 @@ impl Client {
             trace_id,
             deadline: Instant::now() + deadline,
             finished: false,
+            reason: Arc::clone(&self.reason),
         })
     }
 
@@ -176,7 +206,7 @@ impl ResponseStream {
             }
             Ok(None) => {
                 self.finish();
-                Some(Err(IpcError::Closed))
+                Some(Err(closed_error(&self.reason)))
             }
             Ok(Some(env)) => {
                 if env.end_of_stream {
@@ -245,7 +275,13 @@ impl Drop for ResponseStream {
     }
 }
 
-async fn read_loop(mut reader: OwnedReadHalf, pending: Pending, closed: Arc<AtomicBool>, max: u32) {
+async fn read_loop(
+    mut reader: OwnedReadHalf,
+    pending: Pending,
+    closed: Arc<AtomicBool>,
+    reason: CloseReason,
+    max: u32,
+) {
     loop {
         match frame::read_frame(&mut reader, max).await {
             Ok(Some(env)) => {
@@ -253,6 +289,9 @@ async fn read_loop(mut reader: OwnedReadHalf, pending: Pending, closed: Arc<Atom
                     // Connection-level error (e.g. peer rejected, bad frame): hand it
                     // to every open request as its end frame, then close.
                     debug!("connection-level frame from server; closing");
+                    if let Some(Body::Error(e)) = &env.body {
+                        *reason.lock().unwrap_or_else(PoisonError::into_inner) = Some(e.clone());
+                    }
                     let senders: Vec<_> = pending
                         .lock()
                         .unwrap_or_else(PoisonError::into_inner)

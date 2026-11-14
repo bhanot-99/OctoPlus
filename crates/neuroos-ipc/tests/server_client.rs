@@ -403,6 +403,27 @@ async fn peer_checks_reject_wrong_uid_and_unit() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn rejected_client_learns_why_even_after_the_close() {
+    // The server rejects and closes before the client sends anything; the client
+    // must still report PERMISSION_DENIED, not a bare "closed" (hosted-CI race).
+    let dir = tempfile::tempdir().unwrap();
+    let path = sock(&dir);
+    let mut config = cfg();
+    config.policy = PeerPolicy::uids(vec![current_uid().wrapping_add(1)]);
+    let srv = start(&path, config).await;
+    let c = Client::connect(&path, MAX).await.unwrap();
+    wait_for(|| c.is_closed()).await;
+    for _ in 0..3 {
+        let e = c
+            .call(ping("echo:x"), Duration::from_secs(1))
+            .await
+            .unwrap_err();
+        assert_eq!(remote_code(&e), ErrorCode::PermissionDenied);
+    }
+    srv.stop().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn reconnecting_client_tolerates_missing_server() {
     let dir = tempfile::tempdir().unwrap();
     let path = sock(&dir);

@@ -9,6 +9,7 @@
 #include <cstring>
 #include <deque>
 #include <map>
+#include <optional>
 #include <thread>
 #include <vector>
 
@@ -40,15 +41,29 @@ struct ClientShared {
   std::mutex write_mu;
   std::mutex map_mu;
   std::map<std::uint64_t, std::shared_ptr<PendingQueue>> pending;  // guarded by map_mu
+  std::mutex reason_mu;
+  std::optional<Error> close_reason;  // guarded by reason_mu; set before `closed`
   std::jthread reader;
 
+  // Only the reader marks the connection closed, after recording the server's
+  // reason, so callers always see why (e.g. PERMISSION_DENIED).
   bool Write(const v1::Envelope& env) {
     const std::lock_guard lock(write_mu);
-    if (closed.load() || !WriteFrame(fd, env, max_frame)) {
-      closed.store(true);
-      return false;
+    return !closed.load() && WriteFrame(fd, env, max_frame).ok();
+  }
+
+  Error ClosedError() {
+    const std::lock_guard lock(reason_mu);
+    return close_reason.value_or(
+        Error{"connection closed", true, static_cast<int>(v1::ERROR_CODE_UNAVAILABLE)});
+  }
+
+  // After a failed write, give the reader a moment to record the server's reason.
+  Error ClosedErrorAfterWait() {
+    for (int i = 0; i < 40 && !closed.load(); ++i) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
-    return true;
+    return ClosedError();
   }
 
   void Unregister(std::uint64_t id) {
@@ -76,6 +91,10 @@ struct ClientShared {
       }
       v1::Envelope env = std::move(*got);
       if (env.request_id() == 0) {
+        if (env.has_error()) {
+          const std::lock_guard lock(reason_mu);
+          close_reason = FromWire(env.error());
+        }
         // Connection-level error: end every open request with it.
         std::map<std::uint64_t, std::shared_ptr<PendingQueue>> all;
         {
@@ -167,7 +186,7 @@ Result<std::optional<v1::Envelope>> ResponseStream::Next() {
   if (queue_->frames.empty()) {
     lock.unlock();
     Finish();
-    return MakeError(v1::ERROR_CODE_UNAVAILABLE, "connection closed", true);
+    return shared_->ClosedError();
   }
   v1::Envelope env = std::move(queue_->frames.front());
   queue_->frames.pop_front();
@@ -221,7 +240,7 @@ Result<std::unique_ptr<Client>> Client::Connect(const std::filesystem::path& pat
 Result<std::unique_ptr<ResponseStream>> Client::Open(v1::Envelope request,
                                                      std::chrono::milliseconds deadline) {
   if (closed()) {
-    return MakeError(v1::ERROR_CODE_UNAVAILABLE, "connection closed", true);
+    return shared_->ClosedError();
   }
   const std::uint64_t id = shared_->next_id.fetch_add(1);
   const std::string trace = request.trace_id().empty() ? NewTraceId() : request.trace_id();
@@ -231,9 +250,11 @@ Result<std::unique_ptr<ResponseStream>> Client::Open(v1::Envelope request,
     shared_->pending.emplace(id, q);
   }
   Stamp(&request, id, trace, false);
-  if (!shared_->Write(request)) {
+  // The reader sets `closed` before dropping pending queues, so a request registered
+  // after that is caught here rather than waiting for its deadline.
+  if (closed() || !shared_->Write(request)) {
     shared_->Unregister(id);
-    return MakeError(v1::ERROR_CODE_UNAVAILABLE, "connection closed", true);
+    return shared_->ClosedErrorAfterWait();
   }
   return std::make_unique<ResponseStream>(shared_, std::move(q), id, trace,
                                           std::chrono::steady_clock::now() + deadline);

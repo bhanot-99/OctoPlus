@@ -359,6 +359,19 @@ TEST_F(IpcTest, PeerChecks) {
   EXPECT_TRUE(c->Call(Ping("echo:x"), milliseconds(1000)).ok());
 }
 
+TEST_F(IpcTest, RejectedClientLearnsWhyEvenAfterTheClose) {
+  auto cfg = Cfg();
+  cfg.policy = PeerPolicy::Uids({::getuid() + 1});
+  auto srv = Start(cfg);
+  auto c = Connect();
+  WaitFor([&] { return c->closed(); });
+  for (int i = 0; i < 3; ++i) {
+    auto r = c->Call(Ping("echo:x"), milliseconds(1000));
+    ASSERT_FALSE(r.ok());
+    EXPECT_EQ(r.error().code, neuroos::v1::ERROR_CODE_PERMISSION_DENIED);
+  }
+}
+
 TEST_F(IpcTest, ReconnectingClient) {
   ReconnectingClient rc(path_, kMax, Backoff(milliseconds(20), milliseconds(80)));
   const auto t0 = std::chrono::steady_clock::now();
