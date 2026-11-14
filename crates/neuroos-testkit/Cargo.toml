@@ -1,0 +1,29 @@
+[package]
+name = "neuroos-testkit"
+description = "Test fixtures: the neuroos-echo service and helpers for running real units"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "neuroos-echo"
+path = "src/bin/neuroos-echo.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+neuroos-common = { path = "../neuroos-common" }
+neuroos-health = { path = "../neuroos-health" }
+neuroos-ipc = { path = "../neuroos-ipc" }
+neuroos-proto = { path = "../neuroos-proto" }
+neuroos-sandbox = { path = "../neuroos-sandbox" }
+tokio = { workspace = true, features = ["signal"] }
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,11 @@
+# Tests that need the user's systemd session, devices or models are named `local_*`.
+# They run one at a time, only in the local full gate (rules.md §8.6).
+[test-groups]
+local-serial = { max-threads = 1 }
+
+[[profile.default.overrides]]
+filter = 'test(/^local_/)'
+test-group = 'local-serial'
+
+[profile.hosted]
+default-filter = 'not test(/^local_/)'

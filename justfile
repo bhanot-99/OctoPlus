@@ -44,6 +44,11 @@ test: build
     cargo nextest run --workspace --locked --no-tests=fail
     cd cpp && ctest --preset {{cpp_preset}} --no-tests=error
 
+# Hosted CI subset: skips `local_*` tests that need a user session (rules.md §8.6).
+test-hosted: build
+    cargo nextest run --workspace --locked --no-tests=fail --profile hosted
+    cd cpp && ctest --preset {{cpp_preset}} --no-tests=error
+
 # Dependency policy (advisories, bans, licences, sources) plus the network-ban probe.
 deny:
     cargo deny check
@@ -81,7 +86,7 @@ prune:
     @df -h . | tail -n 1
 
 # Hosted CI: format, lint, build, unit tests and dependency checks.
-ci-hosted: fmt-check lint test deny
+ci-hosted: fmt-check lint test-hosted deny
 
 # Full local gate. Every step must run to the end (rules.md §2.9).
 ci: fmt-check lint test deny cov sanitize

@@ -5,7 +5,9 @@ members = [
     "crates/neuroos-health",
     "crates/neuroos-ipc",
     "crates/neuroos-proto",
+    "crates/neuroos-sandbox",
     "crates/neuroos-taint",
+    "crates/neuroos-testkit",
 ]
 # The network-ban probe is its own workspace so it never enters the real build (P0-S05).
 exclude = ["tests/security/netban-probe"]
@@ -19,9 +21,12 @@ publish = false
 
 # Only crates from the Architecture §14 allowlist, and only once a crate uses them. A new entry needs a justification (rules.md §5).
 [workspace.dependencies]
+anyhow = "1.0.104"
 bitflags = "2.13.2"
+clap = { version = "4.6.7", features = ["derive"] }
 getrandom = "0.4.3"
 jiff = "0.2.43"
+landlock = "0.4.7"
 prost = "0.14.6"
 prost-build = "0.14.6"
 rustix = { version = "1.1.6", features = ["process", "fs", "param"] }
