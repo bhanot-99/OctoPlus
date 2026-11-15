@@ -1,0 +1,156 @@
+{
+  "experiment": "S-02-Part-A",
+  "goal": "Pin and build upstream llama.cpp (CPU and Vulkan), pin and fetch four approved models, and prove correctness at pin time (FR-INF-02, P0-S08)",
+  "date_utc": "2026-11-15T05:17:24Z",
+  "commit": "2ba39443f65d580d90d5d5fbe83ac19f6557cf52",
+  "system": {
+    "kernel": "Linux sandbox 7.2.15-76070215-generic #202611011338~1793722468~24.04~d8e9a1a SMP PREEMPT_DYNAMIC Tue N x86_64",
+    "cpu": "AMD Ryzen 7 5800H with Radeon Graphics (16 threads)",
+    "ram_total_bytes": 16130453504,
+    "gpu_hardware": "NVIDIA GeForce RTX 3050 Laptop GPU (4096 MiB VRAM), AMD Radeon Renoir (iGPU)",
+    "nvidia_driver": "595.104.02"
+  },
+  "llama_cpp_pin": {
+    "submodule_path": "cpp/third_party/llama.cpp",
+    "repository": "https://github.com/ggml-org/llama.cpp",
+    "release_tag": "b12389",
+    "commit_sha": "1ae047c92654dc34824d1dfa00b8e3aa82de5c8a",
+    "commit_date": "2026-11-14T23:32:48+01:00",
+    "license": "MIT",
+    "modifications": "none (clean upstream)"
+  },
+  "builds": {
+    "cpu": {
+      "path": "cpp/build/llama-cpu",
+      "cmake_flags": [
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DLLAMA_CURL=OFF",
+        "-DGGML_NATIVE=ON",
+        "-DGGML_VULKAN=OFF",
+        "-DLLAMA_BUILD_SERVER=OFF"
+      ],
+      "status": "success",
+      "duration_seconds": 113,
+      "binaries": [
+        "cpp/build/llama-cpu/bin/llama-cli",
+        "cpp/build/llama-cpu/bin/llama-completion",
+        "cpp/build/llama-cpu/bin/llama-bench",
+        "cpp/build/llama-cpu/bin/llama-perplexity",
+        "cpp/build/llama-cpu/bin/test-backend-ops"
+      ],
+      "test_backend_ops": {
+        "status": "passed",
+        "backend": "CPU",
+        "passed_tests": 24451,
+        "total_tests": 24451,
+        "failed_tests": 0
+      }
+    },
+    "vulkan": {
+      "path": "cpp/build/llama-vulkan",
+      "cmake_flags": [
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DLLAMA_CURL=OFF",
+        "-DGGML_NATIVE=ON",
+        "-DGGML_VULKAN=ON",
+        "-DLLAMA_BUILD_SERVER=OFF"
+      ],
+      "status": "stopped",
+      "stop_reason": "Missing host package 'spirv-headers' (find_package(SPIRV-Headers CONFIG REQUIRED) failed in ggml/src/ggml-vulkan/CMakeLists.txt:14)",
+      "required_action": "sudo apt install spirv-headers",
+      "owner_rule_compliance": "Apt install forbidden per rules.md / owner approval D-17. Item stopped and documented per instructions."
+    }
+  },
+  "models": [
+    {
+      "id": "llm-qwen3-4b-instruct-2507-q4km",
+      "role": "llm",
+      "file": "models/llm/Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+      "size_bytes": 2497281120,
+      "sha256": "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597",
+      "license": "Apache-2.0",
+      "provenance": "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+      "load_status": "ok",
+      "warning": "load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden",
+      "perplexity": {
+        "text_file": "/tmp/neuroos_ppl_text.txt",
+        "text_bytes": 90800,
+        "ctx_size": 512,
+        "chunks_evaluated": 49,
+        "ppl": 15.5527,
+        "uncertainty": 0.47555,
+        "pass_time_seconds": 28.16,
+        "total_time_seconds": 358.35
+      }
+    },
+    {
+      "id": "llm-phi-4-mini-instruct-q4km",
+      "role": "llm",
+      "file": "models/llm/Phi-4-mini-instruct-Q4_K_M.gguf",
+      "size_bytes": 2491874272,
+      "sha256": "88c00229914083cd112853aab84ed51b87bdf6b9ce42f532d8c85c7c63b1730a",
+      "license": "MIT",
+      "provenance": "unsloth/Phi-4-mini-instruct-GGUF",
+      "load_status": "ok",
+      "warning": "load_arch_hparams: Phi SWA is currently disabled - results might be suboptimal for some models (see https://github.com/ggml-org/llama.cpp/pull/13676)",
+      "perplexity": {
+        "text_file": "/tmp/neuroos_ppl_text.txt",
+        "text_bytes": 90800,
+        "ctx_size": 512,
+        "chunks_evaluated": 48,
+        "ppl": 18.3349,
+        "uncertainty": 0.53608,
+        "pass_time_seconds": 25.57,
+        "total_time_seconds": 307.45
+      }
+    },
+    {
+      "id": "llm-smollm3-3b-q4km",
+      "role": "llm",
+      "file": "models/llm/SmolLM3-Q4_K_M.gguf",
+      "size_bytes": 1915305312,
+      "sha256": "8334b850b7bd46238c16b0c550df2138f0889bf433809008cc17a8b05761863e",
+      "license": "Apache-2.0",
+      "provenance": "ggml-org/SmolLM3-3B-GGUF",
+      "load_status": "ok",
+      "warning": null,
+      "perplexity": {
+        "text_file": "/tmp/neuroos_ppl_text.txt",
+        "text_bytes": 90800,
+        "ctx_size": 512,
+        "chunks_evaluated": 48,
+        "ppl": 19.5637,
+        "uncertainty": 0.58470,
+        "pass_time_seconds": 22.12,
+        "total_time_seconds": 267.38
+      }
+    },
+    {
+      "id": "llm-bitnet-b158-2b4t-tq20",
+      "role": "llm",
+      "file": "models/llm/bitnet-2b4t-tq2_0.gguf",
+      "size_bytes": 1203563648,
+      "sha256": "9f8e1097502528a0d80d885c603ea7ee3e4d214a6685356e39baaf697c02cbb6",
+      "license": "MIT",
+      "provenance": "Synapticode/bitnet-b1.58-2B-4T-tq2_0-gguf",
+      "load_status": "ok",
+      "warning": "High perplexity (101.2315); ternary TQ2_0 conversion accuracy degraded compared to 4-bit instruct models",
+      "perplexity": {
+        "text_file": "/tmp/neuroos_ppl_text.txt",
+        "text_bytes": 90800,
+        "ctx_size": 512,
+        "chunks_evaluated": 48,
+        "ppl": 101.2315,
+        "uncertainty": 3.64622,
+        "pass_time_seconds": 14.12,
+        "total_time_seconds": 169.53
+      }
+    }
+  ],
+  "ci_verification": {
+    "just_ci": "ALL GREEN",
+    "just_ci_hosted": "ALL GREEN",
+    "fetch_models_test": "ok - 16 checks",
+    "shellcheck": "clean"
+  }
+}

@@ -83,6 +83,10 @@ bench: build
 bench-s01:
     scripts/bench-s01.sh
 
+# Spike S-02: build upstream llama.cpp (CPU and Vulkan) out-of-tree (P0-S08).
+build-llama *args:
+    scripts/build-llama.sh {{args}}
+
 # Spike S-03: measure streamed text frames and cancel latency (P0-S09).
 bench-s03:
     scripts/bench-s03.sh
