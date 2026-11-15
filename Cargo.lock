@@ -559,6 +559,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "neuroos-deploy"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "neuroos-common",
+ "serde",
+ "tempfile",
+ "thiserror",
+ "toml",
+]
+
+[[package]]
 name = "neuroos-health"
 version = "0.1.0"
 dependencies = [

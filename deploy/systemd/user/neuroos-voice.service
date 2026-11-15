@@ -1,0 +1,48 @@
+[Unit]
+Description=Semantic-NeuroOS Voice Interface
+PartOf=neuroos.target
+Requires=neuroos-runtime.service
+After=neuroos-runtime.service neuroos-healthd.service neuroos-storage.service neuroos-inference.service neuroos-monitor.service neuroos-kernel.service neuroos-knowledge.service
+
+[Service]
+PrivateNetwork=true
+InaccessiblePaths=-/run/systemd/resolve
+InaccessiblePaths=-/run/dbus/system_bus_socket
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=tmpfs
+BindReadOnlyPaths=%h/.local/opt/neuroos
+BindReadOnlyPaths=-%h/.config/neuroos/config.toml
+InaccessiblePaths=-/run/neuroos-fetcher
+TemporaryFileSystem=%t/neuroos
+BindPaths=%t/neuroos/voice
+BindPaths=%t/neuroos/knowledge/knowledge
+PrivateTmp=true
+# C2: Architecture §8.1 permits PrivateDevices and RestrictRealtime exemptions for audio;
+# kept fully hardened for Phase 1 (no audio yet)
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service landlock_create_ruleset landlock_add_rule landlock_restrict_self
+CapabilityBoundingSet=
+AmbientCapabilities=
+LimitCORE=0
+UMask=0077
+MemoryMax=768M
+Restart=on-failure
+RestartSec=2s
+ExecStart=%h/.local/opt/neuroos/bin/neuroos-voice --socket %t/neuroos/voice/voice/voice.sock --socket %t/neuroos/voice/control/control.sock --health-socket %t/neuroos/voice/health/health.sock --allow-unit neuroos-knowledge.service --allow-unit neuroos-kernel.service --allow-unit neuroos-healthd.service
+
+[Install]
+WantedBy=neuroos.target

@@ -107,6 +107,14 @@ spike-s05:
 fetch-models *args:
     scripts/fetch-models.sh {{args}}
 
+# Generate systemd unit files from the socket map (P1-S01, P1-S02).
+units:
+    cargo run -p neuroos-deploy --bin neuroos-gen-units
+
+# Install developer units and binaries into ~/.local (P1-S02).
+install-dev:
+    scripts/install-dev.sh
+
 # Free disk: remove build output.
 prune:
     cargo clean

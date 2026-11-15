@@ -11,12 +11,12 @@
 | Field | Value |
 | :--- | :--- |
 | Last updated | 2026-11-15 |
-| Project stage | **Phase 0 signed off 2026-11-15.** Branch stack awaits the owner's merge to `main`. |
-| Current phase | Phase 0 — Foundation and spikes (2026-11-14 → 2026-11-15, gate review) |
-| Current story | — (Phase 0 report `reports/phase-00-foundation.md` awaits sign-off) |
-| Overall progress | 0 / 11 phases |
-| Health | ✅ Foundation built, all five spikes done incl. GPU half, ADR-0001…0008 accepted, `just ci` + hosted CI green |
-| Next milestone | M0 — proven foundations |
+| Project stage | **Phase 1 in progress** (started 2026-11-15). Phase 0 signed off and merged to `main`. |
+| Current phase | Phase 1 — Walking skeleton |
+| Current story | P1-S01/S02 — socket map as code, unit generator (task T1, agy) |
+| Overall progress | 1 / 11 phases |
+| Health | ✅ Phase 0 done; Phase 1 started |
+| Next milestone | M1 — walking skeleton |
 
 ---
 
@@ -24,11 +24,11 @@
 
 | Field | Value |
 | :--- | :--- |
-| Story | Phase 0 gate |
-| Builder / Checker | — / owner |
-| Branch | `p0/s08-spike-s02` is the tip of the stacked branches; nothing merged to `main` yet. Owner merges (fast-forward `main` to the tip). |
-| Files being changed | — |
-| Next concrete step | Owner merges `p0/s08-spike-s02` into `main` (fast-forward). Then Phase 1 (walking skeleton). |
+| Story | P1-S01/S02 — task T1: `neuroos-common::socketmap`, `crates/neuroos-deploy` unit generator, `deploy/`, `scripts/install-dev.sh` |
+| Builder / Checker | agy / Claude |
+| Branch | `phase_1` (owner's choice: one branch for the phase, one commit per story; D-20) |
+| Files being changed | `crates/neuroos-common`, `crates/neuroos-deploy`, `deploy/`, `scripts/`, `justfile` |
+| Next concrete step | Check T1; then T2 (Rust part binaries) → T3 (C4/C2 C++) → T4 (healthd + neuroosctl) → T5 (security + fault tests) → T6 (perf + 2 h soak) → report. |
 
 ---
 
@@ -37,7 +37,7 @@
 | Phase | Name | Status | Started | Finished | Report |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | 0 | Foundation and spikes | ✅ | 2026-11-14 | 2026-11-15 | `reports/phase-00-foundation.md` |
-| 1 | Walking skeleton | ⬜ | — | — | `reports/phase-01-skeleton.md` |
+| 1 | Walking skeleton | 🟦 | 2026-11-15 | — | `reports/phase-01-skeleton.md` |
 | 2 | Safety kernel (C6) | ⬜ | — | — | `reports/phase-02-kernel.md` |
 | 3 | Monitor (C1) | ⬜ | — | — | `reports/phase-03-monitor.md` |
 | 4 | Storage (C3) | ⬜ | — | — | `reports/phase-04-storage.md` |
@@ -54,21 +54,16 @@ Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done �
 
 ## 4. Current Phase Board
 
-**Phase 0 — Foundation and spikes**
+**Phase 1 — Walking skeleton** (Phase 0 board: `reports/phase-00-foundation.md` §2)
 
 | Story | Title | Status | Builder | Checker |
 | :--- | :--- | :--- | :--- | :--- |
-| P0-S01 | `just ci` green on a clean clone; hosted CI green | Done | Claude | agy (review 2026-11-14) + Claude (verified fixes) |
-| P0-S02 | Contracts usable from Rust and C++ | Done | Claude | agy (review 2026-11-14) + Claude (verified fixes) |
-| P0-S03 | Socket server and client library | Done | Claude | agy (review 2026-11-14) + Claude (verified fixes) |
-| P0-S04 | Health endpoint with real status | Done | Claude | agy (review 2026-11-14) + Claude (verified fixes) |
-| P0-S05 | Network-crate ban in the build | Done | Claude | agy (review 2026-11-14) + Claude (verified fixes) |
-| P0-S06 | Model fetch and verify | Done | Claude | agy (review 2026-11-14) + Claude (verified fixes) |
-| P0-S07 | Spike S-01: storage scan | Done | agy | Claude (independent rerun) |
-| P0-S08 | Spike S-02: model bake-off | Done (CPU by agy; GPU by Claude) | agy (+ Claude pins, part A) | Claude (rescored; re-measured RSS and speed, corrected agy's memory result) |
-| P0-S09 | Spike S-03: streamed frames | Done | agy | Claude (independent rerun) |
-| P0-S10 | Spike S-04: unit hardening and socket isolation | Done | agy (+ Claude early findings) | Claude (re-measured; corrected 4 claims) |
-| P0-S11 | Spike S-05: health and context sensors | Done | agy | Claude (independent rerun; redacted personal data) |
+| P1-S01 | No network and full hardening in every unit from first start | In Progress (T1) | agy | Claude |
+| P1-S02 | Each unit reaches only its allowed sockets | In Progress (T1) | agy | Claude |
+| P1-S03 | Each process restricts its own file access before input | Backlog (T2, T3) | agy | Claude |
+| P1-S04 | healthd shows real status, memory and latency | Backlog (T4) | agy | Claude |
+| P1-S05 | C4 streams a cancellable completion from the chosen model | Backlog (T3) | agy | Claude |
+| P1-S06 | `neuroosctl ask` streams an answer through the whole chain | Backlog (T2, T4) | agy | Claude |
 
 Columns: Backlog → Ready → In Progress → In Check → Done.
 
@@ -80,6 +75,7 @@ One line each. Anything architectural also gets an ADR.
 
 | Date | ID | Decision | ADR |
 | :--- | :--- | :--- | :--- |
+| 2026-11-15 | D-20 | Owner started Phase 1 with agy as builder, on one branch `phase_1`. Claude's design calls (owner may overturn at sign-off): one folder per socket, socket map as code, units generated from it, runtime-folder unit, dev install under `~/.local/opt/neuroos`, C4 hash check by `sha256sum` in ExecStartPre; C++ parts take sockets and peer units as flags from their unit file. | 0009 (Proposed) |
 | 2026-11-15 | D-19 | Owner signed off Phase 0 and delegated the blind chat grading to Claude (Qwen3 best, 4.42/5). After the owner installed `spirv-headers`: Vulkan backend chosen; GPU path enabled on the reference machine (AC only), C4 binds `/dev/nvidia0` + `/dev/nvidiactl`, VRAM budget 3,100 MiB. | 0005, 0008 |
 | 2026-11-15 | D-18 | Under the owner's standing approval ("everything approved", finish Phase 0): model Qwen3-4B-Instruct-2507 Q4_K_M, repacking off; 384-token layout; CPU targets NFR-PERF-02 ≤ 4.5 s p50 / 6.0 s p95, NFR-PERF-03 ≤ 3.0 s p50 (3.0 / 2.0 s become GPU-path goals); C4 2,800 MiB, total 3,795 MiB. GPU path stays off until measured. Owner may overturn at sign-off. | 0005, 0008 addendum |
 | 2026-11-15 | D-17 | Owner approved spike S-02 as proposed: pinned llama.cpp + BitNet b1.58 2B4T, Qwen3-4B-Instruct-2507, Phi-4-mini-instruct, SmolLM3-3B (Q4_K_M; ~7–8 GB, hash-pinned), 1–2 h CPU + Vulkan runs, no CUDA. Chat set graded blind by the owner. | 0005 (after S-02) |

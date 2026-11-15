@@ -105,10 +105,24 @@ pub fn part_dir(runtime_root: &Path, part: Part) -> PathBuf {
     }
 }
 
+/// Path to a specific socket named `socket_name` served by `part` (Architecture §5.2).
+///
+/// In the Phase 1 layout, each socket lives in its own dedicated directory:
+/// `<runtime_root>/<part>/<socket>/<socket>.sock`, or for fetcher
+/// `/run/neuroos-fetcher/<socket>/<socket>.sock`.
+#[must_use]
+pub fn socket_path(runtime_root: &Path, part: Part, socket_name: &str) -> PathBuf {
+    part_dir(runtime_root, part)
+        .join(socket_name)
+        .join(format!("{socket_name}.sock"))
+}
+
 /// `part`'s health socket (served to healthd).
+///
+/// In the Phase 1 layout: `<part>/health/health.sock`, or `/run/neuroos-fetcher/health/health.sock`.
 #[must_use]
 pub fn health_socket(runtime_root: &Path, part: Part) -> PathBuf {
-    part_dir(runtime_root, part).join("health.sock")
+    socket_path(runtime_root, part, "health")
 }
 
 /// `~/.config/neuroos` (or `$XDG_CONFIG_HOME/neuroos`).
@@ -184,11 +198,19 @@ mod tests {
         let root = PathBuf::from("/run/user/1000/neuroos");
         assert_eq!(
             health_socket(&root, Part::Storage),
-            PathBuf::from("/run/user/1000/neuroos/storage/health.sock")
+            PathBuf::from("/run/user/1000/neuroos/storage/health/health.sock")
         );
         assert_eq!(
             health_socket(&root, Part::Fetcher),
-            PathBuf::from("/run/neuroos-fetcher/health.sock")
+            PathBuf::from("/run/neuroos-fetcher/health/health.sock")
+        );
+        assert_eq!(
+            socket_path(&root, Part::Monitor, "stream"),
+            PathBuf::from("/run/user/1000/neuroos/monitor/stream/stream.sock")
+        );
+        assert_eq!(
+            socket_path(&root, Part::Fetcher, "fetch"),
+            PathBuf::from("/run/neuroos-fetcher/fetch/fetch.sock")
         );
         for p in Part::ALL {
             assert!(p.unit().starts_with("neuroos-") && p.unit().ends_with(".service"));
