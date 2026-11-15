@@ -1,6 +1,6 @@
 # ADR-0006 — Build order
 
-**Status:** Proposed (written 2026-11-14 in Phase 0; the order was approved by the owner as D-08)
+**Status:** Accepted by the owner 2026-11-15
 **Date:** 2026-11-14
 **Changes:** phases.md §2 · Architecture §15 #13–15
 **Evidence:** docs/lessons-from-v1.md §1 and §4

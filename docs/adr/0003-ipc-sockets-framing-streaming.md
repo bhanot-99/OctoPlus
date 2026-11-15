@@ -1,6 +1,6 @@
 # ADR-0003 — IPC: Unix sockets, length-prefixed frames, streaming on the request's own stream
 
-**Status:** Proposed — awaiting owner acceptance
+**Status:** Accepted by the owner 2026-11-15
 **Date:** 2026-11-15
 **Changes:** Architecture §5.1 (confirmed, plus write-stall rule) · PRD §6.1 NFR-PERF-11 (label from target to measured)
 **Evidence:** spike S-03 (P0-S09). `reports/bench/s03-ipc-stream-20261114-run1-agy.json` (agy) and `reports/bench/s03-ipc-stream-20261114-run2-claude.json` (independent rerun by Claude). Harness: `scripts/bench-s03.sh` (`just bench-s03`), `cpp/tools/stream_bench_server.cpp`, `bench/ipc-stream`.

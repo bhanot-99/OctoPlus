@@ -1,6 +1,6 @@
 # ADR-0002 — Unit mode and socket-map enforcement
 
-**Status:** Proposed — awaiting owner acceptance
+**Status:** Accepted by the owner 2026-11-15
 **Date:** 2026-11-15
 **Changes:** Architecture §5.2, §8.1, §8.2 (three additions marked "S-04") · ADR-0008 (GPU mechanism, see the addendum there)
 **Evidence:** spike S-04 (P0-S10): `reports/spikes/s04-hardening-20261114.{json,md}` (agy's harness run), `reports/spikes/s04-verification-claude.md` (checker's re-measurement — read this first; it corrects four claims in agy's report), tests `local_unit_isolation.rs` and `local_user_unit.rs` in `crates/neuroos-testkit`.

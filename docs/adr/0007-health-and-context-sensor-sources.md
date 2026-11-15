@@ -1,6 +1,6 @@
 # ADR-0007 — Health and context sensor sources
 
-**Status:** Proposed — awaiting owner acceptance
+**Status:** Accepted by the owner 2026-11-15
 **Date:** 2026-11-15
 **Changes:** Architecture §8.1/§8.2 (C1 unit and Landlock rows) · security.md (C1 needs no system bus) · PRD §10 (cosmic-protocols use confirmed)
 **Evidence:** spike S-05 (P0-S11): `reports/spikes/s05-sensors-20261114-run1-agy.{json,md}` (agy) and `…-run2-claude.{json,md}` (independent rerun by Claude), probe `tests/spikes/s05-probe` (separate workspace so the GPL crate stays out of the main build), `scripts/spike-s05.sh`. App ids and window-title data were removed from the committed files.

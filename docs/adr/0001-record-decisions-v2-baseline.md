@@ -1,6 +1,6 @@
 # ADR-0001 — Record decisions; documents v2.0 are the baseline
 
-**Status:** Proposed (written 2026-11-14 in Phase 0; the decision itself was approved by the owner as D-01 and D-11)
+**Status:** Accepted by the owner 2026-11-15
 **Date:** 2026-11-14
 **Changes:** rules.md §3.6 · memory.md §5
 **Evidence:** owner approval of the v2.0 documents, 2026-11-14 (memory.md D-11)

@@ -713,11 +713,11 @@ Spikes run in Phase 0. Each ends in an ADR that states what was measured, on wha
 
 | ADR | Title | Status |
 | :--- | :--- | :--- |
-| 0001 | Record decisions; documents v2.0 are the baseline | To write in Phase 0 |
-| 0002 | Unit mode and socket-map enforcement | Proposed 2026-11-15 (S-04 done) |
-| 0003 | IPC: sockets, framing, streaming | Proposed 2026-11-15 (S-03 done) |
-| 0004 | Storage: SQLite only, exact scan | Proposed 2026-11-15 (S-01 done) |
+| 0001 | Record decisions; documents v2.0 are the baseline | Accepted 2026-11-15 |
+| 0002 | Unit mode and socket-map enforcement | Accepted 2026-11-15 |
+| 0003 | IPC: sockets, framing, streaming | Accepted 2026-11-15 |
+| 0004 | Storage: SQLite only, exact scan | Accepted 2026-11-15 |
 | 0005 | Model, prompt layout, latency and memory targets | After S-02 |
-| 0006 | Build order | To write in Phase 0 |
-| 0007 | Health and context sensor sources | Proposed 2026-11-15 (S-05 done) |
+| 0006 | Build order | Accepted 2026-11-15 |
+| 0007 | Health and context sensor sources | Accepted 2026-11-15 |
 | 0008 | Optional GPU acceleration for inference (C4) | Accepted 2026-11-14; backend and enabling after S-02 and S-04 |

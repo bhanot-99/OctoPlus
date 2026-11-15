@@ -13,7 +13,7 @@
 | Last updated | 2026-11-14 |
 | Project stage | **Phase 0 in progress.** Documents v2.0 are the approved baseline (owner sign-off 2026-11-14). |
 | Current phase | Phase 0 — Foundation and spikes (in progress since 2026-11-14) |
-| Current story | P0-S08 spike S-02 — waiting for owner approval (downloads, long runs, model pick) |
+| Current story | P0-S08 spike S-02 (approved D-17; agy building) |
 | Overall progress | 0 / 11 phases |
 | Health | 🟦 Foundation built (P0-S01…S06), `just ci` and hosted CI green; spikes not run |
 | Next milestone | M0 — proven foundations |
@@ -80,19 +80,21 @@ One line each. Anything architectural also gets an ADR.
 
 | Date | ID | Decision | ADR |
 | :--- | :--- | :--- | :--- |
+| 2026-11-15 | D-17 | Owner approved spike S-02 as proposed: pinned llama.cpp + BitNet b1.58 2B4T, Qwen3-4B-Instruct-2507, Phi-4-mini-instruct, SmolLM3-3B (Q4_K_M; ~7–8 GB, hash-pinned), 1–2 h CPU + Vulkan runs, no CUDA. Chat set graded blind by the owner. | 0005 (after S-02) |
+| 2026-11-15 | D-16 | Owner accepted ADR-0001, 0002, 0003, 0004, 0006, 0007. | 0001–0004, 0006, 0007 |
 | 2026-11-14 | D-15 | Owner restored the roles: agy builds, Claude plans/checks/commits. P0-S01…S06 were built by Claude alone while agy was off (owner's instruction) and get a second check by agy. | — |
 | 2026-11-14 | D-14 | Owner removed `archive/v1-docs/` from the working tree; the documents stay in git history (`9ec1ac7`). | — |
 | 2026-11-14 | D-13 | GPU is an optional speed-up for inference only. The CPU path stays the baseline; nothing already designed may get worse. | 0008 (accepted 2026-11-14) |
 | 2026-11-14 | D-12 | Code lives locally and on GitHub as `Semantic-NeuroOS`, in a newly created repository. | — |
-| 2026-11-14 | D-11 | Owner approved the v2.0 documents as the baseline. | 0001 (to write) |
-| 2026-11-14 | D-01 | Build on the v2.0 documents; they are the single baseline. | 0001 (to write) |
+| 2026-11-14 | D-11 | Owner approved the v2.0 documents as the baseline. | 0001 |
+| 2026-11-14 | D-01 | Build on the v2.0 documents; they are the single baseline. | 0001 |
 | 2026-11-14 | D-02 | The product is a private laptop buddy: it speaks first (nudges), chats generally, and remembers facts the user asks it to. | — |
 | 2026-11-14 | D-03 | Web lookups are allowed only as one approved search or link at a time, with the exact text shown and editable. No cloud model. | — |
-| 2026-11-14 | D-04 | Storage is one SQLite database with an exact in-memory vector scan — to be confirmed by spike S-01. | 0004 (after S-01) |
-| 2026-11-14 | D-05 | Generated text streams over the ordinary socket; no shared memory. | 0003 (after S-03) |
+| 2026-11-14 | D-04 | Storage is one SQLite database with an exact in-memory vector scan — to be confirmed by spike S-01. | 0004 |
+| 2026-11-14 | D-05 | Generated text streams over the ordinary socket; no shared memory. | 0003 |
 | 2026-11-14 | D-06 | Knowledge graph, graph view, Python worker and background distillation are out of v1.0. Two languages: Rust and C++. | — |
 | 2026-11-14 | D-07 | The language model is chosen by a measured bake-off on upstream llama.cpp. | 0005 (after S-02) |
-| 2026-11-14 | D-08 | Build order: spikes → walking skeleton → safety kernel → monitor → storage → knowledge → nudges → voice → fetcher → integration → release. | 0006 (to write) |
+| 2026-11-14 | D-08 | Build order: spikes → walking skeleton → safety kernel → monitor → storage → knowledge → nudges → voice → fetcher → integration → release. | 0006 |
 | 2026-11-14 | D-09 | Nudges are template text and numbers, and the nudge engine never dispatches a skill. | — |
 | 2026-11-14 | D-10 | Roles: agy builds, Claude checks and commits, the owner approves. | — |
 
@@ -105,7 +107,7 @@ Mirror of [PRD.md](PRD.md) §12 plus anything blocking the current phase. Close 
 | ID | Question | Default | Needed by | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | — | Should the GitHub repository be private or public? | Private | Phase 0 start | **Closed 2026-11-14 — private** (`github.com/bhanot-99/Semantic-NeuroOS`) |
-| — | Candidate model list for spike S-02 | Proposed at the start of the spike | P0-S08 | Open |
+| — | Candidate model list for spike S-02 | Proposed at the start of the spike | P0-S08 | **Closed 2026-11-15 — owner approved 4 candidates (D-17)** |
 | — | GPU backend: Vulkan or CUDA (CUDA needs an owner-approved install) | Vulkan if its speed is close | P0-S08 | Open |
 | OQ-01 | Buddy name and wake phrase | "hey jarvis" | Phase 7 | Open |
 | OQ-02 | Search provider | Compare in Phase 8 | Phase 8 | Open |

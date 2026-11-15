@@ -336,14 +336,14 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | NFR-PERF-01 | Preamble: request → first audio | ≤ 50 ms p95 | T (P: 9.7 ms) |
 | NFR-PERF-02 | End of speech → first answer audio | ≤ 3.0 s p50, ≤ 5.0 s p95 | T, **provisional — fixed by ADR after spike S-02** (P: ≈ 5.0 s) |
 | NFR-PERF-03 | Typed question → first token | ≤ 2.0 s p50 | T, provisional as above |
-| NFR-PERF-04 | C3 hybrid query at the chunk cap | ≤ 25 ms p50, ≤ 50 ms p99 | M: ≈ 13 ms p50, ≈ 16 ms p99 warm; p99 40–47 ms with a concurrent writer (spike S-01, ADR-0004 proposed) |
+| NFR-PERF-04 | C3 hybrid query at the chunk cap | ≤ 25 ms p50, ≤ 50 ms p99 | M: ≈ 13 ms p50, ≈ 16 ms p99 warm; p99 40–47 ms with a concurrent writer (spike S-01, ADR-0004) |
 | NFR-PERF-05 | C5 own compute on the hot path | < 5 ms p99 | T |
 | NFR-PERF-06 | C6 capability check | < 0.5 ms p99 | T |
 | NFR-PERF-07 | C1 event capture | < 1.5 ms p99 | T (P: 0.008 ms) |
 | NFR-PERF-08 | Barge-in flush | < 1 ms | T (P: 0.015 ms) |
 | NFR-PERF-09 | Transcription of a 3 s utterance | ≤ 150 ms | T (P: 96 ms) |
 | NFR-PERF-10 | Nudge: condition holds → nudge decided | ≤ 60 s | T |
-| NFR-PERF-11 | Token frame C4 → C5 added latency | ≤ 1 ms p99 | M: 0.58 ms p99 (spike S-03, ADR-0003 proposed) |
+| NFR-PERF-11 | Token frame C4 → C5 added latency | ≤ 1 ms p99 | M: 0.58 ms p99 (spike S-03, ADR-0003) |
 
 **IPC deadlines:** control calls 250 ms; C3 queries 150 ms; C6 checks 50 ms (approval time excluded); generation 30 s; fetch 15 s.
 

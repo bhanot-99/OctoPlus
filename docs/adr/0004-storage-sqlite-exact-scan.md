@@ -1,6 +1,6 @@
 # ADR-0004 — Storage: one SQLite database, FTS5, exact in-memory vector scan
 
-**Status:** Proposed — awaiting owner acceptance
+**Status:** Accepted by the owner 2026-11-15
 **Date:** 2026-11-15
 **Changes:** PRD §6.1 NFR-PERF-04 (label to measured) · Architecture §7.2 (confirmed; read/write note added below)
 **Evidence:** spike S-01 (P0-S07): `reports/bench/s01-storage-scan-20261114-run1-agy.json` (agy) and `…-run2-claude.json` (independent rerun by Claude). Harness: `bench/storage-scan`, `scripts/bench-s01.sh` (`just bench-s01`).
