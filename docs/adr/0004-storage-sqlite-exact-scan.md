@@ -15,7 +15,7 @@ Decision D-04 and Architecture §15 #1 chose one SQLite database (WAL) holding m
 
 **Conditions.** Ryzen 7 5800H, kernel 7.2.15, governor `performance`, ~2 GB free RAM, 2026-11-14 23:21 UTC (run 1, load 1.13) and 23:30 UTC (run 2, load 0.53), about 1 minute per run.
 
-**A measurement caveat.** The harness's "total" times both the single-thread and the 4-thread scan in every query, so it is pessimistic by one scan (BUG-014). The single-thread path is "total minus the 4-thread scan".
+**A measurement caveat.** The harness's "total" times both the single-thread and the 4-thread scan in every query, so it is pessimistic by one scan (BUG-014). The single-thread path is "total minus the 4-thread scan". The harness was fixed on 2026-11-15; the figures below are from the original runs.
 
 At the cap (N = 30,000), run 1 / run 2:
 

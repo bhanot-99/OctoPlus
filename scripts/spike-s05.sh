@@ -285,7 +285,7 @@ md_lines.append(f"- Session Lock Protocols Offered: `{', '.join(r1_comp.get('ses
 md_lines.append(f"- Fullscreen Protocol: `{r1_comp.get('protocol_providing_fullscreen')}`.")
 md_lines.append(f"- Toplevels discovered: `{r1_comp.get('toplevels_count')}`.")
 for top in r1_comp.get("toplevels", []):
-    md_lines.append(f"  - App ID `{top.get('app_id')}`: title_len={top.get('title_length')}, title_hash=`{top.get('title_hash')}`, states={top.get('states')}, fullscreen={top.get('is_fullscreen')}.")
+    md_lines.append(f"  - Window: has app id={top.get('has_app_id')}, has title={top.get('has_title')}, states={top.get('states')}, fullscreen={top.get('is_fullscreen')}.")
 md_lines.append("")
 
 md_lines.append("### Microphone in Use (FR-VOI-10)")

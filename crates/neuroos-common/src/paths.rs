@@ -149,7 +149,7 @@ pub fn config_file(
     home: Option<&OsStr>,
 ) -> Result<PathBuf, PathError> {
     match neuroos_config.filter(|v| !v.is_empty()) {
-        Some(v) => absolute("NEUROOS_CONFIG", Some(v)),
+        Some(v) => absolute(crate::config::CONFIG_ENV, Some(v)),
         None => Ok(config_dir(xdg_config_home, home)?.join("config.toml")),
     }
 }

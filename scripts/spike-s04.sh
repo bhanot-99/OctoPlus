@@ -151,74 +151,96 @@ for idx in "${!STANZAS[@]}"; do
         echo "note: transient run reported non-zero"
     fi
     
-    # Query systemd property value
-    prop_val="$(systemctl --user show -p "$prop_name" --value "$unit_name" 2>/dev/null || echo "")"
     
     # Check journal for errors
     journal_err="$(journalctl --user -u "$unit_name" -o cat --no-pager 2>/dev/null | grep -i "error\|warning\|failed" | head -n 2 || echo "")"
     
     # Determine evidence and whether it works in user scope
-    works="yes"
-    evidence="systemd accepted; property set"
+    # "yes" only when a behaviour check below passed; "no" when it failed;
+    # "unchecked" when the stanza has no behaviour check (BUG-011).
+    works="unchecked"
+    evidence="systemd accepted; property set (no behaviour check)"
     
     case "$prop_name" in
         "PrivateNetwork")
+            works="no"
             if echo "$unit_out" | grep -q "nameserver_127_0_0_53 unreachable"; then
+                works="yes"
                 evidence="loopback isolated; nameserver unreachable"
             fi
             ;;
         "RestrictAddressFamilies")
+            works="no"
             if echo "$unit_out" | grep -q "PASS socket(AF_INET) blocked"; then
+                works="yes"
                 evidence="AF_INET/6/PACKET sockets blocked with EAFNOSUPPORT"
             fi
             ;;
         "MemoryDenyWriteExecute")
+            works="no"
             if echo "$unit_out" | grep -q "PASS mmap(PROT_WRITE|PROT_EXEC) blocked"; then
+                works="yes"
                 evidence="mmap(PROT_WRITE|PROT_EXEC) blocked with EPERM"
             fi
             ;;
         "LockPersonality")
+            works="no"
             if echo "$unit_out" | grep -q "PASS personality() change blocked"; then
+                works="yes"
                 evidence="personality() change blocked with EPERM"
             fi
             ;;
         "RestrictNamespaces")
+            works="no"
             if echo "$unit_out" | grep -q "PASS unshare(CLONE_NEWUSER) blocked"; then
+                works="yes"
                 evidence="unshare(CLONE_NEWUSER) blocked with EPERM"
             fi
             ;;
         "NoNewPrivileges")
+            works="no"
             if echo "$unit_out" | grep -q "PASS NoNewPrivs enabled"; then
+                works="yes"
                 evidence="NoNewPrivs=1 in /proc/self/status"
             fi
             ;;
         "ProtectHome")
+            works="no"
             if echo "$unit_out" | grep -q "INFO home count=0"; then
+                works="yes"
                 evidence="/home mounted as empty tmpfs (masks /run/user without BindPaths)"
             fi
             ;;
         "PrivateTmp")
+            works="no"
             if echo "$unit_out" | grep -q "INFO tmp count=0"; then
+                works="yes"
                 evidence="/tmp isolated from host"
             fi
             ;;
         "PrivateDevices")
+            works="no"
             if echo "$unit_out" | grep -q "INFO dev_entries count=18"; then
+                works="yes"
                 evidence="/dev populated with only minimal pseudo-devices (~18 entries)"
             fi
             ;;
         "InaccessiblePaths")
+            works="no"
             if echo "$unit_out" | grep -q "PASS /run/systemd/resolve/ inaccessible"; then
+                works="yes"
                 evidence="/run/systemd/resolve made inaccessible (EACCES)"
             fi
             ;;
         "CapabilityBoundingSet")
+            works="no"
             if echo "$unit_out" | grep -q "PASS CapBnd empty"; then
+                works="yes"
                 evidence="CapBnd cleared (0000000000000000)"
             fi
             ;;
         *)
-            evidence="property accepted by user manager: $prop_val"
+            # The unit is already collected here, so its properties cannot be read back.
             ;;
     esac
     
@@ -339,9 +361,6 @@ systemctl --user reset-failed "$UNIT_ECHO" 2>/dev/null || true
 
 echo "Allowed client connect: $ALLOWED_OUT"
 echo "Other client connect: $OTHER_OUT"
-echo "Peer-check Landlock observation:"
-echo "neuroos-echo restricts itself with Landlock to /proc/self only (read-only)."
-echo "When checking peer unit via /proc/<peer pid>/cgroup, access is denied (EACCES) by Landlock."
 
 echo "--- 6. GPU Access Exploration (ADR-0008) ---"
 GPU_NODES=()
@@ -535,7 +554,7 @@ with open(os.environ["STANZA_LOG"]) as f:
             stanzas_data.append({
                 "stanza": parts[0],
                 "property": parts[1],
-                "works_in_user_scope": parts[2] == "yes",
+                "works_in_user_scope": parts[2],  # yes | no | unchecked
                 "evidence": parts[3],
                 "journal_error": parts[4]
             })
@@ -554,7 +573,7 @@ data = {
     "stanzas": stanzas_data,
     "systemd_analyze_security": {
         "exposure_score": os.environ["EXPOSURE_SCORE"],
-        "summary": "Full baseline achieves 1.5 OK (down from 9.8 UNSAFE)"
+        "note": "exposure score of the full baseline unit as reported by systemd-analyze"
     },
     "socket_isolation": {
         "success": os.environ["ISO_SUCCESS"] == "true",
@@ -564,7 +583,7 @@ data = {
     "peer_unit_check": {
         "allowed_client_connect": os.environ["ALLOWED_OUT"],
         "other_client_connect": os.environ["OTHER_OUT"],
-        "landlock_finding": "neuroos-echo restricts filesystem to /proc/self. Reading /proc/<peer pid>/cgroup is denied with EACCES under Landlock."
+        "landlock_finding": "not measured by this script; see reports/spikes/s04-verification-claude.md"
     },
     "gpu_access": {
         "nodes": os.environ["GPU_NODES_STR"].split(),
@@ -598,7 +617,7 @@ data = {
                 "nvidia_detected": os.environ["GPU_V4_NVIDIA"] == "true"
             }
         },
-        "conclusion": "NVIDIA proprietary driver works with MemoryDenyWriteExecute=yes and SystemCallFilter. Only PrivateDevices=no with DevicePolicy=closed and DeviceAllow for /dev/nvidia* and /dev/dri/renderD* is required."
+        "conclusion": "enumeration only (vulkaninfo); DeviceAllow is not enforced in user scope, so variants ii-iv do not prove a device allowlist. Measured GPU mechanism: ADR-0008 addenda"
     }
 }
 
@@ -609,119 +628,64 @@ with open(out_path, "w") as f:
 print(f"Wrote JSON report to {out_path}")
 EOF
 
-cat <<'EOF' > "$OUT_MD"
-# Spike S-04: Systemd User-Scope Hardening, Socket Isolation & GPU Access Report
+# Markdown report generated from the measured JSON only (no fixed findings; BUG-011).
+OUT_MD="$OUT_MD" python3 - <<'EOF'
+import json
+import os
 
-**Date:** __DATE_UTC__
-**Commit:** `__COMMIT__`
-**Kernel:** `__KERNEL__`
-**Systemd:** `__SYSTEMD_VER__`
-**Landlock ABI:** `__LANDLOCK_ABI__`
-**NVIDIA Driver:** `__NVIDIA_DRIVER__`
-
----
-
-## 1. Stanza Support in User-Scope Units
-
-Every stanza specified in Architecture §8.1 was evaluated on its own in an isolated transient user unit.
-
-| Stanza | Works in User Scope? | Evidence |
-|---|:---:|---|
-| `PrivateNetwork=yes` | **Yes** | Loopback isolated; nameserver 127.0.0.53 unreachable |
-| `InaccessiblePaths=-/run/systemd/resolve` | **Yes** | Resolver path `/run/systemd/resolve` made inaccessible (`PermissionDenied`) |
-| `NoNewPrivileges=yes` | **Yes** | `NoNewPrivs=1` verified in `/proc/self/status` |
-| `ProtectSystem=strict` | **Yes** | OS file systems mounted read-only (`ProtectSystem=strict`) |
-| `ProtectHome=tmpfs` | **Yes** | `/home` mounted as empty tmpfs (masks `/run/user/<uid>` unless bound back) |
-| `PrivateTmp=yes` | **Yes** | Private `/tmp` mount created, isolated from host |
-| `PrivateDevices=yes` | **Yes** | Hardware access masked; `/dev` restricted to ~18 pseudo-devices |
-| `ProtectKernelTunables=yes` | **Yes** | `/proc/sys`, `/sys` kernel tunables mounted read-only |
-| `ProtectKernelModules=yes` | **Yes** | Explicit kernel module loading denied |
-| `ProtectKernelLogs=yes` | **Yes** | Kernel log ring buffer `/dev/kmsg` inaccessible |
-| `ProtectControlGroups=yes` | **Yes** | Cgroup hierarchy mounted read-only |
-| `ProtectClock=yes` | **Yes** | Hardware clock write operations denied |
-| `ProtectHostname=yes` | **Yes** | UTS namespace hostname changes denied |
-| `RestrictNamespaces=yes` | **Yes** | `unshare(CLONE_NEWUSER)` blocked with `EPERM` |
-| `RestrictRealtime=yes` | **Yes** | Realtime scheduling priority changes restricted |
-| `RestrictSUIDSGID=yes` | **Yes** | SUID/SGID bit creation denied |
-| `RestrictAddressFamilies=AF_UNIX` | **Yes** | `socket(AF_INET/6/PACKET)` blocked with `EAFNOSUPPORT` |
-| `LockPersonality=yes` | **Yes** | ABI `personality()` changes blocked with `EPERM` |
-| `MemoryDenyWriteExecute=yes` | **Yes** | `mmap(PROT_WRITE|PROT_EXEC)` blocked with `EPERM` |
-| `SystemCallArchitectures=native` | **Yes** | Non-native system call architectures prohibited |
-| `SystemCallFilter=@system-service ...` | **Yes** | System calls restricted to service set + Landlock ABI calls |
-| `CapabilityBoundingSet=` | **Yes** | All capabilities cleared (`CapBnd=0000000000000000`) |
-| `LimitCORE=0` | **Yes** | Core dump maximum file size set to 0 |
-| `UMask=0077` | **Yes** | Restrictive default file mode creation mask |
-| `MemoryMax=64M` | **Yes** | Cgroup memory limit set to 64 MiB |
-
----
-
-## 2. systemd-analyze security --user
-
-* **Default unhardened unit score:** `9.8 UNSAFE :-{`
-* **Full Architecture §8.1 baseline score:** `1.5 OK :-)`
-* **Exposure Reduction:** **85% reduction** in exposure score.
-* **Findings:**
-  - All critical isolation stanzas (network, namespaces, devices, tunables, seccomp, capabilities, memory WX) apply cleanly in user units without root privileges.
-  - Notice on D-Bus: If `/run/dbus/system_bus_socket` is accessible, `org.freedesktop.resolve1` can be reached over the system bus to resolve names, which bypasses `PrivateNetwork=yes`. Therefore, units not requiring system bus access MUST add `InaccessiblePaths=/run/dbus/system_bus_socket`.
-
----
-
-## 3. Socket-Map Isolation (Architecture §5.2)
-
-Architecture §5.2 defines filesystem mount namespace isolation where each service sees only its allowed peer sockets via `TemporaryFileSystem=` and `BindPaths=`.
-
-* **Unit B (Server):** Runs `neuroos-echo` serving `<root>/b/echo/echo.sock`.
-* **Unit A (Allowed Peer):** Granted `TemporaryFileSystem=<root>` and `BindPaths=<root>/a <root>/b`.
-  - Connect Result: **PASS** (`PASS connect <root>/b/echo/echo.sock`).
-* **Unit C (Restricted Peer):** Granted `TemporaryFileSystem=<root>` and `BindPaths=<root>/c` only.
-  - Connect Result: **PASS (Isolation Enforced)** (`FAIL connect <root>/b/echo/echo.sock: No such file or directory`).
-* **Conclusion:** Mount namespace isolation in user-scope units is completely effective. Unit C cannot even see the directory or socket of Unit B.
-
----
-
-## 4. Peer-Unit Checks & Landlock Layering
-
-* `neuroos-echo` serves a socket and restricts its filesystem access with Landlock to `read_only: [/proc/self]`.
-* When a peer connects, `SO_PEERCRED` returns the peer's PID.
-* In user units, reading `/proc/<peer pid>/cgroup` is permitted by systemd.
-* However, because `neuroos-echo`'s Landlock policy restricts filesystem reads to `/proc/self` only, attempting to read `/proc/<peer pid>/cgroup` inside the server process fails with **`EACCES` (Permission Denied)**.
-* **Architectural Finding for ADR-0002:** Any service that performs peer-unit checking via `/proc/<pid>/cgroup` MUST declare `/proc` (or the relevant process tree) in its Landlock `read_only` policy.
-
----
-
-## 5. GPU Exploration (ADR-0008)
-
-Hardware: NVIDIA GeForce RTX 3050 Laptop GPU (Driver 595.104.02).
-
-| Variant | Configuration | NVIDIA GPU Detected? | Notes |
-|---|---|:---:|---|
-| **(i) Full Baseline** | `PrivateDevices=yes` | **No** | Only CPU llvmpipe detected; ICD loader fails on missing device nodes |
-| **(ii) Minimal Device Allowlist** | `PrivateDevices=no`, `DevicePolicy=closed`, `DeviceAllow` for GPU nodes | **Yes** | NVIDIA GeForce RTX 3050 detected and operational via Vulkan |
-| **(iii) Without MDWX** | Variant (ii) without `MemoryDenyWriteExecute` | **Yes** | NVIDIA GPU detected |
-| **(iv) Without SCF** | Variant (ii) without `SystemCallFilter` | **Yes** | NVIDIA GPU detected |
-
-### Smallest Device Access Required
-* `/dev/nvidia0` (GPU device)
-* `/dev/nvidiactl` (Control device)
-* `/dev/nvidia-modeset` (Modeset device)
-* `/dev/nvidia-uvm` (Unified Memory device)
-* `/dev/nvidia-uvm-tools` (UVM tools)
-* `/dev/dri/renderD129` (NVIDIA DRM render node)
-* `/dev/dri/card1` (NVIDIA DRM card node)
-
-### Driver Conflicts
-* **`MemoryDenyWriteExecute=yes`:** **NO CONFLICT**. The NVIDIA driver functions correctly with MDWX enabled.
-* **`SystemCallFilter=@system-service ...`:** **NO CONFLICT**. The driver functions correctly with the systemd service syscall filter.
-* **`PrivateDevices=yes`:** **CONFLICTS**. The driver requires physical device node access, so C4 must use `PrivateDevices=no` coupled with `DevicePolicy=closed` and explicit `DeviceAllow=` rules.
+d = json.load(open(os.environ["OUT_JSON"]))
+c = d["conditions"]
+lines = [
+    "# Spike S-04: user-scope hardening, socket isolation, GPU enumeration",
+    "",
+    f"**Date:** {d['date_utc']} · **Commit:** `{d['commit']}` · **Kernel:** `{c['kernel']}` · "
+    f"**systemd:** `{c['systemd_version']}` · **Landlock ABI:** `{c['landlock_abi']}` · "
+    f"**NVIDIA driver:** `{c['nvidia_driver']}`",
+    "",
+    "Generated from the JSON next to this file. \"unchecked\" means systemd accepted the stanza but this "
+    "script has no behaviour check for it. Findings that need more than this script (D-Bus DNS, peer-unit "
+    "Landlock, the GPU mechanism) are in `reports/spikes/s04-verification-claude.md` and ADR-0002/0008.",
+    "",
+    "## 1. Stanzas",
+    "",
+    "| Stanza | Works | Evidence |",
+    "| :--- | :--- | :--- |",
+]
+for st in d["stanzas"]:
+    lines.append(f"| `{st['stanza']}` | {st['works_in_user_scope']} | {st['evidence']} |")
+sec = d["systemd_analyze_security"]
+iso = d["socket_isolation"]
+peer = d["peer_unit_check"]
+gpu = d["gpu_access"]
+lines += [
+    "",
+    "## 2. systemd-analyze security --user (full baseline)",
+    "",
+    f"{sec['exposure_score']}",
+    "",
+    "## 3. Socket-map isolation (Architecture §5.2)",
+    "",
+    f"- Result: **{'PASS' if iso['success'] else 'FAIL'}**",
+    f"- Unit A (allowed): `{iso['unit_a_result']}`",
+    f"- Unit C (not allowed): `{iso['unit_c_result']}`",
+    "",
+    "## 4. Peer connections",
+    "",
+    f"- Allowed client: `{peer['allowed_client_connect']}`",
+    f"- Other client: `{peer['other_client_connect']}`",
+    "",
+    "## 5. GPU enumeration (vulkaninfo)",
+    "",
+    f"Nodes present: {', '.join(gpu['nodes']) or 'none'}",
+    "",
+    "| Variant | NVIDIA seen |",
+    "| :--- | :--- |",
+]
+for name, v in gpu["variants"].items():
+    lines.append(f"| {name} | {v['nvidia_detected']} |")
+lines += ["", f"Note: {gpu['conclusion']}.", ""]
+open(os.environ["OUT_MD"], "w").write("\n".join(lines))
 EOF
-
-# Substitute metadata in Markdown
-sed -i "s|__DATE_UTC__|$DATE_UTC|g" "$OUT_MD"
-sed -i "s|__COMMIT__|$COMMIT|g" "$OUT_MD"
-sed -i "s|__KERNEL__|$KERNEL|g" "$OUT_MD"
-sed -i "s|__SYSTEMD_VER__|$SYSTEMD_VER|g" "$OUT_MD"
-sed -i "s|__LANDLOCK_ABI__|$LANDLOCK_ABI|g" "$OUT_MD"
-sed -i "s|__NVIDIA_DRIVER__|$NVIDIA_DRIVER|g" "$OUT_MD"
 
 echo "Wrote Markdown report to $OUT_MD"
 echo "=== Spike S-04 Complete ==="

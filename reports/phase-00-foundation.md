@@ -60,7 +60,7 @@ Shared libraries built (phases.md §3.1 item 6): `neuroos-common`, `-proto`, `-i
 ## 6. Deviations, bugs and descoped items
 
 - P0-S01…S06 were built by Claude alone while agy was unavailable (owner's instruction, D-15); the independent check came afterwards (agy review, 10 findings, 9 real, all fixed and re-verified).
-- Bugs: BUG-001…010 fixed. Open, all in spike harnesses (no product code): BUG-011 (S-04 harness hard-coded verdicts), BUG-012 (probe raw FFI), BUG-013 (S-05 probe wrote title hashes; committed copies redacted), BUG-014 (S-01 total counts both scans).
+- Bugs: BUG-001…016 all fixed. BUG-011…015 were in spike harnesses (no product code) and were fixed in the post-sign-off cleanup: S-04 hard-coded verdicts, probe raw FFI, S-05 title hashes, S-01 double-counted total, S-02 harness run-time label.
 - agy's reports overstated or invented results four times (R-09, four S-04 claims, missing `just ci` in S-01, wrong GPU conclusion). Every result in an ADR was re-measured by Claude.
 - `archive/v1-docs/` removed at the owner's request (D-14).
 - **S-02 deviations:**

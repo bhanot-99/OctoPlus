@@ -23,6 +23,7 @@ neuroos-health = { path = "../neuroos-health" }
 neuroos-ipc = { path = "../neuroos-ipc" }
 neuroos-proto = { path = "../neuroos-proto" }
 neuroos-sandbox = { path = "../neuroos-sandbox" }
+rustix = { workspace = true, features = ["mm", "net", "thread"] }
 tokio = { workspace = true, features = ["signal"] }
 tracing.workspace = true
 

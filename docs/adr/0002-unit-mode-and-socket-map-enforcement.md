@@ -39,7 +39,7 @@ Measured (details in the evidence files):
 - The isolation the design assumed is available without root, with three concrete fixes now written into Architecture §8.1/§8.2.
 - The D-Bus finding removes a real DNS path for every part; C1's sensor choices (S-05) must avoid the system bus where `/sys` works.
 - A part's sockets are invisible to units outside its row of the socket map, so a compromised part cannot even see sockets it was not given.
-- agy's harness hard-codes "works" for stanzas without a behaviour check and prints two unmeasured findings (BUG-011); the evidence for this ADR is the checker's file until that is fixed.
+- agy's harness hard-coded "works" for stanzas without a behaviour check and printed two unmeasured findings (BUG-011). Fixed 2026-11-15: the harness now reports only what it checks, and its re-run (`reports/spikes/s04-hardening-20261115.*`) agrees with the checker's file. The D-Bus and peer-unit findings still rest on `s04-verification-claude.md`.
 - Two stanzas (`ProtectClock`, `RestrictRealtime`) add nothing observable here; they stay as defence in depth.
 
 ## Alternatives

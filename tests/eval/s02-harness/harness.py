@@ -158,7 +158,7 @@ def evaluate_grounded(model_meta, model_raw_dir, force=False):
         question = item["question"]
         prompt = f"<untrusted>{evidence}</untrusted>\n{question}"
 
-        clean_ans, raw_out, stderr_out, code = run_single_turn(
+        clean_ans, raw_out, _stderr, code = run_single_turn(
             model_meta["file"], prompt, max_tokens=160
         )
 
@@ -221,7 +221,7 @@ def evaluate_honesty(model_meta, model_raw_dir, force=False):
         question = item["question"]
         prompt = f"<untrusted>{evidence}</untrusted>\n{question}"
 
-        clean_ans, raw_out, stderr_out, code = run_single_turn(
+        clean_ans, raw_out, _stderr, code = run_single_turn(
             model_meta["file"], prompt, max_tokens=160
         )
 
@@ -293,7 +293,7 @@ def evaluate_skill_calls(model_meta, model_raw_dir, force=False):
         expected_skill = item["expected_skill"]
         expect_args = item.get("expect_args", [])
 
-        clean_ans, raw_out, stderr_out, code = run_single_turn(
+        clean_ans, _raw, _stderr, code = run_single_turn(
             model_meta["file"], request, max_tokens=160, grammar_file=SKILL_GRAMMAR_FILE
         )
 
@@ -370,7 +370,7 @@ def evaluate_chat_answers(model_meta, model_raw_dir, force=False):
     for item in items:
         ensure_memory_headroom()
         question = item["question"]
-        clean_ans, raw_out, stderr_out, code = run_single_turn(
+        clean_ans, raw_out, _stderr, code = run_single_turn(
             model_meta["file"], question, max_tokens=220
         )
         results.append({
@@ -595,12 +595,12 @@ def main():
 
         # 1. Grounded
         print("  Running Grounded QA (20 items)...")
-        g_pass, g_tot, g_res = evaluate_grounded(m, model_raw_dir, force=force_rerun)
+        g_pass, g_tot, _ = evaluate_grounded(m, model_raw_dir, force=force_rerun)
         print(f"  Grounded score: {g_pass}/{g_tot} ({g_pass/g_tot*100:.1f}%)")
 
         # 2. Honesty
         print("  Running Honesty QA (10 items)...")
-        h_pass, h_tot, h_res = evaluate_honesty(m, model_raw_dir, force=force_rerun)
+        h_pass, h_tot, _ = evaluate_honesty(m, model_raw_dir, force=force_rerun)
         print(f"  Honesty score: {h_pass}/{h_tot} ({h_pass/h_tot*100:.1f}%)")
 
         # 3. Skill Calls
@@ -784,7 +784,7 @@ def generate_markdown_report(filepath, report):
     md = []
     md.append(f"# Spike S-02 Part B: Model Bake-Off Report (Story P0-S08)")
     md.append(f"\n**Date:** {date_utc}  ")
-    md.append(f"**Total Run Time:** {duration}s ({duration/60:.2f} min)  ")
+    md.append(f"**This invocation took:** {duration}s ({duration/60:.2f} min). Raw results already in `s02-raw/` are re-read, not re-measured, so this is not the measurement time.  ")
     md.append(f"**Commit:** `{cond['git_commit']}`  ")
     md.append(f"**Kernel:** `{cond['kernel']}`  ")
     md.append(f"**CPU:** AMD Ryzen 7 5800H (16 threads, governor: `{cond['governor']}`, avg MHz: `{cond['cpu_mhz_avg']}`)  ")
@@ -806,7 +806,7 @@ def generate_markdown_report(filepath, report):
     md.append(f"| Model | Grounded QA (20) | Honesty (10) | Skill Calls (20) | Skill Parse % | Skill Match % | Args Match % |")
     md.append(f"| :--- | :---: | :---: | :---: | :---: | :---: | :---: |")
 
-    for mid, mdata in models.items():
+    for _mid, mdata in models.items():
         name = mdata["meta"]["name"]
         q = mdata["quality"]
         g = f"{q['grounded']['passed']}/20 ({q['grounded']['rate']*100:.1f}%)"
@@ -825,7 +825,7 @@ def generate_markdown_report(filepath, report):
     md.append(f"| Model | CPU t=8 Prefill (t/s) | CPU t=8 Decode (t/s) | CPU t=16 Prefill (t/s) | CPU t=16 Decode (t/s) | Vulkan Prefill | Vulkan Decode | TTFT (g01 ms) |")
     md.append(f"| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |")
 
-    for mid, mdata in models.items():
+    for _mid, mdata in models.items():
         name = mdata["meta"]["name"]
         s_cpu = mdata["speed_cpu"]
         t8_p = f"{s_cpu['threads_8']['prefill']['avg_ts']:.2f} ± {s_cpu['threads_8']['prefill']['stddev_ts']:.2f}"
@@ -845,7 +845,7 @@ def generate_markdown_report(filepath, report):
     md.append(f"| Model | Peak RSS (MiB) | C4 Cap (≤3,000 MiB) | License | License Acceptable | Vulkan VRAM Used | Vulkan Idle Power |")
     md.append(f"| :--- | :---: | :---: | :---: | :---: | :---: | :---: |")
 
-    for mid, mdata in models.items():
+    for _mid, mdata in models.items():
         name = mdata["meta"]["name"]
         rss_mib = mdata["memory_cpu"]["rss_mib"]
         cap_ok = "**PASS**" if mdata["floors"]["fits_c4_cap_3000mib"] else "**FAIL** (>3000 MiB)"

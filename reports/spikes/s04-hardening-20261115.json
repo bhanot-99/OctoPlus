@@ -1,0 +1,247 @@
+{
+  "experiment": "S-04",
+  "goal": "Verify systemd hardening in user-scope units, socket-folder isolation, peer-unit checks, and GPU access (P0-S10)",
+  "date_utc": "2026-11-15T14:16:30Z",
+  "commit": "d0eb07b9d959750ba897c09a4ececefdbe6a8394",
+  "conditions": {
+    "kernel": "Linux 7.2.15-76070215-generic #202611011338~1793722468~24.04~d8e9a1a SMP PREEMPT_DYNAMIC Tue N x86_64",
+    "systemd_version": "systemd 255 (255.4-1ubuntu8.15pop0~1778766128~24.04~85b5073)",
+    "landlock_abi": "10",
+    "nvidia_driver": "595.104.02"
+  },
+  "stanzas": [
+    {
+      "stanza": "PrivateNetwork=yes",
+      "property": "PrivateNetwork",
+      "works_in_user_scope": "yes",
+      "evidence": "loopback isolated; nameserver unreachable",
+      "journal_error": ""
+    },
+    {
+      "stanza": "InaccessiblePaths=-/run/systemd/resolve",
+      "property": "InaccessiblePaths",
+      "works_in_user_scope": "yes",
+      "evidence": "/run/systemd/resolve made inaccessible (EACCES)",
+      "journal_error": ""
+    },
+    {
+      "stanza": "NoNewPrivileges=yes",
+      "property": "NoNewPrivileges",
+      "works_in_user_scope": "yes",
+      "evidence": "NoNewPrivs=1 in /proc/self/status",
+      "journal_error": ""
+    },
+    {
+      "stanza": "ProtectSystem=strict",
+      "property": "ProtectSystem",
+      "works_in_user_scope": "unchecked",
+      "evidence": "systemd accepted; property set (no behaviour check)",
+      "journal_error": ""
+    },
+    {
+      "stanza": "ProtectHome=tmpfs",
+      "property": "ProtectHome",
+      "works_in_user_scope": "yes",
+      "evidence": "/home mounted as empty tmpfs (masks /run/user without BindPaths)",
+      "journal_error": ""
+    },
+    {
+      "stanza": "PrivateTmp=yes",
+      "property": "PrivateTmp",
+      "works_in_user_scope": "yes",
+      "evidence": "/tmp isolated from host",
+      "journal_error": ""
+    },
+    {
+      "stanza": "PrivateDevices=yes",
+      "property": "PrivateDevices",
+      "works_in_user_scope": "yes",
+      "evidence": "/dev populated with only minimal pseudo-devices (~18 entries)",
+      "journal_error": ""
+    },
+    {
+      "stanza": "ProtectKernelTunables=yes",
+      "property": "ProtectKernelTunables",
+      "works_in_user_scope": "unchecked",
+      "evidence": "systemd accepted; property set (no behaviour check)",
+      "journal_error": ""
+    },
+    {
+      "stanza": "ProtectKernelModules=yes",
+      "property": "ProtectKernelModules",
+      "works_in_user_scope": "unchecked",
+      "evidence": "systemd accepted; property set (no behaviour check)",
+      "journal_error": ""
+    },
+    {
+      "stanza": "ProtectKernelLogs=yes",
+      "property": "ProtectKernelLogs",
+      "works_in_user_scope": "unchecked",
+      "evidence": "systemd accepted; property set (no behaviour check)",
+      "journal_error": ""
+    },
+    {
+      "stanza": "ProtectControlGroups=yes",
+      "property": "ProtectControlGroups",
+      "works_in_user_scope": "unchecked",
+      "evidence": "systemd accepted; property set (no behaviour check)",
+      "journal_error": ""
+    },
+    {
+      "stanza": "ProtectClock=yes",
+      "property": "ProtectClock",
+      "works_in_user_scope": "unchecked",
+      "evidence": "systemd accepted; property set (no behaviour check)",
+      "journal_error": ""
+    },
+    {
+      "stanza": "ProtectHostname=yes",
+      "property": "ProtectHostname",
+      "works_in_user_scope": "unchecked",
+      "evidence": "systemd accepted; property set (no behaviour check)",
+      "journal_error": ""
+    },
+    {
+      "stanza": "RestrictNamespaces=yes",
+      "property": "RestrictNamespaces",
+      "works_in_user_scope": "yes",
+      "evidence": "unshare(CLONE_NEWUSER) blocked with EPERM",
+      "journal_error": ""
+    },
+    {
+      "stanza": "RestrictRealtime=yes",
+      "property": "RestrictRealtime",
+      "works_in_user_scope": "unchecked",
+      "evidence": "systemd accepted; property set (no behaviour check)",
+      "journal_error": ""
+    },
+    {
+      "stanza": "RestrictSUIDSGID=yes",
+      "property": "RestrictSUIDSGID",
+      "works_in_user_scope": "unchecked",
+      "evidence": "systemd accepted; property set (no behaviour check)",
+      "journal_error": ""
+    },
+    {
+      "stanza": "RestrictAddressFamilies=AF_UNIX",
+      "property": "RestrictAddressFamilies",
+      "works_in_user_scope": "yes",
+      "evidence": "AF_INET/6/PACKET sockets blocked with EAFNOSUPPORT",
+      "journal_error": ""
+    },
+    {
+      "stanza": "LockPersonality=yes",
+      "property": "LockPersonality",
+      "works_in_user_scope": "yes",
+      "evidence": "personality() change blocked with EPERM",
+      "journal_error": ""
+    },
+    {
+      "stanza": "MemoryDenyWriteExecute=yes",
+      "property": "MemoryDenyWriteExecute",
+      "works_in_user_scope": "yes",
+      "evidence": "mmap(PROT_WRITE|PROT_EXEC) blocked with EPERM",
+      "journal_error": ""
+    },
+    {
+      "stanza": "SystemCallArchitectures=native",
+      "property": "SystemCallArchitectures",
+      "works_in_user_scope": "unchecked",
+      "evidence": "systemd accepted; property set (no behaviour check)",
+      "journal_error": ""
+    },
+    {
+      "stanza": "SystemCallFilter=@system-service landlock_create_ruleset landlock_add_rule landlock_restrict_self",
+      "property": "SystemCallFilter",
+      "works_in_user_scope": "unchecked",
+      "evidence": "systemd accepted; property set (no behaviour check)",
+      "journal_error": ""
+    },
+    {
+      "stanza": "CapabilityBoundingSet=",
+      "property": "CapabilityBoundingSet",
+      "works_in_user_scope": "yes",
+      "evidence": "CapBnd cleared (0000000000000000)",
+      "journal_error": ""
+    },
+    {
+      "stanza": "LimitCORE=0",
+      "property": "LimitCORE",
+      "works_in_user_scope": "unchecked",
+      "evidence": "systemd accepted; property set (no behaviour check)",
+      "journal_error": ""
+    },
+    {
+      "stanza": "UMask=0077",
+      "property": "UMask",
+      "works_in_user_scope": "unchecked",
+      "evidence": "systemd accepted; property set (no behaviour check)",
+      "journal_error": ""
+    },
+    {
+      "stanza": "MemoryMax=64M",
+      "property": "MemoryMax",
+      "works_in_user_scope": "unchecked",
+      "evidence": "systemd accepted; property set (no behaviour check)",
+      "journal_error": ""
+    }
+  ],
+  "systemd_analyze_security": {
+    "exposure_score": "Overall exposure level for neuroos-s04-sec-eval-1996926.service: 1.5 OK \ud83d\ude42",
+    "note": "exposure score of the full baseline unit as reported by systemd-analyze"
+  },
+  "socket_isolation": {
+    "success": true,
+    "unit_a_result": "Running as unit: neuroos-s04-iso-a-1996926.service; invocation ID: f30a9cab3ab64ebba0f31d22981de3f2\nPASS connect /run/user/1000/neuroos-s04-1996926/iso/b/echo/echo.sock\nFinished with result: success\nMain processes terminated with: code=exited/status=0\nService runtime: 10ms\nCPU time consumed: 10ms\nMemory peak: 256.0K\nMemory swap peak: 0B",
+    "unit_c_result": "Running as unit: neuroos-s04-iso-c-1996926.service\nFAIL connect /run/user/1000/neuroos-s04-1996926/iso/b/echo/echo.sock: No such file or directory (os error 2)\nFinished with result: success\nMain processes terminated with: code=exited/status=0\nService runtime: 10ms\nCPU time consumed: 10ms\nMemory peak: 2.5M\nMemory swap peak: 0B"
+  },
+  "peer_unit_check": {
+    "allowed_client_connect": "Running as unit: neuroos-s04-allowed-client-1996926.service\nPASS connect /run/user/1000/neuroos-s04-1996926/peer/echo/echo.sock\nFinished with result: success\nMain processes terminated with: code=exited/status=0\nService runtime: 6ms\nCPU time consumed: 5ms\nMemory peak: 1.7M\nMemory swap peak: 0B",
+    "other_client_connect": "Running as unit: neuroos-s04-other-client-1996926.service\nPASS connect /run/user/1000/neuroos-s04-1996926/peer/echo/echo.sock\nFinished with result: success\nMain processes terminated with: code=exited/status=0\nService runtime: 6ms\nCPU time consumed: 6ms\nMemory peak: 1.5M\nMemory swap peak: 0B",
+    "landlock_finding": "not measured by this script; see reports/spikes/s04-verification-claude.md"
+  },
+  "gpu_access": {
+    "nodes": [
+      "/dev/nvidia0",
+      "/dev/nvidiactl",
+      "/dev/nvidia-modeset",
+      "/dev/nvidia-uvm",
+      "/dev/nvidia-uvm-tools",
+      "/dev/dri/card0",
+      "/dev/dri/card1",
+      "/dev/dri/renderD128",
+      "/dev/dri/renderD129"
+    ],
+    "variants": {
+      "v1_full_baseline": {
+        "private_devices": true,
+        "nvidia_detected": false
+      },
+      "v2_device_allow": {
+        "private_devices": false,
+        "device_policy": "closed",
+        "device_allow": true,
+        "memory_deny_write_execute": true,
+        "system_call_filter": true,
+        "nvidia_detected": true
+      },
+      "v3_no_mdwx": {
+        "private_devices": false,
+        "device_policy": "closed",
+        "device_allow": true,
+        "memory_deny_write_execute": false,
+        "system_call_filter": true,
+        "nvidia_detected": true
+      },
+      "v4_no_scf": {
+        "private_devices": false,
+        "device_policy": "closed",
+        "device_allow": true,
+        "memory_deny_write_execute": true,
+        "system_call_filter": false,
+        "nvidia_detected": true
+      }
+    },
+    "conclusion": "enumeration only (vulkaninfo); DeviceAllow is not enforced in user scope, so variants ii-iv do not prove a device allowlist. Measured GPU mechanism: ADR-0008 addenda"
+  }
+}

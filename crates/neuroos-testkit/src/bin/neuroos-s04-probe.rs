@@ -15,98 +15,57 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 
-// Linux ABI constants for raw syscalls.
-const AF_INET: i32 = 2;
-const AF_INET6: i32 = 10;
-const AF_PACKET: i32 = 17;
-const SOCK_STREAM: i32 = 1;
-const SOCK_RAW: i32 = 3;
-const CLONE_NEWUSER: i32 = 0x10000000;
-const PROT_READ: i32 = 1;
-const PROT_WRITE: i32 = 2;
-const PROT_EXEC: i32 = 4;
-const MAP_PRIVATE: i32 = 0x02;
-const MAP_ANONYMOUS: i32 = 0x20;
+use rustix::mm::{MapFlags, ProtFlags};
+use rustix::net::{AddressFamily, SocketType};
+
+/// `personality()` has no rustix wrapper; it is the one direct libc call left.
 const PER_LINUX32: u64 = 0x0008;
 
 unsafe extern "C" {
-    fn socket(domain: i32, type_: i32, protocol: i32) -> i32;
-    fn close(fd: i32) -> i32;
-    fn unshare(flags: i32) -> i32;
-    fn mmap(
-        addr: *mut std::ffi::c_void,
-        len: usize,
-        prot: i32,
-        flags: i32,
-        fd: i32,
-        offset: i64,
-    ) -> *mut std::ffi::c_void;
-    fn munmap(addr: *mut std::ffi::c_void, len: usize) -> i32;
     fn personality(persona: u64) -> i32;
-    fn getuid() -> u32;
 }
 
-/// Helper to safely test raw socket creation.
-fn raw_socket_test(domain: i32, sock_type: i32, proto: i32) -> std::io::Result<i32> {
-    // SAFETY: socket() creates a socket descriptor with standard C library ABI.
-    let fd = unsafe { socket(domain, sock_type, proto) };
-    if fd < 0 {
-        Err(std::io::Error::last_os_error())
-    } else {
-        // SAFETY: fd is valid and must be closed immediately.
-        unsafe { close(fd) };
-        Ok(fd)
-    }
+/// Tries to create a socket; the descriptor is closed at once.
+fn socket_test(domain: AddressFamily, sock_type: SocketType) -> std::io::Result<i32> {
+    use std::os::fd::AsRawFd;
+    let fd = rustix::net::socket(domain, sock_type, None)?;
+    Ok(fd.as_raw_fd())
 }
 
-/// Helper to safely test unshare(CLONE_NEWUSER).
-fn raw_unshare_user_ns() -> std::io::Result<()> {
-    // SAFETY: unshare() takes standard bit flags.
-    let rc = unsafe { unshare(CLONE_NEWUSER) };
-    if rc < 0 {
-        Err(std::io::Error::last_os_error())
-    } else {
-        Ok(())
-    }
+/// Tries `unshare(CLONE_NEWUSER)`.
+fn unshare_user_ns() -> std::io::Result<()> {
+    // SAFETY: the probe is single-threaded and exits right after its checks,
+    // so moving it into a new user namespace cannot break other threads.
+    unsafe { rustix::thread::unshare_unsafe(rustix::thread::UnshareFlags::NEWUSER) }?;
+    Ok(())
 }
 
-/// Helper to safely test writable and executable memory allocation.
-fn raw_mmap_wx() -> std::io::Result<()> {
-    // SAFETY: mmap() requests a private anonymous page with PROT_WRITE | PROT_EXEC.
+/// Tries to map one writable and executable page.
+fn mmap_wx() -> std::io::Result<()> {
+    // SAFETY: a fresh private anonymous page at a kernel-chosen address; it is
+    // never dereferenced and is unmapped before returning.
     let ptr = unsafe {
-        mmap(
+        rustix::mm::mmap_anonymous(
             std::ptr::null_mut(),
             4096,
-            PROT_READ | PROT_WRITE | PROT_EXEC,
-            MAP_PRIVATE | MAP_ANONYMOUS,
-            -1,
-            0,
+            ProtFlags::READ | ProtFlags::WRITE | ProtFlags::EXEC,
+            MapFlags::PRIVATE,
         )
-    };
-    if ptr == (-1isize as *mut std::ffi::c_void) {
-        Err(std::io::Error::last_os_error())
-    } else {
-        // SAFETY: ptr is non-null and allocated 4096 bytes.
-        unsafe { munmap(ptr, 4096) };
-        Ok(())
-    }
+    }?;
+    // SAFETY: `ptr` is the 4096-byte mapping created above.
+    unsafe { rustix::mm::munmap(ptr, 4096) }?;
+    Ok(())
 }
 
-/// Helper to safely test personality changes.
-fn raw_personality_change() -> std::io::Result<()> {
-    // SAFETY: personality() sets execution domain flags.
+/// Tries to change the execution domain.
+fn personality_change() -> std::io::Result<()> {
+    // SAFETY: personality() takes a plain flag word and touches no memory.
     let rc = unsafe { personality(PER_LINUX32) };
     if rc < 0 {
         Err(std::io::Error::last_os_error())
     } else {
         Ok(())
     }
-}
-
-/// Helper to get current effective UID.
-fn current_uid() -> u32 {
-    // SAFETY: getuid() is always safe.
-    unsafe { getuid() }
 }
 
 #[derive(Debug, Parser)]
@@ -148,19 +107,19 @@ enum Commands {
 
 fn run_net(unix_dir: Option<&Path>) -> Result<()> {
     // 1. socket(AF_INET)
-    match raw_socket_test(AF_INET, SOCK_STREAM, 0) {
+    match socket_test(AddressFamily::INET, SocketType::STREAM) {
         Ok(fd) => println!("FAIL socket(AF_INET) allowed (fd={fd})"),
         Err(e) => println!("PASS socket(AF_INET) blocked: {e}"),
     }
 
     // 2. socket(AF_INET6)
-    match raw_socket_test(AF_INET6, SOCK_STREAM, 0) {
+    match socket_test(AddressFamily::INET6, SocketType::STREAM) {
         Ok(fd) => println!("FAIL socket(AF_INET6) allowed (fd={fd})"),
         Err(e) => println!("PASS socket(AF_INET6) blocked: {e}"),
     }
 
     // 3. socket(AF_PACKET)
-    match raw_socket_test(AF_PACKET, SOCK_RAW, 0) {
+    match socket_test(AddressFamily::PACKET, SocketType::RAW) {
         Ok(fd) => println!("FAIL socket(AF_PACKET) allowed (fd={fd})"),
         Err(e) => println!("PASS socket(AF_PACKET) blocked: {e}"),
     }
@@ -224,6 +183,15 @@ fn run_dns() -> Result<()> {
         sock.set_read_timeout(Some(Duration::from_millis(300)))
             .context("timeout")?;
         sock.connect("127.0.0.53:53").context("connect udp")?;
+        // A UDP connect sends nothing, so ask a real question: an A query for
+        // "localhost". Only an answer proves the resolver is reachable.
+        let query: [u8; 27] = [
+            0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 9, b'l', b'o',
+            b'c', b'a', b'l', b'h', b'o', b's', b't', 0, 0x00, 0x01, 0x00, 0x01,
+        ];
+        sock.send(&query).context("send query")?;
+        let mut buf = [0u8; 512];
+        sock.recv(&mut buf).context("no answer")?;
         Ok(())
     };
     match check_nameserver() {
@@ -293,7 +261,7 @@ fn run_fs() -> Result<()> {
     }
 
     // 2. /run/user/<uid> visibility
-    let uid = current_uid();
+    let uid = rustix::process::getuid().as_raw();
     let user_run = format!("/run/user/{uid}");
     match fs::read_dir(&user_run) {
         Ok(entries) => {
@@ -381,19 +349,19 @@ fn run_proc() -> Result<()> {
     }
 
     // 2. unshare(CLONE_NEWUSER)
-    match raw_unshare_user_ns() {
+    match unshare_user_ns() {
         Ok(()) => println!("FAIL unshare(CLONE_NEWUSER) allowed"),
         Err(e) => println!("PASS unshare(CLONE_NEWUSER) blocked: {e}"),
     }
 
     // 3. mmap(PROT_WRITE | PROT_EXEC)
-    match raw_mmap_wx() {
+    match mmap_wx() {
         Ok(()) => println!("FAIL mmap(PROT_WRITE|PROT_EXEC) allowed"),
         Err(e) => println!("PASS mmap(PROT_WRITE|PROT_EXEC) blocked: {e}"),
     }
 
     // 4. personality() change
-    match raw_personality_change() {
+    match personality_change() {
         Ok(()) => println!("FAIL personality() change allowed"),
         Err(e) => println!("PASS personality() change blocked: {e}"),
     }

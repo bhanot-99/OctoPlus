@@ -752,10 +752,12 @@ fn execute_query_run(
         let scan_1t_ms = t_scan_start.elapsed().as_secs_f64() * 1000.0;
         scan_1t_lats.push(scan_1t_ms);
 
-        // Vector scan (4 threads) variant for reporting
+        // Vector scan (4 threads) variant, for reporting only: its time is
+        // taken out of the total below, so the total is the 1-thread path (BUG-014).
         let t_scan_4t = Instant::now();
         let _ = scan_4_threads(matrix, ids, q_vec, TOP_K_CANDIDATES);
-        scan_4t_lats.push(t_scan_4t.elapsed().as_secs_f64() * 1000.0);
+        let scan_4t_ms = t_scan_4t.elapsed().as_secs_f64() * 1000.0;
+        scan_4t_lats.push(scan_4t_ms);
 
         // 2. FTS5 MATCH with bm25()
         let t_fts_start = Instant::now();
@@ -776,7 +778,7 @@ fn execute_query_run(
         let fetch_ms = t_fetch_start.elapsed().as_secs_f64() * 1000.0;
         fetch_lats.push(fetch_ms);
 
-        let total_ms = t_total_start.elapsed().as_secs_f64() * 1000.0;
+        let total_ms = t_total_start.elapsed().as_secs_f64() * 1000.0 - scan_4t_ms;
         total_lats.push(total_ms);
     }
 

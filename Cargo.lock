@@ -621,6 +621,7 @@ dependencies = [
  "neuroos-ipc",
  "neuroos-proto",
  "neuroos-sandbox",
+ "rustix",
  "tempfile",
  "tokio",
  "tracing",

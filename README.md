@@ -28,7 +28,7 @@ No cloud model, no accounts, no telemetry, no auto-update, no screen capture, no
 
 ## Status
 
-**Design complete; build not started.** The eight documents below are the baseline. Work begins with Phase 0 (foundation and five measured spikes).
+**Phase 0 done (signed off 2026-11-15).** The repository builds, tests and sandboxes from day one (`just ci`), the shared IPC, health and sandbox libraries exist in Rust and C++, and the five spikes are measured and recorded in [`docs/adr/`](docs/adr). Next: Phase 1, the walking skeleton. Current state is always in [`memory.md`](memory.md); the phase report is [`reports/phase-00-foundation.md`](reports/phase-00-foundation.md).
 
 ## Documents
 
@@ -42,6 +42,8 @@ No cloud model, no accounts, no telemetry, no auto-update, no screen capture, no
 | [`phases.md`](phases.md) | The eleven-phase delivery plan with exit criteria |
 | [`memory.md`](memory.md) | Current state — read this first every session |
 | [`docs/lessons-from-v1.md`](docs/lessons-from-v1.md) | What an earlier prototype taught us |
+| [`docs/adr/`](docs/adr) | Decision records (ADR-0001…0008) |
+| [`BUGS.md`](BUGS.md) | Every bug, open and fixed |
 
 ## Requirements
 
