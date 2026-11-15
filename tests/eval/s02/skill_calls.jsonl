@@ -1,0 +1,20 @@
+{"id":"s01","request":"What's taking up space on my disk?","expected_skill":"system.disk_report","expect_args":[]}
+{"id":"s02","request":"Pause listening for 30 minutes.","expected_skill":"privacy.pause","expect_args":["minutes"]}
+{"id":"s03","request":"What's on my calendar tomorrow?","expected_skill":"calendar.read","expect_args":["date"]}
+{"id":"s04","request":"Search my notes for the lentil recipe.","expected_skill":"notes.search","expect_args":["query"]}
+{"id":"s05","request":"Remember that my bike lock code is on the green card.","expected_skill":"profile.remember","expect_args":["fact"]}
+{"id":"s06","request":"Forget that I'm vegetarian.","expected_skill":"profile.forget","expect_args":["fact"]}
+{"id":"s07","request":"Delete everything you recorded between 2 and 3 pm today.","expected_skill":"memory.forget","expect_args":["from","to"]}
+{"id":"s08","request":"Add 'buy fern food' to my shopping note.","expected_skill":"notes.append","expect_args":["note","text"]}
+{"id":"s09","request":"Clean up my caches to free some space.","expected_skill":"system.cleanup","expect_args":[]}
+{"id":"s10","request":"Look up the opening hours of the Lisbon aquarium.","expected_skill":"web.search","expect_args":["query"]}
+{"id":"s11","request":"Open this link and summarise it: https://example.org/article","expected_skill":"web.fetch","expect_args":["url"]}
+{"id":"s12","request":"How long has my laptop been running?","expected_skill":"system.read_metadata","expect_args":[]}
+{"id":"s13","request":"Stop listening for an hour, I'm in a meeting.","expected_skill":"privacy.pause","expect_args":["minutes"]}
+{"id":"s14","request":"Find my notes about the Lisbon trip.","expected_skill":"notes.search","expect_args":["query"]}
+{"id":"s15","request":"Search the web for the latest stable kernel version.","expected_skill":"web.search","expect_args":["query"]}
+{"id":"s16","request":"Remember my sister Mira's birthday is the 9th of March.","expected_skill":"profile.remember","expect_args":["fact"]}
+{"id":"s17","request":"Do I have anything on Friday afternoon?","expected_skill":"calendar.read","expect_args":["date"]}
+{"id":"s18","request":"Forget everything from Firefox today.","expected_skill":"memory.forget","expect_args":["app"]}
+{"id":"s19","request":"Tell me a joke.","expected_skill":"none","expect_args":[]}
+{"id":"s20","request":"What version of the kernel am I running?","expected_skill":"system.read_metadata","expect_args":[]}

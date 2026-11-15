@@ -1,0 +1,9 @@
+# One skill call as JSON (FR-INF-05). Skills from PRD §5.9 FR-KER-10.
+root   ::= "{" ws "\"skill\"" ws ":" ws skill ws "," ws "\"args\"" ws ":" ws object ws "}"
+skill  ::= "\"system.read_metadata\"" | "\"system.disk_report\"" | "\"calendar.read\"" | "\"notes.search\"" | "\"privacy.pause\"" | "\"profile.remember\"" | "\"profile.forget\"" | "\"memory.forget\"" | "\"notes.append\"" | "\"system.cleanup\"" | "\"web.fetch\"" | "\"web.search\"" | "\"none\""
+object ::= "{" ws ( member ( ws "," ws member )* )? ws "}"
+member ::= string ws ":" ws value
+value  ::= string | number | "true" | "false" | "null"
+string ::= "\"" ( [^"\\\x00-\x1f] | "\\" ["\\/bfnrt] )* "\""
+number ::= "-"? [0-9]+ ( "." [0-9]+ )?
+ws     ::= [ \t\n]*
