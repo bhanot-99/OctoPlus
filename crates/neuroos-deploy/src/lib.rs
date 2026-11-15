@@ -378,7 +378,7 @@ pub fn generate_fetcher_system_service() -> String {
     out.push_str(&format!("MemoryMax={MEMORY_MAX_FETCHER}\n"));
     out.push_str("Restart=on-failure\n");
     out.push_str("RestartSec=2s\n");
-    out.push_str("ExecStart=/opt/neuroos/bin/neuroos-fetcher --allow-uid 1000\n\n");
+    out.push_str("ExecStart=/opt/neuroos/bin/neuroos-fetcher --allow-uid @OWNER_UID@\n\n");
 
     out.push_str("[Install]\n");
     out.push_str("WantedBy=multi-user.target\n");

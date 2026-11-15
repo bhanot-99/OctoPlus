@@ -9,12 +9,13 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": { "CMAKE_CXX_COMPILER": "g++" }
     },
-    { "name": "debug", "inherits": "base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" } },
-    { "name": "release", "inherits": "base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" } },
+    { "name": "debug", "inherits": "base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "NEUROOS_WITH_LLAMA": "ON" } },
+    { "name": "release", "inherits": "base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "NEUROOS_WITH_LLAMA": "ON" } },
     {
       "name": "asan", "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
+        "NEUROOS_WITH_LLAMA": "OFF",
         "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all"
       }
     },
@@ -22,13 +23,14 @@
       "name": "tsan", "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
+        "NEUROOS_WITH_LLAMA": "OFF",
         "CMAKE_CXX_FLAGS": "-fsanitize=thread -fno-omit-frame-pointer",
         "CMAKE_CROSSCOMPILING_EMULATOR": "setarch;x86_64;-R"
       }
     },
     {
       "name": "coverage", "inherits": "base",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "NEUROOS_COVERAGE": "ON" }
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "NEUROOS_WITH_LLAMA": "OFF", "NEUROOS_COVERAGE": "ON" }
     }
   ],
   "buildPresets": [

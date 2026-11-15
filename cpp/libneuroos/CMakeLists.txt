@@ -4,6 +4,7 @@ find_package(Threads REQUIRED)
 add_library(neuroos
   src/time.cpp
   src/health.cpp
+  src/sandbox.cpp
   src/ipc/frame.cpp
   src/ipc/peer.cpp
   src/ipc/envelope.cpp
@@ -19,6 +20,7 @@ add_executable(libneuroos_tests
   tests/frame_test.cpp
   tests/peer_backoff_test.cpp
   tests/server_client_test.cpp
+  tests/sandbox_test.cpp
 )
 target_link_libraries(libneuroos_tests PRIVATE neuroos neuroos_warnings GTest::gtest_main)
 gtest_discover_tests(libneuroos_tests)

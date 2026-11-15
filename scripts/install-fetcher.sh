@@ -42,7 +42,9 @@ fi
 
 echo "=== 3. Installing fetcher system unit ==="
 install -d -m 0755 /etc/systemd/system
-install -m 0644 "$root/deploy/systemd/system/neuroos-fetcher.service" /etc/systemd/system/neuroos-fetcher.service
+owner_uid="$(id -u "$SUDO_USER")"
+sed "s/@OWNER_UID@/$owner_uid/g" "$root/deploy/systemd/system/neuroos-fetcher.service" > /etc/systemd/system/neuroos-fetcher.service
+chmod 0644 /etc/systemd/system/neuroos-fetcher.service
 
 echo "=== 4. Installing fetcher binary ==="
 install -d -m 0755 /opt/neuroos/bin

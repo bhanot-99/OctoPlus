@@ -49,7 +49,7 @@ test: build
 # Hosted CI subset: skips `local_*` tests that need a user session (rules.md §8.6).
 test-hosted: build
     cargo nextest run --workspace --locked --no-tests=fail --profile hosted
-    cd cpp && ctest --preset {{cpp_preset}} --no-tests=error
+    cd cpp && ctest --preset {{cpp_preset}} --no-tests=error -LE local
     tests/scripts/fetch-models-test.sh
 
 # Dependency policy (advisories, bans, licences, sources) plus the network-ban probe.
@@ -65,7 +65,7 @@ cov: build
     rm -rf cpp/build/coverage
     cd cpp && cmake --preset coverage && cmake --build --preset coverage --parallel
     cd cpp && ctest --preset coverage --no-tests=error
-    gcovr --root cpp --filter 'cpp/libneuroos/src/' --object-directory cpp/build/coverage \
+    gcovr --root cpp --filter 'cpp/libneuroos/src/' --filter 'cpp/neuroos-inference/src/' --filter 'cpp/neuroos-voice/src/' --object-directory cpp/build/coverage \
         --gcov-ignore-parse-errors=negative_hits.warn --fail-under-line 70 --print-summary
 
 # C++ tests under AddressSanitizer+UBSan and ThreadSanitizer (Architecture §14).

@@ -525,8 +525,10 @@ async fn test_cancellation_propagates_to_c4() {
     // Client drops stream -> cancels!
     drop(stream);
 
-    // Give a brief moment for the cancel to propagate upstream to C4
-    tokio::time::sleep(Duration::from_millis(300)).await;
+    // Wait for the cancel event to signal mock C4 with a bounded timeout
+    tokio::time::timeout(Duration::from_secs(2), mock_c4.cancel_notify.notified())
+        .await
+        .expect("C4 mock must observe cancellation within timeout");
 
     assert!(
         mock_c4.cancelled.load(Ordering::SeqCst),

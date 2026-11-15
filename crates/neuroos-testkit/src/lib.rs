@@ -134,6 +134,7 @@ pub struct MockInference {
     pub received_prompt: Arc<Mutex<Option<String>>>,
     pub received_stable_prefix: Arc<AtomicU32>,
     pub cancelled: Arc<AtomicBool>,
+    pub cancel_notify: Arc<tokio::sync::Notify>,
 }
 
 impl MockInference {
@@ -147,6 +148,7 @@ impl MockInference {
             received_prompt: Arc::new(Mutex::new(None)),
             received_stable_prefix: Arc::new(AtomicU32::new(0)),
             cancelled: Arc::new(AtomicBool::new(false)),
+            cancel_notify: Arc::new(tokio::sync::Notify::new()),
         }
     }
 
@@ -160,6 +162,7 @@ impl MockInference {
             received_prompt: Arc::new(Mutex::new(None)),
             received_stable_prefix: Arc::new(AtomicU32::new(0)),
             cancelled: Arc::new(AtomicBool::new(false)),
+            cancel_notify: Arc::new(tokio::sync::Notify::new()),
         }
     }
 
@@ -173,6 +176,7 @@ impl MockInference {
             received_prompt: Arc::new(Mutex::new(None)),
             received_stable_prefix: Arc::new(AtomicU32::new(0)),
             cancelled: Arc::new(AtomicBool::new(false)),
+            cancel_notify: Arc::new(tokio::sync::Notify::new()),
         }
     }
 }
@@ -198,17 +202,20 @@ impl Handler for MockInference {
 
         struct DropGuard {
             cancelled: Arc<AtomicBool>,
+            notify: Arc<tokio::sync::Notify>,
             done: bool,
         }
         impl Drop for DropGuard {
             fn drop(&mut self) {
                 if !self.done {
                     self.cancelled.store(true, Ordering::SeqCst);
+                    self.notify.notify_waiters();
                 }
             }
         }
         let mut guard = DropGuard {
             cancelled: self.cancelled.clone(),
+            notify: self.cancel_notify.clone(),
             done: false,
         };
 

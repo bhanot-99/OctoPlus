@@ -362,7 +362,7 @@ fn fetcher_system_unit_and_permissions() {
     assert!(lines.contains(&"RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6"));
     assert!(!lines.contains(&"PrivateNetwork=true"));
     assert!(lines.contains(&"ReadWritePaths=/run/neuroos-fetcher /var/spool/neuroos-fetcher"));
-    assert!(lines.contains(&"ExecStart=/opt/neuroos/bin/neuroos-fetcher --allow-uid 1000"));
+    assert!(lines.contains(&"ExecStart=/opt/neuroos/bin/neuroos-fetcher --allow-uid @OWNER_UID@"));
     assert!(lines.contains(&"MemoryMax=48M"));
     assert!(lines.contains(&"UMask=0027"));
 
