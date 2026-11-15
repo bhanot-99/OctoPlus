@@ -115,6 +115,11 @@ units:
 install-dev:
     scripts/install-dev.sh
 
+# Run the three security proofs and check egress isolation (P1-S01..S04).
+sc:
+    cargo nextest run -p neuroos-testkit --test local_sc_proof_1_net --test local_sc_proof_2_socket_map --test local_sc_proof_3_landlock
+    scripts/check-egress.sh
+
 # Free disk: remove build output.
 prune:
     cargo clean
@@ -127,3 +132,12 @@ ci-hosted: fmt-check lint test-hosted deny
 # Full local gate. Every step must run to the end (rules.md §2.9).
 ci: fmt-check lint test deny cov sanitize
     @echo "just ci: ALL GREEN"
+
+# Phase 1 benchmark suite: conditions, C4 one-shot bench, RSS, e2e latency, cold-start (P1-PF).
+bench-p1 *args:
+    scripts/bench-p1.sh {{args}}
+
+# Phase 1 2-hour mini-soak driver (P1-MS).
+soak-p1 *args:
+    scripts/soak-p1.sh {{args}}
+

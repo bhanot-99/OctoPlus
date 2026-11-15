@@ -1,0 +1,35 @@
+[Unit]
+Description=Semantic-NeuroOS Model Hash Check
+PartOf=neuroos.target
+
+[Service]
+Type=oneshot
+PrivateNetwork=true
+InaccessiblePaths=-/run/systemd/resolve
+InaccessiblePaths=-/run/dbus/system_bus_socket
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=tmpfs
+BindReadOnlyPaths=%h/.local/opt/neuroos/models
+InaccessiblePaths=-/run/neuroos-fetcher
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+CapabilityBoundingSet=
+AmbientCapabilities=
+LimitCORE=0
+UMask=0077
+ExecStart=/usr/bin/sha256sum --check --quiet %h/.local/opt/neuroos/models/SHA256SUMS

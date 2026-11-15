@@ -165,20 +165,7 @@ void RunCancelBenchmark(ipc::Client* client, StreamCollector* col, double* cance
   *cancel_ms = std::chrono::duration<double, std::milli>(t_cancel_end - t_cancel_start).count();
 }
 
-TEST(LocalInferenceTest, local_RealModelCancelStopsWithinOneDecodeStep) {
-  const auto model_path = GetRealModelPath();
-  ASSERT_TRUE(std::filesystem::exists(model_path));
-
-  auto engine = LlamaEngine::Load(model_path, 2048, 512, 8).value();
-  auto health = std::make_shared<Health>("neuroos-inference", "0.1.0");
-  auto service = std::make_shared<InferenceService>(std::move(engine), health);
-  auto fixture = CreateLocalServer("neuroos_real_cancel_", service);
-
-  StreamCollector col;
-  double cancel_ms = 0.0;
-  RunCancelBenchmark(fixture.client.get(), &col, &cancel_ms);
-
-  // Wait until service finishes cancel and becomes idle (FR-INF-04, F8)
+void VerifyCancelMetrics(InferenceService* service) {
   ASSERT_TRUE(service->WaitForIdle(std::chrono::milliseconds(5000)));
 
   auto c2i_hist = service->cancel_to_idle_histogram();
@@ -197,17 +184,35 @@ TEST(LocalInferenceTest, local_RealModelCancelStopsWithinOneDecodeStep) {
   std::cout << "[       OK ] cancel_to_idle: " << cancel_to_idle_ms
             << " ms, mean decode step: " << mean_decode_step_ms << " ms\n";
   EXPECT_LE(cancel_to_idle_ms, 1.5 * mean_decode_step_ms);
+}
 
-  // Assert non-interactive request sent right after cancel is not answered BUSY (F8)
+void VerifyNextPrompt(ipc::Client* client) {
   v1::Envelope req2;
   auto* g2 = req2.mutable_generate_request();
   g2->set_prompt("Next non-interactive prompt.");
   g2->set_max_tokens(4);
   g2->set_interactive(false);
 
-  auto stream2 = fixture.client->Open(std::move(req2), std::chrono::milliseconds(30000)).value();
+  auto stream2 = client->Open(std::move(req2), std::chrono::milliseconds(30000)).value();
   auto first_chunk2 = stream2->Next();
   ASSERT_TRUE(first_chunk2.ok());
+}
+
+TEST(LocalInferenceTest, local_RealModelCancelStopsWithinOneDecodeStep) {
+  const auto model_path = GetRealModelPath();
+  ASSERT_TRUE(std::filesystem::exists(model_path));
+
+  auto engine = LlamaEngine::Load(model_path, 2048, 512, 8).value();
+  auto health = std::make_shared<Health>("neuroos-inference", "0.1.0");
+  auto service = std::make_shared<InferenceService>(std::move(engine), health);
+  auto fixture = CreateLocalServer("neuroos_real_cancel_", service);
+
+  StreamCollector col;
+  double cancel_ms = 0.0;
+  RunCancelBenchmark(fixture.client.get(), &col, &cancel_ms);
+
+  VerifyCancelMetrics(service.get());
+  VerifyNextPrompt(fixture.client.get());
 
   fixture.srv->Stop();
   std::filesystem::remove_all(fixture.test_dir);

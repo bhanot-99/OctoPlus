@@ -28,6 +28,19 @@ struct Report {
 // Returns an Error on failure (fail closed); the caller must exit non-zero.
 Result<Report> Restrict(const Policy& policy);
 
+// Result of trying to read a canary file after Restrict (SC proof 3, security.md §8).
+enum class CanaryResult {
+  kDenied,      // EACCES/EPERM: the sandbox blocked it (expected)
+  kReadable,    // opened: the sandbox did NOT block it (security failure)
+  kUnexpected,  // any other error (e.g. ENOENT: the path is not visible at all), proves nothing
+};
+
+// Tries to open `path` read-only. Only a read attempt; never widens anything.
+CanaryResult ProbeCanary(const std::filesystem::path& path);
+
+// Records a canary result as the health counter landlock_canary_{denied,allowed,unexpected}.
+const char* CanaryCounterName(CanaryResult r);
+
 // True if `path` is inside one of `roots` (lexically; for diagnostics).
 bool Covered(const std::filesystem::path& path, const std::vector<std::filesystem::path>& roots);
 

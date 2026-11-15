@@ -47,6 +47,19 @@ pub struct ServerConfig {
     pub max_connections: usize,
     /// Simultaneous requests per connection.
     pub max_in_flight: usize,
+    /// Who may reach the socket file at the filesystem layer.
+    pub access: SocketAccess,
+}
+
+/// Filesystem access to a server's socket (Architecture §5.2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SocketAccess {
+    /// Folder 0700 (created if missing), socket 0600: only our own user.
+    Private,
+    /// Folder pre-created by tmpfiles with no world access, socket 0660: our
+    /// group may connect. Only the fetcher, whose clients run as another user
+    /// in group `neuroos` (Architecture §5.2, BUG-026).
+    Group,
 }
 
 impl ServerConfig {
@@ -59,6 +72,7 @@ impl ServerConfig {
             policy: PeerPolicy::same_user(),
             max_connections: 64,
             max_in_flight: 16,
+            access: SocketAccess::Private,
         }
     }
 }
@@ -203,6 +217,26 @@ pub fn ensure_private_dir(dir: &Path) -> Result<(), IpcError> {
     }
 }
 
+/// Checks a folder made by tmpfiles for a group-shared socket: it must exist,
+/// be ours, and give nothing to "others". It is never created here: who owns it
+/// and its group is the installer's decision (deploy/tmpfiles.d).
+///
+/// # Errors
+/// Missing, not a directory, not ours, or world-accessible.
+pub fn ensure_group_dir(dir: &Path) -> Result<(), IpcError> {
+    use std::os::unix::fs::MetadataExt;
+    let m = std::fs::metadata(dir).map_err(IpcError::Io)?;
+    if !m.is_dir() {
+        return Err(IpcError::Protocol("socket folder is not a directory"));
+    }
+    if m.uid() != crate::peer::current_uid() || m.permissions().mode() & 0o007 != 0 {
+        return Err(IpcError::Protocol(
+            "group socket folder must be ours with no world access",
+        ));
+    }
+    Ok(())
+}
+
 impl Server {
     /// Binds `path`. Its folder is created 0700 if missing. A stale socket
     /// left by a crashed process is removed; a live one is an error.
@@ -213,7 +247,16 @@ impl Server {
         let dir = path
             .parent()
             .ok_or(IpcError::Protocol("socket path has no folder"))?;
-        ensure_private_dir(dir)?;
+        let mode = match config.access {
+            SocketAccess::Private => {
+                ensure_private_dir(dir)?;
+                0o600
+            }
+            SocketAccess::Group => {
+                ensure_group_dir(dir)?;
+                0o660
+            }
+        };
         if path.exists() {
             if UnixStream::connect(path).await.is_ok() {
                 return Err(IpcError::Protocol("another server is listening"));
@@ -221,7 +264,7 @@ impl Server {
             std::fs::remove_file(path)?;
         }
         let listener = UnixListener::bind(path)?;
-        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode))?;
         Ok(Self {
             listener,
             path: path.to_path_buf(),

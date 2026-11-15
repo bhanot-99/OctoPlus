@@ -41,10 +41,11 @@ echo "=== 3. Setting up dev install prefix ==="
 dev_opt="$HOME/.local/opt/neuroos"
 dev_bin="$dev_opt/bin"
 dev_models="$dev_opt/models"
+dev_lib="$dev_opt/lib"
 
-install -d -m 0755 "$dev_bin" "$dev_models"
+install -d -m 0755 "$dev_bin" "$dev_models" "$dev_lib"
 
-echo "=== 4. Copying available service binaries ==="
+echo "=== 4. Copying available service binaries and shared libraries ==="
 candidates=(
   "neuroos-healthd"
   "neuroos-storage"
@@ -54,6 +55,7 @@ candidates=(
   "neuroos-knowledge"
   "neuroos-voice"
   "neuroosctl"
+  "neuroos-s04-probe"
 )
 
 for bin in "${candidates[@]}"; do
@@ -62,6 +64,8 @@ for bin in "${candidates[@]}"; do
     src="$root/target/release/$bin"
   elif [[ -f "$root/cpp/build/release/bin/$bin" ]]; then
     src="$root/cpp/build/release/bin/$bin"
+  elif [[ -f "$root/cpp/build/release/$bin/$bin" ]]; then
+    src="$root/cpp/build/release/$bin/$bin"
   elif [[ -f "$root/cpp/build/release/$bin" ]]; then
     src="$root/cpp/build/release/$bin"
   fi
@@ -73,6 +77,12 @@ for bin in "${candidates[@]}"; do
     echo "note: $bin not found (built in later tasks), skipping"
   fi
 done
+
+if [[ -d "$root/cpp/build/release" ]]; then
+  cp -a "$root"/cpp/build/release/bin/*.so* "$dev_lib/" 2>/dev/null || true
+  cp -a "$root"/cpp/build/release/libneuroos/*.so* "$dev_lib/" 2>/dev/null || true
+  echo "Copied C++ shared libraries into $dev_lib"
+fi
 
 echo "=== 5. Hard-linking models and generating SHA256SUMS ==="
 python3 -I - "$manifest" "$root/models" "$dev_models" <<'PY'

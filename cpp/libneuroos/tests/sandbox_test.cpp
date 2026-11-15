@@ -172,3 +172,23 @@ TEST(SandboxTest, NegativeControlProvesRestrictionIsLoadBearing) {
 
 }  // namespace
 }  // namespace neuroos
+
+// SC proof 3 helper: the canary must tell "blocked by the sandbox" (EACCES) apart
+// from "not there" (ENOENT), or a hidden path would look like a pass.
+TEST(SandboxCanary, ReadableMissingAndDeniedAreDistinct) {
+  const auto dir =
+      std::filesystem::temp_directory_path() / ("neuroos_canary_" + std::to_string(::getpid()));
+  std::filesystem::create_directories(dir);
+  const auto file = dir / "canary";
+  { std::ofstream(file) << "x"; }
+  EXPECT_EQ(neuroos::ProbeCanary(file), neuroos::CanaryResult::kReadable);
+  EXPECT_EQ(neuroos::ProbeCanary(dir / "missing"), neuroos::CanaryResult::kUnexpected);
+  std::filesystem::permissions(file, std::filesystem::perms::none);
+  if (::geteuid() != 0) {
+    EXPECT_EQ(neuroos::ProbeCanary(file), neuroos::CanaryResult::kDenied);
+  }
+  EXPECT_STREQ(neuroos::CanaryCounterName(neuroos::CanaryResult::kDenied),
+               "landlock_canary_denied");
+  std::filesystem::permissions(file, std::filesystem::perms::owner_all);
+  std::filesystem::remove_all(dir);
+}

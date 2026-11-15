@@ -147,6 +147,62 @@ InferenceService::DecodeState InferenceService::DecodeLoop(
   return state;
 }
 
+Status InferenceService::AcquireGenerationLock(
+    bool interactive, std::uint64_t request_id,
+    const std::shared_ptr<ipc::CancelToken>& local_cancel) {
+  std::unique_lock<std::mutex> lock(mu_);
+  if (busy_) {
+    if (interactive) {
+      if (active_cancel_token_) {
+        active_cancel_token_->Cancel();
+      }
+      cv_.wait(lock, [this] { return !busy_; });
+    } else {
+      counters_.busy->fetch_add(1, std::memory_order_relaxed);
+      return Error{
+          .message = "inference engine is busy",
+          .retryable = true,
+          .code = static_cast<int>(v1::ERROR_CODE_BUSY),
+      };
+    }
+  }
+  busy_ = true;
+  active_request_id_ = request_id;
+  active_cancel_token_ = local_cancel;
+  return ok_status();
+}
+
+std::uint32_t InferenceService::ComputeStablePrefix(const std::string& prompt,
+                                                    std::uint32_t stable_prefix_chars) const {
+  if (stable_prefix_chars == 0 || stable_prefix_chars > prompt.size()) {
+    return 0;
+  }
+  const std::string_view prefix_text(prompt.data(), stable_prefix_chars);
+  auto prefix_res = engine_->Tokenize(prefix_text, true);
+  if (prefix_res.ok()) {
+    return static_cast<std::uint32_t>(prefix_res.value().size());
+  }
+  return 0;
+}
+
+void InferenceService::RecordCancelToIdle(const ipc::CancelToken& cancel_token,
+                                          const ipc::CancelToken* local_cancel) {
+  std::chrono::steady_clock::time_point t_cancel{};
+  if (cancel_token.cancelled()) {
+    t_cancel = cancel_token.cancelled_at();
+  } else if (local_cancel != nullptr && local_cancel->cancelled()) {
+    t_cancel = local_cancel->cancelled_at();
+  }
+
+  if (t_cancel != std::chrono::steady_clock::time_point{}) {
+    const auto t_idle = std::chrono::steady_clock::now();
+    const auto d = std::chrono::duration_cast<std::chrono::nanoseconds>(t_idle - t_cancel);
+    if (d.count() > 0 && histograms_.cancel_to_idle) {
+      histograms_.cancel_to_idle->Record(d);
+    }
+  }
+}
+
 Status InferenceService::HandleGenerate(const ipc::Request& req, ipc::StreamSink& sink,
                                         const ipc::CancelToken& cancel_token, v1::Envelope* reply) {
   counters_.requests->fetch_add(1, std::memory_order_relaxed);
@@ -176,26 +232,10 @@ Status InferenceService::HandleGenerate(const ipc::Request& req, ipc::StreamSink
 
   // 2. Concurrency handling: one generation at a time (FR-INF-04)
   auto local_cancel = std::make_shared<ipc::CancelToken>();
-  {
-    std::unique_lock<std::mutex> lock(mu_);
-    if (busy_) {
-      if (gen_req.interactive()) {
-        if (active_cancel_token_) {
-          active_cancel_token_->Cancel();
-        }
-        cv_.wait(lock, [this] { return !busy_; });
-      } else {
-        counters_.busy->fetch_add(1, std::memory_order_relaxed);
-        return Error{
-            .message = "inference engine is busy",
-            .retryable = true,
-            .code = static_cast<int>(v1::ERROR_CODE_BUSY),
-        };
-      }
-    }
-    busy_ = true;
-    active_request_id_ = req.envelope.request_id();
-    active_cancel_token_ = local_cancel;
+  auto lock_status =
+      AcquireGenerationLock(gen_req.interactive(), req.envelope.request_id(), local_cancel);
+  if (!lock_status.ok()) {
+    return lock_status;
   }
 
   const ScopedBusy cleanup{this};
@@ -214,15 +254,8 @@ Status InferenceService::HandleGenerate(const ipc::Request& req, ipc::StreamSink
   }
 
   // 3. Compute stable prefix tokens if stable_prefix_chars is set
-  std::uint32_t stable_prefix_tokens = 0;
-  if (gen_req.stable_prefix_chars() > 0 &&
-      gen_req.stable_prefix_chars() <= gen_req.prompt().size()) {
-    const std::string_view prefix_text(gen_req.prompt().data(), gen_req.stable_prefix_chars());
-    auto prefix_res = engine_->Tokenize(prefix_text, true);
-    if (prefix_res.ok()) {
-      stable_prefix_tokens = static_cast<std::uint32_t>(prefix_res.value().size());
-    }
-  }
+  const std::uint32_t stable_prefix_tokens =
+      ComputeStablePrefix(gen_req.prompt(), gen_req.stable_prefix_chars());
 
   // 4. Prefill
   const auto prefill_start = std::chrono::steady_clock::now();
@@ -239,17 +272,7 @@ Status InferenceService::HandleGenerate(const ipc::Request& req, ipc::StreamSink
       DecodeLoop(max_tokens, num_prompt_tokens, prefill_start, is_cancelled, sink);
 
   if (decode_state.stop_reason == v1::STOP_REASON_CANCELLED) {
-    const auto t_cancel = cancel_token.cancelled()
-                              ? cancel_token.cancelled_at()
-                              : (local_cancel ? local_cancel->cancelled_at()
-                                              : std::chrono::steady_clock::time_point{});
-    if (t_cancel != std::chrono::steady_clock::time_point{}) {
-      const auto t_idle = std::chrono::steady_clock::now();
-      const auto d = std::chrono::duration_cast<std::chrono::nanoseconds>(t_idle - t_cancel);
-      if (d.count() > 0 && histograms_.cancel_to_idle) {
-        histograms_.cancel_to_idle->Record(d);
-      }
-    }
+    RecordCancelToIdle(cancel_token, local_cancel.get());
   }
 
   // Update RSS gauge in health

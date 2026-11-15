@@ -62,6 +62,13 @@ class InferenceService {
                          std::chrono::steady_clock::time_point prefill_start,
                          const std::function<bool()>& is_cancelled, ipc::StreamSink& sink);
 
+  Status AcquireGenerationLock(bool interactive, std::uint64_t request_id,
+                               const std::shared_ptr<ipc::CancelToken>& local_cancel);
+  [[nodiscard]] std::uint32_t ComputeStablePrefix(const std::string& prompt,
+                                                  std::uint32_t stable_prefix_chars) const;
+  void RecordCancelToIdle(const ipc::CancelToken& cancel_token,
+                          const ipc::CancelToken* local_cancel);
+
   std::shared_ptr<Engine> engine_;
   std::shared_ptr<Health> health_;
 

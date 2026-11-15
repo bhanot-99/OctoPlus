@@ -146,6 +146,21 @@ fn part_description(part: Part) -> &'static str {
 /// Generates the systemd user service content for `part`.
 #[must_use]
 pub fn generate_user_service(part: Part, llm_model_file: &str) -> String {
+    generate_user_service_internal(part, None, Some(llm_model_file))
+}
+
+/// Generates the systemd user service content for `part` with a custom `ExecStart`
+/// (for security probe units); every other line is identical to the real unit.
+#[must_use]
+pub fn generate_user_service_with_exec_start(part: Part, exec_start: &str) -> String {
+    generate_user_service_internal(part, Some(exec_start), None)
+}
+
+fn generate_user_service_internal(
+    part: Part,
+    custom_exec_start: Option<&str>,
+    llm_model_file: Option<&str>,
+) -> String {
     let desc = part_description(part);
     let mut after = vec!["neuroos-runtime.service"];
     after.extend(prior_units_in_start_order(part));
@@ -158,7 +173,15 @@ pub fn generate_user_service(part: Part, llm_model_file: &str) -> String {
     out.push_str(&format!("Description={desc}\n"));
     out.push_str("PartOf=neuroos.target\n");
     out.push_str("Requires=neuroos-runtime.service\n");
-    out.push_str(&format!("After={after_line}\n\n"));
+    if part == Part::Inference {
+        // FR-INF-01 hash check runs in its own unit: on systemd 255 user scope a
+        // unit with more than one exec (e.g. ExecStartPre) silently loses
+        // PrivateNetwork for its main process (ADR-0009 addendum, BUG-027).
+        out.push_str(&format!("Requires={MODEL_CHECK_UNIT}\n"));
+        out.push_str(&format!("After={after_line} {MODEL_CHECK_UNIT}\n\n"));
+    } else {
+        out.push_str(&format!("After={after_line}\n\n"));
+    }
 
     out.push_str("[Service]\n");
     out.push_str("PrivateNetwork=true\n");
@@ -184,11 +207,11 @@ pub fn generate_user_service(part: Part, llm_model_file: &str) -> String {
     // Decision 5: fetcher isolation.
     match part {
         Part::Kernel => {
-            out.push_str("TemporaryFileSystem=/run/neuroos-fetcher\n");
+            out.push_str("InaccessiblePaths=-/run/neuroos-fetcher/health\n");
             out.push_str("BindPaths=-/run/neuroos-fetcher/fetch\n");
         }
         Part::Healthd => {
-            out.push_str("TemporaryFileSystem=/run/neuroos-fetcher\n");
+            out.push_str("InaccessiblePaths=-/run/neuroos-fetcher/fetch\n");
             out.push_str("BindPaths=-/run/neuroos-fetcher/health\n");
         }
         _ => {
@@ -233,30 +256,34 @@ pub fn generate_user_service(part: Part, llm_model_file: &str) -> String {
     out.push_str("RestartSec=2s\n");
 
     // ExecStartPre and ExecStart
-    match part {
-        Part::Inference => {
-            out.push_str("ExecStartPre=/usr/bin/sha256sum --check --quiet %h/.local/opt/neuroos/models/SHA256SUMS\n");
-            out.push_str(&format!(
-                "ExecStart=%h/.local/opt/neuroos/bin/neuroos-inference \
-                --socket %t/neuroos/inference/inference/inference.sock=neuroos-knowledge.service \
-                --health-socket %t/neuroos/inference/health/health.sock=neuroos-healthd.service \
-                --model %h/.local/opt/neuroos/models/{llm_model_file} \
-                --threads 8 --ctx 2048 --batch 512\n"
-            ));
-        }
-        Part::Voice => {
-            out.push_str(
-                "ExecStart=%h/.local/opt/neuroos/bin/neuroos-voice \
-                --socket %t/neuroos/voice/voice/voice.sock=neuroos-knowledge.service \
-                --socket %t/neuroos/voice/control/control.sock=uid \
-                --health-socket %t/neuroos/voice/health/health.sock=neuroos-healthd.service\n",
-            );
-        }
-        _ => {
-            out.push_str(&format!(
-                "ExecStart=%h/.local/opt/neuroos/bin/neuroos-{}\n",
-                part.name()
-            ));
+    if let Some(custom) = custom_exec_start {
+        out.push_str(&format!("ExecStart={custom}\n"));
+    } else {
+        let model = llm_model_file.unwrap_or("");
+        match part {
+            Part::Inference => {
+                out.push_str(&format!(
+                    "ExecStart=%h/.local/opt/neuroos/bin/neuroos-inference \
+                    --socket %t/neuroos/inference/inference/inference.sock=neuroos-knowledge.service \
+                    --health-socket %t/neuroos/inference/health/health.sock=neuroos-healthd.service \
+                    --model %h/.local/opt/neuroos/models/{model} \
+                    --threads 8 --ctx 2048 --batch 512\n"
+                ));
+            }
+            Part::Voice => {
+                out.push_str(
+                    "ExecStart=%h/.local/opt/neuroos/bin/neuroos-voice \
+                    --socket %t/neuroos/voice/voice/voice.sock=neuroos-knowledge.service \
+                    --socket %t/neuroos/voice/control/control.sock=uid \
+                    --health-socket %t/neuroos/voice/health/health.sock=neuroos-healthd.service\n",
+                );
+            }
+            _ => {
+                out.push_str(&format!(
+                    "ExecStart=%h/.local/opt/neuroos/bin/neuroos-{}\n",
+                    part.name()
+                ));
+            }
         }
     }
 
@@ -305,22 +332,103 @@ pub fn generate_runtime_service() -> String {
     out.push_str("LimitCORE=0\n");
     out.push_str("UMask=0077\n");
 
-    out.push_str("ExecStart=/usr/bin/install -d -m 0700 %t/neuroos\n");
-    out.push_str("ExecStart=/usr/bin/install -d -m 0700 %t/neuroos/monitor %t/neuroos/voice %t/neuroos/storage %t/neuroos/inference %t/neuroos/knowledge %t/neuroos/kernel %t/neuroos/healthd\n");
-    out.push_str("ExecStart=/usr/bin/install -d -m 0700 %t/neuroos/monitor/stream %t/neuroos/monitor/control %t/neuroos/monitor/health\n");
-    out.push_str("ExecStart=/usr/bin/install -d -m 0700 %t/neuroos/voice/voice %t/neuroos/voice/control %t/neuroos/voice/health\n");
-    out.push_str("ExecStart=/usr/bin/install -d -m 0700 %t/neuroos/storage/storage %t/neuroos/storage/health\n");
-    out.push_str("ExecStart=/usr/bin/install -d -m 0700 %t/neuroos/inference/inference %t/neuroos/inference/health\n");
-    out.push_str("ExecStart=/usr/bin/install -d -m 0700 %t/neuroos/knowledge/knowledge %t/neuroos/knowledge/health\n");
-    out.push_str(
-        "ExecStart=/usr/bin/install -d -m 0700 %t/neuroos/kernel/kernel %t/neuroos/kernel/health\n",
-    );
-    out.push_str("ExecStart=/usr/bin/install -d -m 0700 %t/neuroos/healthd/healthd\n");
+    // One exec only: see `single_exec` (BUG-027). Parents come first, so
+    // `install -d` creates them in order with this unit's UMask (0700).
+    out.push_str(&format!(
+        "ExecStart=/usr/bin/install -d -m 0700 {}\n",
+        runtime_dirs().join(" ")
+    ));
 
     out.push_str("\n[Install]\n");
     out.push_str("WantedBy=neuroos.target\n");
 
     out
+}
+
+/// The model hash-check unit that C4 requires (FR-INF-01, ADR-0009).
+pub const MODEL_CHECK_UNIT: &str = "neuroos-model-check.service";
+
+/// Every runtime folder to pre-create, parents first, from the socket map
+/// (ADR-0009 decision 4). Fetcher folders are made by tmpfiles, not here.
+#[must_use]
+pub fn runtime_dirs() -> Vec<String> {
+    let mut dirs = vec!["%t/neuroos".to_owned()];
+    let mut parts: Vec<&str> = Vec::new();
+    for e in socketmap::SOCKET_MAP {
+        if e.server != Part::Fetcher && !parts.contains(&e.server.name()) {
+            parts.push(e.server.name());
+        }
+    }
+    dirs.extend(parts.iter().map(|p| format!("%t/neuroos/{p}")));
+    for e in socketmap::SOCKET_MAP {
+        if e.server != Part::Fetcher {
+            dirs.push(format!("%t/neuroos/{}/{}", e.server.name(), e.socket));
+        }
+    }
+    dirs
+}
+
+/// Generates `neuroos-model-check.service`: a oneshot that verifies every model
+/// against the manifest hashes before C4 may start (FR-INF-01). Not
+/// `RemainAfterExit`, so every C4 (re)start re-runs the check.
+#[must_use]
+pub fn generate_model_check_service() -> String {
+    let mut out = String::new();
+    out.push_str("[Unit]\n");
+    out.push_str("Description=Semantic-NeuroOS Model Hash Check\n");
+    out.push_str("PartOf=neuroos.target\n\n");
+    out.push_str("[Service]\n");
+    out.push_str("Type=oneshot\n");
+    for line in [
+        "PrivateNetwork=true",
+        "InaccessiblePaths=-/run/systemd/resolve",
+        "InaccessiblePaths=-/run/dbus/system_bus_socket",
+        "NoNewPrivileges=true",
+        "ProtectSystem=strict",
+        "ProtectHome=tmpfs",
+        "BindReadOnlyPaths=%h/.local/opt/neuroos/models",
+        "InaccessiblePaths=-/run/neuroos-fetcher",
+        "PrivateTmp=true",
+        "PrivateDevices=true",
+        "ProtectKernelTunables=true",
+        "ProtectKernelModules=true",
+        "ProtectKernelLogs=true",
+        "ProtectControlGroups=true",
+        "ProtectClock=true",
+        "ProtectHostname=true",
+        "RestrictNamespaces=true",
+        "RestrictRealtime=true",
+        "RestrictSUIDSGID=true",
+        "RestrictAddressFamilies=AF_UNIX",
+        "LockPersonality=true",
+        "MemoryDenyWriteExecute=true",
+        "SystemCallArchitectures=native",
+        "SystemCallFilter=@system-service",
+        "CapabilityBoundingSet=",
+        "AmbientCapabilities=",
+        "LimitCORE=0",
+        "UMask=0077",
+    ] {
+        out.push_str(line);
+        out.push('\n');
+    }
+    out.push_str(
+        "ExecStart=/usr/bin/sha256sum --check --quiet %h/.local/opt/neuroos/models/SHA256SUMS\n",
+    );
+    out
+}
+
+/// True if a unit has exactly one exec line and no pre/post/stop execs.
+/// systemd 255 in user scope drops `PrivateNetwork=` for the main process of a
+/// unit with several execs (measured 2026-11-16, BUG-027), so every user unit
+/// must pass this check.
+#[must_use]
+pub fn single_exec(unit: &str) -> bool {
+    let execs = unit
+        .lines()
+        .filter(|l| l.trim_start().starts_with("Exec"))
+        .collect::<Vec<_>>();
+    execs.len() == 1 && execs[0].trim_start().starts_with("ExecStart=")
 }
 
 /// Generates the `neuroos.target` unit file.
@@ -450,6 +558,12 @@ pub fn generate_all_files(manifest_path: &Path) -> Result<Vec<GeneratedFile>, De
     files.push(GeneratedFile {
         rel_path: PathBuf::from("systemd/user/neuroos-runtime.service"),
         content: generate_runtime_service(),
+    });
+
+    // 2b. Model hash-check unit (C4 requires it)
+    files.push(GeneratedFile {
+        rel_path: PathBuf::from("systemd/user").join(MODEL_CHECK_UNIT),
+        content: generate_model_check_service(),
     });
 
     // 3. User target

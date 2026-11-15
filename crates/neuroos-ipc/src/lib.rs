@@ -12,7 +12,7 @@ pub mod server;
 
 pub use client::{Client, ReconnectingClient, ResponseStream};
 pub use error::IpcError;
-pub use server::{Handler, HandlerError, Request, Server, ServerConfig, StreamSink};
+pub use server::{Handler, HandlerError, Request, Server, ServerConfig, SocketAccess, StreamSink};
 
 use neuroos_proto::v1::Envelope;
 use neuroos_proto::v1::envelope::Body;

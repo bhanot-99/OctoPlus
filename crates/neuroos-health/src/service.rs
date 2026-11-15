@@ -26,7 +26,7 @@ use neuroos_ipc::server::{Server, ServerConfig, ensure_private_dir};
 use neuroos_proto::v1::HealthStatus;
 use neuroos_sandbox::{Policy, restrict};
 use tokio::signal::unix::{SignalKind, signal};
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 use crate::{Health, HealthHandler};
 
@@ -95,6 +95,13 @@ pub fn socket_dir_for_entry(entry: &SocketEntry, runtime_root: &Path) -> PathBuf
     } else {
         runtime_root.join(entry.server.name()).join(entry.socket)
     }
+}
+
+/// The fetcher's sockets live in tmpfiles-made folders shared with group
+/// `neuroos` (Architecture §5.2). Tests that pass `--runtime-dir` get private
+/// folders as for any other part.
+fn group_shared(part: Part, runtime_root: &Path) -> bool {
+    part == Part::Fetcher && runtime_root == Path::new(paths::FETCHER_RUNTIME_DIR)
 }
 
 /// Helper to get the socket file path for an entry.
@@ -212,7 +219,10 @@ impl ServiceBuilder {
         self
     }
 
-    /// Sets whether to skip Landlock restrict (useful for in-process test runners).
+    /// Skips Landlock restrict, for in-process test runners only. Compiled only
+    /// with the `test-support` feature, which shipped binaries never enable
+    /// (dev-dependency features are not unified into release builds; BUG-025).
+    #[cfg(feature = "test-support")]
     #[must_use]
     pub fn skip_restrict(mut self, skip: bool) -> Self {
         self.skip_restrict = skip;
@@ -279,7 +289,12 @@ impl ServiceBuilder {
         let mut socket_dirs = Vec::new();
         for entry in &part_entries {
             let sdir = socket_dir_for_entry(entry, &runtime_root);
-            ensure_private_dir(&sdir)?;
+            if group_shared(self.part, &runtime_root) {
+                // Made by tmpfiles as 2770 neuroos-fetcher:neuroos (BUG-026).
+                neuroos_ipc::server::ensure_group_dir(&sdir)?;
+            } else {
+                ensure_private_dir(&sdir)?;
+            }
             socket_dirs.push(sdir);
         }
 
@@ -346,6 +361,9 @@ impl ServiceBuilder {
 
                 let mut scfg = ServerConfig::new(max_frame, deadline);
                 scfg.policy = policy;
+                if group_shared(self.part, &runtime_root) {
+                    scfg.access = neuroos_ipc::SocketAccess::Group;
+                }
 
                 let server = Server::bind(&s_path, scfg).await?;
                 if entry.socket == "health" {
@@ -363,6 +381,30 @@ impl ServiceBuilder {
             }
 
             let health = Health::new(self.name, self.version);
+
+            if let Some(canary) = &config.debug.landlock_canary {
+                match std::fs::read(canary) {
+                    Ok(_) => {
+                        error!(canary = %canary.display(), "SECURITY: landlock canary was readable!");
+                        health
+                            .counter("landlock_canary_allowed")
+                            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    }
+                    Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+                        info!(canary = %canary.display(), "landlock canary access denied as expected");
+                        health
+                            .counter("landlock_canary_denied")
+                            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    }
+                    Err(e) => {
+                        // e.g. NotFound: the path is not visible at all, which proves nothing.
+                        warn!(canary = %canary.display(), err = %e, "landlock canary check unexpected error");
+                        health
+                            .counter("landlock_canary_unexpected")
+                            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    }
+                }
+            }
 
             // Shutdown coordination
             let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);

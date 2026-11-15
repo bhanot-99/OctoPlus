@@ -21,6 +21,7 @@ tokio = { workspace = true, features = ["sync", "time"] }
 tracing.workspace = true
 
 [dev-dependencies]
+neuroos-health = { path = "../neuroos-health", features = ["test-support"] }
 neuroos-testkit = { path = "../neuroos-testkit" }
 tempfile.workspace = true
 tokio.workspace = true

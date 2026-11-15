@@ -55,6 +55,11 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
+  auto canary = neuroos::CanaryResult::kUnexpected;
+  if (!cfg.landlock_canary.empty()) {
+    canary = neuroos::ProbeCanary(cfg.landlock_canary);
+  }
+
   // Compute knowledge link socket path if not provided
   if (cfg.knowledge_socket_path.empty()) {
     auto base_rt = cfg.voice_sp->path.parent_path().parent_path().parent_path();
@@ -65,6 +70,9 @@ int main(int argc, char* argv[]) {
       std::make_shared<neuroos::ipc::ReconnectingClient>(cfg.knowledge_socket_path, 1024 * 1024);
 
   auto health = std::make_shared<neuroos::Health>("neuroos-voice", "0.1.0");
+  if (!cfg.landlock_canary.empty()) {
+    health->Counter(neuroos::CanaryCounterName(canary))->fetch_add(1);
+  }
   auto service = std::make_shared<neuroos::voice::VoiceService>(health, knowledge_client);
   health->SetReady();
 

@@ -43,13 +43,20 @@ pub fn init(ctx: &mut ServiceContext) -> Result<(), ServiceError> {
     // Register health probe
     let st_clone = Arc::clone(&state);
     ctx.health.probe(
-        "healthd_aggregate",
+        "scraper",
         Box::new(move || {
             let st = match st_clone.try_read() {
                 Ok(guard) => guard,
                 Err(_) => return (neuroos_proto::v1::HealthStatus::Degraded, "state lock busy"),
             };
-            (st.overall, "aggregate status")
+            if st.last_generated_at_ns > 0 {
+                (neuroos_proto::v1::HealthStatus::Ok, "scraper active")
+            } else {
+                (
+                    neuroos_proto::v1::HealthStatus::Starting,
+                    "initial scrape in progress",
+                )
+            }
         }),
     );
 
@@ -72,5 +79,6 @@ pub fn init(ctx: &mut ServiceContext) -> Result<(), ServiceError> {
     });
 
     info!(soak = soak_enabled, "neuroos-healthd initialized");
+    ctx.health.set_ready();
     Ok(())
 }

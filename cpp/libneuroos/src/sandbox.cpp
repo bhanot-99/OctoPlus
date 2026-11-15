@@ -238,4 +238,31 @@ bool Covered(const std::filesystem::path& path, const std::vector<std::filesyste
   return false;
 }
 
+CanaryResult ProbeCanary(const std::filesystem::path& path) {
+  // Raw open so EACCES (Landlock) can be told apart from ENOENT (not visible).
+  const int fd =
+      ::open(path.c_str(), O_RDONLY | O_CLOEXEC);  // NOLINT(cppcoreguidelines-pro-type-vararg)
+  if (fd >= 0) {
+    ::close(fd);
+    return CanaryResult::kReadable;
+  }
+  const int err = errno;
+  if (err == EACCES || err == EPERM) {
+    return CanaryResult::kDenied;
+  }
+  return CanaryResult::kUnexpected;
+}
+
+const char* CanaryCounterName(CanaryResult r) {
+  switch (r) {
+    case CanaryResult::kDenied:
+      return "landlock_canary_denied";
+    case CanaryResult::kReadable:
+      return "landlock_canary_allowed";
+    case CanaryResult::kUnexpected:
+      return "landlock_canary_unexpected";
+  }
+  return "landlock_canary_unexpected";
+}
+
 }  // namespace neuroos

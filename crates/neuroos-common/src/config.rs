@@ -55,6 +55,18 @@ pub struct Config {
     /// Health daemon options.
     #[serde(default)]
     pub healthd: HealthdConfig,
+    /// Verification hooks (SC proof 3). Read-only probes; they never widen anything.
+    #[serde(default)]
+    pub debug: DebugConfig,
+}
+
+/// `[debug]` section.
+#[derive(Debug, Clone, Default, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields, default)]
+pub struct DebugConfig {
+    /// A file each part tries to read right after Landlock restrict; the result is
+    /// a health counter (security.md §8, "Landlock applied before input").
+    pub landlock_canary: Option<PathBuf>,
 }
 
 /// `[ipc]` section.

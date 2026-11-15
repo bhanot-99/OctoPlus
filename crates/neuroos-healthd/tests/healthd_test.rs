@@ -170,7 +170,7 @@ async fn test_scrape_cycle_aggregates_worst_status_and_cgroups() {
 }
 
 #[tokio::test]
-async fn test_90_percent_budget_marks_degraded() {
+async fn test_part_at_99_percent_budget_reporting_ok_stays_ok_in_aggregate() {
     let tmp = tempdir().unwrap();
     let runtime_root = tmp.path().join("neuroos");
     let cgroup_root = tmp.path().join("cgroup");
@@ -184,10 +184,10 @@ async fn test_90_percent_budget_marks_degraded() {
 
     let config = Config::from_toml_str("").unwrap();
 
-    // Storage budget is 240 MiB. 90% is 216 MiB.
-    // Set storage RSS to 220 MiB (exceeds 90%).
+    // Storage budget is 240 MiB. 99% is ~237.6 MiB.
+    // Set storage RSS to 238 MiB (99% of budget).
     let storage_sock = paths::health_socket(&runtime_root, Part::Storage);
-    let high_rss = 220 * 1024 * 1024;
+    let high_rss = 238 * 1024 * 1024;
     let storage_resp = HealthResponse {
         component: "neuroos-storage".to_string(),
         version: "0.1.0".to_string(),
@@ -208,7 +208,7 @@ async fn test_90_percent_budget_marks_degraded() {
     let storage_status = st.parts.get(&Part::Storage).unwrap();
     assert_eq!(
         storage_status.last.as_ref().unwrap().status,
-        HealthStatus::Degraded as i32
+        HealthStatus::Ok as i32
     );
 }
 

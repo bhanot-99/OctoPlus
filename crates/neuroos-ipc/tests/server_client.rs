@@ -683,3 +683,78 @@ async fn stalled_writer_times_out_and_closes_connection() {
         .await
         .expect("server must stop promptly without hanging");
 }
+
+/// BUG-027: dropping a `Client` must close its connection. Before the fix the
+/// reader task kept a strong handle to the writer channel, so the socket stayed
+/// open forever; healthd (a new client per scrape) filled every part's
+/// `max_connections` within ~64 scrapes and then saw every part as DOWN.
+#[tokio::test(flavor = "multi_thread")]
+async fn dropped_clients_release_their_connection() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = sock(&dir);
+    let mut c = cfg();
+    c.max_connections = 2;
+    let srv = start(&path, c).await;
+    for i in 0..10 {
+        let client = Client::connect(&path, MAX).await.unwrap();
+        let r = client
+            .call(ping("echo:x"), Duration::from_secs(2))
+            .await
+            .unwrap_or_else(|e| panic!("call {i} failed: {e:?} (connections leaked)"));
+        assert_eq!(
+            r,
+            Body::Pong(Pong {
+                payload: b"echo:x".to_vec()
+            })
+        );
+        drop(client);
+    }
+    // A stream whose client was dropped early still finishes (it holds its own handle).
+    let stream = Client::connect(&path, MAX)
+        .await
+        .unwrap()
+        .stream(ping("stream:3"), Duration::from_secs(2))
+        .await;
+    let mut stream = stream.unwrap();
+    let mut n = 0;
+    while let Some(f) = stream.next().await {
+        f.unwrap();
+        n += 1;
+    }
+    assert_eq!(n, 4, "3 frames + end frame");
+    srv.stop().await;
+}
+
+/// BUG-026: the fetcher's folders come from tmpfiles (2770, group neuroos). A
+/// group socket needs such a folder to exist, be ours and give "others" nothing;
+/// the socket is then 0660 so group members can connect.
+#[tokio::test(flavor = "multi_thread")]
+async fn group_socket_needs_a_closed_existing_folder_and_is_0660() {
+    use neuroos_ipc::SocketAccess;
+    use neuroos_ipc::server::ensure_group_dir;
+    let dir = tempfile::tempdir().unwrap();
+    let shared = dir.path().join("fetch");
+    // Missing folder: never created by the server.
+    assert!(ensure_group_dir(&shared).is_err());
+    std::fs::create_dir(&shared).unwrap();
+    std::fs::set_permissions(&shared, std::fs::Permissions::from_mode(0o2777)).unwrap();
+    assert!(
+        ensure_group_dir(&shared).is_err(),
+        "world-accessible folder must be refused"
+    );
+    std::fs::set_permissions(&shared, std::fs::Permissions::from_mode(0o2770)).unwrap();
+    assert!(ensure_group_dir(&shared).is_ok());
+
+    let path = shared.join("fetch.sock");
+    let mut c = cfg();
+    c.access = SocketAccess::Group;
+    let srv = start(&path, c).await;
+    let mode = std::fs::metadata(&path).unwrap().permissions().mode();
+    assert_eq!(mode & 0o777, 0o660);
+    let client = Client::connect(&path, MAX).await.unwrap();
+    client
+        .call(ping("echo:g"), Duration::from_secs(1))
+        .await
+        .unwrap();
+    srv.stop().await;
+}

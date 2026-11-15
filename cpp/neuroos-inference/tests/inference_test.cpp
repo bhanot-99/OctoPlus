@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <sys/stat.h>
 
+#include <array>
 #include <chrono>
 #include <filesystem>
 #include <memory>
@@ -310,25 +311,26 @@ TEST(FlagsTest, RejectsBadNumericWithoutExceptions) {
   Flags flags;
 
   // Non-numeric string
-  const char* bad_argv1[] = {"neuroos-inference", "--threads", "invalid"};
-  EXPECT_FALSE(ParseFlags(3, const_cast<char**>(bad_argv1), &flags));
+  constexpr std::array<const char*, 3> bad_argv1 = {"neuroos-inference", "--threads", "invalid"};
+  EXPECT_FALSE(ParseFlags(static_cast<int>(bad_argv1.size()), bad_argv1.data(), &flags));
 
   // Negative number
-  const char* bad_argv2[] = {"neuroos-inference", "--ctx", "-1"};
-  EXPECT_FALSE(ParseFlags(3, const_cast<char**>(bad_argv2), &flags));
+  constexpr std::array<const char*, 3> bad_argv2 = {"neuroos-inference", "--ctx", "-1"};
+  EXPECT_FALSE(ParseFlags(static_cast<int>(bad_argv2.size()), bad_argv2.data(), &flags));
 
   // Overflow
-  const char* bad_argv3[] = {"neuroos-inference", "--batch", "99999999999999999999"};
-  EXPECT_FALSE(ParseFlags(3, const_cast<char**>(bad_argv3), &flags));
+  constexpr std::array<const char*, 3> bad_argv3 = {"neuroos-inference", "--batch",
+                                                    "99999999999999999999"};
+  EXPECT_FALSE(ParseFlags(static_cast<int>(bad_argv3.size()), bad_argv3.data(), &flags));
 
   // Empty string
-  const char* bad_argv4[] = {"neuroos-inference", "--bench-reps", ""};
-  EXPECT_FALSE(ParseFlags(3, const_cast<char**>(bad_argv4), &flags));
+  constexpr std::array<const char*, 3> bad_argv4 = {"neuroos-inference", "--bench-reps", ""};
+  EXPECT_FALSE(ParseFlags(static_cast<int>(bad_argv4.size()), bad_argv4.data(), &flags));
 
   // Valid numeric values
-  const char* good_argv[] = {"neuroos-inference", "--threads", "4", "--ctx", "1024",
-                             "--batch",           "256"};
-  EXPECT_TRUE(ParseFlags(7, const_cast<char**>(good_argv), &flags));
+  constexpr std::array<const char*, 7> good_argv = {
+      "neuroos-inference", "--threads", "4", "--ctx", "1024", "--batch", "256"};
+  EXPECT_TRUE(ParseFlags(static_cast<int>(good_argv.size()), good_argv.data(), &flags));
   EXPECT_EQ(flags.threads, 4U);
   EXPECT_EQ(flags.ctx, 1024U);
   EXPECT_EQ(flags.batch, 256U);

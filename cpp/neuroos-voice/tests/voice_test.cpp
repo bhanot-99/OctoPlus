@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <sys/stat.h>
 
+#include <array>
 #include <chrono>
 #include <filesystem>
 #include <memory>
@@ -133,24 +134,27 @@ TEST(VoiceFlagsTest, RejectsBadNumericWithoutExceptions) {
   CliConfig cfg;
 
   // Non-numeric string for --threads
-  const char* bad_argv1[] = {"neuroos-voice", "--socket",  "v.sock=uid", "--health-socket",
-                             "h.sock=uid",    "--threads", "invalid"};
-  EXPECT_FALSE(ParseCliArgs(7, const_cast<char**>(bad_argv1), &cfg));
+  constexpr std::array<const char*, 7> bad_argv1 = {"neuroos-voice",   "--socket",   "v.sock=uid",
+                                                    "--health-socket", "h.sock=uid", "--threads",
+                                                    "invalid"};
+  EXPECT_FALSE(ParseCliArgs(static_cast<int>(bad_argv1.size()), bad_argv1.data(), &cfg));
 
   // Negative number
-  const char* bad_argv2[] = {"neuroos-voice", "--socket",  "v.sock=uid", "--health-socket",
-                             "h.sock=uid",    "--threads", "-2"};
-  EXPECT_FALSE(ParseCliArgs(7, const_cast<char**>(bad_argv2), &cfg));
+  constexpr std::array<const char*, 7> bad_argv2 = {
+      "neuroos-voice", "--socket",  "v.sock=uid", "--health-socket",
+      "h.sock=uid",    "--threads", "-2"};
+  EXPECT_FALSE(ParseCliArgs(static_cast<int>(bad_argv2.size()), bad_argv2.data(), &cfg));
 
   // Overflow
-  const char* bad_argv3[] = {"neuroos-voice", "--socket",  "v.sock=uid",          "--health-socket",
-                             "h.sock=uid",    "--threads", "99999999999999999999"};
-  EXPECT_FALSE(ParseCliArgs(7, const_cast<char**>(bad_argv3), &cfg));
+  constexpr std::array<const char*, 7> bad_argv3 = {
+      "neuroos-voice", "--socket",  "v.sock=uid",          "--health-socket",
+      "h.sock=uid",    "--threads", "99999999999999999999"};
+  EXPECT_FALSE(ParseCliArgs(static_cast<int>(bad_argv3.size()), bad_argv3.data(), &cfg));
 
   // Valid number
-  const char* good_argv[] = {"neuroos-voice", "--socket",  "v.sock=uid", "--health-socket",
-                             "h.sock=uid",    "--threads", "2"};
-  EXPECT_TRUE(ParseCliArgs(7, const_cast<char**>(good_argv), &cfg));
+  constexpr std::array<const char*, 7> good_argv = {
+      "neuroos-voice", "--socket", "v.sock=uid", "--health-socket", "h.sock=uid", "--threads", "2"};
+  EXPECT_TRUE(ParseCliArgs(static_cast<int>(good_argv.size()), good_argv.data(), &cfg));
   EXPECT_EQ(cfg.threads, 2U);
 }
 

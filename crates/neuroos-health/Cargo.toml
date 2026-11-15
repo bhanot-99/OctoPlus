@@ -18,6 +18,15 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["signal"] }
 tracing.workspace = true
 
+[features]
+# Test-only hooks (Landlock bypass for in-process tests). Never enabled by a
+# shipped binary; only by dev-dependencies (BUG-025).
+test-support = []
+
+[[test]]
+name = "service_test"
+required-features = ["test-support"]
+
 [dev-dependencies]
 proptest.workspace = true
 tempfile.workspace = true

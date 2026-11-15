@@ -32,15 +32,7 @@ CapabilityBoundingSet=
 AmbientCapabilities=
 LimitCORE=0
 UMask=0077
-ExecStart=/usr/bin/install -d -m 0700 %t/neuroos
-ExecStart=/usr/bin/install -d -m 0700 %t/neuroos/monitor %t/neuroos/voice %t/neuroos/storage %t/neuroos/inference %t/neuroos/knowledge %t/neuroos/kernel %t/neuroos/healthd
-ExecStart=/usr/bin/install -d -m 0700 %t/neuroos/monitor/stream %t/neuroos/monitor/control %t/neuroos/monitor/health
-ExecStart=/usr/bin/install -d -m 0700 %t/neuroos/voice/voice %t/neuroos/voice/control %t/neuroos/voice/health
-ExecStart=/usr/bin/install -d -m 0700 %t/neuroos/storage/storage %t/neuroos/storage/health
-ExecStart=/usr/bin/install -d -m 0700 %t/neuroos/inference/inference %t/neuroos/inference/health
-ExecStart=/usr/bin/install -d -m 0700 %t/neuroos/knowledge/knowledge %t/neuroos/knowledge/health
-ExecStart=/usr/bin/install -d -m 0700 %t/neuroos/kernel/kernel %t/neuroos/kernel/health
-ExecStart=/usr/bin/install -d -m 0700 %t/neuroos/healthd/healthd
+ExecStart=/usr/bin/install -d -m 0700 %t/neuroos %t/neuroos/monitor %t/neuroos/voice %t/neuroos/storage %t/neuroos/inference %t/neuroos/knowledge %t/neuroos/kernel %t/neuroos/healthd %t/neuroos/monitor/stream %t/neuroos/monitor/control %t/neuroos/voice/voice %t/neuroos/voice/control %t/neuroos/storage/storage %t/neuroos/inference/inference %t/neuroos/knowledge/knowledge %t/neuroos/kernel/kernel %t/neuroos/healthd/healthd %t/neuroos/monitor/health %t/neuroos/voice/health %t/neuroos/storage/health %t/neuroos/inference/health %t/neuroos/knowledge/health %t/neuroos/kernel/health
 
 [Install]
 WantedBy=neuroos.target

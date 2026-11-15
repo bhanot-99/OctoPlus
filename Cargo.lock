@@ -713,6 +713,7 @@ dependencies = [
  "anyhow",
  "clap",
  "neuroos-common",
+ "neuroos-deploy",
  "neuroos-health",
  "neuroos-ipc",
  "neuroos-proto",

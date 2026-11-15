@@ -12,7 +12,6 @@ use neuroos_ipc::Client;
 use neuroos_proto::v1::envelope::Body;
 use neuroos_proto::v1::{HealthRequest, HealthResponse, HealthStatus, PartStatus, StatusReport};
 use tokio::sync::RwLock;
-use tracing::debug;
 
 use crate::cgroup::CgroupReader;
 use crate::soak::SoakEngine;
@@ -254,24 +253,10 @@ pub async fn scrape_cycle(
             resp.rss_bytes = cgroup_mem;
         }
 
-        // Architecture §8.1 / §8.2: report DEGRADED at 90% of budget
-        let budget_bytes = part.rss_budget_mib().saturating_mul(1024 * 1024);
-        let ninety_pct = (budget_bytes.saturating_mul(9)) / 10;
-        let mut status = match HealthStatus::try_from(resp.status) {
+        let status = match HealthStatus::try_from(resp.status) {
             Ok(s) => s,
             Err(_) => HealthStatus::Down,
         };
-
-        if status == HealthStatus::Ok && budget_bytes > 0 && resp.rss_bytes >= ninety_pct {
-            debug!(
-                part = part.name(),
-                rss = resp.rss_bytes,
-                budget = budget_bytes,
-                "part exceeded 90% RSS budget, reporting DEGRADED"
-            );
-            status = HealthStatus::Degraded;
-            resp.status = HealthStatus::Degraded as i32;
-        }
 
         // Record into soak engine
         st.soak.record_scrape(

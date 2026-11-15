@@ -24,6 +24,7 @@ struct Flags {
   std::uint32_t bench_prompt_tokens = 128;
   std::uint32_t bench_generate = 16;
   std::uint32_t bench_reps = 3;
+  std::filesystem::path landlock_canary;
 };
 
 inline bool ParseUint32(std::string_view s, std::uint32_t* out) {
@@ -65,7 +66,7 @@ inline bool ParsePolicy(const std::string& arg, std::filesystem::path* sock_path
   return true;
 }
 
-inline bool ParseFlags(int argc, char* const* argv, Flags* flags) {
+inline bool ParseFlags(int argc, const char* const* argv, Flags* flags) {
   for (int i = 1; i < argc; ++i) {
     const std::string arg = argv[i];
     if (arg == "--socket" && i + 1 < argc) {
@@ -114,6 +115,8 @@ inline bool ParseFlags(int argc, char* const* argv, Flags* flags) {
         std::cerr << "neuroos-inference: invalid numeric value for --bench-reps: " << val << "\n";
         return false;
       }
+    } else if (arg == "--landlock-canary" && i + 1 < argc) {
+      flags->landlock_canary = argv[++i];
     } else {
       std::cerr << "neuroos-inference: unknown or incomplete argument: " << arg << "\n";
       return false;

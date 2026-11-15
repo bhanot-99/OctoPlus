@@ -20,6 +20,7 @@ neuroos-taint = { path = "../neuroos-taint" }
 tokio = { workspace = true, features = ["sync", "time"] }
 
 [dev-dependencies]
+neuroos-health = { path = "../neuroos-health", features = ["test-support"] }
 tempfile.workspace = true
 tokio.workspace = true
 

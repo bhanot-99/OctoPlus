@@ -6,7 +6,10 @@ use std::path::{Path, PathBuf};
 
 use neuroos_common::paths::Part;
 use neuroos_common::socketmap;
-use neuroos_deploy::{generate_all_files, memory_max_for_part, read_llm_model_file, write_all};
+use neuroos_deploy::{
+    generate_all_files, generate_user_service, generate_user_service_with_exec_start,
+    memory_max_for_part, read_llm_model_file, single_exec, write_all,
+};
 
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -182,13 +185,13 @@ fn fetcher_isolation_handled_per_decision_5() {
     let manifest = manifest_path();
     let files = generate_all_files(&manifest).unwrap();
 
-    // C6 kernel and healthd get TemporaryFileSystem=/run/neuroos-fetcher plus BindPaths
+    // C6 kernel and healthd get InaccessiblePaths of peer socket plus BindPaths
     let kernel = files
         .iter()
         .find(|f| f.rel_path == Path::new("systemd/user/neuroos-kernel.service"))
         .unwrap();
     let k_lines: Vec<&str> = kernel.content.lines().map(str::trim).collect();
-    assert!(k_lines.contains(&"TemporaryFileSystem=/run/neuroos-fetcher"));
+    assert!(k_lines.contains(&"InaccessiblePaths=-/run/neuroos-fetcher/health"));
     assert!(k_lines.contains(&"BindPaths=-/run/neuroos-fetcher/fetch"));
     assert!(!k_lines.contains(&"InaccessiblePaths=-/run/neuroos-fetcher"));
 
@@ -197,7 +200,7 @@ fn fetcher_isolation_handled_per_decision_5() {
         .find(|f| f.rel_path == Path::new("systemd/user/neuroos-healthd.service"))
         .unwrap();
     let h_lines: Vec<&str> = healthd.content.lines().map(str::trim).collect();
-    assert!(h_lines.contains(&"TemporaryFileSystem=/run/neuroos-fetcher"));
+    assert!(h_lines.contains(&"InaccessiblePaths=-/run/neuroos-fetcher/fetch"));
     assert!(h_lines.contains(&"BindPaths=-/run/neuroos-fetcher/health"));
     assert!(!h_lines.contains(&"InaccessiblePaths=-/run/neuroos-fetcher"));
 
@@ -303,9 +306,25 @@ fn cpp_parts_flags_and_model_from_manifest() {
         .iter()
         .find(|f| f.rel_path == Path::new("systemd/user/neuroos-inference.service"))
         .unwrap();
-    assert!(inf.content.contains(
-        "ExecStartPre=/usr/bin/sha256sum --check --quiet %h/.local/opt/neuroos/models/SHA256SUMS"
+    // The hash check is its own unit (BUG-027): C4 requires and orders after it.
+    assert!(!inf.content.contains("ExecStartPre="));
+    assert!(inf.content.contains("Requires=neuroos-model-check.service"));
+    assert!(
+        inf.content
+            .contains("neuroos-model-check.service\n\n[Service]")
+    );
+    let check = files
+        .iter()
+        .find(|f| f.rel_path == Path::new("systemd/user/neuroos-model-check.service"))
+        .unwrap();
+    assert!(check.content.contains(
+        "ExecStart=/usr/bin/sha256sum --check --quiet %h/.local/opt/neuroos/models/SHA256SUMS"
     ));
+    assert!(check.content.contains("PrivateNetwork=true"));
+    assert!(
+        !check.content.contains("RemainAfterExit"),
+        "check must re-run on every C4 start"
+    );
     assert!(inf.content.contains(
         "--socket %t/neuroos/inference/inference/inference.sock=neuroos-knowledge.service"
     ));
@@ -431,4 +450,82 @@ fn runtime_service_has_all_socket_folders() {
             );
         }
     }
+}
+
+#[test]
+fn service_section_differs_only_in_exec_start_for_probe_rendering() {
+    let manifest = manifest_path();
+    let model = read_llm_model_file(&manifest).unwrap();
+    let user_parts = [
+        Part::Healthd,
+        Part::Storage,
+        Part::Inference,
+        Part::Monitor,
+        Part::Kernel,
+        Part::Knowledge,
+        Part::Voice,
+    ];
+    let probe_cmd = "%h/.local/opt/neuroos/bin/neuroos-s04-probe";
+
+    for part in user_parts {
+        let normal = generate_user_service(part, &model);
+        let probed = generate_user_service_with_exec_start(part, probe_cmd);
+
+        let extract_service_lines = |content: &str| -> Vec<String> {
+            let mut in_service = false;
+            let mut lines = Vec::new();
+            for line in content.lines() {
+                let t = line.trim();
+                if t == "[Service]" {
+                    in_service = true;
+                    continue;
+                } else if t.starts_with('[') && in_service {
+                    break;
+                }
+                if in_service
+                    && !t.is_empty()
+                    && !t.starts_with('#')
+                    && !t.starts_with("ExecStart=")
+                {
+                    lines.push(t.to_string());
+                }
+            }
+            lines
+        };
+
+        let normal_service = extract_service_lines(&normal);
+        let probed_service = extract_service_lines(&probed);
+        assert_eq!(
+            normal_service, probed_service,
+            "Part {:?} service stanzas must match except ExecStart",
+            part
+        );
+        assert!(probed.contains(&format!("ExecStart={probe_cmd}")));
+        assert!(!probed.contains("ExecStartPre="));
+    }
+}
+
+/// BUG-027: systemd 255 user scope drops PrivateNetwork for the main process of a
+/// unit with more than one exec. Every generated user unit must have exactly one.
+#[test]
+fn every_user_unit_has_exactly_one_exec() {
+    let manifest = manifest_path();
+    let files = generate_all_files(&manifest).unwrap();
+    let mut checked = 0;
+    for f in &files {
+        if f.rel_path.starts_with("systemd/user")
+            && f.rel_path.extension().is_some_and(|e| e == "service")
+        {
+            assert!(
+                single_exec(&f.content),
+                "{} must have exactly one ExecStart and no other Exec*",
+                f.rel_path.display()
+            );
+            checked += 1;
+        }
+    }
+    assert_eq!(checked, 9, "7 parts + runtime + model check");
+    // Negative control: the checker rejects a unit with ExecStartPre.
+    assert!(!single_exec("ExecStartPre=/bin/true\nExecStart=/bin/x\n"));
+    assert!(!single_exec("ExecStart=/bin/a\nExecStart=/bin/b\n"));
 }

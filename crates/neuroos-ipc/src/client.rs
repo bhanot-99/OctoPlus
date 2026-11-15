@@ -117,7 +117,9 @@ impl Client {
             pending: pending_r,
             closed: closed_r,
             reason: reason_r,
-            writer_tx: tx.clone(),
+            // Weak: the reader must not keep the writer (and so the socket)
+            // alive after the Client and its streams are gone (BUG-027).
+            writer_tx: tx.downgrade(),
             max_frame_bytes,
         };
         tokio::spawn(async move {
@@ -315,7 +317,7 @@ struct ReaderContext {
     pending: Pending,
     closed: Arc<AtomicBool>,
     reason: CloseReason,
-    writer_tx: mpsc::Sender<Envelope>,
+    writer_tx: mpsc::WeakSender<Envelope>,
     max_frame_bytes: u32,
 }
 
@@ -362,14 +364,16 @@ async fn read_loop(mut reader: OwnedReadHalf, ctx: ReaderContext) {
                                 .lock()
                                 .unwrap_or_else(PoisonError::into_inner)
                                 .remove(&dropped_env.request_id);
-                            let _ = ctx.writer_tx.try_send(envelope(
-                                0,
-                                &dropped_env.trace_id,
-                                Body::Cancel(Cancel {
-                                    target_request_id: dropped_env.request_id,
-                                }),
-                                false,
-                            ));
+                            if let Some(writer) = ctx.writer_tx.upgrade() {
+                                let _ = writer.try_send(envelope(
+                                    0,
+                                    &dropped_env.trace_id,
+                                    Body::Cancel(Cancel {
+                                        target_request_id: dropped_env.request_id,
+                                    }),
+                                    false,
+                                ));
+                            }
                         }
                         Err(mpsc::error::TrySendError::Closed(dropped_env)) => {
                             ctx.pending

@@ -25,6 +25,7 @@ struct CliConfig {
   std::uint32_t threads = 1;
   SocketPolicy* voice_sp = nullptr;
   SocketPolicy* control_sp = nullptr;
+  std::filesystem::path landlock_canary;
 };
 
 inline bool ParseUint32(std::string_view s, std::uint32_t* out) {
@@ -65,7 +66,7 @@ inline bool ParsePolicy(const std::string& arg, SocketPolicy* sp) {
   return true;
 }
 
-inline bool ParseCliArgs(int argc, char* const* argv, CliConfig* cfg) {
+inline bool ParseCliArgs(int argc, const char* const* argv, CliConfig* cfg) {
   for (int i = 1; i < argc; ++i) {
     const std::string arg = argv[i];
     if (arg == "--socket" && i + 1 < argc) {
@@ -88,6 +89,8 @@ inline bool ParseCliArgs(int argc, char* const* argv, CliConfig* cfg) {
         std::cerr << "neuroos-voice: invalid numeric value for --threads: " << val << "\n";
         return false;
       }
+    } else if (arg == "--landlock-canary" && i + 1 < argc) {
+      cfg->landlock_canary = argv[++i];
     } else {
       std::cerr << "neuroos-voice: unknown or incomplete argument: " << arg << "\n";
       return false;
