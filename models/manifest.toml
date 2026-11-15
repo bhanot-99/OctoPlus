@@ -16,3 +16,49 @@
 # Models are added when they are chosen: the language model by ADR-0005 after spike
 # S-02; voice, wake-word and embedding models in their phases. Until then this file
 # has no entries and `just fetch-models` verifies nothing.
+
+# --- Spike S-02 candidates (owner approval D-17, 2026-11-15). Pinned by Claude from the
+# Hugging Face API: repo revision = commit sha, sha256 and size = the repo's LFS metadata.
+# The winner stays (ADR-0005); the others are removed from this file after S-02.
+
+[[model]]
+id = "llm-qwen3-4b-instruct-2507-q4km"
+role = "llm"
+file = "llm/Qwen3-4B-Instruct-2507-Q4_K_M.gguf"
+# Community GGUF (unsloth); Qwen publishes no official GGUF for this release.
+url = "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/a06e946bb6b655725eafa393f4a9745d460374c9/Qwen3-4B-Instruct-2507-Q4_K_M.gguf"
+sha256 = "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597"
+size_bytes = 2497281120
+license = "Apache-2.0"
+
+[[model]]
+id = "llm-phi-4-mini-instruct-q4km"
+role = "llm"
+file = "llm/Phi-4-mini-instruct-Q4_K_M.gguf"
+# Community GGUF (unsloth); no official GGUF repo exists.
+url = "https://huggingface.co/unsloth/Phi-4-mini-instruct-GGUF/resolve/78eb92a46fc37e6b524df991ed9aca9bc6aa7b80/Phi-4-mini-instruct-Q4_K_M.gguf"
+sha256 = "88c00229914083cd112853aab84ed51b87bdf6b9ce42f532d8c85c7c63b1730a"
+size_bytes = 2491874272
+license = "MIT"
+
+[[model]]
+id = "llm-smollm3-3b-q4km"
+role = "llm"
+file = "llm/SmolLM3-Q4_K_M.gguf"
+# Official ggml-org GGUF.
+url = "https://huggingface.co/ggml-org/SmolLM3-3B-GGUF/resolve/4965cb60b150737b68a0408c36aeefb65078f894/SmolLM3-Q4_K_M.gguf"
+sha256 = "8334b850b7bd46238c16b0c550df2138f0889bf433809008cc17a8b05761863e"
+size_bytes = 1915305312
+license = "Apache-2.0"
+
+[[model]]
+id = "llm-bitnet-b158-2b4t-tq20"
+role = "llm"
+file = "llm/bitnet-2b4t-tq2_0.gguf"
+# Community TQ2_0 conversion (Synapticode, single uploader): the only upstream-llama.cpp
+# ternary format found. Microsoft's own GGUF is i2_s (bitnet.cpp fork only). Provenance is
+# weak; correctness is checked by perplexity in S-02 part A.
+url = "https://huggingface.co/Synapticode/bitnet-b1.58-2B-4T-tq2_0-gguf/resolve/f965b4212a598c7a7d05c815135e214e2388a444/bitnet-2b4t-tq2_0.gguf"
+sha256 = "9f8e1097502528a0d80d885c603ea7ee3e4d214a6685356e39baaf697c02cbb6"
+size_bytes = 1203563648
+license = "MIT"
