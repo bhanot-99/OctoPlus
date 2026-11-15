@@ -38,3 +38,5 @@ egress.jsonl*
 .vscode/
 .idea/
 *.swp
+__pycache__/
+*.pyc
