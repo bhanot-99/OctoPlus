@@ -1,6 +1,6 @@
 # ADR-0005 — Language model, prompt layout, latency and memory targets
 
-**Status:** Accepted 2026-11-15 under the owner's standing approval to finish Phase 0 ("everything approved from my side"). The owner may overturn any target below at sign-off. The blind chat grading is a confirmation check (decision 6).
+**Status:** Accepted 2026-11-15 under the owner's standing approval to finish Phase 0 (D-18); confirmed by the owner's Phase 0 sign-off the same day. Chat confirmation done (decision 6).
 **Date:** 2026-11-15
 **Changes:** PRD §6.1 NFR-PERF-02, NFR-PERF-03 · PRD §6.2 C4 and Total rows · Architecture §9.1, §9.2 · `models/manifest.toml` (only the chosen model stays) · ADR-0008 (GPU not measured)
 **Evidence:** spike S-02 (P0-S08). Part A: `reports/spikes/s02a-pin-20261115.{json,md}` (pins, perplexity, backend tests). Part B: `reports/spikes/s02-bakeoff-20261115.{json,md}` and `s02-raw/` (agy) and **`reports/spikes/s02-verification-claude.md`** (checker's rescore and re-measurement — read first; it corrects agy's memory result). Held-out sets: `tests/eval/s02/` (committed in `7b41c17` before any model ran). Harness: `tests/eval/s02-harness/harness.py`, `scripts/bakeoff-s02.sh` (`just bakeoff-s02`).
@@ -50,7 +50,15 @@ Two findings changed the plan:
    - NFR-PERF-03, typed question to first token: **≤ 3.0 s p50**.
    - The original 3.0 s and 2.0 s stay as the **GPU-path goals** (ADR-0008), not yet measured. The preamble (NFR-PERF-01) covers the wait in both cases.
 5. **Memory:** C4 budget **2,800 MiB**, hard limit (`MemoryMax`) **3,220 MiB** (+15 %). The other parts' budgets add up to 995 MiB, so the **total is 3,795 MiB, within ≤ 4,000 MiB**. Little headroom remains; C2 (620 MiB, label P) and C3 (restated in Phase 4) are the parts to watch.
-6. **Chat quality confirmation:** the 20 chat answers are on the owner's blind grading page. If the owner's grades put Qwen3 clearly last, this ADR is reopened before Phase 2 starts. Otherwise the choice stands.
+6. **Chat quality confirmation — done.** The owner delegated the blind grading to Claude ("do binding grade"). Claude scored all 60 answers (1–5 on helpful, honest, safe) from the answers file before opening the key; the labels for c01–c04 had been seen earlier, so those four are not fully blind. Result (`reports/spikes/s02-chat-grades-20261115.json`):
+
+   | Model | Helpful | Honest | Safe | Overall |
+   | :--- | :--- | :--- | :--- | :--- |
+   | **Qwen3-4B** | **4.20** | **4.25** | 4.80 | **4.42** |
+   | Phi-4-mini | 3.05 | 4.15 | 4.80 | 4.00 |
+   | SmolLM3-3B | 2.10 | 3.65 | 4.60 | 3.45 |
+
+   Qwen3 is first, so the choice stands. Weak spot for every model: c15 (ibuprofen with blood-pressure pills), where each called it "generally safe" before adding a caveat. Phase 2 adds this item and similar medicine-interaction questions to the safety tests (KPI-12).
 7. **Skill calls are a Phase 2 acceptance test.** With the grammar, Qwen3's output always parsed (20/20). The low score (7/20) came from a test prompt with no skill descriptions (verification §1). Phase 2 re-runs `tests/eval/s02/skill_calls.jsonl` with the real persona block. Proposed pass mark: **≥ 18/20 right skill and argument keys** (owner to confirm at sign-off).
 
 ## Consequences

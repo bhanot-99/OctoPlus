@@ -475,7 +475,7 @@ Spike S-04 confirmed that every stanza above applies in user scope on the refere
 | C1 | `/proc`, `/sys` (power, thermal), Wayland socket, session-bus socket (MPRIS) — not the system bus (ADR-0007), configured folders, config | own runtime folder |
 | C2 | voice models, PipeWire socket and config, config | own runtime folder |
 | C3 | embedding model, spool (read + remove), config | `storage/`, `backups/`, own runtime folder |
-| C4 | language model, config; GPU path only: the driver files and device nodes listed in ADR-0008 | own runtime folder |
+| C4 | language model, config; GPU path only: `/dev/nvidia0` and `/dev/nvidiactl` bound into the private `/dev` (ADR-0008, S-02 addendum) | own runtime folder |
 | C5 | tokenizer, prompt templates, `nudges.toml`, config | own runtime folder |
 | C6 | `hmac.key`, skill manifests, notification bus socket, config | `actions.jsonl*`, `egress.jsonl*`, own runtime folder |
 | skill runner | per-skill, narrower than C6 | per-skill |
@@ -722,4 +722,4 @@ Spikes run in Phase 0. Each ends in an ADR that states what was measured, on wha
 | 0005 | Model, prompt layout, latency and memory targets | Accepted 2026-11-15 |
 | 0006 | Build order | Accepted 2026-11-15 |
 | 0007 | Health and context sensor sources | Accepted 2026-11-15 |
-| 0008 | Optional GPU acceleration for inference (C4) | Accepted 2026-11-14; S-04 addendum; GPU not measured in S-02 — path stays off |
+| 0008 | Optional GPU acceleration for inference (C4) | Accepted 2026-11-14; S-04 and S-02 addenda: Vulkan backend, `/dev/nvidia0` + `/dev/nvidiactl` only, VRAM 3,100 MiB |

@@ -59,8 +59,31 @@ Measured in user-scope units (`reports/spikes/s04-verification-claude.md` §5):
 
 ---
 
-## Addendum 2026-11-15 — S-02 result: GPU not measured (evidence, not a change of decision)
+## Addendum 2026-11-15 — S-02 result: GPU not measured (superseded the same day by the next addendum)
 
 - The Vulkan build of llama.cpp b12389 needs the `spirv-headers` package (`find_package(SPIRV-Headers CONFIG REQUIRED)`). It is not installed, and installing it needs the owner's sudo password. CUDA was excluded by the owner (D-17). So **no GPU speed, VRAM, idle power or `MemoryDenyWriteExecute` result exists** (`reports/spikes/s02-verification-claude.md` §4).
 - Under decision 3, the GPU path therefore **stays off**, and nothing else changes. The CPU targets in ADR-0005 are the v1.0 requirements; the original 3.0 s / 2.0 s targets are recorded as GPU-path goals.
 - Decision points 5 (backend) and 6 (compute under `MemoryDenyWriteExecute`) stay open. They are measured when the owner installs `spirv-headers` (`sudo apt install spirv-headers`, then `just build-llama --vulkan-only` and `just bakeoff-s02`), at the latest before Phase 2's latency test. That measurement must also set the VRAM budget (PRD §6.2).
+
+---
+
+## Addendum 2026-11-15 (later) — S-02 GPU half measured: Vulkan chosen, GPU path enabled on the reference machine
+
+The owner installed `spirv-headers`. Claude then built and measured the Vulkan path (`reports/spikes/s02-gpu-claude.md`). Against the no-regression rule (decision 3):
+
+| Condition | Result |
+| :--- | :--- |
+| GPU off = baseline | Yes. Same binary choice per config; the CPU build and units are unchanged. |
+| Faster than the CPU path | Yes. Prefill ≈ 1,041–1,249 tok/s against 87–90 (≈ 12–14×); decode ≈ 50 against 11.9 (≈ 4×); time to first token 295 ms against ≈ 3,060 ms on a 268-token prompt. |
+| Same quality checks | Yes. Grounded 20/20, honesty 9/10, the same as on the CPU; `test-backend-ops` 22,362/22,362 passed. |
+| No sandbox control dropped | Yes. Compute works with the full §8.1 baseline, including `MemoryDenyWriteExecute=yes` and `PrivateDevices=yes`. Only `/dev/nvidia0` and `/dev/nvidiactl` are bound in; `/dev/nvidia-uvm` is not needed; the AMD iGPU stays hidden. |
+| RAM budgets unchanged | Yes. Host RSS 2,616 MiB, inside C4's 2,800 MiB. |
+| Licence | llama.cpp's Vulkan backend is MIT. The NVIDIA driver was already installed and is not shipped by the project. No CUDA. |
+
+**Decisions:**
+
+1. **Backend: llama.cpp Vulkan** (decision point 5). CUDA is not needed.
+2. **Device exception for C4** (decision point 6): `BindPaths=/dev/nvidia0 /dev/nvidiactl` into the private `/dev`, only while the GPU path is enabled. No stanza is relaxed. The driver's JIT attempt is refused by `MemoryDenyWriteExecute` and falls back with no speed loss.
+3. **VRAM budget: 3,100 MiB** (measured peak 3,010 MiB at `-c 2048`). C4 uses the GPU only if at least that much is free at load; otherwise it uses the CPU (decision 4).
+4. **The GPU path is enabled in the reference machine's config**, on AC power only (default from decision 4). Every v1.0 target is still met on the CPU alone (ADR-0005 CPU targets). With the GPU, the voice wait computes to ≈ 1.3 s, inside the original 3.0 s goal.
+5. **Not measured:** power. `nvidia-smi` reports a constant ≈ 6.1 W on this laptop even under load, so it is not a usable sensor here. The battery rule above keeps the GPU off on battery power. The VRAM-short fallback and the mid-turn GPU failure restart are C4 behaviours, tested in Phase 2.

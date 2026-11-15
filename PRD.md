@@ -334,8 +334,8 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | ID | Metric | Value | Label |
 | :--- | :--- | :--- | :--- |
 | NFR-PERF-01 | Preamble: request → first audio | ≤ 50 ms p95 | T (P: 9.7 ms) |
-| NFR-PERF-02 | End of speech → first answer audio | CPU: ≤ 4.5 s p50, ≤ 6.0 s p95 · GPU-path goal: ≤ 3.0 s p50, ≤ 5.0 s p95 | T — computed from rates measured in S-02 (prefill ≈ 11.5 ms/token, decode ≈ 86 ms/token, ADR-0005); end-to-end measurement in Phase 2. GPU goal not measured (ADR-0008) |
-| NFR-PERF-03 | Typed question → first token | CPU: ≤ 3.0 s p50 · GPU-path goal: ≤ 2.0 s p50 | T — computed from S-02 rates (ADR-0005); measured in Phase 2 |
+| NFR-PERF-02 | End of speech → first answer audio | CPU: ≤ 4.5 s p50, ≤ 6.0 s p95 · GPU-path goal: ≤ 3.0 s p50, ≤ 5.0 s p95 | T — computed from rates measured in S-02 (prefill ≈ 11.5 ms/token, decode ≈ 86 ms/token, ADR-0005); end-to-end measurement in Phase 2. GPU path: ≈ 1.3 s computed from S-02 GPU rates (prefill ≈ 1 ms/token, decode ≈ 20 ms/token; ADR-0008 addendum) |
+| NFR-PERF-03 | Typed question → first token | CPU: ≤ 3.0 s p50 · GPU-path goal: ≤ 2.0 s p50 | T — computed from S-02 rates (ADR-0005); GPU path ≈ 0.3 s (TTFT measured 295 ms on a 268-token prompt, ADR-0008); measured end to end in Phase 2 |
 | NFR-PERF-04 | C3 hybrid query at the chunk cap | ≤ 25 ms p50, ≤ 50 ms p99 | M: ≈ 13 ms p50, ≈ 16 ms p99 warm; p99 40–47 ms with a concurrent writer (spike S-01, ADR-0004) |
 | NFR-PERF-05 | C5 own compute on the hot path | < 5 ms p99 | T |
 | NFR-PERF-06 | C6 capability check | < 0.5 ms p99 | T |
@@ -355,7 +355,7 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | C2 voice | 620 MiB steady, 480 MiB idle | 768 MiB | P — re-measure over a full 4 h soak |
 | C3 storage | 240 MiB | 320 MiB | T — S-01 measured ≈ 205 MiB steady / 250 MiB peak **without** the embedding model; restated in Phase 4 (ADR-0004) |
 | C4 inference | 2,800 MiB | 3,220 MiB | M: 2,770 MiB peak for one turn, Qwen3-4B Q4_K_M, `-c 2048`, weight repacking off (S-02, ADR-0005) |
-| C4 VRAM (GPU path only) | set when the GPU path is measured; must leave room for other programs | checked before load; fall back to CPU | T — not measured in S-02 (ADR-0008 addendum) |
+| C4 VRAM (GPU path only) | 3,100 MiB | checked before load: less free → CPU path | M: 3,010 MiB peak, one turn, `-c 2048`, RTX 3050 4 GB (S-02, ADR-0008 addendum) |
 | C5 knowledge | 60 MiB | 96 MiB | T |
 | C6 kernel | 15 MiB (+ 25 MiB while a dialog is open) | 64 MiB | T |
 | C7 fetcher | 15 MiB | 48 MiB | T |
