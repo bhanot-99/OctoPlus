@@ -42,7 +42,7 @@ UMask=0077
 MemoryMax=768M
 Restart=on-failure
 RestartSec=2s
-ExecStart=%h/.local/opt/neuroos/bin/neuroos-voice --socket %t/neuroos/voice/voice/voice.sock --socket %t/neuroos/voice/control/control.sock --health-socket %t/neuroos/voice/health/health.sock --allow-unit neuroos-knowledge.service --allow-unit neuroos-kernel.service --allow-unit neuroos-healthd.service
+ExecStart=%h/.local/opt/neuroos/bin/neuroos-voice --socket %t/neuroos/voice/voice/voice.sock=neuroos-knowledge.service --socket %t/neuroos/voice/control/control.sock=uid --health-socket %t/neuroos/voice/health/health.sock=neuroos-healthd.service
 
 [Install]
 WantedBy=neuroos.target

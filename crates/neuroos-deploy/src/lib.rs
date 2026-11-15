@@ -238,10 +238,8 @@ pub fn generate_user_service(part: Part, llm_model_file: &str) -> String {
             out.push_str("ExecStartPre=/usr/bin/sha256sum --check --quiet %h/.local/opt/neuroos/models/SHA256SUMS\n");
             out.push_str(&format!(
                 "ExecStart=%h/.local/opt/neuroos/bin/neuroos-inference \
-                --socket %t/neuroos/inference/inference/inference.sock \
-                --health-socket %t/neuroos/inference/health/health.sock \
-                --allow-unit neuroos-knowledge.service \
-                --allow-unit neuroos-healthd.service \
+                --socket %t/neuroos/inference/inference/inference.sock=neuroos-knowledge.service \
+                --health-socket %t/neuroos/inference/health/health.sock=neuroos-healthd.service \
                 --model %h/.local/opt/neuroos/models/{llm_model_file} \
                 --threads 8 --ctx 2048 --batch 512\n"
             ));
@@ -249,12 +247,9 @@ pub fn generate_user_service(part: Part, llm_model_file: &str) -> String {
         Part::Voice => {
             out.push_str(
                 "ExecStart=%h/.local/opt/neuroos/bin/neuroos-voice \
-                --socket %t/neuroos/voice/voice/voice.sock \
-                --socket %t/neuroos/voice/control/control.sock \
-                --health-socket %t/neuroos/voice/health/health.sock \
-                --allow-unit neuroos-knowledge.service \
-                --allow-unit neuroos-kernel.service \
-                --allow-unit neuroos-healthd.service\n",
+                --socket %t/neuroos/voice/voice/voice.sock=neuroos-knowledge.service \
+                --socket %t/neuroos/voice/control/control.sock=uid \
+                --health-socket %t/neuroos/voice/health/health.sock=neuroos-healthd.service\n",
             );
         }
         _ => {
@@ -287,7 +282,8 @@ pub fn generate_runtime_service() -> String {
     out.push_str("InaccessiblePaths=-/run/dbus/system_bus_socket\n");
     out.push_str("NoNewPrivileges=true\n");
     out.push_str("ProtectSystem=strict\n");
-    out.push_str("ProtectHome=true\n");
+    out.push_str("ProtectHome=tmpfs\n");
+    out.push_str("BindPaths=%t\n");
     out.push_str("PrivateTmp=true\n");
     out.push_str("PrivateDevices=true\n");
     out.push_str("ProtectKernelTunables=true\n");
@@ -382,7 +378,7 @@ pub fn generate_fetcher_system_service() -> String {
     out.push_str(&format!("MemoryMax={MEMORY_MAX_FETCHER}\n"));
     out.push_str("Restart=on-failure\n");
     out.push_str("RestartSec=2s\n");
-    out.push_str("ExecStart=/opt/neuroos/bin/neuroos-fetcher\n\n");
+    out.push_str("ExecStart=/opt/neuroos/bin/neuroos-fetcher --allow-uid 1000\n\n");
 
     out.push_str("[Install]\n");
     out.push_str("WantedBy=multi-user.target\n");

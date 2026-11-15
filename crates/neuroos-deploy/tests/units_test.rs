@@ -266,6 +266,31 @@ fn persistent_data_bind_paths_per_decision_4() {
 }
 
 #[test]
+fn runtime_service_hardening_protect_home_tmpfs_and_bind_paths() {
+    let manifest = manifest_path();
+    let files = generate_all_files(&manifest).unwrap();
+
+    let runtime = files
+        .iter()
+        .find(|f| f.rel_path == Path::new("systemd/user/neuroos-runtime.service"))
+        .unwrap();
+
+    let lines: Vec<&str> = runtime.content.lines().map(str::trim).collect();
+    assert!(
+        lines.contains(&"ProtectHome=tmpfs"),
+        "neuroos-runtime.service must use ProtectHome=tmpfs to allow binding %t"
+    );
+    assert!(
+        lines.contains(&"BindPaths=%t"),
+        "neuroos-runtime.service must have BindPaths=%t"
+    );
+    assert!(
+        !lines.contains(&"ProtectHome=true"),
+        "neuroos-runtime.service must not have ProtectHome=true"
+    );
+}
+
+#[test]
 fn cpp_parts_flags_and_model_from_manifest() {
     let manifest = manifest_path();
     let llm_file = read_llm_model_file(&manifest).unwrap();
@@ -281,19 +306,16 @@ fn cpp_parts_flags_and_model_from_manifest() {
     assert!(inf.content.contains(
         "ExecStartPre=/usr/bin/sha256sum --check --quiet %h/.local/opt/neuroos/models/SHA256SUMS"
     ));
+    assert!(inf.content.contains(
+        "--socket %t/neuroos/inference/inference/inference.sock=neuroos-knowledge.service"
+    ));
+    assert!(inf.content.contains(
+        "--health-socket %t/neuroos/inference/health/health.sock=neuroos-healthd.service"
+    ));
     assert!(
-        inf.content
-            .contains("--socket %t/neuroos/inference/inference/inference.sock")
+        !inf.content.contains("--allow-unit"),
+        "C4 unit must not use flat --allow-unit flags"
     );
-    assert!(
-        inf.content
-            .contains("--health-socket %t/neuroos/inference/health/health.sock")
-    );
-    assert!(
-        inf.content
-            .contains("--allow-unit neuroos-knowledge.service")
-    );
-    assert!(inf.content.contains("--allow-unit neuroos-healthd.service"));
     assert!(
         inf.content
             .contains(&format!("--model %h/.local/opt/neuroos/models/{llm_file}"))
@@ -307,22 +329,21 @@ fn cpp_parts_flags_and_model_from_manifest() {
         .unwrap();
     assert!(
         voi.content
-            .contains("--socket %t/neuroos/voice/voice/voice.sock")
+            .contains("--socket %t/neuroos/voice/voice/voice.sock=neuroos-knowledge.service")
     );
     assert!(
         voi.content
-            .contains("--socket %t/neuroos/voice/control/control.sock")
+            .contains("--socket %t/neuroos/voice/control/control.sock=uid")
     );
     assert!(
-        voi.content
-            .contains("--health-socket %t/neuroos/voice/health/health.sock")
+        voi.content.contains(
+            "--health-socket %t/neuroos/voice/health/health.sock=neuroos-healthd.service"
+        )
     );
     assert!(
-        voi.content
-            .contains("--allow-unit neuroos-knowledge.service")
+        !voi.content.contains("--allow-unit"),
+        "C2 unit must not use flat --allow-unit flags"
     );
-    assert!(voi.content.contains("--allow-unit neuroos-kernel.service"));
-    assert!(voi.content.contains("--allow-unit neuroos-healthd.service"));
 }
 
 #[test]
@@ -341,7 +362,7 @@ fn fetcher_system_unit_and_permissions() {
     assert!(lines.contains(&"RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6"));
     assert!(!lines.contains(&"PrivateNetwork=true"));
     assert!(lines.contains(&"ReadWritePaths=/run/neuroos-fetcher /var/spool/neuroos-fetcher"));
-    assert!(lines.contains(&"ExecStart=/opt/neuroos/bin/neuroos-fetcher"));
+    assert!(lines.contains(&"ExecStart=/opt/neuroos/bin/neuroos-fetcher --allow-uid 1000"));
     assert!(lines.contains(&"MemoryMax=48M"));
     assert!(lines.contains(&"UMask=0027"));
 

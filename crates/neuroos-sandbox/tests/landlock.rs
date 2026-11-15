@@ -100,6 +100,17 @@ fn run_child_case(case: &str) {
             // Nothing was restricted.
             check("still-unrestricted", std::fs::read("/etc/hostname").is_ok());
         }
+        "negative-control" => {
+            let outside = PathBuf::from(std::env::var("OUTSIDE").unwrap());
+            check("outside-read-before", std::fs::read(&outside).is_ok());
+            let report = restrict(&Policy {
+                read_only: vec![ro],
+                read_write: vec![rw],
+            })
+            .unwrap();
+            check("report-full", report.fs_and_tcp);
+            check("outside-read-denied-after", denied(std::fs::read(&outside)));
+        }
         other => panic!("unknown case {other}"),
     }
 }
@@ -111,7 +122,7 @@ fn run_case(case: &str, test_name: &str) -> String {
     std::fs::create_dir_all(&ro).unwrap();
     std::fs::create_dir_all(&rw).unwrap();
     std::fs::write(ro.join("data"), b"hello").unwrap();
-    let name = format!("neuroos-sandbox-test-{}", std::process::id());
+    let name = format!("neuroos-sandbox-test-{}-{}", std::process::id(), test_name);
     let abs = SocketAddr::from_abstract_name(name.as_bytes()).unwrap();
     let _listener = UnixListener::bind_addr(&abs).unwrap();
 
@@ -193,6 +204,50 @@ fn missing_path_fails_closed_before_restricting() {
         "missing_path_fails_closed_before_restricting",
     );
     assert_all_pass(&out, &["missing-path-error", "still-unrestricted"]);
+}
+
+#[test]
+fn negative_control_proves_landlock_is_load_bearing() {
+    if let Ok(case) = std::env::var(CASE) {
+        return run_child_case(&case);
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let ro = dir.path().join("ro");
+    let rw = dir.path().join("rw");
+    std::fs::create_dir_all(&ro).unwrap();
+    std::fs::create_dir_all(&rw).unwrap();
+
+    let outside_dir = tempfile::tempdir().unwrap();
+    let outside_file = outside_dir.path().join("unrestricted.txt");
+    std::fs::write(&outside_file, b"readable before restrict").unwrap();
+
+    let out = Command::new(std::env::current_exe().unwrap())
+        .args([
+            "negative_control_proves_landlock_is_load_bearing",
+            "--exact",
+            "--nocapture",
+            "--test-threads=1",
+        ])
+        .env(CASE, "negative-control")
+        .env("RO", &ro)
+        .env("RW", &rw)
+        .env("OUTSIDE", &outside_file)
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
+    assert!(
+        out.status.success(),
+        "child failed: {stdout}\n{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_all_pass(
+        &stdout,
+        &[
+            "outside-read-before",
+            "report-full",
+            "outside-read-denied-after",
+        ],
+    );
 }
 
 #[test]

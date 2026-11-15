@@ -1,0 +1,26 @@
+[package]
+name = "neuroos-monitor"
+description = "Semantic-NeuroOS Context Monitor (C1)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "neuroos-monitor"
+path = "src/main.rs"
+
+[dependencies]
+neuroos-common = { path = "../neuroos-common" }
+neuroos-health = { path = "../neuroos-health" }
+neuroos-ipc = { path = "../neuroos-ipc" }
+neuroos-proto = { path = "../neuroos-proto" }
+tokio = { workspace = true, features = ["sync"] }
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio.workspace = true
+
+[lints]
+workspace = true

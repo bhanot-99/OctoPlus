@@ -40,7 +40,7 @@ MemoryMax=3220M
 Restart=on-failure
 RestartSec=2s
 ExecStartPre=/usr/bin/sha256sum --check --quiet %h/.local/opt/neuroos/models/SHA256SUMS
-ExecStart=%h/.local/opt/neuroos/bin/neuroos-inference --socket %t/neuroos/inference/inference/inference.sock --health-socket %t/neuroos/inference/health/health.sock --allow-unit neuroos-knowledge.service --allow-unit neuroos-healthd.service --model %h/.local/opt/neuroos/models/llm/Qwen3-4B-Instruct-2507-Q4_K_M.gguf --threads 8 --ctx 2048 --batch 512
+ExecStart=%h/.local/opt/neuroos/bin/neuroos-inference --socket %t/neuroos/inference/inference/inference.sock=neuroos-knowledge.service --health-socket %t/neuroos/inference/health/health.sock=neuroos-healthd.service --model %h/.local/opt/neuroos/models/llm/Qwen3-4B-Instruct-2507-Q4_K_M.gguf --threads 8 --ctx 2048 --batch 512
 
 [Install]
 WantedBy=neuroos.target

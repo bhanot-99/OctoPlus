@@ -26,6 +26,13 @@ if command -v systemd-sysusers >/dev/null 2>&1; then
   systemd-sysusers /etc/sysusers.d/neuroos.conf
 fi
 
+if [[ -z "${SUDO_USER:-}" ]]; then
+  echo "error: SUDO_USER is empty; install-fetcher.sh must be invoked via sudo by the target user" >&2
+  exit 1
+fi
+usermod -aG neuroos "$SUDO_USER"
+echo "Added $SUDO_USER to group 'neuroos'. A re-login or new session is needed for this group to take effect."
+
 echo "=== 2. Installing tmpfiles configuration ==="
 install -d -m 0755 /etc/tmpfiles.d
 install -m 0644 "$root/deploy/tmpfiles.d/neuroos-fetcher.conf" /etc/tmpfiles.d/neuroos-fetcher.conf

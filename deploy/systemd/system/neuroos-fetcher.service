@@ -33,7 +33,7 @@ UMask=0027
 MemoryMax=48M
 Restart=on-failure
 RestartSec=2s
-ExecStart=/opt/neuroos/bin/neuroos-fetcher
+ExecStart=/opt/neuroos/bin/neuroos-fetcher --allow-uid 1000
 
 [Install]
 WantedBy=multi-user.target

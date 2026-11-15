@@ -7,6 +7,10 @@
 //! without anyone remembering to update it. A lesson from the prototype: every
 //! health endpoint always said OK (docs/lessons-from-v1.md §1).
 
+pub mod service;
+
+pub use service::{CommonArgs, ServiceBuilder, ServiceContext, ServiceError};
+
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
