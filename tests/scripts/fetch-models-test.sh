@@ -82,7 +82,15 @@ expect "file:// refused without test switch" fail env NEUROOS_FETCH_ALLOW_FILE=0
 expect "missing tool fails with clear message" fail env PATH="/nonexistent" /bin/bash "$fetch" --manifest "$m" --models-dir "$dir"
 grep -q "fetch-models: required tool" "$tmp/out" || { echo "FAIL no required tool message"; exit 1; }
 
-# The real manifest parses.
-expect "repository manifest is valid" ok "$fetch" --verify-only
+# The real manifest parses. Checked against an empty models folder so the result does not
+# depend on whether the models were downloaded (hosted CI has none): every entry must be
+# reported as MISSING, and nothing may fail as a manifest error.
+mkdir -p "$tmp/no-models"
+"$fetch" --models-dir "$tmp/no-models" --verify-only >"$tmp/real" 2>&1 || true
+if grep -q "^manifest:" "$tmp/real" || ! grep -q "^MISSING" "$tmp/real" \
+  || grep -vqE "^(MISSING|fetch-models: FAIL)" "$tmp/real"; then
+  echo "FAIL repository manifest is valid"; cat "$tmp/real"; exit 1
+fi
+echo "ok   repository manifest is valid"; pass=$((pass + 1))
 
 echo "fetch-models-test: ok - $pass checks"
