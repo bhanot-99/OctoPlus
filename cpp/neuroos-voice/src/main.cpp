@@ -13,106 +13,14 @@
 #include "neuroos/ipc/peer.hpp"
 #include "neuroos/ipc/server.hpp"
 #include "neuroos/sandbox.hpp"
+#include "neuroos/voice/flags.hpp"
 #include "neuroos/voice/service.hpp"
 
-namespace {
-
-struct SocketPolicy {
-  std::filesystem::path path;
-  neuroos::ipc::PeerPolicy policy;
-};
-
-struct CliConfig {
-  std::vector<SocketPolicy> sockets;
-  SocketPolicy health_sp;
-  std::filesystem::path knowledge_socket_path;
-  SocketPolicy* voice_sp = nullptr;
-  SocketPolicy* control_sp = nullptr;
-};
-
-bool ParsePolicy(const std::string& arg, SocketPolicy* sp) {
-  auto eq = arg.find('=');
-  if (eq == std::string::npos || eq == 0 || eq + 1 >= arg.size()) {
-    return false;
-  }
-  sp->path = arg.substr(0, eq);
-  const std::string pol_str = arg.substr(eq + 1);
-
-  if (pol_str == "uid") {
-    sp->policy = neuroos::ipc::PeerPolicy::SameUser();
-    return true;
-  }
-
-  std::vector<std::string> units;
-  std::istringstream iss(pol_str);
-  std::string unit;
-  while (std::getline(iss, unit, ',')) {
-    if (!unit.empty()) {
-      units.push_back(unit);
-    }
-  }
-  sp->policy = neuroos::ipc::PeerPolicy::SameUser().WithUnits(std::move(units));
-  return true;
-}
-
-bool ParseCliArgs(int argc, char* const* argv, CliConfig* cfg) {
-  for (int i = 1; i < argc; ++i) {
-    const std::string arg = argv[i];
-    if (arg == "--socket" && i + 1 < argc) {
-      SocketPolicy sp;
-      if (!ParsePolicy(argv[++i], &sp)) {
-        std::cerr << "neuroos-voice: invalid --socket flag\n";
-        return false;
-      }
-      cfg->sockets.push_back(std::move(sp));
-    } else if (arg == "--health-socket" && i + 1 < argc) {
-      if (!ParsePolicy(argv[++i], &cfg->health_sp)) {
-        std::cerr << "neuroos-voice: invalid --health-socket flag\n";
-        return false;
-      }
-    } else if (arg == "--knowledge-socket" && i + 1 < argc) {
-      cfg->knowledge_socket_path = argv[++i];
-    } else {
-      std::cerr << "neuroos-voice: unknown or incomplete argument: " << arg << "\n";
-      return false;
-    }
-  }
-
-  if (cfg->sockets.empty() || cfg->health_sp.path.empty()) {
-    std::cerr << "neuroos-voice: --socket and --health-socket are required\n";
-    return false;
-  }
-  return true;
-}
-
-bool ResolveSockets(CliConfig* cfg) {
-  for (auto& s : cfg->sockets) {
-    const auto filename = s.path.filename().string();
-    if (filename == "voice.sock" || s.path.string().find("/voice/") != std::string::npos) {
-      cfg->voice_sp = &s;
-    } else if (filename == "control.sock" ||
-               s.path.string().find("/control/") != std::string::npos) {
-      cfg->control_sp = &s;
-    }
-  }
-
-  if (cfg->voice_sp == nullptr || cfg->control_sp == nullptr) {
-    if (cfg->sockets.size() >= 2) {
-      cfg->voice_sp = cfg->sockets.data();
-      cfg->control_sp = cfg->sockets.data() + 1;
-    } else {
-      std::cerr << "neuroos-voice: requires both voice and control sockets\n";
-      return false;
-    }
-  }
-  return true;
-}
-
-}  // namespace
+namespace {}  // namespace
 
 int main(int argc, char* argv[]) {
-  CliConfig cfg;
-  if (!ParseCliArgs(argc, argv, &cfg) || !ResolveSockets(&cfg)) {
+  neuroos::voice::CliConfig cfg;
+  if (!neuroos::voice::ParseCliArgs(argc, argv, &cfg) || !neuroos::voice::ResolveSockets(&cfg)) {
     return 1;
   }
 
@@ -123,22 +31,10 @@ int main(int argc, char* argv[]) {
   sigaddset(&sigs, SIGTERM);
   pthread_sigmask(SIG_BLOCK, &sigs, nullptr);
 
-  // Apply Landlock sandbox (NFR-SEC-04)
+  // Apply Landlock sandbox (NFR-SEC-04, Architecture §8.2)
   neuroos::Policy sandbox_policy;
   if (std::filesystem::exists("/proc")) {
     sandbox_policy.read_only.emplace_back("/proc");
-  }
-  if (std::filesystem::exists("/usr")) {
-    sandbox_policy.read_only.emplace_back("/usr");
-  }
-  if (std::filesystem::exists("/lib")) {
-    sandbox_policy.read_only.emplace_back("/lib");
-  }
-  if (std::filesystem::exists("/lib64")) {
-    sandbox_policy.read_only.emplace_back("/lib64");
-  }
-  if (std::filesystem::exists("/etc")) {
-    sandbox_policy.read_only.emplace_back("/etc");
   }
 
   // Create socket folders and add to read_write list

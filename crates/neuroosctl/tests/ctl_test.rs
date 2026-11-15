@@ -1,0 +1,455 @@
+//! Tests for `neuroosctl` CLI commands and formatting (design.md §7, FR-CLI-01..02).
+
+#![allow(clippy::print_stdout, clippy::print_stderr, clippy::unwrap_used)]
+
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
+
+use neuroos_common::paths::{self, Part};
+use neuroos_ipc::server::{Server, ServerConfig, ensure_private_dir};
+use neuroos_ipc::{Handler, HandlerError, Request, StreamSink};
+use neuroos_proto::v1::envelope::Body;
+use neuroos_proto::v1::{
+    AnswerChunk, AnswerDone, ErrorCode, HealthResponse, HealthStatus, Histogram, PartStatus, Route,
+    StatusReport,
+};
+use neuroosctl::ask::{run_ask, run_ask_internal};
+use neuroosctl::status::{extract_p99_ns, format_p99, format_uptime, run_status};
+use neuroosctl::style::{ColorChoice, Styler};
+use tempfile::tempdir;
+
+#[test]
+fn test_format_uptime() {
+    assert_eq!(format_uptime(0), "0s");
+    assert_eq!(format_uptime(45), "45s");
+    assert_eq!(format_uptime(125), "2m 05s");
+    assert_eq!(format_uptime(3665), "1h 01m");
+    assert_eq!(format_uptime(90060), "1d 01h");
+    assert_eq!(format_uptime(273600), "3d 04h");
+}
+
+#[test]
+fn test_format_p99_and_extraction() {
+    assert_eq!(format_p99("inference", 0), "—");
+    assert_eq!(format_p99("inference", 15_500_000), "15.5 ms/tok");
+    assert_eq!(format_p99("storage", 450_000), "450 µs");
+    assert_eq!(format_p99("storage", 12_300_000), "12.3 ms");
+
+    let resp_empty = HealthResponse::default();
+    assert_eq!(extract_p99_ns(&resp_empty), 0);
+
+    let resp_with_hist = HealthResponse {
+        histograms: vec![Histogram {
+            name: "inference_decode_latency".to_string(),
+            upper_bounds_ns: vec![1_000_000, 2_000_000, 5_000_000],
+            counts: vec![10, 80, 10, 0],
+            sample_count: 100,
+            sum_ns: 180_000_000,
+        }],
+        ..Default::default()
+    };
+    assert_eq!(extract_p99_ns(&resp_with_hist), 5_000_000);
+
+    let resp_other_hist = HealthResponse {
+        histograms: vec![Histogram {
+            name: "misc_metric".to_string(),
+            upper_bounds_ns: vec![1_000_000, 3_000_000],
+            counts: vec![50, 50, 0],
+            sample_count: 100,
+            sum_ns: 150_000_000,
+        }],
+        ..Default::default()
+    };
+    assert_eq!(extract_p99_ns(&resp_other_hist), 3_000_000);
+}
+
+#[test]
+fn test_styler_color_modes() {
+    let uncolored = Styler::new(ColorChoice::Never);
+    assert!(!uncolored.is_enabled());
+    assert_eq!(uncolored.ok("✔ OK"), "✔ OK");
+    assert_eq!(uncolored.degraded("▲ DEGRADED"), "▲ DEGRADED");
+    assert_eq!(uncolored.down("✖ DOWN"), "✖ DOWN");
+    assert_eq!(uncolored.bold("TITLE"), "TITLE");
+    assert_eq!(uncolored.dim("subtle"), "subtle");
+    assert_eq!(uncolored.error("failed"), "error: failed");
+    assert_eq!(uncolored.hint("check logs"), "hint: check logs");
+
+    let colored = Styler::new(ColorChoice::Always);
+    assert!(colored.is_enabled());
+    assert!(colored.ok("✔ OK").contains("\x1b[32m"));
+    assert!(colored.degraded("▲ DEGRADED").contains("\x1b[33m"));
+    assert!(colored.down("✖ DOWN").contains("\x1b[31m"));
+    assert!(colored.bold("TITLE").contains("\x1b[1m"));
+    assert!(colored.dim("subtle").contains("\x1b[2m"));
+    assert!(colored.error("failed").contains("\x1b[31;1merror:"));
+    assert!(colored.hint("check").contains("\x1b[2mhint:"));
+}
+
+/// Mock server for healthd status socket.
+#[derive(Debug, Clone)]
+struct MockHealthdHandler {
+    report: StatusReport,
+}
+
+impl Handler for MockHealthdHandler {
+    async fn handle(&self, req: Request, _sink: StreamSink) -> Result<Body, HandlerError> {
+        match req.body {
+            Body::StatusRequest(_) => Ok(Body::StatusReport(self.report.clone())),
+            _ => Err(HandlerError::unsupported()),
+        }
+    }
+}
+
+async fn start_mock_healthd(
+    runtime_root: PathBuf,
+    report: StatusReport,
+) -> tokio::sync::oneshot::Sender<()> {
+    let sock = paths::socket_path(&runtime_root, Part::Healthd, "healthd");
+    if let Some(parent) = sock.parent() {
+        ensure_private_dir(parent).unwrap();
+    }
+    let mut scfg = ServerConfig::new(1024 * 1024, Duration::from_millis(500));
+    scfg.policy = neuroos_ipc::peer::PeerPolicy::uids(vec![neuroos_ipc::peer::current_uid()]);
+    let server = Server::bind(&sock, scfg).await.unwrap();
+
+    let (stop_tx, stop_rx) = tokio::sync::oneshot::channel();
+    tokio::spawn(async move {
+        server
+            .serve(Arc::new(MockHealthdHandler { report }), async move {
+                let _ = stop_rx.await;
+            })
+            .await;
+    });
+
+    stop_tx
+}
+
+#[tokio::test]
+async fn test_run_status_success_and_json() {
+    let tmp = tempdir().unwrap();
+    let runtime_root = tmp.path().to_path_buf();
+
+    let mut parts = Vec::new();
+    for part in Part::ALL {
+        parts.push(PartStatus {
+            part: part.name().to_string(),
+            reachable: true,
+            last: Some(HealthResponse {
+                component: format!("neuroos-{}", part.name()),
+                version: "0.1.0".to_string(),
+                status: HealthStatus::Ok as i32,
+                started_at_ns: 1_000_000_000,
+                sampled_at_ns: 2_000_000_000,
+                rss_bytes: 10 * 1024 * 1024,
+                subsystems: Vec::new(),
+                counters: Vec::new(),
+                gauges: Vec::new(),
+                histograms: vec![Histogram {
+                    name: "request_latency".to_string(),
+                    upper_bounds_ns: vec![10_000_000],
+                    counts: vec![5, 0],
+                    sample_count: 5,
+                    sum_ns: 25_000_000,
+                }],
+            }),
+            last_scrape_ns: 2_000_000_000,
+            cgroup_memory_bytes: 10 * 1024 * 1024,
+            cgroup_cpu_usage_ns: 50_000_000,
+        });
+    }
+
+    let report = StatusReport {
+        overall: HealthStatus::Ok as i32,
+        parts,
+        generated_at_ns: 2_000_000_000,
+    };
+
+    let stop_tx = start_mock_healthd(runtime_root.clone(), report).await;
+    let styler = Styler::new(ColorChoice::Always);
+
+    // Test text status with color (exit code 0)
+    let exit_code = run_status(&runtime_root, false, styler).await;
+    assert_eq!(exit_code, 0);
+
+    // Test json status (exit code 0)
+    let json_exit = run_status(&runtime_root, true, styler).await;
+    assert_eq!(json_exit, 0);
+
+    let _ = stop_tx.send(());
+}
+
+#[tokio::test]
+async fn test_run_status_degraded_down_starting_and_unreachable() {
+    let tmp = tempdir().unwrap();
+    let runtime_root = tmp.path().to_path_buf();
+    let styler = Styler::new(ColorChoice::Never);
+
+    // Unreachable daemon returns exit code 1
+    let exit_unreachable = run_status(&runtime_root, false, styler).await;
+    assert_eq!(exit_unreachable, 1);
+
+    // Degraded / starting / down states
+    let report = StatusReport {
+        overall: HealthStatus::Degraded as i32,
+        parts: vec![
+            PartStatus {
+                part: "inference".to_string(),
+                reachable: true,
+                last: Some(HealthResponse {
+                    component: "neuroos-inference".to_string(),
+                    version: "0.1.0".to_string(),
+                    status: HealthStatus::Degraded as i32,
+                    started_at_ns: 1_000_000_000,
+                    sampled_at_ns: 2_000_000_000,
+                    rss_bytes: 2900 * 1024 * 1024,
+                    subsystems: Vec::new(),
+                    counters: Vec::new(),
+                    gauges: Vec::new(),
+                    histograms: vec![Histogram {
+                        name: "decode_latency".to_string(),
+                        upper_bounds_ns: vec![80_000_000],
+                        counts: vec![10, 0],
+                        sample_count: 10,
+                        sum_ns: 800_000_000,
+                    }],
+                }),
+                last_scrape_ns: 2_000_000_000,
+                cgroup_memory_bytes: 2900 * 1024 * 1024,
+                cgroup_cpu_usage_ns: 100_000_000,
+            },
+            PartStatus {
+                part: "voice".to_string(),
+                reachable: false,
+                last: Some(HealthResponse {
+                    component: "neuroos-voice".to_string(),
+                    version: "0.1.0".to_string(),
+                    status: HealthStatus::Down as i32,
+                    started_at_ns: 0,
+                    sampled_at_ns: 2_000_000_000,
+                    rss_bytes: 0,
+                    subsystems: Vec::new(),
+                    counters: Vec::new(),
+                    gauges: Vec::new(),
+                    histograms: Vec::new(),
+                }),
+                last_scrape_ns: 2_000_000_000,
+                cgroup_memory_bytes: 0,
+                cgroup_cpu_usage_ns: 0,
+            },
+            PartStatus {
+                part: "storage".to_string(),
+                reachable: true,
+                last: Some(HealthResponse {
+                    component: "neuroos-storage".to_string(),
+                    version: "0.1.0".to_string(),
+                    status: HealthStatus::Starting as i32,
+                    started_at_ns: 1_900_000_000,
+                    sampled_at_ns: 2_000_000_000,
+                    rss_bytes: 5 * 1024 * 1024,
+                    subsystems: Vec::new(),
+                    counters: Vec::new(),
+                    gauges: Vec::new(),
+                    histograms: Vec::new(),
+                }),
+                last_scrape_ns: 2_000_000_000,
+                cgroup_memory_bytes: 5 * 1024 * 1024,
+                cgroup_cpu_usage_ns: 10_000_000,
+            },
+            PartStatus {
+                part: "kernel".to_string(),
+                reachable: true,
+                last: Some(HealthResponse {
+                    component: "neuroos-kernel".to_string(),
+                    version: "0.1.0".to_string(),
+                    status: HealthStatus::Unspecified as i32,
+                    started_at_ns: 0,
+                    sampled_at_ns: 2_000_000_000,
+                    rss_bytes: 0,
+                    subsystems: Vec::new(),
+                    counters: Vec::new(),
+                    gauges: Vec::new(),
+                    histograms: Vec::new(),
+                }),
+                last_scrape_ns: 2_000_000_000,
+                cgroup_memory_bytes: 0,
+                cgroup_cpu_usage_ns: 0,
+            },
+            PartStatus {
+                part: "monitor".to_string(),
+                reachable: false,
+                last: None,
+                last_scrape_ns: 2_000_000_000,
+                cgroup_memory_bytes: 0,
+                cgroup_cpu_usage_ns: 0,
+            },
+        ],
+        generated_at_ns: 2_000_000_000,
+    };
+
+    let stop_tx = start_mock_healthd(runtime_root.clone(), report).await;
+    let exit_degraded = run_status(&runtime_root, false, styler).await;
+    assert_eq!(exit_degraded, 3);
+    let _ = stop_tx.send(());
+}
+
+/// Mock knowledge server for ask requests.
+#[derive(Debug, Clone)]
+enum MockKnowledgeBehavior {
+    Normal,
+    PermissionDenied,
+    InternalError,
+    Slow,
+}
+
+#[derive(Debug, Clone)]
+struct MockKnowledgeHandler {
+    behavior: MockKnowledgeBehavior,
+}
+
+impl Handler for MockKnowledgeHandler {
+    async fn handle(&self, req: Request, sink: StreamSink) -> Result<Body, HandlerError> {
+        match self.behavior {
+            MockKnowledgeBehavior::PermissionDenied => Err(HandlerError::new(
+                ErrorCode::PermissionDenied,
+                "tier check review required",
+                false,
+            )),
+            MockKnowledgeBehavior::InternalError => Err(HandlerError::new(
+                ErrorCode::Internal,
+                "model backend crashed",
+                false,
+            )),
+            MockKnowledgeBehavior::Slow => {
+                let _ = sink
+                    .send(Body::AnswerChunk(AnswerChunk {
+                        text: "Slow initial text...".to_string(),
+                    }))
+                    .await;
+                // Sleep to simulate long generation
+                tokio::time::sleep(Duration::from_millis(500)).await;
+                Ok(Body::AnswerDone(AnswerDone {
+                    route: Route::GeneralChat as i32,
+                    taint: None,
+                    used_web: false,
+                }))
+            }
+            MockKnowledgeBehavior::Normal => match req.body {
+                Body::AskRequest(q) => {
+                    let _ = sink
+                        .send(Body::AnswerChunk(AnswerChunk {
+                            text: format!("Answer to: {}", q.text),
+                        }))
+                        .await;
+                    Ok(Body::AnswerDone(AnswerDone {
+                        route: Route::GeneralChat as i32,
+                        taint: None,
+                        used_web: false,
+                    }))
+                }
+                _ => Err(HandlerError::unsupported()),
+            },
+        }
+    }
+}
+
+async fn start_mock_knowledge(
+    runtime_root: PathBuf,
+    behavior: MockKnowledgeBehavior,
+) -> tokio::sync::oneshot::Sender<()> {
+    let sock = paths::socket_path(&runtime_root, Part::Knowledge, "knowledge");
+    if let Some(parent) = sock.parent() {
+        ensure_private_dir(parent).unwrap();
+    }
+    let mut scfg = ServerConfig::new(1024 * 1024, Duration::from_millis(500));
+    scfg.policy = neuroos_ipc::peer::PeerPolicy::uids(vec![neuroos_ipc::peer::current_uid()]);
+    let server = Server::bind(&sock, scfg).await.unwrap();
+
+    let (stop_tx, stop_rx) = tokio::sync::oneshot::channel();
+    tokio::spawn(async move {
+        server
+            .serve(Arc::new(MockKnowledgeHandler { behavior }), async move {
+                let _ = stop_rx.await;
+            })
+            .await;
+    });
+
+    stop_tx
+}
+
+#[tokio::test]
+async fn test_run_ask_streaming_and_errors() {
+    let tmp = tempdir().unwrap();
+    let styler = Styler::new(ColorChoice::Never);
+
+    // Unreachable knowledge service returns exit code 1
+    let runtime_root_down = tmp.path().join("down");
+    let exit_down = run_ask(&runtime_root_down, "hello".to_string(), false, styler).await;
+    assert_eq!(exit_down, 1);
+
+    // Successful ask streaming
+    let runtime_root_ok = tmp.path().join("ok");
+    let stop_tx =
+        start_mock_knowledge(runtime_root_ok.clone(), MockKnowledgeBehavior::Normal).await;
+    let exit_ok = run_ask(&runtime_root_ok, "what is 2+2?".to_string(), false, styler).await;
+    assert_eq!(exit_ok, 0);
+
+    // With JSON output
+    let exit_json = run_ask(&runtime_root_ok, "what is 2+2?".to_string(), true, styler).await;
+    assert_eq!(exit_json, 0);
+    let _ = stop_tx.send(());
+
+    // Permission denied returns exit code 4
+    let runtime_root_denied = tmp.path().join("denied");
+    let stop_denied = start_mock_knowledge(
+        runtime_root_denied.clone(),
+        MockKnowledgeBehavior::PermissionDenied,
+    )
+    .await;
+    let exit_denied = run_ask(
+        &runtime_root_denied,
+        "delete data".to_string(),
+        false,
+        styler,
+    )
+    .await;
+    assert_eq!(exit_denied, 4);
+    let _ = stop_denied.send(());
+
+    // Internal error returns exit code 1
+    let runtime_root_err = tmp.path().join("err");
+    let stop_err = start_mock_knowledge(
+        runtime_root_err.clone(),
+        MockKnowledgeBehavior::InternalError,
+    )
+    .await;
+    let exit_err = run_ask(
+        &runtime_root_err,
+        "trigger crash".to_string(),
+        false,
+        styler,
+    )
+    .await;
+    assert_eq!(exit_err, 1);
+    let _ = stop_err.send(());
+
+    // Cancellation test with immediate cancel signal
+    let runtime_root_cancel = tmp.path().join("cancel");
+    let stop_cancel =
+        start_mock_knowledge(runtime_root_cancel.clone(), MockKnowledgeBehavior::Slow).await;
+    let cancel_sig = async {
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    };
+    tokio::pin!(cancel_sig);
+    let exit_cancel = run_ask_internal(
+        &runtime_root_cancel,
+        "slow question".to_string(),
+        false,
+        styler,
+        cancel_sig,
+    )
+    .await;
+    assert_eq!(exit_cancel, 130);
+    let _ = stop_cancel.send(());
+}

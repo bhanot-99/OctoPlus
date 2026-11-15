@@ -32,8 +32,24 @@ class InferenceService {
 
   void ReleaseBusy();
 
+  [[nodiscard]] bool is_busy() const {
+    std::lock_guard<std::mutex> lock(mu_);
+    return busy_;
+  }
+
+  bool WaitForIdle(std::chrono::milliseconds timeout = std::chrono::milliseconds(5000)) {
+    std::unique_lock<std::mutex> lock(mu_);
+    return cv_.wait_for(lock, timeout, [this] { return !busy_; });
+  }
+
   [[nodiscard]] std::shared_ptr<Engine> engine() const noexcept { return engine_; }
   [[nodiscard]] std::shared_ptr<Health> health() const noexcept { return health_; }
+  [[nodiscard]] std::shared_ptr<LatencyHistogram> cancel_to_idle_histogram() const noexcept {
+    return histograms_.cancel_to_idle;
+  }
+  [[nodiscard]] std::shared_ptr<LatencyHistogram> decode_step_histogram() const noexcept {
+    return histograms_.decode_step;
+  }
 
  private:
   struct DecodeState {
@@ -50,7 +66,7 @@ class InferenceService {
   std::shared_ptr<Health> health_;
 
   // Concurrency & single generation control
-  std::mutex mu_;
+  mutable std::mutex mu_;
   std::condition_variable cv_;
   bool busy_ = false;
   std::uint64_t active_request_id_ = 0;
@@ -67,6 +83,7 @@ class InferenceService {
   struct Histograms {
     std::shared_ptr<LatencyHistogram> ttft;
     std::shared_ptr<LatencyHistogram> decode_step;
+    std::shared_ptr<LatencyHistogram> cancel_to_idle;
   } histograms_;
 };
 

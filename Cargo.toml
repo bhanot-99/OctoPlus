@@ -5,6 +5,7 @@ members = [
     "crates/neuroos-deploy",
     "crates/neuroos-fetcher",
     "crates/neuroos-health",
+    "crates/neuroos-healthd",
     "crates/neuroos-ipc",
     "crates/neuroos-kernel",
     "crates/neuroos-knowledge",
@@ -14,6 +15,7 @@ members = [
     "crates/neuroos-storage",
     "crates/neuroos-taint",
     "crates/neuroos-testkit",
+    "crates/neuroosctl",
     "bench/ipc-stream",
     "bench/storage-scan",
 ]

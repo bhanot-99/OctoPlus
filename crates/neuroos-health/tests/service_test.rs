@@ -32,6 +32,7 @@ async fn test_service_builder_run_and_shutdown() {
         runtime_dir: Some(runtime_dir.clone()),
         config: Some(config_file),
         allow_uid: Some(neuroos_ipc::peer::current_uid()),
+        soak: false,
     };
 
     let (stop_tx, stop_rx) = tokio::sync::oneshot::channel();

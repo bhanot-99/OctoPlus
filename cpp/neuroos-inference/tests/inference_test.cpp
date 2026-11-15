@@ -10,6 +10,7 @@
 
 #include "neuroos/health.hpp"
 #include "neuroos/inference/fake_engine.hpp"
+#include "neuroos/inference/flags.hpp"
 #include "neuroos/inference/service.hpp"
 #include "neuroos/inference/utf8.hpp"
 #include "neuroos/ipc/client.hpp"
@@ -303,6 +304,34 @@ TEST(Utf8BufferTest, SplitAcrossTokensIsNeverEmittedHalf) {
   const std::string chunk2 = buf.AppendAndExtractValid("\xac 10");
   EXPECT_EQ(chunk2, "\xe2\x82\xac 10");
   EXPECT_FALSE(buf.HasPending());
+}
+
+TEST(FlagsTest, RejectsBadNumericWithoutExceptions) {
+  Flags flags;
+
+  // Non-numeric string
+  const char* bad_argv1[] = {"neuroos-inference", "--threads", "invalid"};
+  EXPECT_FALSE(ParseFlags(3, const_cast<char**>(bad_argv1), &flags));
+
+  // Negative number
+  const char* bad_argv2[] = {"neuroos-inference", "--ctx", "-1"};
+  EXPECT_FALSE(ParseFlags(3, const_cast<char**>(bad_argv2), &flags));
+
+  // Overflow
+  const char* bad_argv3[] = {"neuroos-inference", "--batch", "99999999999999999999"};
+  EXPECT_FALSE(ParseFlags(3, const_cast<char**>(bad_argv3), &flags));
+
+  // Empty string
+  const char* bad_argv4[] = {"neuroos-inference", "--bench-reps", ""};
+  EXPECT_FALSE(ParseFlags(3, const_cast<char**>(bad_argv4), &flags));
+
+  // Valid numeric values
+  const char* good_argv[] = {"neuroos-inference", "--threads", "4", "--ctx", "1024",
+                             "--batch",           "256"};
+  EXPECT_TRUE(ParseFlags(7, const_cast<char**>(good_argv), &flags));
+  EXPECT_EQ(flags.threads, 4U);
+  EXPECT_EQ(flags.ctx, 1024U);
+  EXPECT_EQ(flags.batch, 256U);
 }
 
 }  // namespace

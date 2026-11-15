@@ -82,6 +82,7 @@ async fn test_fetcher_service_init_and_run() {
         runtime_dir: Some(runtime_dir.clone()),
         config: Some(config_file),
         allow_uid: Some(neuroos_ipc::peer::current_uid()),
+        soak: false,
     };
 
     let (stop_tx, stop_rx) = tokio::sync::oneshot::channel();

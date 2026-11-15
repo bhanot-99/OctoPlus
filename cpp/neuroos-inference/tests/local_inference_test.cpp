@@ -178,6 +178,37 @@ TEST(LocalInferenceTest, local_RealModelCancelStopsWithinOneDecodeStep) {
   double cancel_ms = 0.0;
   RunCancelBenchmark(fixture.client.get(), &col, &cancel_ms);
 
+  // Wait until service finishes cancel and becomes idle (FR-INF-04, F8)
+  ASSERT_TRUE(service->WaitForIdle(std::chrono::milliseconds(5000)));
+
+  auto c2i_hist = service->cancel_to_idle_histogram();
+  auto ds_hist = service->decode_step_histogram();
+  ASSERT_NE(c2i_hist, nullptr);
+  ASSERT_NE(ds_hist, nullptr);
+  ASSERT_GT(c2i_hist->sample_count(), 0U);
+  ASSERT_GT(ds_hist->sample_count(), 0U);
+
+  const double cancel_to_idle_ms =
+      (static_cast<double>(c2i_hist->sum_ns()) / static_cast<double>(c2i_hist->sample_count())) /
+      1e6;
+  const double mean_decode_step_ms =
+      (static_cast<double>(ds_hist->sum_ns()) / static_cast<double>(ds_hist->sample_count())) / 1e6;
+
+  std::cout << "[       OK ] cancel_to_idle: " << cancel_to_idle_ms
+            << " ms, mean decode step: " << mean_decode_step_ms << " ms\n";
+  EXPECT_LE(cancel_to_idle_ms, 1.5 * mean_decode_step_ms);
+
+  // Assert non-interactive request sent right after cancel is not answered BUSY (F8)
+  v1::Envelope req2;
+  auto* g2 = req2.mutable_generate_request();
+  g2->set_prompt("Next non-interactive prompt.");
+  g2->set_max_tokens(4);
+  g2->set_interactive(false);
+
+  auto stream2 = fixture.client->Open(std::move(req2), std::chrono::milliseconds(30000)).value();
+  auto first_chunk2 = stream2->Next();
+  ASSERT_TRUE(first_chunk2.ok());
+
   fixture.srv->Stop();
   std::filesystem::remove_all(fixture.test_dir);
 
@@ -185,10 +216,6 @@ TEST(LocalInferenceTest, local_RealModelCancelStopsWithinOneDecodeStep) {
   if (col.got_done) {
     EXPECT_EQ(col.done.reason(), v1::STOP_REASON_CANCELLED);
   }
-  std::cout << "[       OK ] Real model cancellation completed in " << cancel_ms << " ms\n";
-
-  // Single CPU decode step on 8 threads is ~85 ms. Must cancel within one decode step (< 250 ms).
-  EXPECT_LT(cancel_ms, 300.0) << "Cancellation must take effect within one decode step";
 }
 
 TEST(LocalInferenceTest, local_TruncatedModelExitsNonZero) {
@@ -214,20 +241,20 @@ TEST(LocalInferenceTest, local_TruncatedModelExitsNonZero) {
   EXPECT_FALSE(res.ok()) << "Truncated model must fail to load";
 
   // Also test running the neuroos-inference binary with the truncated model
-  // Binary must exit non-zero
-  auto bin_path = std::filesystem::current_path() / "build" / "debug" / "neuroos-inference" /
-                  "neuroos-inference";
-  if (!std::filesystem::exists(bin_path)) {
-    bin_path = std::filesystem::current_path() / "neuroos-inference" / "neuroos-inference";
-  }
+  // Binary must exist and must exit non-zero (F9)
+#ifndef NEUROOS_INFERENCE_BIN
+  FAIL() << "NEUROOS_INFERENCE_BIN is not defined";
+#else
+  const std::filesystem::path bin_path = NEUROOS_INFERENCE_BIN;
+  ASSERT_TRUE(std::filesystem::exists(bin_path))
+      << "neuroos-inference binary not found at " << bin_path;
 
-  if (std::filesystem::exists(bin_path)) {
-    const std::string cmd =
-        bin_path.string() + " --model " + trunc_path.string() + " --bench 2>/dev/null";
-    // NOLINTNEXTLINE(cert-env33-c,concurrency-mt-unsafe)
-    const int status = std::system(cmd.c_str());
-    EXPECT_NE(status, 0) << "Binary must exit non-zero when model is corrupt/truncated";
-  }
+  const std::string cmd =
+      bin_path.string() + " --model " + trunc_path.string() + " --bench 2>/dev/null";
+  // NOLINTNEXTLINE(cert-env33-c,concurrency-mt-unsafe)
+  const int status = std::system(cmd.c_str());
+  EXPECT_NE(status, 0) << "Binary must exit non-zero when model is corrupt/truncated";
+#endif
 
   std::filesystem::remove_all(test_dir);
 }

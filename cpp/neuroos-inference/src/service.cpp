@@ -30,6 +30,7 @@ InferenceService::InferenceService(std::shared_ptr<Engine> engine, std::shared_p
 
   histograms_.ttft = health_->Histogram("ttft");
   histograms_.decode_step = health_->Histogram("decode_step");
+  histograms_.cancel_to_idle = health_->Histogram("cancel_to_idle");
 }
 
 ipc::Handler InferenceService::GetHandler() {
@@ -236,6 +237,20 @@ Status InferenceService::HandleGenerate(const ipc::Request& req, ipc::StreamSink
   // 5. Run decode loop
   const DecodeState decode_state =
       DecodeLoop(max_tokens, num_prompt_tokens, prefill_start, is_cancelled, sink);
+
+  if (decode_state.stop_reason == v1::STOP_REASON_CANCELLED) {
+    const auto t_cancel = cancel_token.cancelled()
+                              ? cancel_token.cancelled_at()
+                              : (local_cancel ? local_cancel->cancelled_at()
+                                              : std::chrono::steady_clock::time_point{});
+    if (t_cancel != std::chrono::steady_clock::time_point{}) {
+      const auto t_idle = std::chrono::steady_clock::now();
+      const auto d = std::chrono::duration_cast<std::chrono::nanoseconds>(t_idle - t_cancel);
+      if (d.count() > 0 && histograms_.cancel_to_idle) {
+        histograms_.cancel_to_idle->Record(d);
+      }
+    }
+  }
 
   // Update RSS gauge in health
   auto rss = RssBytes();

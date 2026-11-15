@@ -45,6 +45,10 @@ pub struct CommonArgs {
     /// Allowed client UID (defaults to own UID; fetcher uses this to accept desktop user connections).
     #[arg(long)]
     pub allow_uid: Option<u32>,
+
+    /// Enable soak mode (FR-HLT-04, NFR-REL-04; used by healthd).
+    #[arg(long, default_value_t = false)]
+    pub soak: bool,
 }
 
 /// Errors occurring during service bootstrap or shutdown.
@@ -127,6 +131,8 @@ pub struct ServiceContext {
     pub stop_rx: tokio::sync::watch::Receiver<bool>,
     /// Spawned task handles.
     pub handles: Vec<tokio::task::JoinHandle<()>>,
+    /// Whether soak mode is enabled.
+    pub soak: bool,
 }
 
 impl ServiceContext {
@@ -349,12 +355,12 @@ impl ServiceBuilder {
                 }
             }
 
-            let health_server = health_server.ok_or_else(|| {
-                ServiceError::Custom(format!(
+            if health_server.is_none() && self.part != Part::Healthd {
+                return Err(ServiceError::Custom(format!(
                     "no health socket entry found in socketmap for {:?}",
                     self.part
-                ))
-            })?;
+                )));
+            }
 
             let health = Health::new(self.name, self.version);
 
@@ -369,34 +375,37 @@ impl ServiceBuilder {
                 servers: other_servers,
                 stop_rx: stop_rx.clone(),
                 handles: Vec::new(),
+                soak: args.soak,
             };
 
-            // Probe server accept stats on health
-            let hstats = health_server.stats();
-            health.probe(
-                "health_accept",
-                Box::new(move || {
-                    use std::sync::atomic::Ordering;
-                    if hstats.accept_errors.load(Ordering::Relaxed) > 0 {
-                        (
-                            HealthStatus::Degraded,
-                            "accept errors seen on health socket",
-                        )
-                    } else {
-                        (HealthStatus::Ok, "")
-                    }
-                }),
-            );
+            if let Some(hs) = health_server {
+                // Probe server accept stats on health
+                let hstats = hs.stats();
+                health.probe(
+                    "health_accept",
+                    Box::new(move || {
+                        use std::sync::atomic::Ordering;
+                        if hstats.accept_errors.load(Ordering::Relaxed) > 0 {
+                            (
+                                HealthStatus::Degraded,
+                                "accept errors seen on health socket",
+                            )
+                        } else {
+                            (HealthStatus::Ok, "")
+                        }
+                    }),
+                );
 
-            // 8. Serve health on <part>/health/health.sock
-            let wait = |mut rx: tokio::sync::watch::Receiver<bool>| async move {
-                let _ = rx.wait_for(|s| *s).await;
-            };
+                // 8. Serve health on <part>/health/health.sock
+                let wait = |mut rx: tokio::sync::watch::Receiver<bool>| async move {
+                    let _ = rx.wait_for(|s| *s).await;
+                };
 
-            ctx.handles.push(tokio::spawn(health_server.serve(
-                Arc::new(HealthHandler(health.clone())),
-                wait(stop_rx.clone()),
-            )));
+                ctx.handles.push(tokio::spawn(hs.serve(
+                    Arc::new(HealthHandler(health.clone())),
+                    wait(stop_rx.clone()),
+                )));
+            }
 
             // Let the service configure its handlers and tasks
             init(&mut ctx)?;

@@ -36,7 +36,8 @@ if(NEUROOS_WITH_LLAMA)
     "${CMAKE_SOURCE_DIR}/third_party/llama.cpp/ggml/include"
   )
   target_compile_definitions(neuroos_inference_local_tests PRIVATE
-    NEUROOS_TEST_MODEL_PATH="${CMAKE_SOURCE_DIR}/../models/llm/Qwen3-4B-Instruct-2507-Q4_K_M.gguf")
+    NEUROOS_TEST_MODEL_PATH="${CMAKE_SOURCE_DIR}/../models/llm/Qwen3-4B-Instruct-2507-Q4_K_M.gguf"
+    NEUROOS_INFERENCE_BIN="$<TARGET_FILE:neuroos-inference>")
   target_link_libraries(neuroos_inference_local_tests PRIVATE neuroos_inference_core llama neuroos GTest::gtest_main neuroos_warnings)
   gtest_discover_tests(neuroos_inference_local_tests PROPERTIES LABELS "local")
 endif()

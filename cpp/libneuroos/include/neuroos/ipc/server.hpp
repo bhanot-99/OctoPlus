@@ -46,10 +46,22 @@ struct ServerStats {
 class CancelToken {
  public:
   [[nodiscard]] bool cancelled() const noexcept { return flag_.load(std::memory_order_acquire); }
-  void Cancel() noexcept { flag_.store(true, std::memory_order_release); }
+  void Cancel() noexcept {
+    if (!flag_.exchange(true, std::memory_order_acq_rel)) {
+      const auto now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                              std::chrono::steady_clock::now().time_since_epoch())
+                              .count();
+      cancelled_at_ns_.store(now_ns, std::memory_order_release);
+    }
+  }
+  [[nodiscard]] std::chrono::steady_clock::time_point cancelled_at() const noexcept {
+    const auto ns = cancelled_at_ns_.load(std::memory_order_acquire);
+    return std::chrono::steady_clock::time_point(std::chrono::nanoseconds(ns));
+  }
 
  private:
   std::atomic<bool> flag_{false};
+  std::atomic<std::int64_t> cancelled_at_ns_{0};
 };
 
 struct RequestState;

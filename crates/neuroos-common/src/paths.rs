@@ -71,7 +71,25 @@ impl Part {
     pub fn unit(self) -> String {
         format!("neuroos-{}.service", self.name())
     }
+
+    /// PRD §6.2 RSS budget in MiB.
+    #[must_use]
+    pub const fn rss_budget_mib(self) -> u64 {
+        match self {
+            Part::Monitor => 30,
+            Part::Voice => 620,
+            Part::Storage => 240,
+            Part::Inference => 2800,
+            Part::Knowledge => 60,
+            Part::Kernel => 15,
+            Part::Fetcher => 15,
+            Part::Healthd => 15,
+        }
+    }
 }
+
+/// Total system RSS budget in MiB (PRD §6.2: sum of budgets, <= 4000 MiB cap).
+pub const TOTAL_RSS_BUDGET_MIB: u64 = 3795;
 
 /// Fetcher sockets live outside the user runtime root (Architecture §5.2).
 pub const FETCHER_RUNTIME_DIR: &str = "/run/neuroos-fetcher";

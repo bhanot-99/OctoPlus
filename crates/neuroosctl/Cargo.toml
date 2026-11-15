@@ -1,0 +1,27 @@
+[package]
+name = "neuroosctl"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "neuroosctl"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["signal"] }
+
+neuroos-common = { path = "../neuroos-common" }
+neuroos-proto = { path = "../neuroos-proto" }
+neuroos-ipc = { path = "../neuroos-ipc" }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

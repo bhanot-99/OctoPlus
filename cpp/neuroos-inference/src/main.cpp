@@ -11,89 +11,18 @@
 
 #include "neuroos/health.hpp"
 #include "neuroos/inference/bench.hpp"
+#include "neuroos/inference/flags.hpp"
 #include "neuroos/inference/llama_engine.hpp"
 #include "neuroos/inference/service.hpp"
 #include "neuroos/ipc/peer.hpp"
 #include "neuroos/ipc/server.hpp"
 #include "neuroos/sandbox.hpp"
 
-namespace {
-
-struct Flags {
-  std::string socket_arg;
-  std::string health_socket_arg;
-  std::filesystem::path model_path;
-  std::uint32_t threads = 8;
-  std::uint32_t ctx = 2048;
-  std::uint32_t batch = 512;
-  bool bench = false;
-  std::uint32_t bench_prompt_tokens = 128;
-  std::uint32_t bench_generate = 16;
-  std::uint32_t bench_reps = 3;
-};
-
-bool ParsePolicy(const std::string& arg, std::filesystem::path* sock_path,
-                 neuroos::ipc::PeerPolicy* policy) {
-  auto eq = arg.find('=');
-  if (eq == std::string::npos || eq == 0 || eq + 1 >= arg.size()) {
-    return false;
-  }
-  *sock_path = arg.substr(0, eq);
-  const std::string pol_str = arg.substr(eq + 1);
-
-  if (pol_str == "uid") {
-    *policy = neuroos::ipc::PeerPolicy::SameUser();
-    return true;
-  }
-
-  std::vector<std::string> units;
-  std::istringstream iss(pol_str);
-  std::string unit;
-  while (std::getline(iss, unit, ',')) {
-    if (!unit.empty()) {
-      units.push_back(unit);
-    }
-  }
-  *policy = neuroos::ipc::PeerPolicy::SameUser().WithUnits(std::move(units));
-  return true;
-}
-
-bool ParseFlags(int argc, char* const* argv, Flags* flags) {
-  for (int i = 1; i < argc; ++i) {
-    const std::string arg = argv[i];
-    if (arg == "--socket" && i + 1 < argc) {
-      flags->socket_arg = argv[++i];
-    } else if (arg == "--health-socket" && i + 1 < argc) {
-      flags->health_socket_arg = argv[++i];
-    } else if (arg == "--model" && i + 1 < argc) {
-      flags->model_path = argv[++i];
-    } else if (arg == "--threads" && i + 1 < argc) {
-      flags->threads = static_cast<std::uint32_t>(std::stoul(argv[++i]));
-    } else if (arg == "--ctx" && i + 1 < argc) {
-      flags->ctx = static_cast<std::uint32_t>(std::stoul(argv[++i]));
-    } else if (arg == "--batch" && i + 1 < argc) {
-      flags->batch = static_cast<std::uint32_t>(std::stoul(argv[++i]));
-    } else if (arg == "--bench") {
-      flags->bench = true;
-    } else if (arg == "--bench-prompt-tokens" && i + 1 < argc) {
-      flags->bench_prompt_tokens = static_cast<std::uint32_t>(std::stoul(argv[++i]));
-    } else if (arg == "--bench-generate" && i + 1 < argc) {
-      flags->bench_generate = static_cast<std::uint32_t>(std::stoul(argv[++i]));
-    } else if (arg == "--bench-reps" && i + 1 < argc) {
-      flags->bench_reps = static_cast<std::uint32_t>(std::stoul(argv[++i]));
-    } else {
-      std::cerr << "neuroos-inference: unknown or incomplete argument: " << arg << "\n";
-      return false;
-    }
-  }
-  return true;
-}
-
-}  // namespace
+namespace {}  // namespace
 
 int main(int argc, char* argv[]) {
-  Flags flags;
-  if (!ParseFlags(argc, argv, &flags)) {
+  neuroos::inference::Flags flags;
+  if (!neuroos::inference::ParseFlags(argc, argv, &flags)) {
     return 1;
   }
 
@@ -108,12 +37,14 @@ int main(int argc, char* argv[]) {
   neuroos::ipc::PeerPolicy health_policy;
 
   if (!flags.bench) {
-    if (flags.socket_arg.empty() || !ParsePolicy(flags.socket_arg, &inf_sock_path, &inf_policy)) {
+    if (flags.socket_arg.empty() ||
+        !neuroos::inference::ParsePolicy(flags.socket_arg, &inf_sock_path, &inf_policy)) {
       std::cerr << "neuroos-inference: valid --socket <path>=<policy> is required\n";
       return 1;
     }
     if (flags.health_socket_arg.empty() ||
-        !ParsePolicy(flags.health_socket_arg, &health_sock_path, &health_policy)) {
+        !neuroos::inference::ParsePolicy(flags.health_socket_arg, &health_sock_path,
+                                         &health_policy)) {
       std::cerr << "neuroos-inference: valid --health-socket <path>=<unit> is required\n";
       return 1;
     }
@@ -126,23 +57,11 @@ int main(int argc, char* argv[]) {
   sigaddset(&sigs, SIGTERM);
   pthread_sigmask(SIG_BLOCK, &sigs, nullptr);
 
-  // Apply Landlock sandbox before loading model or binding sockets (NFR-SEC-04)
+  // Apply Landlock sandbox before loading model or binding sockets (NFR-SEC-04, Architecture §8.2)
   neuroos::Policy sandbox_policy;
   sandbox_policy.read_only.push_back(flags.model_path.parent_path());
   if (std::filesystem::exists("/proc")) {
     sandbox_policy.read_only.emplace_back("/proc");
-  }
-  if (std::filesystem::exists("/usr")) {
-    sandbox_policy.read_only.emplace_back("/usr");
-  }
-  if (std::filesystem::exists("/lib")) {
-    sandbox_policy.read_only.emplace_back("/lib");
-  }
-  if (std::filesystem::exists("/lib64")) {
-    sandbox_policy.read_only.emplace_back("/lib64");
-  }
-  if (std::filesystem::exists("/etc")) {
-    sandbox_policy.read_only.emplace_back("/etc");
   }
 
   if (!flags.bench) {

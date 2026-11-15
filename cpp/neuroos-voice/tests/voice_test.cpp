@@ -13,6 +13,7 @@
 #include "neuroos/v1/envelope.pb.h"
 #include "neuroos/v1/health.pb.h"
 #include "neuroos/v1/voice.pb.h"
+#include "neuroos/voice/flags.hpp"
 #include "neuroos/voice/service.hpp"
 
 namespace neuroos::voice {
@@ -126,6 +127,31 @@ TEST_F(VoiceTest, HealthReportsAudioDegradedAndKnowledgeLink) {
   // Knowledge link probe reports DEGRADED when knowledge server is missing
   ASSERT_NE(link_sub, nullptr);
   EXPECT_EQ(link_sub->status(), v1::HEALTH_STATUS_DEGRADED);
+}
+
+TEST(VoiceFlagsTest, RejectsBadNumericWithoutExceptions) {
+  CliConfig cfg;
+
+  // Non-numeric string for --threads
+  const char* bad_argv1[] = {"neuroos-voice", "--socket",  "v.sock=uid", "--health-socket",
+                             "h.sock=uid",    "--threads", "invalid"};
+  EXPECT_FALSE(ParseCliArgs(7, const_cast<char**>(bad_argv1), &cfg));
+
+  // Negative number
+  const char* bad_argv2[] = {"neuroos-voice", "--socket",  "v.sock=uid", "--health-socket",
+                             "h.sock=uid",    "--threads", "-2"};
+  EXPECT_FALSE(ParseCliArgs(7, const_cast<char**>(bad_argv2), &cfg));
+
+  // Overflow
+  const char* bad_argv3[] = {"neuroos-voice", "--socket",  "v.sock=uid",          "--health-socket",
+                             "h.sock=uid",    "--threads", "99999999999999999999"};
+  EXPECT_FALSE(ParseCliArgs(7, const_cast<char**>(bad_argv3), &cfg));
+
+  // Valid number
+  const char* good_argv[] = {"neuroos-voice", "--socket",  "v.sock=uid", "--health-socket",
+                             "h.sock=uid",    "--threads", "2"};
+  EXPECT_TRUE(ParseCliArgs(7, const_cast<char**>(good_argv), &cfg));
+  EXPECT_EQ(cfg.threads, 2U);
 }
 
 }  // namespace

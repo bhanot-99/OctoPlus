@@ -52,6 +52,9 @@ pub struct Config {
     /// Per-call deadlines.
     #[serde(default)]
     pub deadlines: DeadlinesConfig,
+    /// Health daemon options.
+    #[serde(default)]
+    pub healthd: HealthdConfig,
 }
 
 /// `[ipc]` section.
@@ -106,6 +109,25 @@ impl DeadlinesConfig {
     }
 }
 
+/// `[healthd]` section.
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields, default)]
+pub struct HealthdConfig {
+    /// Scrape interval in seconds (Architecture §6.6: default 30).
+    pub scrape_interval_s: u64,
+    /// Whether soak tracking is enabled.
+    pub soak: bool,
+}
+
+impl Default for HealthdConfig {
+    fn default() -> Self {
+        Self {
+            scrape_interval_s: 30,
+            soak: false,
+        }
+    }
+}
+
 impl Config {
     /// Parses and validates config text.
     ///
@@ -156,6 +178,12 @@ impl Config {
                     reason: "a deadline must be greater than zero",
                 });
             }
+        }
+        if self.healthd.scrape_interval_s == 0 {
+            return Err(ConfigError::Invalid {
+                key: "healthd.scrape_interval_s",
+                reason: "scrape interval must be greater than zero",
+            });
         }
         Ok(())
     }

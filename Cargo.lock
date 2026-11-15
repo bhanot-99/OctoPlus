@@ -600,6 +600,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "neuroos-healthd"
+version = "0.1.0"
+dependencies = [
+ "jiff",
+ "neuroos-common",
+ "neuroos-health",
+ "neuroos-ipc",
+ "neuroos-proto",
+ "rustix",
+ "tempfile",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "neuroos-ipc"
 version = "0.1.0"
 dependencies = [
@@ -706,6 +721,20 @@ dependencies = [
  "tempfile",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "neuroosctl"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "neuroos-common",
+ "neuroos-ipc",
+ "neuroos-proto",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]

@@ -30,6 +30,16 @@ class LatencyHistogram {
  public:
   void Record(std::chrono::nanoseconds d);
   void ToWire(const std::string& name, v1::Histogram* out) const;
+  [[nodiscard]] std::uint64_t sample_count() const noexcept {
+    std::uint64_t total = 0;
+    for (const auto& c : counts_) {
+      total += c.load(std::memory_order_relaxed);
+    }
+    return total;
+  }
+  [[nodiscard]] std::uint64_t sum_ns() const noexcept {
+    return sum_ns_.load(std::memory_order_relaxed);
+  }
 
  private:
   std::array<std::atomic<std::uint64_t>, kHealthBucketsNs.size() + 1> counts_{};
