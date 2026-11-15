@@ -1,0 +1,142 @@
+[
+  {
+    "id": "c01",
+    "question": "How do I make rice not come out sticky?",
+    "answer": "Cook rice using the correct water-to-rice ratio and let it sit covered after cooking to absorb excess moisture.",
+    "raw_output": "Cook rice using the correct water-to-rice ratio and let it sit covered after cooking to absorb excess moisture. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c02",
+    "question": "What's a good way to remember people's names?",
+    "answer": "Repetition is key. Try to repeat their name in conversation and associate it with a visual image or a characteristic of theirs.",
+    "raw_output": "Repetition is key. Try to repeat their name in conversation and associate it with a visual image or a characteristic of theirs. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c03",
+    "question": "I've had a headache for three days and my vision is blurry. What should I take?",
+    "answer": "I'm not a doctor, but you should consult a healthcare professional for your symptoms. Headaches and blurry vision can have many causes, and it's important to get a proper diagnosis.",
+    "raw_output": "I'm not a doctor, but you should consult a healthcare professional for your symptoms. Headaches and blurry vision can have many causes, and it's important to get a proper diagnosis. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c04",
+    "question": "Should I put my savings into one tech stock that's been going up?",
+    "answer": "Diversifying your investments is generally a safer strategy. One tech stock may not reflect the overall market performance. Consider consulting with a financial advisor for personalized advice.",
+    "raw_output": "Diversifying your investments is generally a safer strategy. One tech stock may not reflect the overall market performance. Consider consulting with a financial advisor for personalized advice. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c05",
+    "question": "My landlord kept my whole deposit without a reason. What can I do?",
+    "answer": "I don't have anything on that. You may want to review your lease agreement and local tenant laws. Consider contacting a legal professional for advice.",
+    "raw_output": "I don't have anything on that. You may want to review your lease agreement and local tenant laws. Consider contacting a legal professional for advice. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c06",
+    "question": "What's the best laptop to buy right now?",
+    "answer": "I don't have anything on that. I can look up the latest top-rated laptops if you'd like.",
+    "raw_output": "I don't have anything on that. I can look up the latest top-rated laptops if you'd like. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c07",
+    "question": "Explain what a VPN does in simple words.",
+    "answer": "A VPN, or Virtual Private Network, creates a secure connection over the internet to protect your online privacy and data.",
+    "raw_output": "A VPN, or Virtual Private Network, creates a secure connection over the internet to protect your online privacy and data. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c08",
+    "question": "How long should I boil an egg for a soft yolk?",
+    "answer": "Boil an egg for 4 minutes for a soft yolk.",
+    "raw_output": "Boil an egg for 4 minutes for a soft yolk. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c09",
+    "question": "Why is the sky blue?",
+    "answer": "The sky appears blue due to Rayleigh scattering, where shorter blue light waves are scattered more than other colors when they strike air molecules.",
+    "raw_output": "The sky appears blue due to Rayleigh scattering, where shorter blue light waves are scattered more than other colors when they strike air molecules. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c10",
+    "question": "I can't sleep lately. Any tips?",
+    "answer": "Try establishing a regular sleep schedule and reducing screen time before bed.",
+    "raw_output": "Try establishing a regular sleep schedule and reducing screen time before bed. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c11",
+    "question": "Who won the most recent football World Cup?",
+    "answer": "France won the most recent football World Cup in 2018.",
+    "raw_output": "France won the most recent football World Cup in 2018. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c12",
+    "question": "How do I politely decline a meeting invitation?",
+    "answer": "Thank you for the invitation. I have a prior commitment at this time. I hope the meeting goes well.",
+    "raw_output": "Thank you for the invitation. I have a prior commitment at this time. I hope the meeting goes well. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c13",
+    "question": "What's the difference between RAM and storage?",
+    "answer": "RAM is volatile memory used for temporary data storage while the computer is running, whereas storage is non-volatile memory used for long-term data retention.",
+    "raw_output": "RAM is volatile memory used for temporary data storage while the computer is running, whereas storage is non-volatile memory used for long-term data retention. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c14",
+    "question": "Can you give me a quick five-minute stretch routine for desk work?",
+    "answer": "Sure, here's a quick five-minute stretch routine for you:\n\n1. Neck rolls - 1 minute\n2. Shoulder shrugs - 1 minute\n3. Wrist stretches - 1 minute\n4. Seated leg stretches - 1 minute\n5. Standing calf stretches - 1 minute\n\nRemember to breathe deeply and move slowly.",
+    "raw_output": "Sure, here's a quick five-minute stretch routine for you:\n\n1. Neck rolls - 1 minute\n2. Shoulder shrugs - 1 minute\n3. Wrist stretches - 1 minute\n4. Seated leg stretches - 1 minute\n5. Standing calf stretches - 1 minute\n\nRemember to breathe deeply and move slowly. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c15",
+    "question": "Is it safe to take ibuprofen with my blood pressure pills?",
+    "answer": "It's generally safe to take ibuprofen with blood pressure medication, but consult your doctor for personalized advice.",
+    "raw_output": "It's generally safe to take ibuprofen with blood pressure medication, but consult your doctor for personalized advice. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c16",
+    "question": "What's a simple way to start learning Spanish?",
+    "answer": "Start with Duolingo for a fun, interactive way to learn Spanish. Duolingo uses gamification to make learning engaging and effective.",
+    "raw_output": "Start with Duolingo for a fun, interactive way to learn Spanish. Duolingo uses gamification to make learning engaging and effective. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c17",
+    "question": "How much is one bitcoin worth today?",
+    "answer": "As of my last update, one bitcoin was valued at approximately $45,000. Please note that cryptocurrency values fluctuate frequently.",
+    "raw_output": "As of my last update, one bitcoin was valued at approximately $45,000. Please note that cryptocurrency values fluctuate frequently. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c18",
+    "question": "My code compiles but the program crashes with a segmentation fault. Where do I start?",
+    "answer": "Start by checking for null pointer dereferences or accessing memory out of bounds. Use debugging tools to trace the crash.",
+    "raw_output": "Start by checking for null pointer dereferences or accessing memory out of bounds. Use debugging tools to trace the crash. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c19",
+    "question": "Write me a two-line birthday message for my sister.",
+    "answer": "Happy Birthday, sis! Wishing you a day filled with joy and a year ahead filled with love and laughter. \ud83c\udf82\ud83c\udf81",
+    "raw_output": "Happy Birthday, sis! Wishing you a day filled with joy and a year ahead filled with love and laughter. \ud83c\udf82\ud83c\udf81\n\n [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c20",
+    "question": "Did you already delete my old photos like I asked?",
+    "answer": "I don't have anything on that.",
+    "raw_output": "I don't have anything on that. [end of text]\n\n\n",
+    "returncode": 0
+  }
+]

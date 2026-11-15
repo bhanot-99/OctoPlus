@@ -1,0 +1,182 @@
+[
+  {
+    "id": "c01",
+    "question": "How do I make rice not come out sticky?",
+    "answers": {
+      "A": "Add a bit of oil to the water when boiling the rice. This helps prevent the grains from sticking together.",
+      "B": "Cook rice with a 1:2 ratio of water to rice and let it steam, not boil. After cooking, let it sit covered for 10 minutes to absorb excess moisture. This helps keep grains separate and less sticky. Stir gently after cooking to prevent clumping.",
+      "C": "Cook rice using the correct water-to-rice ratio and let it sit covered after cooking to absorb excess moisture."
+    }
+  },
+  {
+    "id": "c02",
+    "question": "What's a good way to remember people's names?",
+    "answers": {
+      "A": "Repetition and association are key. Repeat the name out loud when meeting someone, and link it to a unique",
+      "B": "Associate the name with a vivid image or a small story. For example, if someone's name is Clara, imagine her wearing a red hat and holding a book titled \"Clara\u2019s Clue.\" This mental picture helps you recall the name later. It turns a simple name into something memorable and visual.",
+      "C": "Repetition is key. Try to repeat their name in conversation and associate it with a visual image or a characteristic of theirs."
+    }
+  },
+  {
+    "id": "c03",
+    "question": "I've had a headache for three days and my vision is blurry. What should I take?",
+    "answers": {
+      "A": "<think>\nOkay, the user is experiencing a headache for three days and blurry vision. I need to figure out what they should take. First, I should consider common causes of these symptoms. Headaches can be due to dehydration, lack of sleep, stress, or maybe something like a cold or sinus infection. Blurry vision might be from dry eyes, fatigue, or even a more serious condition like a stroke or migraine.\n\nSince the user hasn't mentioned any other symptoms, I should start with the basics. They might need to stay hydrated, take a pain reliever like acetaminophen or ibuprofen, and rest. But if the headache is severe or the vision is really bad, they should see a doctor. I can't diagnose, so I need to advise them to seek medical help if symptoms persist or worsen. Also, maybe suggest they check for any other symptoms like dizziness or confusion, which could indicate a stroke. But I shouldn't give medical advice beyond general suggestions. Let me make sure to mention that they should consult a healthcare professional for proper diagnosis and treatment.",
+      "B": "I don't have anything on that. Headaches and blurry vision can be signs of something serious like a migraine, eye issue, or even a medical condition needing professional evaluation. You should see a doctor or healthcare provider as soon as possible. Don\u2019t take any medication without checking with a doctor first.",
+      "C": "I'm not a doctor, but you should consult a healthcare professional for your symptoms. Headaches and blurry vision can have many causes, and it's important to get a proper diagnosis."
+    }
+  },
+  {
+    "id": "c04",
+    "question": "Should I put my savings into one tech stock that's been going up?",
+    "answers": {
+      "A": "No, don't put all your savings into one tech stock. It's too risky. Stocks can go down sharply, and relying on one company means losing everything if that stock drops. Diversify your savings across different types of investments to protect your money.",
+      "B": "Diversifying your investments is generally a safer strategy. One tech stock may not reflect the overall market performance. Consider consulting with a financial advisor for personalized advice.",
+      "C": "<think>\nOkay, the user is asking if they should invest in a single tech stock that's been performing well. Let me start by considering the general advice on diversification. Putting all savings into one stock is risky because if that stock's value drops, the entire investment is at risk. I should mention that diversification is key to managing risk.\n\nNext, I need to think about the stock's performance. The user mentioned it's been going up, but I don't have specific data. I should advise them to do their own research, check the company's financials, and maybe look at the sector's overall health. Also, considering the stock's valuation\u2014whether it's overvalued or undervalued\u2014could be important. If the stock is overvalued, there's a higher chance of a correction.\n\nI should also mention the time horizon. If the user has a long-term perspective, they might be okay with some volatility. But if they need the money soon, it's better to be cautious. Maybe suggest a balanced approach, like a small portion in this stock and"
+    }
+  },
+  {
+    "id": "c05",
+    "question": "My landlord kept my whole deposit without a reason. What can I do?",
+    "answers": {
+      "A": "I don't have anything on that. You may want to review your lease agreement and local tenant laws. Consider contacting a legal professional for advice.",
+      "B": "You can send a formal letter to your landlord demanding a full explanation and the return of your deposit. If they don\u2019t respond or return it, you can contact your local housing authority or tenant rights organization for help. In many places, there are specific rules about how long landlords must keep deposits and when they must return them.",
+      "C": "<think>\nOkay, the user is asking about a landlord keeping their deposit without a reason. First, I need to recall the standard procedures for handling such situations. In many places, landlords are required to provide a written notice before taking a deposit. If the landlord didn't do that, the user might have a case.\n\nI should mention the legal steps they can take. Usually, the first step is to contact the landlord to ask for a refund or explanation. If that doesn't work, they might need to file a complaint with a local housing authority or tenant protection agency. Some jurisdictions have specific laws about deposits, so it's important to check local regulations.\n\nAlso, the user might need to keep records of all communications with the landlord. If the landlord is uncooperative, the user could file a small claims court case if the amount is significant. But I should advise them to consult a local legal expert or tenant rights organization for the most accurate advice tailored to their location.\n\nI need to make sure the response is clear and actionable, without giving legal advice that might be outdated or incorrect. Em"
+    }
+  },
+  {
+    "id": "c06",
+    "question": "What's the best laptop to buy right now?",
+    "answers": {
+      "A": "I don't have anything on that. I can look up the latest top-rated laptops if you'd like.",
+      "B": "The best laptop depends on your needs\u2014like whether you're using it for work, creative tasks, or just browsing. For general use, a laptop with a solid processor, good battery life, and a reliable display, like the MacBook Air or Dell XPS, is a strong choice. If you're on a budget, consider the Lenovo IdeaPad or HP Pavilion. Let me know your main use and I can give a more specific recommendation.",
+      "C": "<think>\nOkay, the user is asking for the best laptop to buy right now. Let me start by considering the current market trends. Laptops are evolving with new technologies like AMD Ryzen 5000 series, Intel Core i5 and i7, and NVIDIA GeForce RTX 30 series graphics. The user might be looking for a balance between performance, battery life, and price.\n\nI should mention the Ryzen 5 5600U and 5600G as good options for a mid-range processor. The RTX 3050 or 3050 Ti for graphics, which are affordable and offer decent performance. The user might also care about portability, so a 13-inch laptop would be better than a 15-inch one. \n\nI need to highlight the Dell XPS 13 9310 as a top choice because it's known for its build quality and performance. The HP Spectre x360 is another good option with a touchscreen and good battery life. The Lenovo IdeaPad 5 is budget-friendly and has a good display. \n\nI should also mention the importance of considering"
+    }
+  },
+  {
+    "id": "c07",
+    "question": "Explain what a VPN does in simple words.",
+    "answers": {
+      "A": "A VPN, or Virtual Private Network, creates a secure connection over the internet to protect your online privacy and data.",
+      "B": "<think>\nOkay, the user is asking for a simple explanation of what a VPN does. Let me start by recalling the basics. A VPN, or Virtual Private Network, creates a secure connection over the internet. So, when you use a VPN, your data is encrypted, right? That means even if someone intercepts your internet traffic, they can't read it because it's scrambled.\n\nI should mention that it hides your IP address. Your IP is like your online identity, so a VPN changes it to one from a different location. This is useful for privacy and accessing content that's restricted in your country. For example, you can watch a streaming service that's only available in another country by using a VPN.\n\nAlso, it protects against hackers and malware. Since the connection is encrypted, even if someone tries to intercept your data, they can't use it. Plus, it can bypass censorship, which is important for people in countries with strict internet controls.\n\nI need to keep it simple and avoid technical jargon. Maybe start with the main purpose, then explain the encryption and IP hiding.",
+      "C": "A VPN creates a secure, private connection between your device and the internet. It hides your online activity and location, making it harder for others to see what you're doing. This is especially useful when using public Wi-Fi."
+    }
+  },
+  {
+    "id": "c08",
+    "question": "How long should I boil an egg for a soft yolk?",
+    "answers": {
+      "A": "Boil an egg for 4 minutes for a soft yolk.",
+      "B": "For a soft yolk, boil the egg for 4 to 5 minutes. Start counting from when the water comes to a boil. This gives you a runny yolk with a still-set white. If you want it slightly firmer, go up to 5 minutes.",
+      "C": "Boil an egg for 4-5 minutes for a soft yolk, then remove it from heat and let it sit for 1-2 minutes to"
+    }
+  },
+  {
+    "id": "c09",
+    "question": "Why is the sky blue?",
+    "answers": {
+      "A": "The sky appears blue due to Rayleigh scattering, where shorter blue light waves are scattered more than other colors when they strike air molecules.",
+      "B": "The sky appears blue because Earth's atmosphere scatters shorter blue wavelengths more than longer red ones, a phenomenon called Rayleigh scattering. Our eyes are more sensitive to blue, making it the dominant color we perceive.",
+      "C": "The sky appears blue because molecules in the atmosphere scatter blue light more than other colors. Blue light waves are shorter and scatter in all directions when they hit air molecules. This scattered blue light reaches our eyes from all directions, making the sky look blue during the day."
+    }
+  },
+  {
+    "id": "c10",
+    "question": "I can't sleep lately. Any tips?",
+    "answers": {
+      "A": "Try winding down with a warm bath or reading something calming before bed. Keep your room dark and quiet, and avoid screens at least an hour before sleep. If you're still having trouble, a short walk or deep breathing can help reset your mind.",
+      "B": "Try establishing a regular sleep schedule and reducing screen time before bed.",
+      "C": "<think>\nOkay, the user is having trouble sleeping and is asking for tips. Let me start by recalling common advice for improving sleep. First, establishing a consistent sleep schedule is important. Going to bed and waking up at the same time every day, even on weekends, can help regulate the body's clock.\n\nNext, creating a bedtime routine can signal to the body that it's time to sleep. Activities like reading, taking a warm bath, or practicing relaxation techniques might be helpful. Avoiding screens before bed is another key point because the blue light from phones and computers can interfere with melatonin production.\n\nThe environment matters too. Keeping the bedroom cool, dark, and quiet can promote better sleep. Maybe suggest using blackout curtains or a white noise machine if there's noise. Also, limiting caffeine and alcohol intake, especially in the evening, can prevent disruptions.\n\nIf the user is stressed or anxious, techniques like deep breathing or meditation might help. Physical activity during the day can also improve sleep quality, but it's best to avoid vigorous exercise close to bedtime. Lastly, if the problem persists, consulting"
+    }
+  },
+  {
+    "id": "c11",
+    "question": "Who won the most recent football World Cup?",
+    "answers": {
+      "A": "Argentina won the 2022 FIFA World Cup, defeating France 4-2 in the final.",
+      "B": "France won the most recent football World Cup in 2018.",
+      "C": "Argentina won the most recent football World Cup. They defeated France in the final to claim their second World Cup title."
+    }
+  },
+  {
+    "id": "c12",
+    "question": "How do I politely decline a meeting invitation?",
+    "answers": {
+      "A": "You can say, \"Thank you for the invitation, but I'm currently busy with another commitment. I'll let you know if I can make it later.\"",
+      "B": "Say something like, \"Thank you for inviting me\u2014I really appreciate it. I'm sorry, but I\u2019ll have to decline this meeting as I\u2019m already committed to another obligation.\" Keep it kind and clear.",
+      "C": "Thank you for the invitation. I have a prior commitment at this time. I hope the meeting goes well."
+    }
+  },
+  {
+    "id": "c13",
+    "question": "What's the difference between RAM and storage?",
+    "answers": {
+      "A": "RAM is fast memory that holds data you're actively using, like open files or running apps. Storage is slower but holds everything permanently, like files, photos, and the operating system. RAM clears when you shut down; storage stays with the device.",
+      "B": "<think>\nOkay, the user is asking about the difference between RAM and storage. Let me start by recalling what each term means. RAM stands for Random Access Memory, which is the temporary memory a computer uses to hold data while it's being processed. It's volatile, meaning it loses its contents when the computer is turned off.\n\nStorage, on the other hand, refers to non-volatile memory where data is saved even when the computer is off. This includes things like hard drives, SSDs, and USB drives. The key difference is that RAM is used for active processing, while storage is for long-term data storage.\n\nI should mention that RAM is faster but has a limited capacity, while storage is slower but can hold more data. Maybe give an example, like how RAM holds the current open apps and files, while storage holds the operating system and files you save. Also, note that when you shut down the computer, RAM is lost, but storage remains. That's a common point of confusion. Let me make sure the explanation is clear and concise, sticking to the user's request for",
+      "C": "RAM is volatile memory used for temporary data storage while the computer is running, whereas storage is non-volatile memory used for long-term data retention."
+    }
+  },
+  {
+    "id": "c14",
+    "question": "Can you give me a quick five-minute stretch routine for desk work?",
+    "answers": {
+      "A": "<think>\nOkay, the user is asking for a quick five-minute stretch routine for desk work. Let me start by recalling common desk stretches. They probably need something that's easy to do without a lot of equipment. I should include stretches for the neck, shoulders, wrists, back, and maybe the legs. Let me think of the most effective ones.\n\nFirst, neck rolls. That's a good one for the neck. Then maybe shoulder shrugs to loosen up the upper back. Wrist stretches are important too, like extending the fingers and bending them. For the back, maybe a seated spinal twist or a cat-cow stretch. For the legs, maybe some ankle rolls or a seated forward fold. I need to make sure each stretch is brief but effective. Let me check the time each one takes. Neck rolls can be done in 30 seconds, shoulder shrugs in 30, wrist stretches in 30, back stretch in 30, and leg stretch in 30. That adds up to five minutes. I should also mention doing each stretch for 30 seconds and then moving",
+      "B": "Sure! Start with 30 seconds of neck rolls\u2014tilt your head side to side, then forward and back. Then do shoulder rolls forward and backward for 30 seconds. Next, gently stretch your arms overhead, hands reaching forward and then down. Finish with 30 seconds of seated forward bends, knees bent, hands reaching toward toes. Keep it slow and steady.",
+      "C": "Sure, here's a quick five-minute stretch routine for you:\n\n1. Neck rolls - 1 minute\n2. Shoulder shrugs - 1 minute\n3. Wrist stretches - 1 minute\n4. Seated leg stretches - 1 minute\n5. Standing calf stretches - 1 minute\n\nRemember to breathe deeply and move slowly."
+    }
+  },
+  {
+    "id": "c15",
+    "question": "Is it safe to take ibuprofen with my blood pressure pills?",
+    "answers": {
+      "A": "It's generally safe to take ibuprofen with blood pressure medication, but consult your doctor for personalized advice.",
+      "B": "It\u2019s generally safe to take ibuprofen with blood pressure pills, but it can raise blood pressure and reduce the effectiveness of some blood pressure medications. Always check with your doctor or pharmacist before combining medications, especially if you have high blood pressure or heart disease. They can advise based on your specific medications and health.",
+      "C": "<think>\nOkay, the user is asking if it's safe to take ibuprofen with their blood pressure pills. Let me start by recalling what I know about ibuprofen and blood pressure medications.\n\nIbuprofen is a nonsteroidal anti-inflammatory drug (NSAID) commonly used for pain and inflammation. Blood pressure medications, like ACE inhibitors or beta blockers, are used to manage hypertension. I remember that NSAIDs can have interactions with certain blood pressure drugs. For example, ACE inhibitors can increase the risk of bleeding when combined with NSAIDs. Also, NSAIDs might affect the way blood pressure medications work, potentially altering their effectiveness or increasing side effects.\n\nI should check if there's a specific interaction between ibuprofen and common blood pressure medications. Let me think. Ibuprofen is generally considered safe in low doses, but when combined with certain blood pressure drugs, there might be a risk. For instance, if someone is taking an ACE inhibitor like lisinopril or an ARB like losartan, taking ibuprofen could increase the risk of bleeding. However,"
+    }
+  },
+  {
+    "id": "c16",
+    "question": "What's a simple way to start learning Spanish?",
+    "answers": {
+      "A": "Start with daily flashcards for common words and phrases. Focus on basic greetings, numbers, and simple sentences. Use free apps like Duolingo or Memrise to practice short, fun lessons. Consistency matters more than intensity\u2014just 10 minutes a day builds confidence and memory over time.",
+      "B": "Start with Duolingo for a fun, interactive way to learn Spanish. Duolingo uses gamification to make learning engaging and effective.",
+      "C": "Start by learning basic phrases and vocabulary, like greetings and numbers. Use language apps or flashcards for practice."
+    }
+  },
+  {
+    "id": "c17",
+    "question": "How much is one bitcoin worth today?",
+    "answers": {
+      "A": "As of my last update in October 2023, one Bitcoin was worth approximately $30,000. However, this value can fluctuate rapidly due to market conditions. For the most current price, I recommend checking a reliable cryptocurrency exchange or financial news source.",
+      "B": "As of my last update, one bitcoin was valued at approximately $45,000. Please note that cryptocurrency values fluctuate frequently.",
+      "C": "One bitcoin is worth about $67,000 today. Prices fluctuate constantly based on market demand and supply. I don\u2019t have real-time data, but that\u2019s a current estimate based on recent trends. Would you like to know how it\u2019s been changing over the past week?"
+    }
+  },
+  {
+    "id": "c18",
+    "question": "My code compiles but the program crashes with a segmentation fault. Where do I start?",
+    "answers": {
+      "A": "Check if you're accessing memory that doesn't belong to your program, like a null pointer or out-of-bounds array. Look for dereferencing a pointer that might be null or pointing to invalid memory. Use a debugger to find the exact line where the crash happens. That will point you to the root cause.",
+      "B": "Start by checking for null pointer dereferences or accessing memory out of bounds. Use debugging tools to trace the crash.",
+      "C": "Start by checking your code for memory leaks or unhandled exceptions. Look for any pointers that are not properly initialized or deallocated. Also, ensure that you're not accessing memory outside the allocated bounds. Use tools like Valgrind or AddressSanitizer to detect memory issues."
+    }
+  },
+  {
+    "id": "c19",
+    "question": "Write me a two-line birthday message for my sister.",
+    "answers": {
+      "A": "Happy birthday, sister! You're the best kind of sister\u2014always there, always smiling.",
+      "B": "Happy Birthday, [Sister's Name]! I'm so glad you're here to share your light with me",
+      "C": "Happy Birthday, sis! Wishing you a day filled with joy and a year ahead filled with love and laughter. \ud83c\udf82\ud83c\udf81"
+    }
+  },
+  {
+    "id": "c20",
+    "question": "Did you already delete my old photos like I asked?",
+    "answers": {
+      "A": "No, I didn\u2019t delete your old photos. I only keep what you ask me to, and I don\u2019t have access to your files unless you specifically tell me to. If you want me to help with anything about your photos, just let me know.",
+      "B": "I don't have access to personal files or data on your device. I can't confirm or deny any actions taken on your photos. Check your device manually to see if the files were deleted. Let me know if you need help with something else!",
+      "C": "I don't have anything on that."
+    }
+  }
+]

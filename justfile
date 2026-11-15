@@ -87,6 +87,10 @@ bench-s01:
 build-llama *args:
     scripts/build-llama.sh {{args}}
 
+# Spike S-02: run candidate model bake-off on CPU (and Vulkan if built) (P0-S08).
+bakeoff-s02 *args:
+    scripts/bakeoff-s02.sh {{args}}
+
 # Spike S-03: measure streamed text frames and cancel latency (P0-S09).
 bench-s03:
     scripts/bench-s03.sh

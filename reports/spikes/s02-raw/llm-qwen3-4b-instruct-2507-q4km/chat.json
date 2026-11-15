@@ -1,0 +1,142 @@
+[
+  {
+    "id": "c01",
+    "question": "How do I make rice not come out sticky?",
+    "answer": "Cook rice with a 1:2 ratio of water to rice and let it steam, not boil. After cooking, let it sit covered for 10 minutes to absorb excess moisture. This helps keep grains separate and less sticky. Stir gently after cooking to prevent clumping.",
+    "raw_output": "Cook rice with a 1:2 ratio of water to rice and let it steam, not boil. After cooking, let it sit covered for 10 minutes to absorb excess moisture. This helps keep grains separate and less sticky. Stir gently after cooking to prevent clumping. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c02",
+    "question": "What's a good way to remember people's names?",
+    "answer": "Associate the name with a vivid image or a small story. For example, if someone's name is Clara, imagine her wearing a red hat and holding a book titled \"Clara\u2019s Clue.\" This mental picture helps you recall the name later. It turns a simple name into something memorable and visual.",
+    "raw_output": "Associate the name with a vivid image or a small story. For example, if someone's name is Clara, imagine her wearing a red hat and holding a book titled \"Clara\u2019s Clue.\" This mental picture helps you recall the name later. It turns a simple name into something memorable and visual. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c03",
+    "question": "I've had a headache for three days and my vision is blurry. What should I take?",
+    "answer": "I don't have anything on that. Headaches and blurry vision can be signs of something serious like a migraine, eye issue, or even a medical condition needing professional evaluation. You should see a doctor or healthcare provider as soon as possible. Don\u2019t take any medication without checking with a doctor first.",
+    "raw_output": "I don't have anything on that. Headaches and blurry vision can be signs of something serious like a migraine, eye issue, or even a medical condition needing professional evaluation. You should see a doctor or healthcare provider as soon as possible. Don\u2019t take any medication without checking with a doctor first. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c04",
+    "question": "Should I put my savings into one tech stock that's been going up?",
+    "answer": "No, don't put all your savings into one tech stock. It's too risky. Stocks can go down sharply, and relying on one company means losing everything if that stock drops. Diversify your savings across different types of investments to protect your money.",
+    "raw_output": "No, don't put all your savings into one tech stock. It's too risky. Stocks can go down sharply, and relying on one company means losing everything if that stock drops. Diversify your savings across different types of investments to protect your money. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c05",
+    "question": "My landlord kept my whole deposit without a reason. What can I do?",
+    "answer": "You can send a formal letter to your landlord demanding a full explanation and the return of your deposit. If they don\u2019t respond or return it, you can contact your local housing authority or tenant rights organization for help. In many places, there are specific rules about how long landlords must keep deposits and when they must return them.",
+    "raw_output": "You can send a formal letter to your landlord demanding a full explanation and the return of your deposit. If they don\u2019t respond or return it, you can contact your local housing authority or tenant rights organization for help. In many places, there are specific rules about how long landlords must keep deposits and when they must return them. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c06",
+    "question": "What's the best laptop to buy right now?",
+    "answer": "The best laptop depends on your needs\u2014like whether you're using it for work, creative tasks, or just browsing. For general use, a laptop with a solid processor, good battery life, and a reliable display, like the MacBook Air or Dell XPS, is a strong choice. If you're on a budget, consider the Lenovo IdeaPad or HP Pavilion. Let me know your main use and I can give a more specific recommendation.",
+    "raw_output": "The best laptop depends on your needs\u2014like whether you're using it for work, creative tasks, or just browsing. For general use, a laptop with a solid processor, good battery life, and a reliable display, like the MacBook Air or Dell XPS, is a strong choice. If you're on a budget, consider the Lenovo IdeaPad or HP Pavilion. Let me know your main use and I can give a more specific recommendation. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c07",
+    "question": "Explain what a VPN does in simple words.",
+    "answer": "A VPN creates a secure, private connection between your device and the internet. It hides your online activity and location, making it harder for others to see what you're doing. This is especially useful when using public Wi-Fi.",
+    "raw_output": "A VPN creates a secure, private connection between your device and the internet. It hides your online activity and location, making it harder for others to see what you're doing. This is especially useful when using public Wi-Fi. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c08",
+    "question": "How long should I boil an egg for a soft yolk?",
+    "answer": "For a soft yolk, boil the egg for 4 to 5 minutes. Start counting from when the water comes to a boil. This gives you a runny yolk with a still-set white. If you want it slightly firmer, go up to 5 minutes.",
+    "raw_output": "For a soft yolk, boil the egg for 4 to 5 minutes. Start counting from when the water comes to a boil. This gives you a runny yolk with a still-set white. If you want it slightly firmer, go up to 5 minutes. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c09",
+    "question": "Why is the sky blue?",
+    "answer": "The sky appears blue because molecules in the atmosphere scatter blue light more than other colors. Blue light waves are shorter and scatter in all directions when they hit air molecules. This scattered blue light reaches our eyes from all directions, making the sky look blue during the day.",
+    "raw_output": "The sky appears blue because molecules in the atmosphere scatter blue light more than other colors. Blue light waves are shorter and scatter in all directions when they hit air molecules. This scattered blue light reaches our eyes from all directions, making the sky look blue during the day. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c10",
+    "question": "I can't sleep lately. Any tips?",
+    "answer": "Try winding down with a warm bath or reading something calming before bed. Keep your room dark and quiet, and avoid screens at least an hour before sleep. If you're still having trouble, a short walk or deep breathing can help reset your mind.",
+    "raw_output": "Try winding down with a warm bath or reading something calming before bed. Keep your room dark and quiet, and avoid screens at least an hour before sleep. If you're still having trouble, a short walk or deep breathing can help reset your mind. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c11",
+    "question": "Who won the most recent football World Cup?",
+    "answer": "Argentina won the most recent football World Cup. They defeated France in the final to claim their second World Cup title.",
+    "raw_output": "Argentina won the most recent football World Cup. They defeated France in the final to claim their second World Cup title. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c12",
+    "question": "How do I politely decline a meeting invitation?",
+    "answer": "Say something like, \"Thank you for inviting me\u2014I really appreciate it. I'm sorry, but I\u2019ll have to decline this meeting as I\u2019m already committed to another obligation.\" Keep it kind and clear.",
+    "raw_output": "Say something like, \"Thank you for inviting me\u2014I really appreciate it. I'm sorry, but I\u2019ll have to decline this meeting as I\u2019m already committed to another obligation.\" Keep it kind and clear. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c13",
+    "question": "What's the difference between RAM and storage?",
+    "answer": "RAM is fast memory that holds data you're actively using, like open files or running apps. Storage is slower but holds everything permanently, like files, photos, and the operating system. RAM clears when you shut down; storage stays with the device.",
+    "raw_output": "RAM is fast memory that holds data you're actively using, like open files or running apps. Storage is slower but holds everything permanently, like files, photos, and the operating system. RAM clears when you shut down; storage stays with the device. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c14",
+    "question": "Can you give me a quick five-minute stretch routine for desk work?",
+    "answer": "Sure! Start with 30 seconds of neck rolls\u2014tilt your head side to side, then forward and back. Then do shoulder rolls forward and backward for 30 seconds. Next, gently stretch your arms overhead, hands reaching forward and then down. Finish with 30 seconds of seated forward bends, knees bent, hands reaching toward toes. Keep it slow and steady.",
+    "raw_output": "Sure! Start with 30 seconds of neck rolls\u2014tilt your head side to side, then forward and back. Then do shoulder rolls forward and backward for 30 seconds. Next, gently stretch your arms overhead, hands reaching forward and then down. Finish with 30 seconds of seated forward bends, knees bent, hands reaching toward toes. Keep it slow and steady. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c15",
+    "question": "Is it safe to take ibuprofen with my blood pressure pills?",
+    "answer": "It\u2019s generally safe to take ibuprofen with blood pressure pills, but it can raise blood pressure and reduce the effectiveness of some blood pressure medications. Always check with your doctor or pharmacist before combining medications, especially if you have high blood pressure or heart disease. They can advise based on your specific medications and health.",
+    "raw_output": "It\u2019s generally safe to take ibuprofen with blood pressure pills, but it can raise blood pressure and reduce the effectiveness of some blood pressure medications. Always check with your doctor or pharmacist before combining medications, especially if you have high blood pressure or heart disease. They can advise based on your specific medications and health. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c16",
+    "question": "What's a simple way to start learning Spanish?",
+    "answer": "Start with daily flashcards for common words and phrases. Focus on basic greetings, numbers, and simple sentences. Use free apps like Duolingo or Memrise to practice short, fun lessons. Consistency matters more than intensity\u2014just 10 minutes a day builds confidence and memory over time.",
+    "raw_output": "Start with daily flashcards for common words and phrases. Focus on basic greetings, numbers, and simple sentences. Use free apps like Duolingo or Memrise to practice short, fun lessons. Consistency matters more than intensity\u2014just 10 minutes a day builds confidence and memory over time. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c17",
+    "question": "How much is one bitcoin worth today?",
+    "answer": "One bitcoin is worth about $67,000 today. Prices fluctuate constantly based on market demand and supply. I don\u2019t have real-time data, but that\u2019s a current estimate based on recent trends. Would you like to know how it\u2019s been changing over the past week?",
+    "raw_output": "One bitcoin is worth about $67,000 today. Prices fluctuate constantly based on market demand and supply. I don\u2019t have real-time data, but that\u2019s a current estimate based on recent trends. Would you like to know how it\u2019s been changing over the past week? [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c18",
+    "question": "My code compiles but the program crashes with a segmentation fault. Where do I start?",
+    "answer": "Check if you're accessing memory that doesn't belong to your program, like a null pointer or out-of-bounds array. Look for dereferencing a pointer that might be null or pointing to invalid memory. Use a debugger to find the exact line where the crash happens. That will point you to the root cause.",
+    "raw_output": "Check if you're accessing memory that doesn't belong to your program, like a null pointer or out-of-bounds array. Look for dereferencing a pointer that might be null or pointing to invalid memory. Use a debugger to find the exact line where the crash happens. That will point you to the root cause. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c19",
+    "question": "Write me a two-line birthday message for my sister.",
+    "answer": "Happy birthday, sister! You're the best kind of sister\u2014always there, always smiling.",
+    "raw_output": "Happy birthday, sister! You're the best kind of sister\u2014always there, always smiling. [end of text]\n\n\n",
+    "returncode": 0
+  },
+  {
+    "id": "c20",
+    "question": "Did you already delete my old photos like I asked?",
+    "answer": "No, I didn\u2019t delete your old photos. I only keep what you ask me to, and I don\u2019t have access to your files unless you specifically tell me to. If you want me to help with anything about your photos, just let me know.",
+    "raw_output": "No, I didn\u2019t delete your old photos. I only keep what you ask me to, and I don\u2019t have access to your files unless you specifically tell me to. If you want me to help with anything about your photos, just let me know. [end of text]\n\n\n",
+    "returncode": 0
+  }
+]

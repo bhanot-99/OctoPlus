@@ -539,17 +539,19 @@ Both are JSON lines, hash-chained (`prev_hash` = SHA-256 of the previous line), 
 | First speech chunk synthesised | C2 | ≈ 0.5 s (P) |
 | **Total** | — | NFR-PERF-02 |
 
-Prefill dominates. With the provisional prompt layout (§9.2) about 384 tokens are uncached per turn, so NFR-PERF-02 needs a prefill speed near 4 ms/token or a smaller prompt. Spike S-02 measures the candidates; an ADR then fixes the model, the layout and the final target together. The preamble (NFR-PERF-01) covers the wait either way.
+Prefill dominates. S-02 measured about 11.5 ms per uncached token and 86 ms per decoded token for the chosen model on the CPU (ADR-0005). With the layout in §9.2 about 208 tokens are uncached per turn: ≈ 2.5 s prefill + ≈ 1.0 s first sentence + transcription + first speech chunk ≈ 4.2 s, inside the CPU target of NFR-PERF-02. The preamble (NFR-PERF-01) covers the wait; the optional GPU path (ADR-0008) is the lever towards 3 s.
 
-### 9.2 Prompt layout (provisional, 512 tokens)
+### 9.2 Prompt layout (384 tokens, ADR-0005)
 
 | Block | Tokens | Cached between turns |
 | :--- | :--- | :--- |
-| Persona and rules | 128 | yes — always first |
+| Persona, rules and skill list | 128 | yes — always first |
 | Personal facts | 48 | usually |
-| Focus context | 48 | no |
-| Session history | 64 | partly |
-| Evidence | 224 | no |
+| Focus context | 32 | no |
+| Session history | 48 | partly |
+| Evidence | 128 | no |
+
+C4 runs Qwen3-4B-Instruct-2507 Q4_K_M on llama.cpp with 8 threads, weight repacking off, context 2,048, and keeps the persona block's KV state between turns (ADR-0005).
 
 The question itself is counted against the history block on the first turn. Truncation is exact and never splits the untrusted-document wrapper.
 
@@ -717,7 +719,7 @@ Spikes run in Phase 0. Each ends in an ADR that states what was measured, on wha
 | 0002 | Unit mode and socket-map enforcement | Accepted 2026-11-15 |
 | 0003 | IPC: sockets, framing, streaming | Accepted 2026-11-15 |
 | 0004 | Storage: SQLite only, exact scan | Accepted 2026-11-15 |
-| 0005 | Model, prompt layout, latency and memory targets | After S-02 |
+| 0005 | Model, prompt layout, latency and memory targets | Accepted 2026-11-15 |
 | 0006 | Build order | Accepted 2026-11-15 |
 | 0007 | Health and context sensor sources | Accepted 2026-11-15 |
-| 0008 | Optional GPU acceleration for inference (C4) | Accepted 2026-11-14; backend and enabling after S-02 and S-04 |
+| 0008 | Optional GPU acceleration for inference (C4) | Accepted 2026-11-14; S-04 addendum; GPU not measured in S-02 — path stays off |

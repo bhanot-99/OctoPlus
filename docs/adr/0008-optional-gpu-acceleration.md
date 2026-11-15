@@ -56,3 +56,11 @@ Measured in user-scope units (`reports/spikes/s04-verification-claude.md` §5):
 - `DevicePolicy=`/`DeviceAllow=` are **not enforced in user scope**; they cannot be the C4 device control.
 - The working mechanism keeps `PrivateDevices=yes` and binds only NVIDIA nodes into the private `/dev` with `BindPaths=`. Enumeration needs `/dev/nvidia0` and `/dev/nvidiactl`; the AMD iGPU stays hidden. `MemoryDenyWriteExecute=yes` and the syscall filter did not stop enumeration.
 - Still open for S-02: whether real compute (llama.cpp Vulkan, shader compilation) works with `MemoryDenyWriteExecute=yes`, and whether it needs `/dev/nvidia-uvm` or `/dev/dri/renderD129`. Decision point 6 is answered only when that is measured.
+
+---
+
+## Addendum 2026-11-15 — S-02 result: GPU not measured (evidence, not a change of decision)
+
+- The Vulkan build of llama.cpp b12389 needs the `spirv-headers` package (`find_package(SPIRV-Headers CONFIG REQUIRED)`). It is not installed, and installing it needs the owner's sudo password. CUDA was excluded by the owner (D-17). So **no GPU speed, VRAM, idle power or `MemoryDenyWriteExecute` result exists** (`reports/spikes/s02-verification-claude.md` §4).
+- Under decision 3, the GPU path therefore **stays off**, and nothing else changes. The CPU targets in ADR-0005 are the v1.0 requirements; the original 3.0 s / 2.0 s targets are recorded as GPU-path goals.
+- Decision points 5 (backend) and 6 (compute under `MemoryDenyWriteExecute`) stay open. They are measured when the owner installs `spirv-headers` (`sudo apt install spirv-headers`, then `just build-llama --vulkan-only` and `just bakeoff-s02`), at the latest before Phase 2's latency test. That measurement must also set the VRAM budget (PRD §6.2).

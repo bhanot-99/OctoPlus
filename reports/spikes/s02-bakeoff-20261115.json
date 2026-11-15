@@ -1,0 +1,1075 @@
+{
+  "experiment": "S-02-Part-B",
+  "goal": "Candidate Model Bake-Off (P0-S08, FR-INF-02/05/08)",
+  "date_utc": "2026-11-15T06:36:21Z",
+  "duration_seconds": 1.53,
+  "conditions_before": {
+    "kernel": "Linux sandbox 7.2.15-76070215-generic x86_64",
+    "git_commit": "5c1f7e214a2f1a79fababc05bc71fba98c76159f",
+    "llama_tag": "b12389",
+    "llama_commit": "1ae047c92654dc34824d1dfa00b8e3aa82de5c8a",
+    "governor": "performance",
+    "cpu_mhz_avg": 2885.33,
+    "load_avg": [
+      8.197265625,
+      11.29931640625,
+      9.99951171875
+    ],
+    "free_ram_mib": 9365,
+    "vram": {
+      "total_mib": 4096,
+      "free_mib": 3770,
+      "used_mib": 1
+    },
+    "ac_power_online": "1"
+  },
+  "conditions_after": {
+    "kernel": "Linux sandbox 7.2.15-76070215-generic x86_64",
+    "git_commit": "5c1f7e214a2f1a79fababc05bc71fba98c76159f",
+    "llama_tag": "b12389",
+    "llama_commit": "1ae047c92654dc34824d1dfa00b8e3aa82de5c8a",
+    "governor": "performance",
+    "cpu_mhz_avg": 3372.07,
+    "load_avg": [
+      8.197265625,
+      11.29931640625,
+      9.99951171875
+    ],
+    "free_ram_mib": 9521,
+    "vram": {
+      "total_mib": 4096,
+      "free_mib": 3770,
+      "used_mib": 1
+    },
+    "ac_power_online": "1"
+  },
+  "excluded_models": [
+    {
+      "id": "llm-bitnet-b158-2b4t-tq20",
+      "name": "BitNet b1.58 2B4T",
+      "file": "/home/bhanot/Semantic NeuroOS/models/llm/bitnet-2b4t-tq2_0.gguf",
+      "license": "MIT",
+      "reason": "excluded: failed pin-time correctness (PPL 101.23 vs 15.5-19.6)"
+    }
+  ],
+  "evaluated_models": {
+    "llm-qwen3-4b-instruct-2507-q4km": {
+      "meta": {
+        "id": "llm-qwen3-4b-instruct-2507-q4km",
+        "name": "Qwen3-4B-Instruct-2507",
+        "file": "/home/bhanot/Semantic NeuroOS/models/llm/Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+        "license": "Apache-2.0",
+        "size_bytes": 2497281120
+      },
+      "quality": {
+        "grounded": {
+          "passed": 20,
+          "total": 20,
+          "rate": 1.0
+        },
+        "honesty": {
+          "passed": 9,
+          "total": 10,
+          "rate": 0.9
+        },
+        "skill_calls": {
+          "passed": 7,
+          "total": 20,
+          "parse_rate": 1.0,
+          "skill_match_rate": 0.4,
+          "args_match_rate": 0.55
+        }
+      },
+      "speed_cpu": {
+        "threads_8": {
+          "threads": 8,
+          "prefill": {
+            "avg_ts": 77.181112,
+            "stddev_ts": 0.798188,
+            "samples_ts": [
+              78.1334,
+              77.7109,
+              77.0227,
+              76.9986,
+              76.0399
+            ]
+          },
+          "decode": {
+            "avg_ts": 12.017198,
+            "stddev_ts": 0.116144,
+            "samples_ts": [
+              11.8129,
+              12.0747,
+              12.0342,
+              12.0917,
+              12.0725
+            ]
+          },
+          "raw": [
+            {
+              "build_commit": "1ae047c92",
+              "build_number": 12389,
+              "cpu_info": "AMD Ryzen 7 5800H with Radeon Graphics",
+              "gpu_info": "",
+              "backends": "CPU",
+              "model_filename": "models/llm/Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+              "model_type": "qwen3 4B Q4_K - Medium",
+              "model_size": 2491323904,
+              "model_n_params": 4022468096,
+              "n_batch": 512,
+              "n_ubatch": 512,
+              "n_threads": 8,
+              "cpu_mask": "0x0",
+              "cpu_strict": false,
+              "poll": 50,
+              "type_k": "f16",
+              "type_v": "f16",
+              "n_gpu_layers": -1,
+              "n_cpu_moe": 0,
+              "split_mode": "layer",
+              "main_gpu": 0,
+              "no_kv_offload": false,
+              "flash_attn": -1,
+              "devices": "auto",
+              "tensor_split": "0.00",
+              "tensor_buft_overrides": "none",
+              "load_mode": "auto",
+              "lazy_mode": "auto",
+              "embeddings": false,
+              "no_op_offload": 0,
+              "no_host": false,
+              "repack": true,
+              "fit_target": 0,
+              "fit_min_ctx": 0,
+              "n_prompt": 512,
+              "n_gen": 0,
+              "n_depth": 0,
+              "test_time": "2026-11-15T06:23:13Z",
+              "avg_ns": 6634316500,
+              "stddev_ns": 68787998,
+              "avg_ts": 77.181112,
+              "stddev_ts": 0.798188,
+              "samples_ns": [
+                6552892168,
+                6588521185,
+                6647391300,
+                6649469306,
+                6733308544
+              ],
+              "samples_ts": [
+                78.1334,
+                77.7109,
+                77.0227,
+                76.9986,
+                76.0399
+              ]
+            },
+            {
+              "build_commit": "1ae047c92",
+              "build_number": 12389,
+              "cpu_info": "AMD Ryzen 7 5800H with Radeon Graphics",
+              "gpu_info": "",
+              "backends": "CPU",
+              "model_filename": "models/llm/Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+              "model_type": "qwen3 4B Q4_K - Medium",
+              "model_size": 2491323904,
+              "model_n_params": 4022468096,
+              "n_batch": 512,
+              "n_ubatch": 512,
+              "n_threads": 8,
+              "cpu_mask": "0x0",
+              "cpu_strict": false,
+              "poll": 50,
+              "type_k": "f16",
+              "type_v": "f16",
+              "n_gpu_layers": -1,
+              "n_cpu_moe": 0,
+              "split_mode": "layer",
+              "main_gpu": 0,
+              "no_kv_offload": false,
+              "flash_attn": -1,
+              "devices": "auto",
+              "tensor_split": "0.00",
+              "tensor_buft_overrides": "none",
+              "load_mode": "auto",
+              "lazy_mode": "auto",
+              "embeddings": false,
+              "no_op_offload": 0,
+              "no_host": false,
+              "repack": true,
+              "fit_target": 0,
+              "fit_min_ctx": 0,
+              "n_prompt": 0,
+              "n_gen": 128,
+              "n_depth": 0,
+              "test_time": "2026-11-15T06:23:52Z",
+              "avg_ns": 10652206971,
+              "stddev_ns": 104199577,
+              "avg_ts": 12.017198,
+              "stddev_ts": 0.116144,
+              "samples_ns": [
+                10835639901,
+                10600635943,
+                10636378285,
+                10585806591,
+                10602574136
+              ],
+              "samples_ts": [
+                11.8129,
+                12.0747,
+                12.0342,
+                12.0917,
+                12.0725
+              ]
+            }
+          ]
+        },
+        "threads_16": {
+          "threads": 16,
+          "prefill": {
+            "avg_ts": 70.299774,
+            "stddev_ts": 0.733504,
+            "samples_ts": [
+              71.2653,
+              69.2165,
+              70.4558,
+              70.3838,
+              70.1774
+            ]
+          },
+          "decode": {
+            "avg_ts": 7.133805,
+            "stddev_ts": 0.236153,
+            "samples_ts": [
+              6.71362,
+              7.20987,
+              7.22063,
+              7.26914,
+              7.25576
+            ]
+          },
+          "raw": [
+            {
+              "build_commit": "1ae047c92",
+              "build_number": 12389,
+              "cpu_info": "AMD Ryzen 7 5800H with Radeon Graphics",
+              "gpu_info": "",
+              "backends": "CPU",
+              "model_filename": "/home/bhanot/Semantic NeuroOS/models/llm/Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+              "model_type": "qwen3 4B Q4_K - Medium",
+              "model_size": 2491323904,
+              "model_n_params": 4022468096,
+              "n_batch": 512,
+              "n_ubatch": 512,
+              "n_threads": 16,
+              "cpu_mask": "0x0",
+              "cpu_strict": false,
+              "poll": 50,
+              "type_k": "f16",
+              "type_v": "f16",
+              "n_gpu_layers": -1,
+              "n_cpu_moe": 0,
+              "split_mode": "layer",
+              "main_gpu": 0,
+              "no_kv_offload": false,
+              "flash_attn": -1,
+              "devices": "auto",
+              "tensor_split": "0.00",
+              "tensor_buft_overrides": "none",
+              "load_mode": "auto",
+              "lazy_mode": "auto",
+              "embeddings": false,
+              "no_op_offload": 0,
+              "no_host": false,
+              "repack": true,
+              "fit_target": 0,
+              "fit_min_ctx": 0,
+              "n_prompt": 512,
+              "n_gen": 0,
+              "n_depth": 0,
+              "test_time": "2026-11-15T06:26:22Z",
+              "avg_ns": 7283731923,
+              "stddev_ns": 76197269,
+              "avg_ts": 70.299774,
+              "stddev_ts": 0.733504,
+              "samples_ns": [
+                7184423057,
+                7397080879,
+                7266964282,
+                7274396938,
+                7295794463
+              ],
+              "samples_ts": [
+                71.2653,
+                69.2165,
+                70.4558,
+                70.3838,
+                70.1774
+              ]
+            },
+            {
+              "build_commit": "1ae047c92",
+              "build_number": 12389,
+              "cpu_info": "AMD Ryzen 7 5800H with Radeon Graphics",
+              "gpu_info": "",
+              "backends": "CPU",
+              "model_filename": "/home/bhanot/Semantic NeuroOS/models/llm/Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+              "model_type": "qwen3 4B Q4_K - Medium",
+              "model_size": 2491323904,
+              "model_n_params": 4022468096,
+              "n_batch": 512,
+              "n_ubatch": 512,
+              "n_threads": 16,
+              "cpu_mask": "0x0",
+              "cpu_strict": false,
+              "poll": 50,
+              "type_k": "f16",
+              "type_v": "f16",
+              "n_gpu_layers": -1,
+              "n_cpu_moe": 0,
+              "split_mode": "layer",
+              "main_gpu": 0,
+              "no_kv_offload": false,
+              "flash_attn": -1,
+              "devices": "auto",
+              "tensor_split": "0.00",
+              "tensor_buft_overrides": "none",
+              "load_mode": "auto",
+              "lazy_mode": "auto",
+              "embeddings": false,
+              "no_op_offload": 0,
+              "no_host": false,
+              "repack": true,
+              "fit_target": 0,
+              "fit_min_ctx": 0,
+              "n_prompt": 0,
+              "n_gen": 128,
+              "n_depth": 0,
+              "test_time": "2026-11-15T06:27:06Z",
+              "avg_ns": 17959194251,
+              "stddev_ns": 621428863,
+              "avg_ts": 7.133805,
+              "stddev_ts": 0.236153,
+              "samples_ns": [
+                19065730401,
+                17753429585,
+                17726973726,
+                17608680795,
+                17641156750
+              ],
+              "samples_ts": [
+                6.71362,
+                7.20987,
+                7.22063,
+                7.26914,
+                7.25576
+              ]
+            }
+          ]
+        }
+      },
+      "ttft_cpu": {
+        "prompt_eval_ms": 3571.66,
+        "total_ms": 3574.93,
+        "item_id": "g01"
+      },
+      "memory_cpu": {
+        "max_rss_kb": 4547668,
+        "rss_mib": 4441.08
+      },
+      "vulkan": {
+        "speed": "not measured: Vulkan build blocked (spirv-headers not installed)",
+        "ttft": "not measured: Vulkan build blocked (spirv-headers not installed)",
+        "memory_rss": "not measured: Vulkan build blocked (spirv-headers not installed)",
+        "vram_used": "not measured: Vulkan build blocked (spirv-headers not installed)",
+        "idle_power": "not measured: Vulkan build blocked (spirv-headers not installed)",
+        "vram_short_fallback": "not measured: Vulkan build blocked (spirv-headers not installed)"
+      },
+      "floors": {
+        "fits_c4_cap_3000mib": false,
+        "license_acceptable": true
+      }
+    },
+    "llm-phi-4-mini-instruct-q4km": {
+      "meta": {
+        "id": "llm-phi-4-mini-instruct-q4km",
+        "name": "Phi-4-mini-instruct",
+        "file": "/home/bhanot/Semantic NeuroOS/models/llm/Phi-4-mini-instruct-Q4_K_M.gguf",
+        "license": "MIT",
+        "size_bytes": 2491874272
+      },
+      "quality": {
+        "grounded": {
+          "passed": 19,
+          "total": 20,
+          "rate": 0.95
+        },
+        "honesty": {
+          "passed": 7,
+          "total": 10,
+          "rate": 0.7
+        },
+        "skill_calls": {
+          "passed": 3,
+          "total": 20,
+          "parse_rate": 0.9,
+          "skill_match_rate": 0.3,
+          "args_match_rate": 0.35
+        }
+      },
+      "speed_cpu": {
+        "threads_8": {
+          "threads": 8,
+          "prefill": {
+            "avg_ts": 89.709808,
+            "stddev_ts": 0.563515,
+            "samples_ts": [
+              90.1727,
+              90.1785,
+              89.3038,
+              89.9634,
+              88.9306
+            ]
+          },
+          "decode": {
+            "avg_ts": 12.211319,
+            "stddev_ts": 0.01241,
+            "samples_ts": [
+              12.2123,
+              12.2062,
+              12.2075,
+              12.1988,
+              12.2318
+            ]
+          },
+          "raw": [
+            {
+              "build_commit": "1ae047c92",
+              "build_number": 12389,
+              "cpu_info": "AMD Ryzen 7 5800H with Radeon Graphics",
+              "gpu_info": "",
+              "backends": "CPU",
+              "model_filename": "/home/bhanot/Semantic NeuroOS/models/llm/Phi-4-mini-instruct-Q4_K_M.gguf",
+              "model_type": "phi3 3B Q4_K - Medium",
+              "model_size": 2483623296,
+              "model_n_params": 3836021856,
+              "n_batch": 512,
+              "n_ubatch": 512,
+              "n_threads": 8,
+              "cpu_mask": "0x0",
+              "cpu_strict": false,
+              "poll": 50,
+              "type_k": "f16",
+              "type_v": "f16",
+              "n_gpu_layers": -1,
+              "n_cpu_moe": 0,
+              "split_mode": "layer",
+              "main_gpu": 0,
+              "no_kv_offload": false,
+              "flash_attn": -1,
+              "devices": "auto",
+              "tensor_split": "0.00",
+              "tensor_buft_overrides": "none",
+              "load_mode": "auto",
+              "lazy_mode": "auto",
+              "embeddings": false,
+              "no_op_offload": 0,
+              "no_host": false,
+              "repack": true,
+              "fit_target": 0,
+              "fit_min_ctx": 0,
+              "n_prompt": 512,
+              "n_gen": 0,
+              "n_depth": 0,
+              "test_time": "2026-11-15T06:28:54Z",
+              "avg_ns": 5707471929,
+              "stddev_ns": 35953661,
+              "avg_ts": 89.709808,
+              "stddev_ts": 0.563515,
+              "samples_ns": [
+                5677996550,
+                5677628074,
+                5733237900,
+                5691200183,
+                5757296940
+              ],
+              "samples_ts": [
+                90.1727,
+                90.1785,
+                89.3038,
+                89.9634,
+                88.9306
+              ]
+            },
+            {
+              "build_commit": "1ae047c92",
+              "build_number": 12389,
+              "cpu_info": "AMD Ryzen 7 5800H with Radeon Graphics",
+              "gpu_info": "",
+              "backends": "CPU",
+              "model_filename": "/home/bhanot/Semantic NeuroOS/models/llm/Phi-4-mini-instruct-Q4_K_M.gguf",
+              "model_type": "phi3 3B Q4_K - Medium",
+              "model_size": 2483623296,
+              "model_n_params": 3836021856,
+              "n_batch": 512,
+              "n_ubatch": 512,
+              "n_threads": 8,
+              "cpu_mask": "0x0",
+              "cpu_strict": false,
+              "poll": 50,
+              "type_k": "f16",
+              "type_v": "f16",
+              "n_gpu_layers": -1,
+              "n_cpu_moe": 0,
+              "split_mode": "layer",
+              "main_gpu": 0,
+              "no_kv_offload": false,
+              "flash_attn": -1,
+              "devices": "auto",
+              "tensor_split": "0.00",
+              "tensor_buft_overrides": "none",
+              "load_mode": "auto",
+              "lazy_mode": "auto",
+              "embeddings": false,
+              "no_op_offload": 0,
+              "no_host": false,
+              "repack": true,
+              "fit_target": 0,
+              "fit_min_ctx": 0,
+              "n_prompt": 0,
+              "n_gen": 128,
+              "n_depth": 0,
+              "test_time": "2026-11-15T06:29:29Z",
+              "avg_ns": 10482086715,
+              "stddev_ns": 10644900,
+              "avg_ts": 12.211319,
+              "stddev_ts": 0.01241,
+              "samples_ns": [
+                10481211307,
+                10486497848,
+                10485334901,
+                10492826038,
+                10464563485
+              ],
+              "samples_ts": [
+                12.2123,
+                12.2062,
+                12.2075,
+                12.1988,
+                12.2318
+              ]
+            }
+          ]
+        },
+        "threads_16": {
+          "threads": 16,
+          "prefill": {
+            "avg_ts": 84.783707,
+            "stddev_ts": 0.682822,
+            "samples_ts": [
+              85.1589,
+              83.9103,
+              84.7982,
+              85.6752,
+              84.3759
+            ]
+          },
+          "decode": {
+            "avg_ts": 7.431347,
+            "stddev_ts": 0.071826,
+            "samples_ts": [
+              7.46067,
+              7.40421,
+              7.36901,
+              7.5431,
+              7.37974
+            ]
+          },
+          "raw": [
+            {
+              "build_commit": "1ae047c92",
+              "build_number": 12389,
+              "cpu_info": "AMD Ryzen 7 5800H with Radeon Graphics",
+              "gpu_info": "",
+              "backends": "CPU",
+              "model_filename": "/home/bhanot/Semantic NeuroOS/models/llm/Phi-4-mini-instruct-Q4_K_M.gguf",
+              "model_type": "phi3 3B Q4_K - Medium",
+              "model_size": 2483623296,
+              "model_n_params": 3836021856,
+              "n_batch": 512,
+              "n_ubatch": 512,
+              "n_threads": 16,
+              "cpu_mask": "0x0",
+              "cpu_strict": false,
+              "poll": 50,
+              "type_k": "f16",
+              "type_v": "f16",
+              "n_gpu_layers": -1,
+              "n_cpu_moe": 0,
+              "split_mode": "layer",
+              "main_gpu": 0,
+              "no_kv_offload": false,
+              "flash_attn": -1,
+              "devices": "auto",
+              "tensor_split": "0.00",
+              "tensor_buft_overrides": "none",
+              "load_mode": "auto",
+              "lazy_mode": "auto",
+              "embeddings": false,
+              "no_op_offload": 0,
+              "no_host": false,
+              "repack": true,
+              "fit_target": 0,
+              "fit_min_ctx": 0,
+              "n_prompt": 512,
+              "n_gen": 0,
+              "n_depth": 0,
+              "test_time": "2026-11-15T06:30:23Z",
+              "avg_ns": 6039209453,
+              "stddev_ns": 48632765,
+              "avg_ts": 84.783707,
+              "stddev_ts": 0.682822,
+              "samples_ns": [
+                6012287324,
+                6101755779,
+                6037863460,
+                5976057343,
+                6068083362
+              ],
+              "samples_ts": [
+                85.1589,
+                83.9103,
+                84.7982,
+                85.6752,
+                84.3759
+              ]
+            },
+            {
+              "build_commit": "1ae047c92",
+              "build_number": 12389,
+              "cpu_info": "AMD Ryzen 7 5800H with Radeon Graphics",
+              "gpu_info": "",
+              "backends": "CPU",
+              "model_filename": "/home/bhanot/Semantic NeuroOS/models/llm/Phi-4-mini-instruct-Q4_K_M.gguf",
+              "model_type": "phi3 3B Q4_K - Medium",
+              "model_size": 2483623296,
+              "model_n_params": 3836021856,
+              "n_batch": 512,
+              "n_ubatch": 512,
+              "n_threads": 16,
+              "cpu_mask": "0x0",
+              "cpu_strict": false,
+              "poll": 50,
+              "type_k": "f16",
+              "type_v": "f16",
+              "n_gpu_layers": -1,
+              "n_cpu_moe": 0,
+              "split_mode": "layer",
+              "main_gpu": 0,
+              "no_kv_offload": false,
+              "flash_attn": -1,
+              "devices": "auto",
+              "tensor_split": "0.00",
+              "tensor_buft_overrides": "none",
+              "load_mode": "auto",
+              "lazy_mode": "auto",
+              "embeddings": false,
+              "no_op_offload": 0,
+              "no_host": false,
+              "repack": true,
+              "fit_target": 0,
+              "fit_min_ctx": 0,
+              "n_prompt": 0,
+              "n_gen": 128,
+              "n_depth": 0,
+              "test_time": "2026-11-15T06:30:59Z",
+              "avg_ns": 17225612391,
+              "stddev_ns": 165397175,
+              "avg_ts": 7.431347,
+              "stddev_ts": 0.071826,
+              "samples_ns": [
+                17156630057,
+                17287453640,
+                17370047494,
+                16969141425,
+                17344789339
+              ],
+              "samples_ts": [
+                7.46067,
+                7.40421,
+                7.36901,
+                7.5431,
+                7.37974
+              ]
+            }
+          ]
+        }
+      },
+      "ttft_cpu": {
+        "prompt_eval_ms": 2806.88,
+        "total_ms": 2812.14,
+        "item_id": "g01"
+      },
+      "memory_cpu": {
+        "max_rss_kb": 4042344,
+        "rss_mib": 3947.6
+      },
+      "vulkan": {
+        "speed": "not measured: Vulkan build blocked (spirv-headers not installed)",
+        "ttft": "not measured: Vulkan build blocked (spirv-headers not installed)",
+        "memory_rss": "not measured: Vulkan build blocked (spirv-headers not installed)",
+        "vram_used": "not measured: Vulkan build blocked (spirv-headers not installed)",
+        "idle_power": "not measured: Vulkan build blocked (spirv-headers not installed)",
+        "vram_short_fallback": "not measured: Vulkan build blocked (spirv-headers not installed)"
+      },
+      "floors": {
+        "fits_c4_cap_3000mib": false,
+        "license_acceptable": true
+      }
+    },
+    "llm-smollm3-3b-q4km": {
+      "meta": {
+        "id": "llm-smollm3-3b-q4km",
+        "name": "SmolLM3-3B",
+        "file": "/home/bhanot/Semantic NeuroOS/models/llm/SmolLM3-Q4_K_M.gguf",
+        "license": "Apache-2.0",
+        "size_bytes": 1915305312
+      },
+      "quality": {
+        "grounded": {
+          "passed": 19,
+          "total": 20,
+          "rate": 0.95
+        },
+        "honesty": {
+          "passed": 3,
+          "total": 10,
+          "rate": 0.3
+        },
+        "skill_calls": {
+          "passed": 3,
+          "total": 20,
+          "parse_rate": 0.95,
+          "skill_match_rate": 0.2,
+          "args_match_rate": 0.45
+        }
+      },
+      "speed_cpu": {
+        "threads_8": {
+          "threads": 8,
+          "prefill": {
+            "avg_ts": 98.556073,
+            "stddev_ts": 0.480908,
+            "samples_ts": [
+              99.0796,
+              98.6793,
+              98.9157,
+              98.0529,
+              98.0528
+            ]
+          },
+          "decode": {
+            "avg_ts": 15.758876,
+            "stddev_ts": 0.034641,
+            "samples_ts": [
+              15.7378,
+              15.7452,
+              15.8196,
+              15.7373,
+              15.7544
+            ]
+          },
+          "raw": [
+            {
+              "build_commit": "1ae047c92",
+              "build_number": 12389,
+              "cpu_info": "AMD Ryzen 7 5800H with Radeon Graphics",
+              "gpu_info": "",
+              "backends": "CPU",
+              "model_filename": "/home/bhanot/Semantic NeuroOS/models/llm/SmolLM3-Q4_K_M.gguf",
+              "model_type": "smollm3 3B Q4_K - Medium",
+              "model_size": 1907462144,
+              "model_n_params": 3075098624,
+              "n_batch": 512,
+              "n_ubatch": 512,
+              "n_threads": 8,
+              "cpu_mask": "0x0",
+              "cpu_strict": false,
+              "poll": 50,
+              "type_k": "f16",
+              "type_v": "f16",
+              "n_gpu_layers": -1,
+              "n_cpu_moe": 0,
+              "split_mode": "layer",
+              "main_gpu": 0,
+              "no_kv_offload": false,
+              "flash_attn": -1,
+              "devices": "auto",
+              "tensor_split": "0.00",
+              "tensor_buft_overrides": "none",
+              "load_mode": "auto",
+              "lazy_mode": "auto",
+              "embeddings": false,
+              "no_op_offload": 0,
+              "no_host": false,
+              "repack": true,
+              "fit_target": 0,
+              "fit_min_ctx": 0,
+              "n_prompt": 512,
+              "n_gen": 0,
+              "n_depth": 0,
+              "test_time": "2026-11-15T06:32:39Z",
+              "avg_ns": 5195111199,
+              "stddev_ns": 25367517,
+              "avg_ts": 98.556073,
+              "stddev_ts": 0.480908,
+              "samples_ns": [
+                5167562184,
+                5188522267,
+                5176123815,
+                5221670834,
+                5221676896
+              ],
+              "samples_ts": [
+                99.0796,
+                98.6793,
+                98.9157,
+                98.0529,
+                98.0528
+              ]
+            },
+            {
+              "build_commit": "1ae047c92",
+              "build_number": 12389,
+              "cpu_info": "AMD Ryzen 7 5800H with Radeon Graphics",
+              "gpu_info": "",
+              "backends": "CPU",
+              "model_filename": "/home/bhanot/Semantic NeuroOS/models/llm/SmolLM3-Q4_K_M.gguf",
+              "model_type": "smollm3 3B Q4_K - Medium",
+              "model_size": 1907462144,
+              "model_n_params": 3075098624,
+              "n_batch": 512,
+              "n_ubatch": 512,
+              "n_threads": 8,
+              "cpu_mask": "0x0",
+              "cpu_strict": false,
+              "poll": 50,
+              "type_k": "f16",
+              "type_v": "f16",
+              "n_gpu_layers": -1,
+              "n_cpu_moe": 0,
+              "split_mode": "layer",
+              "main_gpu": 0,
+              "no_kv_offload": false,
+              "flash_attn": -1,
+              "devices": "auto",
+              "tensor_split": "0.00",
+              "tensor_buft_overrides": "none",
+              "load_mode": "auto",
+              "lazy_mode": "auto",
+              "embeddings": false,
+              "no_op_offload": 0,
+              "no_host": false,
+              "repack": true,
+              "fit_target": 0,
+              "fit_min_ctx": 0,
+              "n_prompt": 0,
+              "n_gen": 128,
+              "n_depth": 0,
+              "test_time": "2026-11-15T06:33:11Z",
+              "avg_ns": 8122438132,
+              "stddev_ns": 17807541,
+              "avg_ts": 15.758876,
+              "stddev_ts": 0.034641,
+              "samples_ns": [
+                8133300129,
+                8129438210,
+                8091236633,
+                8133517930,
+                8124697761
+              ],
+              "samples_ts": [
+                15.7378,
+                15.7452,
+                15.8196,
+                15.7373,
+                15.7544
+              ]
+            }
+          ]
+        },
+        "threads_16": {
+          "threads": 16,
+          "prefill": {
+            "avg_ts": 92.721434,
+            "stddev_ts": 0.385884,
+            "samples_ts": [
+              92.1574,
+              93.0711,
+              93.0764,
+              92.7495,
+              92.5527
+            ]
+          },
+          "decode": {
+            "avg_ts": 9.422538,
+            "stddev_ts": 0.055191,
+            "samples_ts": [
+              9.45749,
+              9.42862,
+              9.34448,
+              9.39552,
+              9.48659
+            ]
+          },
+          "raw": [
+            {
+              "build_commit": "1ae047c92",
+              "build_number": 12389,
+              "cpu_info": "AMD Ryzen 7 5800H with Radeon Graphics",
+              "gpu_info": "",
+              "backends": "CPU",
+              "model_filename": "/home/bhanot/Semantic NeuroOS/models/llm/SmolLM3-Q4_K_M.gguf",
+              "model_type": "smollm3 3B Q4_K - Medium",
+              "model_size": 1907462144,
+              "model_n_params": 3075098624,
+              "n_batch": 512,
+              "n_ubatch": 512,
+              "n_threads": 16,
+              "cpu_mask": "0x0",
+              "cpu_strict": false,
+              "poll": 50,
+              "type_k": "f16",
+              "type_v": "f16",
+              "n_gpu_layers": -1,
+              "n_cpu_moe": 0,
+              "split_mode": "layer",
+              "main_gpu": 0,
+              "no_kv_offload": false,
+              "flash_attn": -1,
+              "devices": "auto",
+              "tensor_split": "0.00",
+              "tensor_buft_overrides": "none",
+              "load_mode": "auto",
+              "lazy_mode": "auto",
+              "embeddings": false,
+              "no_op_offload": 0,
+              "no_host": false,
+              "repack": true,
+              "fit_target": 0,
+              "fit_min_ctx": 0,
+              "n_prompt": 512,
+              "n_gen": 0,
+              "n_depth": 0,
+              "test_time": "2026-11-15T06:33:53Z",
+              "avg_ns": 5521992968,
+              "stddev_ns": 23021858,
+              "avg_ts": 92.721434,
+              "stddev_ts": 0.385884,
+              "samples_ns": [
+                5555710122,
+                5501170107,
+                5500858008,
+                5520242442,
+                5531984162
+              ],
+              "samples_ts": [
+                92.1574,
+                93.0711,
+                93.0764,
+                92.7495,
+                92.5527
+              ]
+            },
+            {
+              "build_commit": "1ae047c92",
+              "build_number": 12389,
+              "cpu_info": "AMD Ryzen 7 5800H with Radeon Graphics",
+              "gpu_info": "",
+              "backends": "CPU",
+              "model_filename": "/home/bhanot/Semantic NeuroOS/models/llm/SmolLM3-Q4_K_M.gguf",
+              "model_type": "smollm3 3B Q4_K - Medium",
+              "model_size": 1907462144,
+              "model_n_params": 3075098624,
+              "n_batch": 512,
+              "n_ubatch": 512,
+              "n_threads": 16,
+              "cpu_mask": "0x0",
+              "cpu_strict": false,
+              "poll": 50,
+              "type_k": "f16",
+              "type_v": "f16",
+              "n_gpu_layers": -1,
+              "n_cpu_moe": 0,
+              "split_mode": "layer",
+              "main_gpu": 0,
+              "no_kv_offload": false,
+              "flash_attn": -1,
+              "devices": "auto",
+              "tensor_split": "0.00",
+              "tensor_buft_overrides": "none",
+              "load_mode": "auto",
+              "lazy_mode": "auto",
+              "embeddings": false,
+              "no_op_offload": 0,
+              "no_host": false,
+              "repack": true,
+              "fit_target": 0,
+              "fit_min_ctx": 0,
+              "n_prompt": 0,
+              "n_gen": 128,
+              "n_depth": 0,
+              "test_time": "2026-11-15T06:34:27Z",
+              "avg_ns": 13584823475,
+              "stddev_ns": 79704490,
+              "avg_ts": 9.422538,
+              "stddev_ts": 0.055191,
+              "samples_ns": [
+                13534250572,
+                13575691611,
+                13697925369,
+                13623518038,
+                13492731786
+              ],
+              "samples_ts": [
+                9.45749,
+                9.42862,
+                9.34448,
+                9.39552,
+                9.48659
+              ]
+            }
+          ]
+        }
+      },
+      "ttft_cpu": {
+        "prompt_eval_ms": 2632.25,
+        "total_ms": 2634.35,
+        "item_id": "g01"
+      },
+      "memory_cpu": {
+        "max_rss_kb": 3429984,
+        "rss_mib": 3349.59
+      },
+      "vulkan": {
+        "speed": "not measured: Vulkan build blocked (spirv-headers not installed)",
+        "ttft": "not measured: Vulkan build blocked (spirv-headers not installed)",
+        "memory_rss": "not measured: Vulkan build blocked (spirv-headers not installed)",
+        "vram_used": "not measured: Vulkan build blocked (spirv-headers not installed)",
+        "idle_power": "not measured: Vulkan build blocked (spirv-headers not installed)",
+        "vram_short_fallback": "not measured: Vulkan build blocked (spirv-headers not installed)"
+      },
+      "floors": {
+        "fits_c4_cap_3000mib": false,
+        "license_acceptable": true
+      }
+    }
+  },
+  "blind_chat": {
+    "answers_file": "/home/bhanot/Semantic NeuroOS/reports/spikes/s02-chat-answers-20261115.json",
+    "key_file": "/home/bhanot/Semantic NeuroOS/reports/spikes/s02-chat-key-20261115.json",
+    "total_items": 20
+  },
+  "raw_data_dir": "/home/bhanot/Semantic NeuroOS/reports/spikes/s02-raw",
+  "vulkan_status": "not measured: Vulkan build blocked (spirv-headers not installed)"
+}

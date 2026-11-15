@@ -1,0 +1,405 @@
+[
+  {
+    "id": "g01",
+    "question": "What was I working on this morning?",
+    "evidence": "[focus 09:12-10:47] app=code title=\"invoice_parser.py \u2014 billing-tools\"\n[focus 10:47-11:05] app=firefox title=\"Python regex docs\"",
+    "must_include": [
+      [
+        "invoice"
+      ]
+    ],
+    "must_not_include": [
+      "spreadsheet"
+    ],
+    "answer": "<think>\nOkay, the user is asking what they were working on this morning. Let me look at the provided focus times and apps. The first entry is from 09:12 to 10:47 with the app being code and the title \"invoice_parser.py \u2014 billing-tools\". The second entry is from 10:47 to 11:05 with Firefox and the title \"Python regex docs\".\n\nSo, the first period was spent working on invoice_parser.py, which is likely a Python script related to parsing invoices. The second period was using Firefox to look at Python regex documentation. The user might have switched between these tasks. The first task started at 9:12 AM and ended at 10:47 AM, then switched to Firefox at 10:47 AM. The second task",
+    "raw_output": "<think>\nOkay, the user is asking what they were working on this morning. Let me look at the provided focus times and apps. The first entry is from 09:12 to 10:47 with the app being code and the title \"invoice_parser.py \u2014 billing-tools\". The second entry is from 10:47 to 11:05 with Firefox and the title \"Python regex docs\".\n\nSo, the first period was spent working on invoice_parser.py, which is likely a Python script related to parsing invoices. The second period was using Firefox to look at Python regex documentation. The user might have switched between these tasks. The first task started at 9:12 AM and ended at 10:47 AM, then switched to Firefox at 10:47 AM. The second task\n\n",
+    "passed": true,
+    "groups_passed": true,
+    "no_forbidden": true,
+    "returncode": 0
+  },
+  {
+    "id": "g02",
+    "question": "What did I last commit to the garden planner?",
+    "evidence": "[git 2026-11-13 18:40] repo=garden-planner commit \"Add frost date lookup\"\n[git 2026-11-13 19:02] repo=garden-planner commit \"Fix tomato spacing\"",
+    "must_include": [
+      [
+        "tomato"
+      ]
+    ],
+    "must_not_include": [
+      "frost date lookup was the last"
+    ],
+    "answer": "You last committed \"Fix tomato spacing\" to",
+    "raw_output": "<think>\nOkay, the user is asking what they last committed to the garden planner. Let me look at the provided git logs. The first commit is from 2026-11-13 at 18:40, titled \"Add frost date lookup.\" The second commit is from the same day at 19:02, titled \"Fix tomato spacing.\" Since the user is asking about the last commit, the most recent one would be the second one. The second commit is the most recent in the log, so the answer should be \"Fix tomato spacing.\" I need to make sure there's no other commits after that, but the logs only show these two. So the correct answer is the second commit message. I'll present that clearly.\n</think>\n\nYou last committed \"Fix tomato spacing\" to\n\n",
+    "passed": true,
+    "groups_passed": true,
+    "no_forbidden": true,
+    "returncode": 0
+  },
+  {
+    "id": "g03",
+    "question": "When is my dentist appointment?",
+    "evidence": "[calendar] 2026-11-16 14:00-14:30 \"Dentist \u2014 Dr. Okafor\"\n[calendar] 2026-11-16 17:00-18:00 \"Badminton\"",
+    "must_include": [
+      [
+        "2 pm",
+        "2pm",
+        "14:00",
+        "2:00",
+        "two o'clock",
+        "2 o'clock",
+        "2 p.m"
+      ]
+    ],
+    "must_not_include": [
+      "badminton at 2"
+    ],
+    "answer": "<think>\nOkay, the user is asking when their dentist appointment is. Let me check the calendar data provided. The first entry is on 2026-11-16 from 14:00 to 14:30 with the title \"Dentist \u2014 Dr. Okafor\". The second entry is a badminton session from 17:00 to 18:00 on the same date.\n\nSo the dentist appointment is scheduled from 2:00 PM to 2:30 PM on November 16, 2026. The user might be confused because the badminton session is later in the day, but the dentist appointment is earlier. I need to make sure I'm not missing any other entries. The calendar data only shows these two events. Therefore, the correct time",
+    "raw_output": "<think>\nOkay, the user is asking when their dentist appointment is. Let me check the calendar data provided. The first entry is on 2026-11-16 from 14:00 to 14:30 with the title \"Dentist \u2014 Dr. Okafor\". The second entry is a badminton session from 17:00 to 18:00 on the same date.\n\nSo the dentist appointment is scheduled from 2:00 PM to 2:30 PM on November 16, 2026. The user might be confused because the badminton session is later in the day, but the dentist appointment is earlier. I need to make sure I'm not missing any other entries. The calendar data only shows these two events. Therefore, the correct time\n\n",
+    "passed": true,
+    "groups_passed": true,
+    "no_forbidden": true,
+    "returncode": 0
+  },
+  {
+    "id": "g04",
+    "question": "Which book am I reading right now?",
+    "evidence": "[note notes/books.md] Reading list: Piranesi (done), The Overstory (in progress), Klara and the Sun (next)",
+    "must_include": [
+      [
+        "overstory"
+      ]
+    ],
+    "must_not_include": [
+      "piranesi is"
+    ],
+    "answer": "<think>\nOkay, the user is asking which book they're currently reading. Let me check the note they provided. The note mentions \"Reading list: Piranesi (done), The Overstory (in progress), Klara and the Sun (next)\". The \"in progress\" book is The Overstory. So the user is reading The Overstory right now. I should confirm that and maybe add a brief note about the book's genre or author if needed. The user might want to know if there's a summary or something, but the note is concise. I'll just state the book and maybe mention the author and genre briefly. Let me make sure I'm not missing any other details. The note doesn't specify the author, but The Overstory is by Richard Powers. I should include",
+    "raw_output": "<think>\nOkay, the user is asking which book they're currently reading. Let me check the note they provided. The note mentions \"Reading list: Piranesi (done), The Overstory (in progress), Klara and the Sun (next)\". The \"in progress\" book is The Overstory. So the user is reading The Overstory right now. I should confirm that and maybe add a brief note about the book's genre or author if needed. The user might want to know if there's a summary or something, but the note is concise. I'll just state the book and maybe mention the author and genre briefly. Let me make sure I'm not missing any other details. The note doesn't specify the author, but The Overstory is by Richard Powers. I should include\n\n",
+    "passed": true,
+    "groups_passed": true,
+    "no_forbidden": true,
+    "returncode": 0
+  },
+  {
+    "id": "g05",
+    "question": "What's using the most space on my disk?",
+    "evidence": "[disk /] total 150 GB, used 139 GB, free 11 GB\n[disk-report] largest: ~/Videos/raw 38 GB, ~/.cache 12 GB, ~/Downloads 9 GB",
+    "must_include": [
+      [
+        "video"
+      ]
+    ],
+    "must_not_include": [
+      "downloads is the largest"
+    ],
+    "answer": "<think>\nOkay, the user is asking which part of their disk is using the most space. Let me look at the data they provided.\n\nFirst, the total disk space is 150 GB, with 139 GB used and 11 GB free. That means they're pretty close to full. Now, the disk-report shows the largest files: ~/Videos/raw is 38 GB, ~/.cache is 12 GB, and ~/Downloads is 9 GB. \n\nSo, the largest single file is in the Videos directory. The user's home directory is probably where most of their personal files are, so the Videos folder is likely their media folder. The 38 GB there is the biggest chunk. The cache and downloads are smaller, but the cache is still a significant 12 GB. \n\nI",
+    "raw_output": "<think>\nOkay, the user is asking which part of their disk is using the most space. Let me look at the data they provided.\n\nFirst, the total disk space is 150 GB, with 139 GB used and 11 GB free. That means they're pretty close to full. Now, the disk-report shows the largest files: ~/Videos/raw is 38 GB, ~/.cache is 12 GB, and ~/Downloads is 9 GB. \n\nSo, the largest single file is in the Videos directory. The user's home directory is probably where most of their personal files are, so the Videos folder is likely their media folder. The 38 GB there is the biggest chunk. The cache and downloads are smaller, but the cache is still a significant 12 GB. \n\nI\n\n",
+    "passed": true,
+    "groups_passed": true,
+    "no_forbidden": true,
+    "returncode": 0
+  },
+  {
+    "id": "g06",
+    "question": "Which spreadsheet did I have open this afternoon?",
+    "evidence": "[focus 15:30-16:10] app=libreoffice-calc title=\"budget_2027.ods\"\n[focus 16:10-16:25] app=thunderbird title=\"Re: flat deposit\"",
+    "must_include": [
+      [
+        "budget"
+      ]
+    ],
+    "must_not_include": [
+      "deposit.ods"
+    ],
+    "answer": "<think>\nOkay, the user is asking which spreadsheet they had open this afternoon. Let me look at the provided data.\n\nFirst, there's a focus entry from 15:30 to 16:10 with LibreOffice Calc open on a file named \"budget_2027.ods\". Then another focus from 16:10 to 16:25 with Thunderbird open on a message titled \"Re: flat deposit\". The user is asking about the spreadsheet, so the relevant part is the LibreOffice Calc entry. The file name is \"budget_2027.ods\", which is a spreadsheet file format. So the answer should be that they had the \"budget_2027.ods\" spreadsheet open during that time. I need to make sure there's no other spreadsheet mentioned, but the",
+    "raw_output": "<think>\nOkay, the user is asking which spreadsheet they had open this afternoon. Let me look at the provided data.\n\nFirst, there's a focus entry from 15:30 to 16:10 with LibreOffice Calc open on a file named \"budget_2027.ods\". Then another focus from 16:10 to 16:25 with Thunderbird open on a message titled \"Re: flat deposit\". The user is asking about the spreadsheet, so the relevant part is the LibreOffice Calc entry. The file name is \"budget_2027.ods\", which is a spreadsheet file format. So the answer should be that they had the \"budget_2027.ods\" spreadsheet open during that time. I need to make sure there's no other spreadsheet mentioned, but the\n\n",
+    "passed": true,
+    "groups_passed": true,
+    "no_forbidden": true,
+    "returncode": 0
+  },
+  {
+    "id": "g07",
+    "question": "What was I listening to tonight?",
+    "evidence": "[media] player=spotify state=playing artist=\"Nils Frahm\" title=\"Says\" 21:04\n[media] player=spotify state=paused 21:15",
+    "must_include": [
+      [
+        "frahm"
+      ]
+    ],
+    "must_not_include": [
+      "radiohead"
+    ],
+    "answer": "<think>\nOkay, the user is asking what they were listening to tonight based on the media player logs. Let me look at the timestamps and the information provided.\n\nFirst, there's a media player log at 21:04 with artist \"Nils Frahm\" and title \"Says\". Then at 21:15, the player is paused. The user is asking what they were listening to tonight. \n\nThe key here is the timestamps. 21:04 is 9:04 PM, and 21:15 is 9:15 PM. So the user started listening to \"Says\" by Nils Frahm at 9:04 PM and paused it at 9:15 PM. The question is whether they were listening to something else between those times or if \"",
+    "raw_output": "<think>\nOkay, the user is asking what they were listening to tonight based on the media player logs. Let me look at the timestamps and the information provided.\n\nFirst, there's a media player log at 21:04 with artist \"Nils Frahm\" and title \"Says\". Then at 21:15, the player is paused. The user is asking what they were listening to tonight. \n\nThe key here is the timestamps. 21:04 is 9:04 PM, and 21:15 is 9:15 PM. So the user started listening to \"Says\" by Nils Frahm at 9:04 PM and paused it at 9:15 PM. The question is whether they were listening to something else between those times or if \"\n\n",
+    "passed": true,
+    "groups_passed": true,
+    "no_forbidden": true,
+    "returncode": 0
+  },
+  {
+    "id": "g08",
+    "question": "What did you tell me about the wifi password hint?",
+    "evidence": "[voice 2026-11-12 08:31] Q: remind me what the wifi password hint was A: It's the cat's name plus the year you moved in.",
+    "must_include": [
+      [
+        "cat"
+      ]
+    ],
+    "must_not_include": [
+      "password is"
+    ],
+    "answer": "<think>\nOkay, the user is asking about the wifi password hint I mentioned earlier. Let me recall the previous message. The hint was \"the cat's name plus the year you moved in.\" The user wants to know if I can provide more details or confirm that's correct.\n\nSince the user is asking for more information, I should check if there's any additional context or if they need further clarification. The original hint was a simple combination of the cat's name and the move-in year. I don't have any additional information beyond that, so I can't provide more specifics. I should confirm that the hint is accurate based on the previous message and suggest that if they need more details, they might need to check their own notes or the system where the hint was set. Also, I should",
+    "raw_output": "<think>\nOkay, the user is asking about the wifi password hint I mentioned earlier. Let me recall the previous message. The hint was \"the cat's name plus the year you moved in.\" The user wants to know if I can provide more details or confirm that's correct.\n\nSince the user is asking for more information, I should check if there's any additional context or if they need further clarification. The original hint was a simple combination of the cat's name and the move-in year. I don't have any additional information beyond that, so I can't provide more specifics. I should confirm that the hint is accurate based on the previous message and suggest that if they need more details, they might need to check their own notes or the system where the hint was set. Also, I should\n\n",
+    "passed": true,
+    "groups_passed": true,
+    "no_forbidden": true,
+    "returncode": 0
+  },
+  {
+    "id": "g09",
+    "question": "Did my photo sorter build work?",
+    "evidence": "[build_job] project=photo-sorter command=\"cargo build --release\" result=failed 13:22 error=\"linker cc not found\"\n[build_job] project=photo-sorter result=succeeded 13:40",
+    "must_include": [
+      [
+        "succeed",
+        "worked",
+        "work now",
+        "did work",
+        "built"
+      ]
+    ],
+    "must_not_include": [
+      "still failing"
+    ],
+    "answer": "<think>\nOkay, let's see. The user is asking if their photo sorter build worked. They provided two build job entries. The first one says the build failed with an error about the linker not being found. The second one says the build succeeded. \n\nHmm, the first job's error message is \"linker cc not found,\" which usually means the linker (like ld) isn't installed or the compiler isn't set up correctly. The second job succeeded, so maybe the first one was a temporary issue or the user fixed it. \n\nSince the second job is marked as succeeded, that's the most recent and successful build. The user might have resolved the linker issue. But I should check if there's any other context. The first job's time is 13:22, the",
+    "raw_output": "<think>\nOkay, let's see. The user is asking if their photo sorter build worked. They provided two build job entries. The first one says the build failed with an error about the linker not being found. The second one says the build succeeded. \n\nHmm, the first job's error message is \"linker cc not found,\" which usually means the linker (like ld) isn't installed or the compiler isn't set up correctly. The second job succeeded, so maybe the first one was a temporary issue or the user fixed it. \n\nSince the second job is marked as succeeded, that's the most recent and successful build. The user might have resolved the linker issue. But I should check if there's any other context. The first job's time is 13:22, the\n\n",
+    "passed": true,
+    "groups_passed": true,
+    "no_forbidden": true,
+    "returncode": 0
+  },
+  {
+    "id": "g10",
+    "question": "What time is my Lisbon flight?",
+    "evidence": "[note notes/trip.md] Lisbon trip: flight 3 Dec 07:15 from LHR, hotel Casa do Rio, 4 nights",
+    "must_include": [
+      [
+        "7:15",
+        "07:15",
+        "7.15",
+        "quarter past seven"
+      ]
+    ],
+    "must_not_include": [
+      "3 pm"
+    ],
+    "answer": "Your flight departs at 07:15 on December 3 from London Heathrow.",
+    "raw_output": "<think>\nOkay, the user is asking about the time of their Lisbon flight. Let me check the information provided. In the note, it says the flight is from LHR (London Heathrow) on 3 December at 07:15. So the flight time is 07:15 on 3 December. I need to make sure I'm not missing any other details. The user might be planning their day or checking schedules, so providing the exact time and date is important. There's no conflicting information here, so the answer should be straightforward. Just confirm the time and date as given in the note.\n</think>\n\nYour flight departs at 07:15 on December 3 from London Heathrow. [end of text]\n\n\n",
+    "passed": true,
+    "groups_passed": true,
+    "no_forbidden": true,
+    "returncode": 0
+  },
+  {
+    "id": "g11",
+    "question": "How long was I gaming this evening?",
+    "evidence": "[focus 20:00-20:50] app=steam title=\"Hades II\"\n[focus 20:50-21:00] app=discord title=\"#general\"",
+    "must_include": [
+      [
+        "50 min",
+        "fifty min"
+      ]
+    ],
+    "must_not_include": [
+      "two hours"
+    ],
+    "answer": "You were gaming for 1 hour this evening.",
+    "raw_output": "<think>\nOkay, the user is asking how long they were gaming this evening. Let me look at the data provided. The first focus entry is from 20:00 to 20:50, which is 50 minutes. Then the next focus is from 20:50 to 21:00, another 10 minutes. So adding those together, 50 + 10 equals 60 minutes. That's 1 hour. The user was gaming for 1 hour this evening based on the given data. I should just state the total time without any extra information since the user didn't ask for a breakdown. Keep it simple and direct.\n</think>\n\nYou were gaming for 1 hour this evening. [end of text]\n\n\n",
+    "passed": false,
+    "groups_passed": false,
+    "no_forbidden": true,
+    "returncode": 0
+  },
+  {
+    "id": "g12",
+    "question": "What's my sister's name?",
+    "evidence": "[profile] The user is vegetarian.\n[profile] The user's sister is called Mira.",
+    "must_include": [
+      [
+        "mira"
+      ]
+    ],
+    "must_not_include": [
+      "maria"
+    ],
+    "answer": "My sister's name is Mira.",
+    "raw_output": "<think>\nOkay, the user is asking about their sister's name. From the given profile data, it says the user's sister is called Mira. So the answer should be straightforward. I need to make sure I'm not adding any extra information beyond what's provided. The user's profile includes the sister's name, so I can directly state that. No need to ask for more details since the information is already present. Just a simple response with the sister's name.\n</think>\n\nMy sister's name is Mira. [end of text]\n\n\n",
+    "passed": true,
+    "groups_passed": true,
+    "no_forbidden": true,
+    "returncode": 0
+  },
+  {
+    "id": "g13",
+    "question": "Which shell did I switch to?",
+    "evidence": "[git 2026-11-14 11:05] repo=dotfiles branch=main commit \"Switch shell to fish\"",
+    "must_include": [
+      [
+        "fish"
+      ]
+    ],
+    "must_not_include": [
+      "zsh"
+    ],
+    "answer": "I switched to the fish shell.",
+    "raw_output": "<think>\nOkay, the user is asking which shell they switched to based on the Git commit message. The commit message says \"Switch shell to fish\". So the answer is fish. I need to be concise and just state the shell name. No need for extra details unless specified. The user's question is straightforward, so the answer is simply fish. I should make sure to respond clearly and directly without any extra information.\n</think>\n\nI switched to the fish shell. [end of text]\n\n\n",
+    "passed": true,
+    "groups_passed": true,
+    "no_forbidden": true,
+    "returncode": 0
+  },
+  {
+    "id": "g14",
+    "question": "Did I plug in my laptop after the battery got low?",
+    "evidence": "[battery 18:02] 14% discharging, about 25 minutes left\n[battery 18:20] 41% charging",
+    "must_include": [
+      [
+        "yes",
+        "you did",
+        "plugged"
+      ]
+    ],
+    "must_not_include": [
+      "did not plug"
+    ],
+    "answer": "<think>\nOkay, the user is asking if they plugged in their laptop after the battery got low. Let me look at the battery logs they provided.\n\nFirst, the battery was at 14% and discharging at 18:02. Then, at 18:20, it's 41% and charging. The time between these two events is 18 minutes. If the laptop was plugged in, the battery should start charging immediately. The fact that the battery went from 14% to 41% in 18 minutes suggests that it was indeed plugged in. Charging from 14% to 41% in that time is a significant jump, which is possible if the laptop is on a power source. So, yes, they probably plugged it in after the battery got low. The",
+    "raw_output": "<think>\nOkay, the user is asking if they plugged in their laptop after the battery got low. Let me look at the battery logs they provided.\n\nFirst, the battery was at 14% and discharging at 18:02. Then, at 18:20, it's 41% and charging. The time between these two events is 18 minutes. If the laptop was plugged in, the battery should start charging immediately. The fact that the battery went from 14% to 41% in 18 minutes suggests that it was indeed plugged in. Charging from 14% to 41% in that time is a significant jump, which is possible if the laptop is on a power source. So, yes, they probably plugged it in after the battery got low. The\n\n",
+    "passed": true,
+    "groups_passed": true,
+    "no_forbidden": true,
+    "returncode": 0
+  },
+  {
+    "id": "g15",
+    "question": "How long do I simmer the dal?",
+    "evidence": "[note notes/recipes.md] Dal: 1 cup red lentils, 3 cups water, 1 tsp turmeric, simmer 20 minutes",
+    "must_include": [
+      [
+        "20 min",
+        "twenty min"
+      ]
+    ],
+    "must_not_include": [
+      "40"
+    ],
+    "answer": "Simmer 20 minutes until the lentils are tender and the water is absorbed.",
+    "raw_output": "<think>\nOkay, the user is asking about the simmering time for dal. Let me check the note they provided. The note says \"simmer 20 minutes.\" So the answer is straightforward. They just need to simmer it for 20 minutes. No need to add extra details since the note is explicit. Just confirm the time and maybe mention that the dal is cooked when the water is absorbed. But the user specifically asked for the simmering time, so the answer is 20 minutes. Make sure to keep it concise as per the guidelines.\n</think>\n\nSimmer 20 minutes until the lentils are tender and the water is absorbed. [end of text]\n\n\n",
+    "passed": true,
+    "groups_passed": true,
+    "no_forbidden": true,
+    "returncode": 0
+  },
+  {
+    "id": "g16",
+    "question": "How many meetings did I have this morning?",
+    "evidence": "[focus 09:00-09:40] app=zoom title=\"Standup\"\n[focus 09:40-11:30] app=code title=\"scheduler.rs \u2014 rota\"\n[focus 11:30-12:00] app=zoom title=\"Design review\"",
+    "must_include": [
+      [
+        "two",
+        "2 meeting"
+      ]
+    ],
+    "must_not_include": [
+      "three meetings"
+    ],
+    "answer": "<think>\nOkay, let's see. The user provided a series of focus times with different apps and titles. The question is asking how many meetings they had this morning.\n\nFirst, I need to identify which meetings are in the morning. The focus times are listed as 09:00-09:40, 09:40-11:30, and 11:30-12:00. The first two meetings are from 9:00 to 11:30, which is a 2.5-hour block. The third is from 11:30 to 12:00, which is a 30-minute block. \n\nBut the question is about the morning. Typically, morning meetings might be considered from 9:00 AM to 12:00 PM. The first",
+    "raw_output": "<think>\nOkay, let's see. The user provided a series of focus times with different apps and titles. The question is asking how many meetings they had this morning.\n\nFirst, I need to identify which meetings are in the morning. The focus times are listed as 09:00-09:40, 09:40-11:30, and 11:30-12:00. The first two meetings are from 9:00 to 11:30, which is a 2.5-hour block. The third is from 11:30 to 12:00, which is a 30-minute block. \n\nBut the question is about the morning. Typically, morning meetings might be considered from 9:00 AM to 12:00 PM. The first\n\n",
+    "passed": true,
+    "groups_passed": true,
+    "no_forbidden": true,
+    "returncode": 0
+  },
+  {
+    "id": "g17",
+    "question": "When is Mum's birthday?",
+    "evidence": "[calendar] 2026-11-20 \"Mum's birthday\" all-day",
+    "must_include": [
+      [
+        "20",
+        "twentieth"
+      ]
+    ],
+    "must_not_include": [
+      "21"
+    ],
+    "answer": "The event \"Mum's birthday\" is scheduled for November 20, 2026",
+    "raw_output": "<think>\nOkay, the user is asking when Mum's birthday is. I need to check the calendar data provided. The event is listed as \"Mum's birthday\" on 2026-11-20, which is November 20, 2026. Since the user is asking about the date, I should just provide the date they have in the calendar. There's no additional information suggesting any changes or other dates, so the answer is straightforward. I should confirm the date and mention the year to be clear. Also, since the user is asking about the event, I don't need to speculate or provide any other details unless the calendar data changes. Just stick to the given information.\n</think>\n\nThe event \"Mum's birthday\" is scheduled for November 20, 2026\n\n",
+    "passed": true,
+    "groups_passed": true,
+    "no_forbidden": true,
+    "returncode": 0
+  },
+  {
+    "id": "g18",
+    "question": "Why did my laptop get hot earlier?",
+    "evidence": "[thermal 14:10-14:16] cpu 93 \u00b0C sustained during \"cargo build\" in project=photo-sorter",
+    "must_include": [
+      [
+        "build",
+        "compil"
+      ]
+    ],
+    "must_not_include": [
+      "game"
+    ],
+    "answer": "<think>\nOkay, the user is asking why their laptop got hot during a \"cargo build\" in the photo-sorter project. They provided a time range and the CPU temperature of 93\u00b0C. Let me break this down.\n\nFirst, 93\u00b0C is definitely too hot for a laptop. CPUs usually run up to around 80-85\u00b0C under load, so 93\u00b0C is a red flag. The user mentioned a \"cargo build,\" which is a term often used in Rust programming. Cargo is the package manager for Rust, and a build process can generate a lot of heat if it's not optimized.\n\nPossible reasons for the high temperature: the build process is CPU-intensive, maybe the laptop's cooling system isn't sufficient, or the build script is inefficient. The user might have a",
+    "raw_output": "<think>\nOkay, the user is asking why their laptop got hot during a \"cargo build\" in the photo-sorter project. They provided a time range and the CPU temperature of 93\u00b0C. Let me break this down.\n\nFirst, 93\u00b0C is definitely too hot for a laptop. CPUs usually run up to around 80-85\u00b0C under load, so 93\u00b0C is a red flag. The user mentioned a \"cargo build,\" which is a term often used in Rust programming. Cargo is the package manager for Rust, and a build process can generate a lot of heat if it's not optimized.\n\nPossible reasons for the high temperature: the build process is CPU-intensive, maybe the laptop's cooling system isn't sufficient, or the build script is inefficient. The user might have a\n\n",
+    "passed": true,
+    "groups_passed": true,
+    "no_forbidden": true,
+    "returncode": 0
+  },
+  {
+    "id": "g19",
+    "question": "How often should I water the cactus?",
+    "evidence": "[note notes/plants.md] Water the fern every 3 days; the cactus every 2 weeks.",
+    "must_include": [
+      [
+        "two weeks",
+        "2 weeks",
+        "fortnight",
+        "14 days"
+      ]
+    ],
+    "must_not_include": [
+      "every 3 days"
+    ],
+    "answer": "The cactus should be watered every 2 weeks.",
+    "raw_output": "<think>\nOkay, the user is asking about how often to water their cactus. I remember from the notes that the fern needs water every 3 days, and the cactus every 2 weeks. The user specifically asked about the cactus, so the answer should be based on the note provided. Let me make sure I'm not mixing up the two. The note clearly states the cactus every 2 weeks, so the answer is straightforward. I don't need to add any extra information since the question is directly about the cactus. Just confirm the note's information and provide the answer clearly.\n</think>\n\nThe cactus should be watered every 2 weeks. [end of text]\n\n\n",
+    "passed": true,
+    "groups_passed": true,
+    "no_forbidden": true,
+    "returncode": 0
+  },
+  {
+    "id": "g20",
+    "question": "Where did I say my locker code is?",
+    "evidence": "[voice 2026-11-14 22:10] Q: remember that my locker code is on the blue sticky note A: Got it \u2014 I'll remember that.",
+    "must_include": [
+      [
+        "blue"
+      ]
+    ],
+    "must_not_include": [
+      "red"
+    ],
+    "answer": "<think>\nOkay, let's see. The user asked me to remember their locker code is on the blue sticky note. I responded with \"Got it \u2014 I'll remember that.\" Now they're asking where I said their locker code is. Wait, the original message was about the locker code being on the blue sticky note. The user is probably confused because I didn't explicitly mention the location of the sticky note. But in the conversation, I did say the code is on the blue sticky note. Maybe the user is asking for confirmation or a specific detail about the location. However, the initial instruction was to be brief and concrete, so I should stick to the facts given. The key point is that the code is on the blue sticky note. The user might be expecting a more detailed answer,",
+    "raw_output": "<think>\nOkay, let's see. The user asked me to remember their locker code is on the blue sticky note. I responded with \"Got it \u2014 I'll remember that.\" Now they're asking where I said their locker code is. Wait, the original message was about the locker code being on the blue sticky note. The user is probably confused because I didn't explicitly mention the location of the sticky note. But in the conversation, I did say the code is on the blue sticky note. Maybe the user is asking for confirmation or a specific detail about the location. However, the initial instruction was to be brief and concrete, so I should stick to the facts given. The key point is that the code is on the blue sticky note. The user might be expecting a more detailed answer,\n\n",
+    "passed": true,
+    "groups_passed": true,
+    "no_forbidden": true,
+    "returncode": 0
+  }
+]

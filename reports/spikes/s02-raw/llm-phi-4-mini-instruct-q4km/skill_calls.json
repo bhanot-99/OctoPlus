@@ -1,0 +1,403 @@
+[
+  {
+    "id": "s01",
+    "request": "What's taking up space on my disk?",
+    "expected_skill": "system.disk_report",
+    "expect_args": [],
+    "answer": "{ \"skill\": \"system.disk_report\", \"args\": { \"output\": \"summary\" } }",
+    "parsed_json": {
+      "skill": "system.disk_report",
+      "args": {
+        "output": "summary"
+      }
+    },
+    "is_parsed": true,
+    "skill_matched": true,
+    "args_matched": true,
+    "passed": true,
+    "returncode": 0
+  },
+  {
+    "id": "s02",
+    "request": "Pause listening for 30 minutes.",
+    "expected_skill": "privacy.pause",
+    "expect_args": [
+      "minutes"
+    ],
+    "answer": "{ \"skill\": \"system.read_metadata\", \"args\":  {\"pausetime\": \"30 min\", \"action\": \"pausing listening\" } }",
+    "parsed_json": {
+      "skill": "system.read_metadata",
+      "args": {
+        "pausetime": "30 min",
+        "action": "pausing listening"
+      }
+    },
+    "is_parsed": true,
+    "skill_matched": false,
+    "args_matched": false,
+    "passed": false,
+    "returncode": 0
+  },
+  {
+    "id": "s03",
+    "request": "What's on my calendar tomorrow?",
+    "expected_skill": "calendar.read",
+    "expect_args": [
+      "date"
+    ],
+    "answer": "{\"skill\": \"notes.append\", \"args\":  {\"date\": \"2023-04-05\", \"time\": \"09:00\", \"event\": \"Team Meeting\", \"location\": \"Conference Room A\"}}",
+    "parsed_json": {
+      "skill": "notes.append",
+      "args": {
+        "date": "2023-04-05",
+        "time": "09:00",
+        "event": "Team Meeting",
+        "location": "Conference Room A"
+      }
+    },
+    "is_parsed": true,
+    "skill_matched": false,
+    "args_matched": true,
+    "passed": false,
+    "returncode": 0
+  },
+  {
+    "id": "s04",
+    "request": "Search my notes for the lentil recipe.",
+    "expected_skill": "notes.search",
+    "expect_args": [
+      "query"
+    ],
+    "answer": "{ \"skill\": \"notes.search\", \"args\": { \"recip\": \"lentil\", \"recip.t\": \"recipe\" } }",
+    "parsed_json": {
+      "skill": "notes.search",
+      "args": {
+        "recip": "lentil",
+        "recip.t": "recipe"
+      }
+    },
+    "is_parsed": true,
+    "skill_matched": true,
+    "args_matched": false,
+    "passed": false,
+    "returncode": 0
+  },
+  {
+    "id": "s05",
+    "request": "Remember that my bike lock code is on the green card.",
+    "expected_skill": "profile.remember",
+    "expect_args": [
+      "fact"
+    ],
+    "answer": "{ \"skill\": \"notes.append\"  , \"args\": { \"code\": \"green card\", \"item\": \"bike lock\" } }",
+    "parsed_json": {
+      "skill": "notes.append",
+      "args": {
+        "code": "green card",
+        "item": "bike lock"
+      }
+    },
+    "is_parsed": true,
+    "skill_matched": false,
+    "args_matched": false,
+    "passed": false,
+    "returncode": 0
+  },
+  {
+    "id": "s06",
+    "request": "Forget that I'm vegetarian.",
+    "expected_skill": "profile.forget",
+    "expect_args": [
+      "fact"
+    ],
+    "answer": "{\n  \"skill\": \"notes.append\",\n  \"args\": {\n    \"dietary_change\": \"noted\",\n    \"reason\": \"unknown\"\n  }\n}",
+    "parsed_json": {
+      "skill": "notes.append",
+      "args": {
+        "dietary_change": "noted",
+        "reason": "unknown"
+      }
+    },
+    "is_parsed": true,
+    "skill_matched": false,
+    "args_matched": false,
+    "passed": false,
+    "returncode": 0
+  },
+  {
+    "id": "s07",
+    "request": "Delete everything you recorded between 2 and 3 pm today.",
+    "expected_skill": "memory.forget",
+    "expect_args": [
+      "from",
+      "to"
+    ],
+    "answer": "{\"skill\": \"notes.append\", \"args\":  {\"time\": \"2-3 pm\", \"action\": \"delete\", \"content\": \"all recordings\"}}",
+    "parsed_json": {
+      "skill": "notes.append",
+      "args": {
+        "time": "2-3 pm",
+        "action": "delete",
+        "content": "all recordings"
+      }
+    },
+    "is_parsed": true,
+    "skill_matched": false,
+    "args_matched": false,
+    "passed": false,
+    "returncode": 0
+  },
+  {
+    "id": "s08",
+    "request": "Add 'buy fern food' to my shopping note.",
+    "expected_skill": "notes.append",
+    "expect_args": [
+      "note",
+      "text"
+    ],
+    "answer": "{\"skill\": \"notes.append\", \"args\": {\"note\": \"buy fern food\", \"category\": \"shopping\"}}",
+    "parsed_json": {
+      "skill": "notes.append",
+      "args": {
+        "note": "buy fern food",
+        "category": "shopping"
+      }
+    },
+    "is_parsed": true,
+    "skill_matched": true,
+    "args_matched": false,
+    "passed": false,
+    "returncode": 0
+  },
+  {
+    "id": "s09",
+    "request": "Clean up my caches to free some space.",
+    "expected_skill": "system.cleanup",
+    "expect_args": [],
+    "answer": "{\n  \"skill\": \"system.cleanup\"\n  ,\"args\":  {\"cache\": \"cleaned\", \"space\": \"freed\"}\n}",
+    "parsed_json": {
+      "skill": "system.cleanup",
+      "args": {
+        "cache": "cleaned",
+        "space": "freed"
+      }
+    },
+    "is_parsed": true,
+    "skill_matched": true,
+    "args_matched": true,
+    "passed": true,
+    "returncode": 0
+  },
+  {
+    "id": "s10",
+    "request": "Look up the opening hours of the Lisbon aquarium.",
+    "expected_skill": "web.search",
+    "expect_args": [
+      "query"
+    ],
+    "answer": "{\n  \"skill\": \"memory.forget\",\n  \"args\": {\n    \"name\": \"Lisbon Aquarium\",\n    \"location\": \"Lisbon, Portugal\",\n    \"opening_hours\": \"9:00 AM - 5:00 PM\"\n  }\n}",
+    "parsed_json": {
+      "skill": "memory.forget",
+      "args": {
+        "name": "Lisbon Aquarium",
+        "location": "Lisbon, Portugal",
+        "opening_hours": "9:00 AM - 5:00 PM"
+      }
+    },
+    "is_parsed": true,
+    "skill_matched": false,
+    "args_matched": false,
+    "passed": false,
+    "returncode": 0
+  },
+  {
+    "id": "s11",
+    "request": "Open this link and summarise it: https://example.org/article",
+    "expected_skill": "web.fetch",
+    "expect_args": [
+      "url"
+    ],
+    "answer": "{ \"skill\": \"notes.append\"",
+    "parsed_json": null,
+    "is_parsed": false,
+    "skill_matched": false,
+    "args_matched": false,
+    "passed": false,
+    "returncode": 0
+  },
+  {
+    "id": "s12",
+    "request": "How long has my laptop been running?",
+    "expected_skill": "system.read_metadata",
+    "expect_args": [],
+    "answer": "{\"skill\": \"notes.append\", \"args\":  {\"time\": \"unknown\", \"info\": \"I don't have access to your laptop's history.\"}}",
+    "parsed_json": {
+      "skill": "notes.append",
+      "args": {
+        "time": "unknown",
+        "info": "I don't have access to your laptop's history."
+      }
+    },
+    "is_parsed": true,
+    "skill_matched": false,
+    "args_matched": true,
+    "passed": false,
+    "returncode": 0
+  },
+  {
+    "id": "s13",
+    "request": "Stop listening for an hour, I'm in a meeting.",
+    "expected_skill": "privacy.pause",
+    "expect_args": [
+      "minutes"
+    ],
+    "answer": "{ \"skill\": \"notes.append\" , \"args\": { \"time\": \"1 tim\", \"type\": \"meeting\" } }",
+    "parsed_json": {
+      "skill": "notes.append",
+      "args": {
+        "time": "1 tim",
+        "type": "meeting"
+      }
+    },
+    "is_parsed": true,
+    "skill_matched": false,
+    "args_matched": false,
+    "passed": false,
+    "returncode": 0
+  },
+  {
+    "id": "s14",
+    "request": "Find my notes about the Lisbon trip.",
+    "expected_skill": "notes.search",
+    "expect_args": [
+      "query"
+    ],
+    "answer": "{\"skill\": \"notes.search\", \"args\": {\"trip\": \"Lisbon\", \"date\": \"unspecified\"}}",
+    "parsed_json": {
+      "skill": "notes.search",
+      "args": {
+        "trip": "Lisbon",
+        "date": "unspecified"
+      }
+    },
+    "is_parsed": true,
+    "skill_matched": true,
+    "args_matched": false,
+    "passed": false,
+    "returncode": 0
+  },
+  {
+    "id": "s15",
+    "request": "Search the web for the latest stable kernel version.",
+    "expected_skill": "web.search",
+    "expect_args": [
+      "query"
+    ],
+    "answer": "{\"skill\": \"web.search\", \"args\": {\"query\": \"latest stable Linux kernel version\"}}",
+    "parsed_json": {
+      "skill": "web.search",
+      "args": {
+        "query": "latest stable Linux kernel version"
+      }
+    },
+    "is_parsed": true,
+    "skill_matched": true,
+    "args_matched": true,
+    "passed": true,
+    "returncode": 0
+  },
+  {
+    "id": "s16",
+    "request": "Remember my sister Mira's birthday is the 9th of March.",
+    "expected_skill": "profile.remember",
+    "expect_args": [
+      "fact"
+    ],
+    "answer": "{\"skill\": \"memory.forget\", \"args\":  {\"date\": \"March 9\", \"event\": \"birthday\", \"person\": \"Mira\"}}",
+    "parsed_json": {
+      "skill": "memory.forget",
+      "args": {
+        "date": "March 9",
+        "event": "birthday",
+        "person": "Mira"
+      }
+    },
+    "is_parsed": true,
+    "skill_matched": false,
+    "args_matched": false,
+    "passed": false,
+    "returncode": 0
+  },
+  {
+    "id": "s17",
+    "request": "Do I have anything on Friday afternoon?",
+    "expected_skill": "calendar.read",
+    "expect_args": [
+      "date"
+    ],
+    "answer": "{\"skill\": \"notes.append\", \"args\":  {\"s\": \"no\", \"t\": \"no\", \"i\": \"no\", \"n\": \"no\", \"e\": \"no\", \"r\": \"no\", \"s\": \"no\", \"a\": \"no\", \"p\": \"no\", \"l\": \"no\", \"o\": \"no\", \"v\": \"no\", \"d\": \"no\", \"f\": \"no\", \"i\": \"no\", \"c\": \"no\", \"u\": \"no\", \"b\": \"no\", \"k\": \"no\", \"m\": \"no\", \"w\": \"no\", \"h\": \"no\", \"q\": \"no\",",
+    "parsed_json": null,
+    "is_parsed": false,
+    "skill_matched": false,
+    "args_matched": false,
+    "passed": false,
+    "returncode": 0
+  },
+  {
+    "id": "s18",
+    "request": "Forget everything from Firefox today.",
+    "expected_skill": "memory.forget",
+    "expect_args": [
+      "app"
+    ],
+    "answer": "{\n  \"skill\": \"calendar.read\",\n  \"args\":   {\n    \"firefox\": \"calenna\",\n    \"data\": \"untrusted\"\n  }\n}",
+    "parsed_json": {
+      "skill": "calendar.read",
+      "args": {
+        "firefox": "calenna",
+        "data": "untrusted"
+      }
+    },
+    "is_parsed": true,
+    "skill_matched": false,
+    "args_matched": false,
+    "passed": false,
+    "returncode": 0
+  },
+  {
+    "id": "s19",
+    "request": "Tell me a joke.",
+    "expected_skill": "none",
+    "expect_args": [],
+    "answer": "{\"skill\": \"privacy.pause\", \"args\":  {\"joke\": \"Why don't scientists trust atoms? Because they make up everything!\"}}",
+    "parsed_json": {
+      "skill": "privacy.pause",
+      "args": {
+        "joke": "Why don't scientists trust atoms? Because they make up everything!"
+      }
+    },
+    "is_parsed": true,
+    "skill_matched": false,
+    "args_matched": true,
+    "passed": false,
+    "returncode": 0
+  },
+  {
+    "id": "s20",
+    "request": "What version of the kernel am I running?",
+    "expected_skill": "system.read_metadata",
+    "expect_args": [],
+    "answer": "{\n  \"skill\": \"system.disk_report\",\n  \"args\": {\n    \"kernel_version\": \"5.8.10-1\"\n  }\n}",
+    "parsed_json": {
+      "skill": "system.disk_report",
+      "args": {
+        "kernel_version": "5.8.10-1"
+      }
+    },
+    "is_parsed": true,
+    "skill_matched": false,
+    "args_matched": true,
+    "passed": false,
+    "returncode": 0
+  }
+]

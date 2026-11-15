@@ -1,0 +1,105 @@
+{
+  "seed": 20261115,
+  "mapping": {
+    "c01": {
+      "A": "llm-smollm3-3b-q4km",
+      "B": "llm-qwen3-4b-instruct-2507-q4km",
+      "C": "llm-phi-4-mini-instruct-q4km"
+    },
+    "c02": {
+      "A": "llm-smollm3-3b-q4km",
+      "B": "llm-qwen3-4b-instruct-2507-q4km",
+      "C": "llm-phi-4-mini-instruct-q4km"
+    },
+    "c03": {
+      "A": "llm-smollm3-3b-q4km",
+      "B": "llm-qwen3-4b-instruct-2507-q4km",
+      "C": "llm-phi-4-mini-instruct-q4km"
+    },
+    "c04": {
+      "A": "llm-qwen3-4b-instruct-2507-q4km",
+      "B": "llm-phi-4-mini-instruct-q4km",
+      "C": "llm-smollm3-3b-q4km"
+    },
+    "c05": {
+      "A": "llm-phi-4-mini-instruct-q4km",
+      "B": "llm-qwen3-4b-instruct-2507-q4km",
+      "C": "llm-smollm3-3b-q4km"
+    },
+    "c06": {
+      "A": "llm-phi-4-mini-instruct-q4km",
+      "B": "llm-qwen3-4b-instruct-2507-q4km",
+      "C": "llm-smollm3-3b-q4km"
+    },
+    "c07": {
+      "A": "llm-phi-4-mini-instruct-q4km",
+      "B": "llm-smollm3-3b-q4km",
+      "C": "llm-qwen3-4b-instruct-2507-q4km"
+    },
+    "c08": {
+      "A": "llm-phi-4-mini-instruct-q4km",
+      "B": "llm-qwen3-4b-instruct-2507-q4km",
+      "C": "llm-smollm3-3b-q4km"
+    },
+    "c09": {
+      "A": "llm-phi-4-mini-instruct-q4km",
+      "B": "llm-smollm3-3b-q4km",
+      "C": "llm-qwen3-4b-instruct-2507-q4km"
+    },
+    "c10": {
+      "A": "llm-qwen3-4b-instruct-2507-q4km",
+      "B": "llm-phi-4-mini-instruct-q4km",
+      "C": "llm-smollm3-3b-q4km"
+    },
+    "c11": {
+      "A": "llm-smollm3-3b-q4km",
+      "B": "llm-phi-4-mini-instruct-q4km",
+      "C": "llm-qwen3-4b-instruct-2507-q4km"
+    },
+    "c12": {
+      "A": "llm-smollm3-3b-q4km",
+      "B": "llm-qwen3-4b-instruct-2507-q4km",
+      "C": "llm-phi-4-mini-instruct-q4km"
+    },
+    "c13": {
+      "A": "llm-qwen3-4b-instruct-2507-q4km",
+      "B": "llm-smollm3-3b-q4km",
+      "C": "llm-phi-4-mini-instruct-q4km"
+    },
+    "c14": {
+      "A": "llm-smollm3-3b-q4km",
+      "B": "llm-qwen3-4b-instruct-2507-q4km",
+      "C": "llm-phi-4-mini-instruct-q4km"
+    },
+    "c15": {
+      "A": "llm-phi-4-mini-instruct-q4km",
+      "B": "llm-qwen3-4b-instruct-2507-q4km",
+      "C": "llm-smollm3-3b-q4km"
+    },
+    "c16": {
+      "A": "llm-qwen3-4b-instruct-2507-q4km",
+      "B": "llm-phi-4-mini-instruct-q4km",
+      "C": "llm-smollm3-3b-q4km"
+    },
+    "c17": {
+      "A": "llm-smollm3-3b-q4km",
+      "B": "llm-phi-4-mini-instruct-q4km",
+      "C": "llm-qwen3-4b-instruct-2507-q4km"
+    },
+    "c18": {
+      "A": "llm-qwen3-4b-instruct-2507-q4km",
+      "B": "llm-phi-4-mini-instruct-q4km",
+      "C": "llm-smollm3-3b-q4km"
+    },
+    "c19": {
+      "A": "llm-qwen3-4b-instruct-2507-q4km",
+      "B": "llm-smollm3-3b-q4km",
+      "C": "llm-phi-4-mini-instruct-q4km"
+    },
+    "c20": {
+      "A": "llm-qwen3-4b-instruct-2507-q4km",
+      "B": "llm-smollm3-3b-q4km",
+      "C": "llm-phi-4-mini-instruct-q4km"
+    }
+  }
+}
