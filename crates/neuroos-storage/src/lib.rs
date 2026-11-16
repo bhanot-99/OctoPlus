@@ -8,7 +8,10 @@ pub mod db;
 pub mod embed;
 pub mod fusion;
 pub mod ingest;
+pub mod lifecycle;
+pub mod query;
 pub mod spool;
+pub mod store;
 pub mod vectors;
 
 use std::sync::Arc;

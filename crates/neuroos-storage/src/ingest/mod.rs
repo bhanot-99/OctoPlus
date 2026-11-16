@@ -3,7 +3,10 @@
 //! exactly the same result as a live run.
 
 pub mod adapters;
+pub mod apply;
 pub mod filter;
+pub mod live;
+pub mod pipeline;
 
 use neuroos_proto::v1::Domain;
 use neuroos_taint::TaintFlags;
