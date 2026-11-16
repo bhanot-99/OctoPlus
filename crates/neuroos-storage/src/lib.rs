@@ -5,6 +5,7 @@
 //! - Subscribes to `monitor/stream` via [`ReconnectingClient`], reporting DEGRADED when absent.
 
 pub mod db;
+pub mod embed;
 pub mod fusion;
 pub mod ingest;
 pub mod spool;
