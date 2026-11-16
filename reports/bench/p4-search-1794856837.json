@@ -1,0 +1,43 @@
+{
+  "concurrent_with_writer_total": {
+    "max_ms": 26.02583,
+    "n": 200,
+    "p50_ms": 20.133968,
+    "p99_ms": 23.10164
+  },
+  "conditions": {
+    "chunks": 30000,
+    "commit": "see report",
+    "date_unix": 1794856837,
+    "governor": "performance",
+    "loadavg": "7.99"
+  },
+  "embedding_alone": {
+    "max_ms": 7.8204199999999995,
+    "n": 100,
+    "p50_ms": 4.734044,
+    "p99_ms": 7.407729
+  },
+  "first_after_burst_total": {
+    "max_ms": 21.913974,
+    "n": 30,
+    "p50_ms": 19.163082000000003,
+    "p99_ms": 21.913974
+  },
+  "process_rss_mib": {
+    "after_load_and_queries": 308.5,
+    "before_load": 233.71875
+  },
+  "targets": {
+    "p50_ms": 25,
+    "p99_ms": 50,
+    "ref": "NFR-PERF-04"
+  },
+  "warm_total": {
+    "max_ms": 22.295446,
+    "n": 300,
+    "p50_ms": 19.253403,
+    "p99_ms": 21.972775
+  },
+  "what": "C3 hybrid query at the 30,000-chunk cap, real embedding model (bge-small-en-v1.5, 2 threads), 4-thread scan, release build"
+}
