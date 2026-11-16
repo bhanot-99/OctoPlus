@@ -246,6 +246,41 @@ async fn negative_control_a_mount_that_cannot_be_read_is_skipped_and_a_missing_f
     task.await.unwrap();
 }
 
+#[test]
+fn usage_arithmetic_for_empty_full_reserved_and_absurd_filesystems() {
+    // 1000 blocks of 4 KiB.
+    assert_eq!(
+        disk::usage_from(1000, 4096, 1000, 1000),
+        Some((4_096_000, 0, 4_096_000)),
+        "empty"
+    );
+    assert_eq!(
+        disk::usage_from(1000, 4096, 0, 0),
+        Some((4_096_000, 4_096_000, 0)),
+        "full"
+    );
+    // 50 reserved blocks: root could still write them, a user cannot.
+    assert_eq!(
+        disk::usage_from(1000, 4096, 50, 0),
+        Some((4_096_000, 3_891_200, 0)),
+        "full for users"
+    );
+    assert_eq!(
+        disk::usage_from(1000, 4096, 500, 450),
+        Some((4_096_000, 2_048_000, 1_843_200))
+    );
+    assert_eq!(
+        disk::usage_from(u64::MAX, 4096, 0, 0),
+        None,
+        "overflow is refused, not wrapped"
+    );
+    assert_eq!(
+        disk::usage_from(0, 0, 0, 0),
+        Some((0, 0, 0)),
+        "a zero-size pseudo filesystem"
+    );
+}
+
 // ---------------------------------------------------------------- battery (FR-MON-06)
 
 fn bat(status: &str, now: u64, full: u64, power: u64) -> Reading {

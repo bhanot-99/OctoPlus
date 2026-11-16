@@ -106,13 +106,21 @@ pub fn relevant_mounts(text: &str) -> Vec<Mount> {
         .collect()
 }
 
+/// `(total, used, free)` bytes from `statvfs` counters. `free` is what an ordinary user can
+/// still write (`f_bavail`), which is less than the filesystem's free space when blocks are
+/// reserved; `used` counts the reserved blocks as free, like `df`. `None` on overflow.
+#[must_use]
+pub fn usage_from(blocks: u64, frsize: u64, bfree: u64, bavail: u64) -> Option<(u64, u64, u64)> {
+    let total = blocks.checked_mul(frsize)?;
+    let free = bavail.checked_mul(frsize)?;
+    let used = total.saturating_sub(bfree.checked_mul(frsize)?);
+    Some((total, used, free))
+}
+
 /// `(total, used, free)` bytes for a mount point.
 fn usage(mount_point: &str) -> Option<(u64, u64, u64)> {
     let s = rustix::fs::statvfs(mount_point).ok()?;
-    let total = s.f_blocks.checked_mul(s.f_frsize)?;
-    let free = s.f_bavail.checked_mul(s.f_frsize)?;
-    let used = total.saturating_sub(s.f_bfree.checked_mul(s.f_frsize)?);
-    Some((total, used, free))
+    usage_from(s.f_blocks, s.f_frsize, s.f_bfree, s.f_bavail)
 }
 
 /// Samples every relevant mount every `disk_interval_s`.

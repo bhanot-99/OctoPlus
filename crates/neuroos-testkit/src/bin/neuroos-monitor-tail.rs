@@ -11,9 +11,9 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use neuroos_common::paths;
 use neuroos_ipc::Client;
+use neuroos_proto::v1::MonitorSubscribe;
 use neuroos_proto::v1::envelope::Body;
 use neuroos_proto::v1::monitor_event::Event;
-use neuroos_proto::v1::MonitorSubscribe;
 
 #[derive(Debug, Parser)]
 #[command(about = "Count the events C1 emits for a while")]
@@ -54,7 +54,10 @@ async fn main() -> Result<()> {
         .context("cannot connect to the monitor stream")?;
     let total = Duration::from_secs(args.seconds);
     let mut stream = client
-        .stream(Body::MonitorSubscribe(MonitorSubscribe {}), total + Duration::from_secs(5))
+        .stream(
+            Body::MonitorSubscribe(MonitorSubscribe {}),
+            total + Duration::from_secs(5),
+        )
         .await
         .context("subscribe failed")?;
     let mut counts: BTreeMap<&'static str, u64> = BTreeMap::new();

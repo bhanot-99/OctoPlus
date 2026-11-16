@@ -284,3 +284,95 @@ fn the_snapshot_is_not_handed_out_while_paused_and_is_bounded_by_the_queue() {
         "nothing is handed out during a pause"
     );
 }
+
+/// FI: a subscriber that never reads must not slow the sensors, must not grow memory without
+/// bound, and must still get the newest events in order when it starts reading again.
+#[tokio::test]
+async fn a_stalled_socket_subscriber_never_blocks_publishing_and_loses_only_old_events() {
+    let (bus, health) = bus(32, Arc::new(SystemClock));
+    let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);
+    let handler = Arc::new(StreamHandler::new(Arc::clone(&bus), stop_rx.clone()));
+    let dir = tempfile::tempdir().unwrap();
+    let sock_dir = dir.path().join("stream");
+    neuroos_ipc::server::ensure_private_dir(&sock_dir).unwrap();
+    let sock = sock_dir.join("stream.sock");
+    let server = Server::bind(
+        &sock,
+        ServerConfig::new(1024 * 1024, Duration::from_secs(30)),
+    )
+    .await
+    .unwrap();
+    let mut srv_stop = stop_rx;
+    let serve = tokio::spawn(server.serve(handler, async move {
+        let _ = srv_stop.wait_for(|s| *s).await;
+    }));
+    let client = Client::connect(&sock, 1024 * 1024).await.unwrap();
+    let mut stream = client
+        .stream(
+            Body::MonitorSubscribe(MonitorSubscribe {}),
+            Duration::from_secs(30),
+        )
+        .await
+        .unwrap();
+    while bus.subscriber_count() == 0 {
+        tokio::task::yield_now().await;
+    }
+    // The client is not reading. Publish far more than any queue can hold.
+    let started = std::time::Instant::now();
+    for i in 1..=20_000u64 {
+        bus.publish(idle(i, i % 2 == 0));
+        if i % 1000 == 0 {
+            tokio::task::yield_now().await; // let the handler move events along
+        }
+    }
+    assert!(
+        started.elapsed() < Duration::from_secs(2),
+        "publishing never waits for a reader"
+    );
+    assert!(
+        health.counter("events_dropped").load(Ordering::Relaxed) > 0,
+        "the loss is counted, not silent"
+    );
+    // The IPC layer cuts a reader that falls too far behind with a retryable error (ADR-0003);
+    // what arrived before that is in order.
+    let mut last = 0;
+    let mut ended_with = String::from("silence");
+    loop {
+        match tokio::time::timeout(Duration::from_millis(300), stream.next()).await {
+            Ok(Some(Ok(Body::MonitorEvent(e)))) => {
+                assert!(e.observed_at_ns > last, "order is kept");
+                last = e.observed_at_ns;
+            }
+            Ok(other) => {
+                ended_with = format!("{other:?}");
+                break;
+            }
+            Err(_) => break,
+        }
+    }
+    assert!(
+        ended_with.contains("ResourceExhausted") && ended_with.contains("retryable: true"),
+        "a stalled reader is cut loose with a retryable error, got {ended_with}"
+    );
+    // Reconnecting works at once and starts from the latest state, so nothing important is lost.
+    let mut again = client
+        .stream(
+            Body::MonitorSubscribe(MonitorSubscribe {}),
+            Duration::from_secs(30),
+        )
+        .await
+        .unwrap();
+    let Some(Ok(Body::MonitorEvent(first))) =
+        tokio::time::timeout(Duration::from_secs(2), again.next())
+            .await
+            .unwrap()
+    else {
+        panic!("a snapshot event was expected on reconnect");
+    };
+    assert_eq!(
+        first.observed_at_ns, 20_000,
+        "the reconnect snapshot is the newest state"
+    );
+    stop_tx.send(true).unwrap();
+    let _ = serve.await;
+}
