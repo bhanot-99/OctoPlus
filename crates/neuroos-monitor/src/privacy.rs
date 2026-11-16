@@ -161,6 +161,10 @@ impl Privacy {
 }
 
 impl Gate for Privacy {
+    fn snapshot_allowed(&self) -> bool {
+        !self.is_paused()
+    }
+
     fn admit(&self, mut event: MonitorEvent) -> Option<MonitorEvent> {
         // Exclusion state follows focus even while paused: a window focused during a pause
         // must still hide the process tree that arrives right after resume.

@@ -3,13 +3,14 @@
 //! it never blocks a sensor (AB-11, rules §9.7). The [`Gate`] is the only place an event
 //! may be stopped or changed (AB-5, FR-MON-10).
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use neuroos_health::{Health, LatencyHistogram};
 use neuroos_proto::v1::MonitorEvent;
+use neuroos_proto::v1::monitor_event::Event;
 use tokio::sync::Notify;
 
 use crate::clock::Clock;
@@ -19,6 +20,12 @@ use crate::clock::Clock;
 pub trait Gate: Send + Sync + 'static {
     /// `Some(event)` (possibly redacted) to publish, `None` to drop silently.
     fn admit(&self, event: MonitorEvent) -> Option<MonitorEvent>;
+
+    /// Whether a new subscriber may be given the last known state. False while paused:
+    /// nothing is handed out during a pause, not even older observations.
+    fn snapshot_allowed(&self) -> bool {
+        true
+    }
 }
 
 /// Lets everything through (tests and the foundation only).
@@ -30,6 +37,9 @@ impl Gate for PassGate {
         Some(event)
     }
 }
+
+/// Most distinct state keys remembered (media players and mounts are few; this is a ceiling).
+const LATEST_CAP: usize = 256;
 
 fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     m.lock().unwrap_or_else(PoisonError::into_inner)
@@ -85,6 +95,8 @@ impl Drop for Subscription {
 /// The bus. Cheap to share.
 pub struct Bus {
     gate: Arc<dyn Gate>,
+    /// The last event of every state-like kind, so a late subscriber starts informed.
+    latest: Mutex<HashMap<String, MonitorEvent>>,
     clock: Arc<dyn Clock>,
     health: Arc<Health>,
     capacity: usize,
@@ -115,6 +127,7 @@ impl Bus {
         health.gauge("subscribers", 0.0);
         Arc::new(Self {
             gate,
+            latest: Mutex::new(HashMap::new()),
             clock,
             capacity: capacity.max(1),
             subs: Mutex::new(Vec::new()),
@@ -133,6 +146,7 @@ impl Bus {
         let Some(event) = self.gate.admit(event) else {
             return;
         };
+        self.remember(&event);
         let subs = lock(&self.subs);
         for (_, q) in subs.iter() {
             let mut items = lock(&q.items);
@@ -152,6 +166,27 @@ impl Bus {
         self.latency.record(Duration::from_nanos(lag));
     }
 
+    /// Keeps the newest event of each *state* kind (not process trees or file activity,
+    /// which are things that happened, not things that are). Bounded: a new key is
+    /// ignored once the table is full.
+    fn remember(&self, event: &MonitorEvent) {
+        let key = match event.event.as_ref() {
+            Some(Event::Focus(_)) => "focus".to_owned(),
+            Some(Event::Idle(_)) => "idle".to_owned(),
+            Some(Event::Lock(_)) => "lock".to_owned(),
+            Some(Event::Media(m)) => format!("media:{}", m.player),
+            Some(Event::Resources(_)) => "resources".to_owned(),
+            Some(Event::Disk(d)) => format!("disk:{}", d.mount_point),
+            Some(Event::Battery(_)) => "battery".to_owned(),
+            Some(Event::Thermal(t)) => format!("thermal:{}", t.sensor),
+            Some(Event::ProcessTree(_) | Event::File(_)) | None => return,
+        };
+        let mut latest = lock(&self.latest);
+        if latest.len() < LATEST_CAP || latest.contains_key(&key) {
+            latest.insert(key, event.clone());
+        }
+    }
+
     /// How many subscriptions are open.
     #[must_use]
     pub fn subscriber_count(&self) -> usize {
@@ -167,6 +202,14 @@ impl Bus {
             notify: Notify::new(),
             dropped: AtomicU64::new(0),
         });
+        if self.gate.snapshot_allowed() {
+            let mut known: Vec<MonitorEvent> = lock(&self.latest).values().cloned().collect();
+            known.sort_by_key(|e| e.observed_at_ns);
+            let mut items = lock(&queue.items);
+            // The newest `capacity` states, oldest first.
+            let skip = known.len().saturating_sub(self.capacity);
+            items.extend(known.into_iter().skip(skip));
+        }
         let mut subs = lock(&self.subs);
         subs.push((id, Arc::clone(&queue)));
         self.health.gauge("subscribers", subs.len() as f64);

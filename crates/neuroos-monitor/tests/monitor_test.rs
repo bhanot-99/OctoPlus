@@ -202,3 +202,67 @@ fn test_privacy() -> Arc<neuroos_monitor::Privacy> {
         neuroos_health::Health::new("neuroos-monitor", "0.1.0"),
     )
 }
+
+/// IT (local): every real sensor started the way the service starts them, a real subscriber
+/// on a socket sees a disk sample (the disk sensor samples at once), and health has a row for
+/// every sensor. (The peer-unit policy of the real `stream.sock` rejects a test process on
+/// purpose, so the real-unit run is checked by `scripts/p3-live-check.sh`.)
+#[tokio::test]
+async fn local_all_sensors_stream_real_events_and_each_has_a_health_row() {
+    use neuroos_monitor::bus::Bus;
+    use neuroos_monitor::exclusion::Exclusion;
+    let health = neuroos_health::Health::new("neuroos-monitor", "test");
+    let clock: Arc<dyn neuroos_monitor::clock::Clock> =
+        Arc::new(neuroos_monitor::clock::SystemClock);
+    let privacy = neuroos_monitor::Privacy::new(
+        Arc::clone(&clock),
+        Exclusion::default(),
+        Arc::clone(&health),
+    );
+    let bus = Bus::new(
+        256,
+        Arc::clone(&privacy) as Arc<dyn neuroos_monitor::bus::Gate>,
+        clock,
+        Arc::clone(&health),
+    );
+    let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);
+    let cfg = neuroos_common::config::MonitorConfig::default();
+    let handles = neuroos_monitor::spawn_sensors(&cfg, &bus, &privacy, &health, &stop_rx);
+
+    let sub = bus.subscribe();
+    let mut seen_disk = false;
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+    while tokio::time::Instant::now() < deadline && !seen_disk {
+        if let Ok(e) = tokio::time::timeout(Duration::from_millis(500), sub.next()).await {
+            seen_disk |= matches!(
+                e.event,
+                Some(neuroos_proto::v1::monitor_event::Event::Disk(_))
+            );
+        }
+    }
+    assert!(seen_disk, "a real disk sample must arrive");
+    let snap = health.snapshot();
+    for name in [
+        "resources",
+        "disk",
+        "battery",
+        "thermal",
+        "focus",
+        "proc",
+        "idle",
+        "media",
+        "folders",
+    ] {
+        assert!(
+            snap.subsystems.iter().any(|s| s.name == name),
+            "no health row for {name}"
+        );
+    }
+    // A late subscriber starts with the latest state, so a reconnecting C3 is not blind.
+    let late = bus.subscribe();
+    assert!(late.try_next().is_some());
+    stop_tx.send(true).unwrap();
+    for h in handles {
+        h.await.unwrap();
+    }
+}

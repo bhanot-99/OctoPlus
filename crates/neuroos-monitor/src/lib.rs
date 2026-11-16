@@ -81,6 +81,50 @@ pub fn init(ctx: &mut neuroos_health::ServiceContext) -> Result<(), neuroos_heal
     init_with(ctx, &Options::default())
 }
 
+/// Starts every sensor under its own supervisor (P3 steps 1–2). Each reports its own health;
+/// one failing never stops the others. The handles end when `stop` turns true.
+#[must_use]
+pub fn spawn_sensors(
+    cfg: &neuroos_common::config::MonitorConfig,
+    bus: &Arc<bus::Bus>,
+    privacy: &Arc<Privacy>,
+    health: &Arc<neuroos_health::Health>,
+    stop: &tokio::sync::watch::Receiver<bool>,
+) -> Vec<tokio::task::JoinHandle<()>> {
+    use sensors::{battery, cosmic, disk, folders, idle, mpris, proc, resources, thermal};
+    let table = proc::ProcTable::new(std::path::Path::new("/proc"));
+    let (focused_tx, focused_rx) = tokio::sync::watch::channel(String::new());
+    let snapshot = privacy.snapshot_requests();
+    let clock: Arc<dyn clock::Clock> = Arc::new(clock::SystemClock);
+    let mut handles = Vec::new();
+
+    macro_rules! run {
+        ($sensor:expr) => {
+            handles.push(tokio::spawn(supervisor::supervise(
+                $sensor,
+                Arc::clone(bus),
+                Arc::clone(&clock),
+                Arc::clone(health),
+                stop.clone(),
+            )))
+        };
+    }
+    run!(resources::ResourcesSensor::new(cfg));
+    run!(disk::DiskSensor::new(cfg));
+    run!(battery::BatterySensor::new(cfg));
+    run!(thermal::ThermalSensor::new(cfg));
+    run!(cosmic::FocusSensor::new(
+        Arc::clone(&table),
+        focused_tx,
+        snapshot.clone()
+    ));
+    run!(proc::ProcSensor::new(table, focused_rx));
+    run!(idle::IdleSensor::new(cfg, snapshot.clone()));
+    run!(mpris::MprisSensor::new(snapshot));
+    run!(folders::FoldersSensor::new(cfg));
+    handles
+}
+
 /// Initializes the C1 monitor: privacy gate, bus, stream and control sockets, recorder.
 ///
 /// # Errors
@@ -117,6 +161,14 @@ pub fn init_with(
             }
         });
     }
+    let handles = spawn_sensors(
+        &ctx.config.monitor,
+        &bus,
+        &privacy,
+        &ctx.health,
+        &ctx.stop_rx,
+    );
+    ctx.handles.extend(handles);
     let stream_handler = Arc::new(StreamHandler::new(bus, ctx.stop_rx.clone()));
     let control_handler = Arc::new(ControlHandler::new(privacy));
 

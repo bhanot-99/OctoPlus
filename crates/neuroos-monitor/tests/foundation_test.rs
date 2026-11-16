@@ -207,3 +207,80 @@ async fn stream_delivers_events_in_order_and_ends_with_a_final_frame() {
     ));
     let _ = serve.await;
 }
+
+#[test]
+fn a_late_subscriber_starts_with_the_latest_state_of_each_kind_in_time_order() {
+    use neuroos_proto::v1::{DiskSample, FileActivity, FocusChanged, ProcessTree};
+    let (bus, _h) = bus(16, Arc::new(FakeClock::new(1_000)));
+    let ev = |t: u64, e: Event| MonitorEvent {
+        observed_at_ns: t,
+        event: Some(e),
+    };
+    let focus = |title: &str| {
+        Event::Focus(FocusChanged {
+            title: title.into(),
+            ..Default::default()
+        })
+    };
+    let disk = |m: &str| {
+        Event::Disk(DiskSample {
+            mount_point: m.into(),
+            ..Default::default()
+        })
+    };
+    bus.publish(ev(1, focus("old")));
+    bus.publish(ev(2, disk("/")));
+    bus.publish(ev(3, disk("/boot")));
+    bus.publish(ev(4, focus("new")));
+    bus.publish(ev(5, Event::ProcessTree(ProcessTree::default())));
+    bus.publish(ev(6, Event::File(FileActivity::default())));
+    bus.publish(ev(7, Event::Idle(IdleChanged { idle: true })));
+    let late = bus.subscribe();
+    let got: Vec<u64> = std::iter::from_fn(|| late.try_next())
+        .map(|e| e.observed_at_ns)
+        .collect();
+    assert_eq!(
+        got,
+        vec![2, 3, 4, 7],
+        "one per state key, newest of each, oldest first; trees and files are not state"
+    );
+}
+
+#[test]
+fn the_snapshot_is_not_handed_out_while_paused_and_is_bounded_by_the_queue() {
+    use neuroos_monitor::exclusion::Exclusion;
+    use neuroos_monitor::privacy::Privacy;
+    let clock = Arc::new(FakeClock::new(1));
+    let health = Health::new("neuroos-monitor", "test");
+    let privacy = Privacy::new(
+        Arc::clone(&clock) as Arc<dyn Clock>,
+        Exclusion::default(),
+        Arc::clone(&health),
+    );
+    let bus = Bus::new(
+        2,
+        Arc::clone(&privacy) as Arc<dyn neuroos_monitor::bus::Gate>,
+        clock as Arc<dyn Clock>,
+        health,
+    );
+    for i in 1..=4u64 {
+        bus.publish(MonitorEvent {
+            observed_at_ns: i,
+            event: Some(Event::Disk(neuroos_proto::v1::DiskSample {
+                mount_point: format!("/m{i}"),
+                ..Default::default()
+            })),
+        });
+    }
+    let sub = bus.subscribe();
+    let got: Vec<u64> = std::iter::from_fn(|| sub.try_next())
+        .map(|e| e.observed_at_ns)
+        .collect();
+    assert_eq!(got, vec![3, 4], "a small queue gets the newest states");
+    privacy.pause(0);
+    let during = bus.subscribe();
+    assert!(
+        during.try_next().is_none(),
+        "nothing is handed out during a pause"
+    );
+}
