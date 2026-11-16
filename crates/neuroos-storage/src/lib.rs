@@ -6,6 +6,7 @@
 
 pub mod db;
 pub mod fusion;
+pub mod ingest;
 pub mod spool;
 pub mod vectors;
 
