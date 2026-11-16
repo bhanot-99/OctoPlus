@@ -12,16 +12,15 @@
 # question, so the first minutes are not steady state). Final = median RSS of the
 # last 10 min. Source: healthd's soak CSV (30 s scrape).
 #
-# Writes to DIR (default .agy/bench): soak-p1-<UTC>.{csv,asks.log,status.jsonl,json,md}.
+# Writes to DIR (default reports/bench, rules.md §9.6): soak-p1-<UTC>.{csv,asks.log,status.jsonl,json,md}.
 # Restores ~/.config/neuroos/config.toml and stops neuroos.target at the end.
-# Needs `just install-dev` first. Written by Claude (replaces agy's draft, whose
-# loop condition raised NameError and which read the wrong CSV folder).
+# Needs `just install-dev` first.
 set -euo pipefail
 
 duration=7200
 interval=20
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-out="$root/.agy/bench"
+out="$root/reports/bench"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --duration) duration="$2"; shift 2 ;;

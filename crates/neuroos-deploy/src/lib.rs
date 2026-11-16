@@ -176,7 +176,7 @@ fn generate_user_service_internal(
     if part == Part::Inference {
         // FR-INF-01 hash check runs in its own unit: on systemd 255 user scope a
         // unit with more than one exec (e.g. ExecStartPre) silently loses
-        // PrivateNetwork for its main process (ADR-0009 addendum, BUG-027).
+        // PrivateNetwork for its main process (ADR-0002 addendum, BUG-028).
         out.push_str(&format!("Requires={MODEL_CHECK_UNIT}\n"));
         out.push_str(&format!("After={after_line} {MODEL_CHECK_UNIT}\n\n"));
     } else {
@@ -332,7 +332,7 @@ pub fn generate_runtime_service() -> String {
     out.push_str("LimitCORE=0\n");
     out.push_str("UMask=0077\n");
 
-    // One exec only: see `single_exec` (BUG-027). Parents come first, so
+    // One exec only: see `single_exec` (BUG-028). Parents come first, so
     // `install -d` creates them in order with this unit's UMask (0700).
     out.push_str(&format!(
         "ExecStart=/usr/bin/install -d -m 0700 {}\n",
@@ -420,7 +420,7 @@ pub fn generate_model_check_service() -> String {
 
 /// True if a unit has exactly one exec line and no pre/post/stop execs.
 /// systemd 255 in user scope drops `PrivateNetwork=` for the main process of a
-/// unit with several execs (measured 2026-11-16, BUG-027), so every user unit
+/// unit with several execs (measured 2026-11-16, BUG-028), so every user unit
 /// must pass this check.
 #[must_use]
 pub fn single_exec(unit: &str) -> bool {

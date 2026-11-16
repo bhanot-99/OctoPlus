@@ -3,7 +3,9 @@
 Semantic-NeuroOS Network Fetcher (C7).
 
 ## Purpose
-The sole network-capable part in Semantic-NeuroOS (system scope). In Phase 1, network fetching is disabled and stubs return `UNSUPPORTED`. Zero network code is linked or executed.
+The only part allowed network access (system unit, own user `neuroos-fetcher`). Fetching and search come in Phase 8.
+
+**Phase 1 (skeleton):** no network code is linked; every fetch request returns the error `UNSUPPORTED_VERSION`. Its sockets are group-shared with `neuroos` (ADR-0009) so C6 and healthd can connect. Install with `sudo bash scripts/install-fetcher.sh`, then `sudo systemctl enable --now neuroos-fetcher`.
 
 ## Sockets
 - `/run/neuroos-fetcher/fetch/fetch.sock`: Accepts `FetchRequest` from C6 `neuroos-kernel`.

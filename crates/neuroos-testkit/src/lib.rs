@@ -296,7 +296,7 @@ impl Handler for EchoHandler {
 /// of them. `systemctl stop neuroos.target` alone returns once the target is
 /// stopped; the parts stop through `PartOf=` as separate jobs, and a `start`
 /// issued next cancels those jobs, so the parts keep running with their old
-/// config (found in the Phase 1 gate: healthd kept a 30 s scrape).
+/// config (BUG-034).
 #[must_use]
 pub fn stop_stack() -> bool {
     Command::new("systemctl")

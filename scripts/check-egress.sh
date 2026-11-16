@@ -34,7 +34,7 @@ check_pid() {
   fi
 
   # The namespace itself must differ from this shell's (host) one: a unit that
-  # silently fell back to the host namespace is a failure, never a warning (BUG-027).
+  # silently fell back to the host namespace is a failure, never a warning (BUG-028).
   local ns host_ns
   ns=$(readlink "/proc/$target_pid/ns/net" 2>/dev/null || true)
   host_ns=$(readlink /proc/self/ns/net)

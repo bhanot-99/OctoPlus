@@ -24,8 +24,6 @@ class FakeEngine : public Engine {
 
   void SetOutputPieces(std::vector<std::string> pieces);
 
-  void SetTokensPerWord(bool enabled) noexcept { tokens_per_word_ = enabled; }
-
   Result<std::vector<std::int32_t>> Tokenize(std::string_view text, bool add_special) override;
 
   Result<std::string> Detokenize(std::int32_t token) override;
@@ -49,7 +47,6 @@ class FakeEngine : public Engine {
  private:
   std::uint32_t ctx_;
   std::chrono::milliseconds delay_{0};
-  bool tokens_per_word_ = true;
   std::vector<std::pair<std::int32_t, std::string>> output_sequence_;
   std::size_t decode_index_ = 0;
   std::vector<std::int32_t> previous_tokens_;

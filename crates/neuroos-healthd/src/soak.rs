@@ -23,9 +23,6 @@ pub const MAX_SOAK_RSS_GROWTH_PERCENT: f64 = 5.0;
 /// Maximum allowed p99 drift percentage under NFR-REL-04.
 pub const MAX_SOAK_P99_DRIFT_PERCENT: f64 = 10.0;
 
-/// Maximum allowed restarts under NFR-REL-04.
-pub const MAX_SOAK_RESTARTS: u64 = 0;
-
 /// Number of initial samples used to establish steady-state baseline.
 pub const SOAK_BASELINE_SAMPLES: usize = 5;
 

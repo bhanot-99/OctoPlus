@@ -3,7 +3,9 @@
 Semantic-NeuroOS Context Monitor (C1).
 
 ## Purpose
-Collects desktop activity events (window focus, idle, system metrics, media playback) and streams them to C3 `neuroos-storage`. Provides pause and resume privacy control.
+Will collect desktop activity (window focus, idle, system metrics, media playback) and stream it to C3 `neuroos-storage`, with pause and resume privacy control (Phase 3).
+
+**Phase 1 (skeleton):** `stream` accepts a subscription and keeps it open but sends no events yet; `control` handles pause and resume and returns the privacy state.
 
 ## Sockets
 - `monitor/stream/stream.sock`: Accepts `MonitorSubscribe`, streams `MonitorEvent` frames to C3.

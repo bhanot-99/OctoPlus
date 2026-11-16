@@ -3,7 +3,9 @@
 Semantic-NeuroOS Safety Kernel (C6).
 
 ## Purpose
-Enforces capability evaluation, taint checks, security gating, and action dispatching.
+Will enforce capability tiers, taint checks, approval and action dispatch (Phase 2).
+
+**Phase 1 (skeleton):** answers every `EvaluateRequest` with `tier: SAFE`, rejects a request without `context_taint`, and keeps reconnecting links to C7 and `monitor/control` (DEGRADED while either is down).
 
 ## Sockets
 - `kernel/kernel/kernel.sock`: Accepts `EvaluateRequest` and capability checks.

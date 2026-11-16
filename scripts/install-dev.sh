@@ -38,7 +38,7 @@ if [[ -f "$root/cpp/CMakeLists.txt" ]]; then
 fi
 
 # Nothing installed here may be writable by anyone but the owner: the units run
-# these binaries, libraries and the hash list (found 0666/0777 on 2026-11-16).
+# these binaries, libraries and the hash list (BUG-031).
 umask 022
 
 echo "=== 3. Setting up dev install prefix ==="

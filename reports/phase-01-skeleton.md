@@ -38,7 +38,7 @@ SC proofs 1–3, kill-and-recover for every user part, fault injection and the 2
 
 | Criterion (phases.md §4.4) | Met? | Evidence |
 | :--- | :--- | :--- |
-| All units start under `neuroos.target` and report real health | Yes | `neuroosctl status` with C7 installed: healthy 7/8. healthd, storage, inference, monitor, kernel, knowledge and fetcher are OK; voice is DEGRADED ("audio not built", true until Phase 6). C6 is OK once its fetcher link is up. |
+| All units start under `neuroos.target` and report real health | Yes | `neuroosctl status` with C7 installed: healthy 7/8. healthd, storage, inference, monitor, kernel, knowledge and fetcher are OK; voice is DEGRADED ("audio not built", true until Phase 7). C6 is OK once its fetcher link is up. |
 | The three SC proofs pass, each with its negative control | Yes | SC1 probe + check-egress; SC2 namespace visibility, with fetcher sockets unreachable and two negative controls (BUG-035); SC3 canary — see §2 and §5 |
 | `neuroosctl ask` works end to end; C4 numbers recorded against ADR-0005 | Yes | §4 |
 | Kill-and-recover verified for every part | Yes, all 7 (healthd is the observer) | §4 table |

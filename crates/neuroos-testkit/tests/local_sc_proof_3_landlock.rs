@@ -4,7 +4,7 @@
 //! 1. A canary file is placed in `~/.local/opt/neuroos/`, which every part unit
 //!    can see (read-only bind) but which no part's Landlock policy allows.
 //! 2. The Rust parts get its path from `config.toml` (`[debug] landlock_canary`),
-//!    the C++ parts from a `--landlock-canary` drop-in (one ExecStart, BUG-027).
+//!    the C++ parts from a `--landlock-canary` drop-in (one ExecStart, BUG-028).
 //!    Each part tries to read it right after `restrict` and reports the result as
 //!    a health counter: `landlock_canary_{denied,allowed,unexpected}`.
 //! 3. The test reads every part's counters through healthd and requires

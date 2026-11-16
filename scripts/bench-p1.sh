@@ -14,13 +14,12 @@
 # Per-part RSS, healthd RSS and end-to-end time to first chunk come from the
 # mini-soak (scripts/soak-p1.sh).
 #
-# Output: DIR/bench-p1-<UTC>.json (default DIR .agy/bench). Written by Claude
-# (replaces agy's draft, which hand-copied the unit instead of deriving it).
+# Output: DIR/bench-p1-<UTC>.json (default DIR reports/bench, rules.md §9.6).
 set -euo pipefail
 
 reps=5
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-out="$root/.agy/bench"
+out="$root/reports/bench"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --reps) reps="$2"; shift 2 ;;

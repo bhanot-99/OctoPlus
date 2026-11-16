@@ -33,19 +33,13 @@ Result<std::vector<std::int32_t>> FakeEngine::Tokenize(std::string_view text, bo
     tokens.push_back(100);  // BOS marker
   }
 
-  if (tokens_per_word_) {
-    const std::string s(text);
-    std::istringstream iss(s);
-    std::string word;
-    std::int32_t id = 1;
-    while (iss >> word) {
-      tokens.push_back(id++);
-    }
-  } else {
-    // 1 token per byte
-    for (char c : text) {
-      tokens.push_back(static_cast<std::int32_t>(static_cast<std::uint8_t>(c)));
-    }
+  // One token per whitespace-separated word.
+  const std::string s(text);
+  std::istringstream iss(s);
+  std::string word;
+  std::int32_t id = 1;
+  while (iss >> word) {
+    tokens.push_back(id++);
   }
 
   if (tokens.empty() && !add_special) {

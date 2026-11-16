@@ -306,7 +306,7 @@ fn cpp_parts_flags_and_model_from_manifest() {
         .iter()
         .find(|f| f.rel_path == Path::new("systemd/user/neuroos-inference.service"))
         .unwrap();
-    // The hash check is its own unit (BUG-027): C4 requires and orders after it.
+    // The hash check is its own unit (BUG-028): C4 requires and orders after it.
     assert!(!inf.content.contains("ExecStartPre="));
     assert!(inf.content.contains("Requires=neuroos-model-check.service"));
     assert!(
@@ -505,7 +505,7 @@ fn service_section_differs_only_in_exec_start_for_probe_rendering() {
     }
 }
 
-/// BUG-027: systemd 255 user scope drops PrivateNetwork for the main process of a
+/// BUG-028: systemd 255 user scope drops PrivateNetwork for the main process of a
 /// unit with more than one exec. Every generated user unit must have exactly one.
 #[test]
 fn every_user_unit_has_exactly_one_exec() {

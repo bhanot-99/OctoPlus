@@ -3,7 +3,9 @@
 Semantic-NeuroOS Storage Engine (C3).
 
 ## Purpose
-Provides vector and text search (hybrid query) over indexed desktop events, notes, and activity. Ingests events from C1 `neuroos-monitor`.
+Will provide vector and text search (hybrid query) over indexed desktop events, notes and activity, ingesting events from C1 `neuroos-monitor` (Phase 4).
+
+**Phase 1 (skeleton):** answers `QueryHybrid` with placeholder evidence carrying a non-empty taint, and subscribes to `monitor/stream` (DEGRADED while C1 is down).
 
 ## Sockets
 - `storage/storage/storage.sock`: Serves hybrid retrieval queries (`QueryHybrid` -> `HybridResult`).
