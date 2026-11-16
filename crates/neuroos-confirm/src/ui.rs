@@ -190,20 +190,25 @@ fn items_list(req: &DialogRequest) -> Option<gtk::Widget> {
         .row_spacing(4)
         .build();
     grid.add_css_class("items");
+    // The suffix only matters when a list mixes "to the trash" with "for good";
+    // when everything is deleted for good, the lead sentence already says so.
+    let mixed = req.items.iter().any(|i| i.kind == ItemKind::MoveToTrash)
+        && req.items.iter().any(|i| i.kind == ItemKind::DeleteForever);
     for (row, item) in (0_i32..).zip(&req.items) {
         let shown = match item.kind {
-            ItemKind::MoveToTrash => format::middle_truncate(&item.path, PATH_CHARS),
-            ItemKind::DeleteForever => format!(
+            ItemKind::DeleteForever if mixed => format!(
                 "{} {}",
                 format::middle_truncate(&item.path, PATH_CHARS - 20),
                 wording::DELETE_FOREVER_SUFFIX
             ),
+            _ => format::middle_truncate(&item.path, PATH_CHARS),
         };
         let path = label(&shown, &["mono"]);
         path.set_wrap(false);
         path.set_hexpand(true);
         path.set_tooltip_text(Some(&item.path));
         let size = label(&format::size(item.size_bytes), &["mono", "size"]);
+        size.set_wrap(false);
         size.set_xalign(1.0);
         grid.attach(&path, 0, row, 1, 1);
         grid.attach(&size, 1, row, 1, 1);
