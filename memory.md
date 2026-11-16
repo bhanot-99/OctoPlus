@@ -13,7 +13,7 @@
 | Last updated | 2026-11-16 |
 | Project stage | **Phase 2 in progress** (started 2026-11-16 on branch `phase_2`). |
 | Current phase | Phase 2 — Safety kernel (C6) |
-| Current story | P2-S01/S02 (agy, T1); P2-S03 dialog (Claude) |
+| Current story | Phase 2 gate (all stories In Check) |
 | Overall progress | 2 / 11 phases |
 | Health | 🟦 Phase 2 building |
 | Next milestone | M2 — safety kernel |
@@ -58,13 +58,13 @@ Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done �
 
 | Story | Title | Status | Builder | Checker |
 | :--- | :--- | :--- | :--- | :--- |
-| P2-S01 | C5 asks whether a capability is allowed and gets a fast answer | In Progress | agy | Claude |
-| P2-S02 | Anything influenced by web content asks the user first | In Progress | agy | Claude |
-| P2-S03 | Clear approval dialog; approval cannot be faked | In Progress (dialog built) | Claude (dialog) | agy review |
-| P2-S04 | Skills run in a sandbox with only the access they need | Backlog | — | — |
-| P2-S05 | Every action has ATTEMPT and RESULT; tampering is detectable | Backlog | — | — |
-| P2-S06 | Disk report and confirmed cleanup of an allowlisted set | Backlog | — | — |
-| P2-S07 | Notifications show only fixed wording with numbers | Backlog | — | — |
+| P2-S01 | C5 asks whether a capability is allowed and gets a fast answer | In Check (gate) | agy (registry, tier) | Claude |
+| P2-S02 | Anything influenced by web content asks the user first | In Check (gate) | agy | Claude |
+| P2-S03 | Clear approval dialog; approval cannot be faked | In Check (gate) | Claude (dialog, tokens, dispatch) | agy review (T4) |
+| P2-S04 | Skills run in a sandbox with only the access they need | In Check (gate) | Claude (neuroos-skill, seccomp) | agy review (T4) |
+| P2-S05 | Every action has ATTEMPT and RESULT; tampering is detectable | In Check (gate) | agy (log, actor, CLI), Claude (pipeline, recovery) | Claude / agy review |
+| P2-S06 | Disk report and confirmed cleanup of an allowlisted set | In Check (gate) | Claude | agy review (T4) |
+| P2-S07 | Notifications show only fixed wording with numbers | In Check (gate) | agy | Claude |
 
 Columns: Backlog → Ready → In Progress → In Check → Done.
 

@@ -491,7 +491,11 @@ void Server::Stop() {
     return;
   }
   const char b = 1;
-  (void)::write(impl_->wake[1], &b, 1);
+  // The only way this write fails on our own open pipe is a full pipe, and a
+  // full pipe already holds a wake byte for the acceptor's poll.
+  if (::write(impl_->wake[1], &b, 1) < 0) {
+    // Nothing to do.
+  }
   if (impl_->acceptor.joinable()) {
     impl_->acceptor.join();
   }
