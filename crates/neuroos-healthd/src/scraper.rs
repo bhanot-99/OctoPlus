@@ -25,6 +25,25 @@ pub fn now_ns() -> u64 {
     u64::try_from(jiff::Timestamp::now().as_nanosecond()).unwrap_or(0)
 }
 
+/// One compact rolling-window entry. Plain numbers only, so the window's memory
+/// is fixed once its capacity is reserved (no per-sample heap data; see the
+/// Phase 1 mini-soak, where full status copies grew healthd's RSS by ~1 MiB).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Sample {
+    /// Scrape time, UTC epoch ns.
+    pub at_ns: u64,
+    /// Reported status.
+    pub status: HealthStatus,
+    /// Whether the health socket answered.
+    pub reachable: bool,
+    /// Process RSS in bytes (cgroup memory if the process reported none).
+    pub rss_bytes: u64,
+    /// cgroup `memory.current` in bytes.
+    pub cgroup_memory_bytes: u64,
+    /// cgroup CPU usage in ns.
+    pub cgroup_cpu_usage_ns: u64,
+}
+
 /// Shared internal state for `neuroos-healthd`.
 #[derive(Debug)]
 pub struct HealthdState {
@@ -32,8 +51,8 @@ pub struct HealthdState {
     pub overall: HealthStatus,
     /// Latest status per component.
     pub parts: HashMap<Part, PartStatus>,
-    /// Rolling window of recent samples per component.
-    pub rolling: HashMap<Part, VecDeque<PartStatus>>,
+    /// Rolling window of recent samples per component (fixed-size, allocated once).
+    pub rolling: HashMap<Part, VecDeque<Sample>>,
     /// Soak baseline and drift tracking engine.
     pub soak: SoakEngine,
     /// Timestamp of last report generation.
@@ -269,6 +288,7 @@ pub async fn scrape_cycle(
             },
         );
 
+        let rss_bytes = resp.rss_bytes;
         let part_status = PartStatus {
             part: part.name().to_string(),
             reachable,
@@ -279,11 +299,22 @@ pub async fn scrape_cycle(
         };
 
         // Update rolling window
-        let window = st.rolling.entry(part).or_default();
+        let sample = Sample {
+            at_ns: scrape_ts,
+            status,
+            reachable,
+            rss_bytes,
+            cgroup_memory_bytes: cgroup_mem,
+            cgroup_cpu_usage_ns: cgroup_cpu,
+        };
+        let window = st
+            .rolling
+            .entry(part)
+            .or_insert_with(|| VecDeque::with_capacity(ROLLING_WINDOW_CAPACITY));
         if window.len() >= ROLLING_WINDOW_CAPACITY {
             window.pop_front();
         }
-        window.push_back(part_status.clone());
+        window.push_back(sample);
 
         st.parts.insert(part, part_status);
     }
@@ -312,6 +343,11 @@ pub async fn run_scraper_loop(
 ) {
     let interval_s = ctx.config.healthd.scrape_interval_s.max(1);
     let interval = Duration::from_secs(interval_s);
+    tracing::info!(
+        interval_s,
+        soak = ctx.config.healthd.soak,
+        "scraper started"
+    );
 
     // Run first scrape immediately on startup
     scrape_cycle(
@@ -376,6 +412,9 @@ mod tests {
         let st = state.read().await;
         let window = st.rolling.get(&Part::Healthd).unwrap();
         assert_eq!(window.len(), ROLLING_WINDOW_CAPACITY);
+        // Reserved once: the window never reallocates as it fills and rolls.
+        assert!(window.capacity() >= ROLLING_WINDOW_CAPACITY);
+        assert!(window.capacity() < 2 * ROLLING_WINDOW_CAPACITY);
         assert!(now_ns() > 0);
     }
 }

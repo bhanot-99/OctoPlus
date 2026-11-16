@@ -576,6 +576,32 @@ fn run_socketmap_proof(
                     // Since probe is not the allowed unit, peer check will reject if enforced
                 }
             }
+        } else if entry.server == Part::Fetcher {
+            // Fetcher folders are host paths (/run/neuroos-fetcher), outside the
+            // per-unit runtime tmpfs, so units mask them with InaccessiblePaths=:
+            // the folder may exist as an empty mode-000 node. The proof is that
+            // it cannot be listed and its socket cannot be connected.
+            let listable = fs::read_dir(&dir).is_ok();
+            let connectable = UnixStream::connect(&sock_path).is_ok();
+            if listable || connectable {
+                breach_detected = true;
+                if !negative_control {
+                    anyhow::bail!(
+                        "FAIL breach: forbidden fetcher socket {} reachable by {:?} (listable={listable}, connectable={connectable})",
+                        sock_path.display(),
+                        part
+                    );
+                }
+                println!(
+                    "PASS negative_control reached forbidden fetcher socket: {}",
+                    sock_path.display()
+                );
+            } else {
+                println!(
+                    "PASS forbidden fetcher socket unreachable: {}",
+                    sock_path.display()
+                );
+            }
         } else {
             // Forbidden socket folder
             if dir.exists() {

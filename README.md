@@ -28,7 +28,7 @@ No cloud model, no accounts, no telemetry, no auto-update, no screen capture, no
 
 ## Status
 
-**Phase 0 done (signed off 2026-11-15).** The repository builds, tests and sandboxes from day one (`just ci`), the shared IPC, health and sandbox libraries exist in Rust and C++, and the five spikes are measured and recorded in [`docs/adr/`](docs/adr). Next: Phase 1, the walking skeleton. Current state is always in [`memory.md`](memory.md); the phase report is [`reports/phase-00-foundation.md`](reports/phase-00-foundation.md).
+**Phase 1 built, awaiting owner sign-off (branch `phase_1`).** Every part runs as a locked-down service under `neuroos.target`, reports its health to healthd, and recovers by itself after a crash. `neuroosctl ask` streams an answer from the local model through the whole chain. The three security proofs pass against the real services. The fetcher still needs its root install by the owner. Phase 0 was signed off on 2026-11-15. Current state is always in [`memory.md`](memory.md); the phase reports are [`reports/phase-00-foundation.md`](reports/phase-00-foundation.md) and [`reports/phase-01-skeleton.md`](reports/phase-01-skeleton.md).
 
 ## Documents
 

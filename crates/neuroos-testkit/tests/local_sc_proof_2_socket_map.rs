@@ -58,10 +58,10 @@ fn check_systemd_user_bus() -> bool {
 
 #[test]
 fn local_sc_proof_2_socket_map_enforced() {
-    if !check_systemd_user_bus() {
-        eprintln!("Skipping test: user systemd session bus not accessible");
-        return;
-    }
+    assert!(
+        check_systemd_user_bus(),
+        "user systemd session bus not accessible (local gate needs a user session)"
+    );
 
     let unit_dir = user_unit_dir();
     fs::create_dir_all(&unit_dir).expect("create ~/.config/systemd/user");
@@ -183,5 +183,56 @@ fn local_sc_proof_2_socket_map_enforced() {
         println!(
             "SC Proof 2 Negative Control PASS: breach of forbidden BindPaths correctly detected"
         );
+    }
+
+    // 3. Negative control for the fetcher's host folders: healthd's unit without
+    // its InaccessiblePaths= mask on fetch/ must let the probe reach fetch.sock
+    // (healthd's user is in group neuroos), so the probe reports the breach.
+    {
+        assert!(
+            std::path::Path::new("/run/neuroos-fetcher/fetch/fetch.sock").exists(),
+            "fetcher not running: start neuroos-fetcher for this proof"
+        );
+        let neg_name = "neuroos-sc-probe-sock-negfetch.service";
+        let neg_path = unit_dir.join(neg_name);
+        let probe_cmd = "%h/.local/opt/neuroos/bin/neuroos-s04-probe socket-map-proof --part healthd --negative-control";
+        let base = generate_user_service_with_exec_start(Part::Healthd, probe_cmd);
+        let mask = "InaccessiblePaths=-/run/neuroos-fetcher/fetch\n";
+        assert!(
+            base.contains(mask),
+            "healthd unit must mask the fetch folder"
+        );
+        let breach = base
+            .replace("Restart=on-failure\n", "Restart=no\n")
+            .replace(mask, "");
+        fs::write(&neg_path, &breach).expect("write fetcher negative control unit");
+        let _neg_guard = UnitFileGuard {
+            path: neg_path.clone(),
+            name: neg_name.to_string(),
+        };
+        let _ = Command::new("systemctl")
+            .args(["--user", "daemon-reload"])
+            .status();
+        let _ = Command::new("systemctl")
+            .args(["--user", "start", "--wait", neg_name])
+            .status();
+        let show = Command::new("systemctl")
+            .args([
+                "--user",
+                "show",
+                "-p",
+                "ExecMainStatus",
+                "-p",
+                "Result",
+                neg_name,
+            ])
+            .output()
+            .expect("show fetcher negative control status");
+        let show_str = String::from_utf8_lossy(&show.stdout);
+        assert!(
+            show_str.contains("ExecMainStatus=0") && show_str.contains("Result=success"),
+            "Fetcher negative control failed: unmasked fetch.sock was not detected: show={show_str}"
+        );
+        println!("SC Proof 2 fetcher negative control PASS: unmasked fetch.sock detected");
     }
 }

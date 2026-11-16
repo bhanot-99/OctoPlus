@@ -79,7 +79,7 @@ impl Drop for Restore {
         }
         let _ = std::fs::remove_file(&self.canary);
         systemctl(&["daemon-reload"]);
-        systemctl(&["stop", "neuroos.target"]);
+        let _ = neuroos_testkit::stop_stack();
     }
 }
 
@@ -181,7 +181,7 @@ async fn local_sc_proof_3_landlock_in_real_units() {
         guard.dropins.push(dropin);
     }
     assert!(systemctl(&["daemon-reload"]));
-    systemctl(&["stop", "neuroos.target"]);
+    assert!(neuroos_testkit::stop_stack(), "stop neuroos units");
     assert!(
         systemctl(&["start", "neuroos.target"]),
         "target failed to start"

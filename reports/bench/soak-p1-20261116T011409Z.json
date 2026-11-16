@@ -1,0 +1,70 @@
+{
+  "source_csv": "~/.local/share/neuroos/soak/soak-20261116T011409Z.csv",
+  "duration_s": 7200,
+  "asks": 360,
+  "failed_asks": 0,
+  "ttft_ms_median": 454,
+  "ttft_ms_p95": 554,
+  "parts": {
+    "fetcher": {
+      "verdict": "no data (not running)"
+    },
+    "healthd": {
+      "baseline_mib": 5.0,
+      "final_mib": 4.8,
+      "growth_pct": -3.29,
+      "last30_rise_pct": -4.96,
+      "restarts": 0,
+      "verdict": "pass"
+    },
+    "inference": {
+      "baseline_mib": 2768.8,
+      "final_mib": 2768.7,
+      "growth_pct": -0.0,
+      "last30_rise_pct": -0.0,
+      "restarts": 0,
+      "verdict": "pass"
+    },
+    "kernel": {
+      "baseline_mib": 4.4,
+      "final_mib": 4.4,
+      "growth_pct": 0.09,
+      "last30_rise_pct": 0.0,
+      "restarts": 0,
+      "verdict": "pass"
+    },
+    "knowledge": {
+      "baseline_mib": 4.6,
+      "final_mib": 4.6,
+      "growth_pct": -0.34,
+      "last30_rise_pct": -1.66,
+      "restarts": 0,
+      "verdict": "pass"
+    },
+    "monitor": {
+      "baseline_mib": 4.4,
+      "final_mib": 4.3,
+      "growth_pct": -0.89,
+      "last30_rise_pct": -1.28,
+      "restarts": 0,
+      "verdict": "pass"
+    },
+    "storage": {
+      "baseline_mib": 4.4,
+      "final_mib": 4.4,
+      "growth_pct": 0.0,
+      "last30_rise_pct": 0.0,
+      "restarts": 0,
+      "verdict": "pass"
+    },
+    "voice": {
+      "baseline_mib": 6.9,
+      "final_mib": 6.9,
+      "growth_pct": -0.06,
+      "last30_rise_pct": -0.03,
+      "restarts": 0,
+      "verdict": "pass"
+    }
+  },
+  "pass": true
+}

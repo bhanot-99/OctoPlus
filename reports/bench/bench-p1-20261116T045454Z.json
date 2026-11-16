@@ -1,0 +1,48 @@
+{
+  "date_utc": "2026-11-16T04:56:41Z",
+  "commit": "7ec04ef",
+  "conditions": {
+    "governor": "powersave",
+    "cpu_max_khz": 4465261,
+    "ac_online": "1",
+    "build": "release",
+    "threads": 8,
+    "ctx": 2048,
+    "batch": 512,
+    "repacking": "off",
+    "where": "neuroos-inference.service sandbox, ExecStart replaced"
+  },
+  "c4_bench": [
+    {
+      "summary": true,
+      "reps": 5,
+      "prompt_tokens": 208,
+      "generate_tokens": 64,
+      "ttft_ms_mean": 2574.14,
+      "prefill_tok_per_s_mean": 84.08,
+      "decode_tok_per_s_mean": 12.09,
+      "rss_bytes_peak": 2898354176,
+      "path": "CPU",
+      "prompt_tokens_requested": 208
+    },
+    {
+      "summary": true,
+      "reps": 5,
+      "prompt_tokens": 384,
+      "generate_tokens": 64,
+      "ttft_ms_mean": 4468.7,
+      "prefill_tok_per_s_mean": 87.74,
+      "decode_tok_per_s_mean": 12.65,
+      "rss_bytes_peak": 2922491904,
+      "path": "CPU",
+      "prompt_tokens_requested": 384
+    }
+  ],
+  "reps_after_warmup": 5,
+  "cold_start_to_c4_ok_ms": [
+    2590,
+    2569,
+    2582
+  ],
+  "note": "cold start = target start to C4 OK as seen by healthd at a 1 s scrape; includes the model hash check unit; upper bound by up to 1 s"
+}

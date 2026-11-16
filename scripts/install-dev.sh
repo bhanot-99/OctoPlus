@@ -37,6 +37,10 @@ if [[ -f "$root/cpp/CMakeLists.txt" ]]; then
   (cd "$root/cpp" && cmake --preset release && cmake --build --preset release --parallel)
 fi
 
+# Nothing installed here may be writable by anyone but the owner: the units run
+# these binaries, libraries and the hash list (found 0666/0777 on 2026-11-16).
+umask 022
+
 echo "=== 3. Setting up dev install prefix ==="
 dev_opt="$HOME/.local/opt/neuroos"
 dev_bin="$dev_opt/bin"
@@ -79,8 +83,9 @@ for bin in "${candidates[@]}"; do
 done
 
 if [[ -d "$root/cpp/build/release" ]]; then
-  cp -a "$root"/cpp/build/release/bin/*.so* "$dev_lib/" 2>/dev/null || true
-  cp -a "$root"/cpp/build/release/libneuroos/*.so* "$dev_lib/" 2>/dev/null || true
+  cp -P --remove-destination "$root"/cpp/build/release/bin/*.so* "$dev_lib/" 2>/dev/null || true
+  cp -P --remove-destination "$root"/cpp/build/release/libneuroos/*.so* "$dev_lib/" 2>/dev/null || true
+  find "$dev_lib" -type f -exec chmod 0755 {} +
   echo "Copied C++ shared libraries into $dev_lib"
 fi
 
@@ -124,8 +129,12 @@ sums_path = os.path.join(dst_models_dir, "SHA256SUMS")
 with open(sums_path, "w", encoding="utf-8") as f:
     for line in sums:
         f.write(line + "\n")
+os.chmod(sums_path, 0o644)
 print(f"Wrote {sums_path}")
 PY
+# Model folders and files: owner-writable folders, read-only models.
+find "$dev_models" -type d -exec chmod 0755 {} +
+find "$dev_models" -type f ! -name SHA256SUMS -exec chmod 0444 {} +
 
 echo "=== 6. Creating local share directories ==="
 install -d -m 0700 "$HOME/.local/share/neuroos/storage" "$HOME/.local/share/neuroos/soak"
@@ -135,7 +144,7 @@ user_systemd="$HOME/.config/systemd/user"
 install -d -m 0755 "$user_systemd"
 for u in "$root/deploy/systemd/user/"*; do
   if [[ -f "$u" ]]; then
-    cp "$u" "$user_systemd/"
+    install -m 0644 "$u" "$user_systemd/"
     echo "Copied $(basename "$u") to $user_systemd"
   fi
 done

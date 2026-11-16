@@ -49,3 +49,18 @@ Measured (details in the evidence files):
 | System-scope units with a dedicated user per part | Loses the desktop session's Wayland, PipeWire and session-bus sockets; needs root to install and run. |
 | Rely on UID + unit peer checks instead of mount namespaces | All parts share one UID; a unit check alone has the PID-reuse window. Mount namespaces make other sockets invisible. |
 | `DeviceAllow=` for the GPU | Not enforced in user scope (measured). |
+
+---
+
+## Addendum 2026-11-16 — a second exec drops `PrivateNetwork=` in user scope (Phase 1, BUG-028)
+
+Measured by Claude on the reference machine (systemd 255.4, user scope), with a bare probe:
+
+| Unit | Network namespace of the main process | Interfaces |
+| :--- | :--- | :--- |
+| `systemd-run --user -p PrivateNetwork=yes sleep 30` | its own | `lo` |
+| the same plus `-p ExecStartPre=/bin/true` | **the host's** | `lo`, `wlp2s0` |
+
+So a user unit with any `ExecStartPre=` (and, by the same mechanism, more than one exec) silently runs its main process in the host network namespace. C4 had exactly this in its first Phase 1 unit (a hash check in `ExecStartPre`). The other layers still held: `RestrictAddressFamilies=AF_UNIX` (seccomp) and Landlock's TCP deny. But the primary network control was missing, and nothing reported it.
+
+**Decision addition (decision 7):** every user unit has exactly one exec line (`ExecStart=`), with no `ExecStartPre/Post`, `ExecStop*` or `ExecReload`. Work that must run first goes into its own oneshot unit that the part `Requires=` (ADR-0009). The generator enforces this with a test that has a negative control, and `scripts/check-egress.sh` fails (never warns) when a running part shares the host's network namespace.

@@ -178,9 +178,9 @@ A control without a test is a hope. Each row is an exit criterion of the phase n
 
 | Control | How it is proven | Phase |
 | :--- | :--- | :--- |
-| No network in isolated units | Inside each real unit: TCP connect, DNS lookup and raw socket all fail; local sockets still work | 1, re-run in 9 |
-| Socket map enforced | Each unit tries every socket it should not reach; all fail | 1, 9 |
-| Landlock applied before input | Each service tries to read a forbidden path at startup in a test build; denied. Removing the sandbox call fails the test | 1 onward |
+| No network in isolated units | Inside each real unit: TCP connect, DNS lookup and raw socket all fail; local sockets still work (`local_sc_proof_1_net`). Every running part has its own network namespace with only `lo` (`scripts/check-egress.sh`; a part in the host namespace is a failure). Every user unit has exactly one exec (generator test), since a second exec drops `PrivateNetwork=` in user scope (ADR-0002 addendum) | 1, re-run in 9 |
+| Socket map enforced | In each part's exact unit, every socket folder outside its row of the map is invisible (ENOENT), every one in it visible; expectations come from `socketmap` (`local_sc_proof_2_socket_map`, negative control: an extra bind is detected). Second layer (server peer-unit check): `neuroos-ipc` peer tests | 1, 9 |
+| Landlock applied before input | Each real part (Rust and C++) reads a canary visible in its unit but outside its policy right after `restrict`; healthd must report `landlock_canary_denied` for all of them, and `cat` of the same file in each unit's exact namespace without Landlock must succeed (`local_sc_proof_3_landlock`). No shipped binary can skip `restrict` (test-only feature, BUG-025) | 1 onward |
 | Network-crate ban | A throwaway probe crate triggers the ban | 0 |
 | Tier logic | Every tier × taint × disabled combination; property test that effective tier ≥ base tier | 2 |
 | Approval protocol | Valid, expired, replayed, wrong arguments, wrong capability, bit-flipped token; forged approval from another process | 2 |

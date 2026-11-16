@@ -6,13 +6,12 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use std::io::{BufRead, BufReader};
+use std::io::Read;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
 use neuroos_ipc::Client;
-use neuroos_proto::v1::HealthRequest;
 use neuroos_proto::v1::envelope::Body;
 
 fn check_systemd_user_bus() -> bool {
@@ -49,10 +48,11 @@ async fn local_e2e_ask_and_cancel() {
 
     let dev_bin = home_opt_bin();
     let ctl_bin = dev_bin.join("neuroosctl");
-    if !ctl_bin.exists() {
-        eprintln!("neuroosctl binary not found at {}", ctl_bin.display());
-        return;
-    }
+    assert!(
+        ctl_bin.exists(),
+        "neuroosctl not found at {}; run `just install-dev` first",
+        ctl_bin.display()
+    );
 
     // Ensure neuroos.target is started
     let _ = Command::new("systemctl")
@@ -101,29 +101,46 @@ async fn local_e2e_ask_and_cancel() {
 
     // 2. Cancel Test: Stream tokens, send SIGINT after first chunk, measure cancel-to-idle
     println!("\n=== E2E Cancel Latency Measurement ===");
+    // C4's cancel count before this cancel: the check below needs a new sample,
+    // not one left over from an earlier run of C4.
+    let cancels_before = c4_histograms().await.map_or(0, |(c, _)| c.sample_count);
+
+    // A long answer, so generation is still running when the cancel arrives
+    // (a short prompt can finish in one chunk and leave nothing to cancel).
     let mut child = Command::new(&ctl_bin)
-        .args(["ask", "Count from 1 to 500 slowly, one number per line."])
+        .args([
+            "ask",
+            "Write a detailed essay of at least 1500 words on the history of the Roman Empire.",
+        ])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
         .expect("spawn neuroosctl ask for cancel test");
 
-    let stdout = child.stdout.take().expect("take stdout");
-    let mut reader = BufReader::new(stdout);
+    let mut stdout = child.stdout.take().expect("take stdout");
 
-    // Read until first non-empty line arrives
-    let mut first_chunk = String::new();
+    // Read the first streamed bytes (not a whole line: chunks arrive as they decode).
+    let mut first_chunk = Vec::new();
+    let mut buf = [0_u8; 256];
     let read_start = Instant::now();
-    while read_start.elapsed() < Duration::from_secs(15) {
-        let mut line = String::new();
-        if reader.read_line(&mut line).unwrap_or(0) > 0 && !line.trim().is_empty() {
-            first_chunk = line;
+    while read_start.elapsed() < Duration::from_secs(30) {
+        let n = stdout.read(&mut buf).unwrap_or(0);
+        if n == 0 {
+            break;
+        }
+        first_chunk.extend_from_slice(&buf[..n]);
+        if first_chunk.iter().any(|b| !b.is_ascii_whitespace()) {
             break;
         }
     }
+    let first_chunk = String::from_utf8_lossy(&first_chunk).into_owned();
     assert!(
-        !first_chunk.is_empty(),
-        "Timed out waiting for first streamed token chunk"
+        !first_chunk.trim().is_empty(),
+        "Timed out waiting for the first streamed chunk"
+    );
+    assert!(
+        child.try_wait().expect("try_wait").is_none(),
+        "the answer finished before the cancel; nothing was cancelled"
     );
     println!("First chunk received: {:?}", first_chunk.trim());
 
@@ -142,29 +159,33 @@ async fn local_e2e_ask_and_cancel() {
         cancel_elapsed, status
     );
 
-    // Query C4 health socket for cancel_to_idle histogram or verify C4 is ready
-    let root = runtime_root();
-    let c4_health_sock = root.join("inference/health/health.sock");
-
-    if let Ok(client) = Client::connect(&c4_health_sock, 1024 * 1024).await {
-        let resp = client
-            .call(
-                Body::HealthRequest(HealthRequest {}),
-                Duration::from_secs(2),
-            )
-            .await;
-        if let Ok(Body::HealthResponse(hr)) = resp {
-            for h in hr.histograms {
-                if h.name == "cancel_to_idle" && h.sample_count > 0 {
-                    let mean_ms = (h.sum_ns / h.sample_count) as f64 / 1_000_000.0;
-                    println!(
-                        "C4 recorded cancel_to_idle histogram: samples={}, mean={:.2}ms, sum={}ns",
-                        h.sample_count, mean_ms, h.sum_ns
-                    );
-                }
-            }
+    // FR-INF-04: C4's own cancel_to_idle (cancel token set -> decode loop exited)
+    // must be within one decode step. C4's health socket admits only healthd, so
+    // read C4's histograms through healthd's status report (default scrape 30 s).
+    let deadline = std::time::Instant::now() + Duration::from_secs(70);
+    let (cancel, step) = loop {
+        if let Some((c, d)) = c4_histograms().await
+            && c.sample_count > cancels_before
+        {
+            break (c, d);
         }
-    }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "C4 reported no new cancel_to_idle sample via healthd within 70 s (two scrapes)"
+        );
+        tokio::time::sleep(Duration::from_millis(250)).await;
+    };
+    let cancel_ms = cancel.sum_ns as f64 / cancel.sample_count as f64 / 1e6;
+    let step_ms = step.sum_ns as f64 / step.sample_count.max(1) as f64 / 1e6;
+    println!(
+        "C4 cancel_to_idle mean {cancel_ms:.1} ms over {} sample(s); mean decode step {step_ms:.1} ms",
+        cancel.sample_count
+    );
+    assert!(step.sample_count > 0, "C4 reported no decode_step samples");
+    assert!(
+        cancel_ms <= 1.5 * step_ms,
+        "cancel took {cancel_ms:.1} ms, more than one decode step ({step_ms:.1} ms)"
+    );
 
     // Verify C4 remains responsive immediately following the cancellation
     let verify_ask = Command::new(&ctl_bin)
@@ -176,4 +197,28 @@ async fn local_e2e_ask_and_cancel() {
         "C4 must be immediately ready for new prompts after cancellation"
     );
     println!("C4 immediately responsive after cancellation: PASS");
+}
+
+/// C4's `cancel_to_idle` and `decode_step` histograms, read through healthd.
+async fn c4_histograms() -> Option<(neuroos_proto::v1::Histogram, neuroos_proto::v1::Histogram)> {
+    let sock = runtime_root().join("healthd/healthd/healthd.sock");
+    let client = Client::connect(&sock, 1024 * 1024).await.ok()?;
+    let Body::StatusReport(r) = client
+        .call(
+            Body::StatusRequest(neuroos_proto::v1::StatusRequest {}),
+            Duration::from_secs(2),
+        )
+        .await
+        .ok()?
+    else {
+        return None;
+    };
+    let c4 = r
+        .parts
+        .iter()
+        .find(|p| p.part == "inference")?
+        .last
+        .clone()?;
+    let get = |n: &str| c4.histograms.iter().find(|h| h.name == n).cloned();
+    Some((get("cancel_to_idle")?, get("decode_step")?))
 }

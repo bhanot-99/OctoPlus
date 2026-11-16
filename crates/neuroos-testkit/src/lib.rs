@@ -7,6 +7,7 @@
 //!   Landlock sandbox, clean shutdown on SIGTERM. Used to prove the unit,
 //!   sandbox and reconnect machinery before any real part exists.
 
+use std::process::Command;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -289,4 +290,17 @@ impl Handler for EchoHandler {
             _ => Err(HandlerError::unsupported()),
         }
     }
+}
+
+/// Stops `neuroos.target` and every loaded `neuroos-*` unit, and waits for all
+/// of them. `systemctl stop neuroos.target` alone returns once the target is
+/// stopped; the parts stop through `PartOf=` as separate jobs, and a `start`
+/// issued next cancels those jobs, so the parts keep running with their old
+/// config (found in the Phase 1 gate: healthd kept a 30 s scrape).
+#[must_use]
+pub fn stop_stack() -> bool {
+    Command::new("systemctl")
+        .args(["--user", "stop", "neuroos.target", "neuroos-*.service"])
+        .status()
+        .is_ok_and(|s| s.success())
 }

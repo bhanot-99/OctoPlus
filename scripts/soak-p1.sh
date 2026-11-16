@@ -43,7 +43,7 @@ backup=""
 if [[ -f "$cfg" ]]; then backup="$(mktemp)"; cp "$cfg" "$backup"; fi
 restore() {
   if [[ -n "$backup" ]]; then cp "$backup" "$cfg"; rm -f "$backup"; else rm -f "$cfg"; fi
-  systemctl --user stop neuroos.target || true
+  systemctl --user stop neuroos.target 'neuroos-*.service' || true
 }
 trap restore EXIT
 if [[ -n "$backup" ]] && grep -q '^\[healthd\]' "$backup"; then
@@ -51,7 +51,7 @@ if [[ -n "$backup" ]] && grep -q '^\[healthd\]' "$backup"; then
 fi
 { [[ -n "$backup" ]] && cat "$backup"; printf '\n[healthd]\nscrape_interval_s = 30\nsoak = true\n'; } > "$cfg"
 
-systemctl --user stop neuroos.target || true
+systemctl --user stop neuroos.target 'neuroos-*.service' || true
 systemctl --user start neuroos.target
 start_epoch="$(date +%s)"
 

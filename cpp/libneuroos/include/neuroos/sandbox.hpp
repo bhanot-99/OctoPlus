@@ -2,6 +2,7 @@
 // C++ equivalent of crates/neuroos-sandbox.
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 #include <vector>
 
@@ -29,7 +30,7 @@ struct Report {
 Result<Report> Restrict(const Policy& policy);
 
 // Result of trying to read a canary file after Restrict (SC proof 3, security.md §8).
-enum class CanaryResult {
+enum class CanaryResult : std::uint8_t {
   kDenied,      // EACCES/EPERM: the sandbox blocked it (expected)
   kReadable,    // opened: the sandbox did NOT block it (security failure)
   kUnexpected,  // any other error (e.g. ENOENT: the path is not visible at all), proves nothing
