@@ -61,5 +61,6 @@
     ]
   },
   "capture_latency_p99_ns_upper_bound": 100000,
-  "steady_state": "not asserted: run shorter than the curve needs (rules.md section 9.3)"
+  "steady_state": "not asserted: run shorter than the curve needs (rules.md section 9.3)",
+  "superseded_by": "p3-monitor-20261116T155509Z.json: this run was the binary before the agy review fixes (F1-F9) and the disk dedupe change; kept for the record (rules.md 9.6)"
 }

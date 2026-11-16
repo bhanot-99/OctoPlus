@@ -1,0 +1,65 @@
+{
+  "what": "C1 neuroos-monitor in its real sandboxed unit, release build, user working normally",
+  "conditions": {
+    "date_utc": "2026-11-16T16:05:09+00:00",
+    "commit": "6956183",
+    "binary_sha256": "5cb81bdc5b6adc30682d01744b5b2d3a88589b13b7dba4528084aff057339c03",
+    "governor": "performance",
+    "cpu0_mhz": 3986,
+    "loadavg_1m_at_start": 4.21,
+    "duration_s": 600,
+    "sample_interval_s": 10,
+    "samples": 60
+  },
+  "rss_bytes": {
+    "min": 6635520,
+    "max": 7585792,
+    "first": 7311360,
+    "last": 7585792
+  },
+  "idle_cpu_percent": 0.498,
+  "capture_latency": {
+    "name": "capture_latency",
+    "sample_count": 254,
+    "p99_ns": 500000,
+    "upper_bounds_ns": [
+      100000,
+      250000,
+      500000,
+      1000000,
+      2500000,
+      5000000,
+      10000000,
+      25000000,
+      50000000,
+      100000000,
+      250000000,
+      500000000,
+      1000000000,
+      2500000000,
+      10000000000,
+      30000000000
+    ],
+    "counts": [
+      239,
+      10,
+      5,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "capture_latency_p99_ns_upper_bound": 500000,
+  "steady_state": "not asserted: run shorter than the curve needs (rules.md section 9.3)"
+}
