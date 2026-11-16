@@ -23,7 +23,7 @@ const S: u64 = 1_000_000_000;
 async fn store() -> (Arc<Store>, tempfile::TempDir) {
     let dir = tempfile::tempdir().unwrap();
     let s = Store::open(
-        &dir.path().join("n.sqlite3"),
+        &neuroos_storage::store::StorePaths::under(dir.path()),
         StorageConfig::default(),
         Arc::new(HashEmbedder),
         Health::new("neuroos-storage", "test"),

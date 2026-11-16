@@ -35,8 +35,16 @@ pub type PostCommit = Arc<dyn Fn(Vec<MatrixOp>) + Send + Sync>;
 /// A boxed job: runs inside a savepoint and returns its matrix changes.
 type Job = Box<dyn FnOnce(&Connection) -> Result<Vec<MatrixOp>, DbError> + Send>;
 
+/// A job that must run outside any transaction (VACUUM, checkpoints, backups).
+type Maintenance = Box<dyn FnOnce(&Connection) -> Result<(), DbError> + Send>;
+
+enum Work {
+    Job(Job),
+    Maintenance(Maintenance),
+}
+
 struct Envelope {
-    job: Job,
+    work: Work,
     reply: oneshot::Sender<Result<(), DbError>>,
 }
 
@@ -89,7 +97,7 @@ impl Writer {
         let (reply, rx) = oneshot::channel();
         let tx = self.tx.as_ref().ok_or(DbError::WriterGone)?;
         tx.send(Envelope {
-            job: Box::new(job),
+            work: Work::Job(Box::new(job)),
             reply,
         })
         .await
@@ -108,11 +116,31 @@ impl Writer {
         let (reply, rx) = oneshot::channel();
         let tx = self.tx.as_ref().ok_or(DbError::WriterGone)?;
         tx.blocking_send(Envelope {
-            job: Box::new(job),
+            work: Work::Job(Box::new(job)),
             reply,
         })
         .map_err(|_| DbError::WriterGone)?;
         rx.blocking_recv().map_err(|_| DbError::WriterGone)?
+    }
+
+    /// Runs `f` on the writer thread *outside* a transaction, between batches: for `VACUUM`,
+    /// `wal_checkpoint` and `VACUUM INTO`, which SQLite refuses inside one.
+    ///
+    /// # Errors
+    /// What `f` returns, or [`DbError::WriterGone`].
+    pub async fn maintain<F>(&self, f: F) -> Result<(), DbError>
+    where
+        F: FnOnce(&Connection) -> Result<(), DbError> + Send + 'static,
+    {
+        let (reply, rx) = oneshot::channel();
+        let tx = self.tx.as_ref().ok_or(DbError::WriterGone)?;
+        tx.send(Envelope {
+            work: Work::Maintenance(Box::new(f)),
+            reply,
+        })
+        .await
+        .map_err(|_| DbError::WriterGone)?;
+        rx.await.map_err(|_| DbError::WriterGone)?
     }
 
     /// Jobs the queue can still take right now (health).
@@ -133,14 +161,34 @@ impl Drop for Writer {
 
 fn run(conn: Connection, mut rx: mpsc::Receiver<Envelope>, post_commit: &PostCommit) {
     while let Some(first) = rx.blocking_recv() {
+        if let Work::Maintenance(_) = first.work {
+            let Work::Maintenance(f) = first.work else {
+                continue;
+            };
+            let _ = first.reply.send(f(&conn).map_err(|e| match e {
+                DbError::Sqlite(x) => DbError::from_sqlite(x),
+                other => other,
+            }));
+            continue;
+        }
         let mut batch = vec![first];
+        let mut deferred: Option<Envelope> = None;
         while batch.len() < BATCH_MAX {
             match rx.try_recv() {
-                Ok(e) => batch.push(e),
+                Ok(e) if matches!(e.work, Work::Job(_)) => batch.push(e),
+                Ok(e) => {
+                    deferred = Some(e); // maintenance runs after this batch, in order
+                    break;
+                }
                 Err(_) => break,
             }
         }
         commit_batch(&conn, batch, post_commit);
+        if let Some(e) = deferred
+            && let Work::Maintenance(f) = e.work
+        {
+            let _ = e.reply.send(f(&conn));
+        }
         // Let readers and the next producers in between batches (ADR-0004 item 3b).
         std::thread::sleep(Duration::from_micros(200));
     }
@@ -155,7 +203,8 @@ fn commit_batch(conn: &Connection, batch: Vec<Envelope>, post_commit: &PostCommi
     }
     let mut results: Vec<Settled> = Vec::with_capacity(batch.len());
     for env in batch {
-        let outcome = run_in_savepoint(conn, env.job);
+        let Work::Job(job) = env.work else { continue };
+        let outcome = run_in_savepoint(conn, job);
         results.push((env.reply, outcome));
     }
     match conn.execute_batch("COMMIT") {

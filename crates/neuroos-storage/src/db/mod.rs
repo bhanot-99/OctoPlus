@@ -93,6 +93,8 @@ impl Db {
         conn.pragma_update(None, "synchronous", "NORMAL")?;
         // auto_vacuum only takes effect on a new file or after VACUUM; set before the first table.
         conn.pragma_update(None, "auto_vacuum", "INCREMENTAL")?;
+        // Deleted text and vectors are overwritten, not left in free pages (FR-STO-13).
+        conn.pragma_update(None, "secure_delete", true)?;
         conn.pragma_update(None, "journal_size_limit", 64 * 1024 * 1024_i64)?;
         conn.pragma_update(None, "cache_size", -8192_i64)?; // 8 MiB, bounded (rules §9.7)
         base_pragmas(&conn)?;

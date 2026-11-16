@@ -2,7 +2,7 @@
 //! (AP-3). Ingest, queries and lifecycle jobs are methods on [`Store`]; the IPC handler and the
 //! tests drive nothing else.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError, RwLock};
 
 use neuroos_common::config::StorageConfig;
@@ -45,12 +45,34 @@ fn apply_ops(index: &RwLock<VectorIndex>, ops: Vec<MatrixOp>) {
     }
 }
 
+/// Where C3 keeps its files (Architecture §7.1).
+#[derive(Debug, Clone)]
+pub struct StorePaths {
+    /// The SQLite file, in `storage/`.
+    pub db: PathBuf,
+    /// The backups folder.
+    pub backups: PathBuf,
+}
+
+impl StorePaths {
+    /// `<root>/storage/neuroos.sqlite3` and `<root>/backups` for a data root such as
+    /// `~/.local/share/neuroos`.
+    #[must_use]
+    pub fn under(root: &Path) -> Self {
+        Self {
+            db: root.join("storage").join("neuroos.sqlite3"),
+            backups: root.join("backups"),
+        }
+    }
+}
+
 /// C3's engine.
 pub struct Store {
     pub(crate) db: Arc<Db>,
     pub(crate) index: Arc<RwLock<VectorIndex>>,
     pub(crate) embedder: Arc<dyn Embedder>,
     pub(crate) cfg: StorageConfig,
+    pub(crate) paths: StorePaths,
     pub(crate) health: Arc<Health>,
     pub(crate) live: Mutex<crate::ingest::live::LiveState>,
 }
@@ -62,13 +84,13 @@ impl std::fmt::Debug for Store {
 }
 
 impl Store {
-    /// Opens the database at `db_path`, loads the vector matrix for the current model, and records
+    /// Opens the database at `paths.db`, loads the vector matrix for the current model, and records
     /// the model id in `index_meta` (FR-STO-12).
     ///
     /// # Errors
     /// [`DbError`] if the database cannot be opened or read.
     pub async fn open(
-        db_path: &Path,
+        paths: &StorePaths,
         cfg: StorageConfig,
         embedder: Arc<dyn Embedder>,
         health: Arc<Health>,
@@ -76,12 +98,13 @@ impl Store {
         let index = Arc::new(RwLock::new(VectorIndex::new(embedder.dim())));
         let hook_index = Arc::clone(&index);
         let hook: PostCommit = Arc::new(move |ops| apply_ops(&hook_index, ops));
-        let db = Arc::new(Db::open(db_path, cfg.reader_pool, cfg.write_queue, hook)?);
+        let db = Arc::new(Db::open(&paths.db, cfg.reader_pool, cfg.write_queue, hook)?);
         let store = Self {
             db,
             index,
             embedder,
             cfg,
+            paths: paths.clone(),
             health,
             live: Mutex::new(crate::ingest::live::LiveState::default()),
         };

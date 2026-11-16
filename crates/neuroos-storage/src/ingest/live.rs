@@ -92,3 +92,10 @@ impl LiveState {
             .collect()
     }
 }
+
+impl LiveState {
+    /// Forgets everything (purge).
+    pub fn clear(&mut self) {
+        *self = Self::default();
+    }
+}
