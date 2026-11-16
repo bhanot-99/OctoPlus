@@ -58,7 +58,7 @@ pub fn validate(inv: &Invocation, requested: &Path) -> Result<Target, SkillError
     // Must exist (without following a final symlink).
     std::fs::symlink_metadata(requested).map_err(|_| SkillError::PathOutsideAllowlist)?;
     // `.ok()`: a dangling symlink cannot be the trash, but it may still be a
-    // valid entry to delete below (agy review FIND-03).
+    // valid entry to delete below (BUG-042).
     if let Some(trash) = &inv.trash
         && canonical(trash)
             .ok()
@@ -342,7 +342,7 @@ mod tests {
 
     #[test]
     fn dangling_symlink_in_a_root_can_be_deleted() {
-        // agy review FIND-03: a broken link in the cache is an ordinary entry.
+        // BUG-042: a broken link in the cache is an ordinary entry.
         let f = fixture(Mode::Run);
         let link = f.home.join(".cache/broken");
         std::os::unix::fs::symlink(f.home.join("no-such-target"), &link).unwrap();

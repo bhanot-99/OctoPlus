@@ -5,7 +5,13 @@
 //! - Rejects missing `context_taint` with [`ErrorCode::InvalidRequest`] (rules.md R0-4).
 //! - Rejects disabled or unknown capabilities with [`ErrorCode::PermissionDenied`].
 //! - Escalates SAFE to REVIEW under `EXTERNAL_UNTRUSTED` taint (FR-KER-03).
+//! - Accepts `DispatchRequest`: ATTEMPT → tier → (REVIEW/DANGEROUS: dialog, signed single-use
+//!   token, re-verified against what runs) → skill child or kernel skill → RESULT
+//!   (FR-KER-04, FR-KER-05, FR-KER-09; [`dispatch`]).
+//! - Accepts `NotifyRequest`, rendered only from compiled-in templates ([`notify`]).
+//! - Answers `llm.generate` SAFE for any valid taint; it is never dispatchable (ADR-0010 item 11).
 //! - Manages hash-chained audit and egress ledgers with rotation and verification (FR-KER-06, FR-KER-07, Architecture §8.5).
+//! - On start, records `RESULT EXPIRED` for any ATTEMPT left without a RESULT ([`recovery`]).
 //! - Connects via [`ReconnectingClient`] to fetcher and `monitor/control` (probe: DEGRADED when either is down).
 
 pub mod actor;

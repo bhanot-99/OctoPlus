@@ -26,9 +26,9 @@
 | :--- | :--- |
 | Story | None — Phase 2 closed |
 | Builder / Checker | agy builds, Claude checks (D-23); Claude builds pieces itself where faster (D-21 carried over) |
-| Branch | `phase_2` (one branch for the phase, as in Phase 1) |
-| Files being changed | `crates/neuroos-kernel`, `crates/neuroos-confirm`, `crates/neuroos-common/src/config.rs`, `ui/tokens/` |
-| Next concrete step | Owner merges `phase_2` to `main` and sets the CPU governor to `performance` (sudo) before Phase 3 measurements. Phase 3 (C1 monitor) starts when the owner says. |
+| Branch | `main` (Phase 2 merged 2026-11-16) |
+| Files being changed | — |
+| Next concrete step | Owner sets the CPU governor to `performance` (sudo) before Phase 3 measurements. Phase 3 (C1 monitor) starts when the owner says. |
 
 ---
 
@@ -58,13 +58,13 @@ Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done �
 
 | Story | Title | Status | Builder | Checker |
 | :--- | :--- | :--- | :--- | :--- |
-| P2-S01 | C5 asks whether a capability is allowed and gets a fast answer | Done (pending sign-off) | agy (registry, tier) | Claude |
-| P2-S02 | Anything influenced by web content asks the user first | Done (pending sign-off) | agy | Claude |
-| P2-S03 | Clear approval dialog; approval cannot be faked | Done (pending sign-off) | Claude (dialog, tokens, dispatch) | agy review (T4) |
-| P2-S04 | Skills run in a sandbox with only the access they need | Done (pending sign-off) | Claude (neuroos-skill, seccomp) | agy review (T4) |
-| P2-S05 | Every action has ATTEMPT and RESULT; tampering is detectable | Done (pending sign-off) | agy (log, actor, CLI), Claude (pipeline, recovery) | Claude / agy review |
-| P2-S06 | Disk report and confirmed cleanup of an allowlisted set | Done (pending sign-off) | Claude | agy review (T4) |
-| P2-S07 | Notifications show only fixed wording with numbers | Done (pending sign-off) | agy | Claude |
+| P2-S01 | C5 asks whether a capability is allowed and gets a fast answer | Done | agy (registry, tier) | Claude |
+| P2-S02 | Anything influenced by web content asks the user first | Done | agy | Claude |
+| P2-S03 | Clear approval dialog; approval cannot be faked | Done | Claude (dialog, tokens, dispatch) | agy review (T4) |
+| P2-S04 | Skills run in a sandbox with only the access they need | Done | Claude (neuroos-skill, seccomp) | agy review (T4) |
+| P2-S05 | Every action has ATTEMPT and RESULT; tampering is detectable | Done | agy (log, actor, CLI), Claude (pipeline, recovery) | Claude / agy review |
+| P2-S06 | Disk report and confirmed cleanup of an allowlisted set | Done | Claude | agy review (T4) |
+| P2-S07 | Notifications show only fixed wording with numbers | Done | agy | Claude |
 
 Columns: Backlog → Ready → In Progress → In Check → Done.
 
@@ -160,6 +160,7 @@ Newest first. One row per work session.
 
 | Date | Summary | Stories | Builder / Checker | Next step |
 | :--- | :--- | :--- | :--- | :--- |
+| 2026-11-16 | Owner signed off Phase 2 (D-24); `phase_2` fast-forwarded into `main`. Post-merge cleanup: kernel README and crate docs describe the real Phase 2 kernel; READMEs for confirm, skill, sandbox; C5 README names `llm.generate`; code comments cite BUG-041/042/043 instead of review finding ids. | P2 close | Claude / Claude | Phase 3 when the owner says |
 | 2026-11-16 | Phase 2 built and gated. agy: registry/tiers/limiter, audit log + CLI, notifications, injection corpus, BUG-036/039 fixes, independent review of Claude's code (4 of 5 findings accepted, BUG-040..043). Claude: dialog, tokens, keys, skill child + seccomp, skills, dispatch, recovery, units, install; real-unit bugs BUG-037/038, gate bug BUG-044. Capability check p99 0.032 ms; C6 hits its 64 MiB cap with the dialog open → owner raised it to 128 MiB. `just ci` ALL GREEN (297 Rust, 62 C++, cov 84.8 % / 78 %, ASan/TSan). Owner signed off (D-24). | P2-S01…S07 | agy + Claude / Claude + agy (review) | Phase 3 when the owner says |
 | 2026-11-16 | Branch cleanup (dead code, wrong BUG/ADR references, crate READMEs state real Phase 1 behaviour, profraw clutter). Owner signed off Phase 1, ADR-0009 accepted (D-22); merged to `main`. | P1 close | Claude / Claude | Phase 2 when the owner says |
 | 2026-11-16 | Phase 1 gate. Soak 1 failed on healthd RSS (BUG-030), fixed, soak 2 PASS (360 asks, 0 restarts, all parts ≤ 2 %). Bench in the real C4 unit (89 / 11.9 tok/s, peak 2,788 MiB); cold start 2.6 s. Fixed BUG-030…035 (rolling window, world-writable dev install, bench pipefail, E2E cancel never cancelling, stop→start race, SC2 fetcher check). Owner installed C7; reboot needed for group `neuroos`; C7 kill-and-recover 494 ms DOWN / 2,468 ms back. `just ci` ALL GREEN (160 Rust, 62 C++, cov 82.3 % / 78.6 %, ASan/TSan). Report written. | P1 gate | Claude / Claude | Owner sign-off, ADR-0009, merge |

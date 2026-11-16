@@ -421,7 +421,7 @@ async fn one_dialog_at_a_time() {
 
 #[tokio::test]
 async fn an_allow_only_counts_if_the_dialog_exits_cleanly() {
-    // agy review FIND-04: a decision line followed by a failing exit is not an approval.
+    // BUG-043: a decision line followed by a failing exit is not an approval.
     let w = world(&format!("{ALLOW}\nexit 3"));
     let r =
         w.d.dispatch(req("system.cleanup", &cleanup_args(&w), Some(0)))
@@ -433,7 +433,7 @@ async fn an_allow_only_counts_if_the_dialog_exits_cleanly() {
 
 #[tokio::test]
 async fn a_dialog_that_answers_but_never_exits_does_not_hold_the_gate() {
-    // agy review FIND-02: output closed, process alive. C6 must give up and free the gate.
+    // BUG-041: output closed, process alive. C6 must give up and free the gate.
     let w = world(&format!("{ALLOW}\nexec sleep 30 >&-"));
     let started = std::time::Instant::now();
     let r =

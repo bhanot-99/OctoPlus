@@ -5,7 +5,7 @@ Semantic-NeuroOS Knowledge and Nudge Engine (C5).
 ## Purpose
 Orchestrates turn processing, grounding, evidence assembly, safety evaluation, inference streaming, and nudges.
 In Phase 1, implements the thin `AskRequest` walking skeleton path:
-1. Calls C6 `EvaluateRequest` to verify capability permission.
+1. Calls C6 `EvaluateRequest` for `llm.generate` (Architecture §6.1; C6 answers SAFE, BUG-044).
 2. Calls C3 `QueryHybrid` for context evidence (fails soft if C3 is down).
 3. Builds ChatML prompt with persona, evidence wrapped in `<untrusted_document>`, and stable prefix length.
 4. Streams `GenerateRequest` to C4, streaming `TokenChunk` -> `AnswerChunk` back to client, ending with `AnswerDone`.
