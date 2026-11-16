@@ -45,6 +45,12 @@ async fn main() {
         }
         Commands::Audit { command } => run_audit(&runtime_root, command, styler).await,
         Commands::Egress { command } => run_egress(&runtime_root, command, styler).await,
+        Commands::Replay {
+            dump,
+            speed,
+            serve,
+            json,
+        } => neuroosctl::replay::run_replay(&dump, speed, serve.as_deref(), json).await,
     };
 
     std::process::exit(exit_code);

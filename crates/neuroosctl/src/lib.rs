@@ -5,6 +5,7 @@
 pub mod ask;
 pub mod audit;
 pub mod egress;
+pub mod replay;
 pub mod run;
 pub mod status;
 pub mod style;
@@ -86,6 +87,24 @@ pub enum Commands {
     Egress {
         #[command(subcommand)]
         command: EgressCommands,
+    },
+
+    /// Replay a recorded monitor dump (FR-MON-12, P3-S06).
+    Replay {
+        /// Recorded dump file to replay.
+        dump: PathBuf,
+
+        /// Replay speed multiplier (0 = no delay, 1.0 = real time, 10.0 = 10x faster).
+        #[arg(long, default_value_t = 1.0, value_parser = replay::validate_speed)]
+        speed: f64,
+
+        /// Serve the dump over a Unix domain socket for MonitorSubscribe clients.
+        #[arg(long)]
+        serve: Option<PathBuf>,
+
+        /// Emit one JSON object per line.
+        #[arg(long)]
+        json: bool,
     },
 }
 
