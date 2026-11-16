@@ -75,6 +75,8 @@ pub struct Store {
     pub(crate) paths: StorePaths,
     pub(crate) health: Arc<Health>,
     pub(crate) live: Mutex<crate::ingest::live::LiveState>,
+    /// Chunks not embedded by the current model (kept fresh by the gauges and re-embedding).
+    pub(crate) stale: std::sync::atomic::AtomicU64,
 }
 
 impl std::fmt::Debug for Store {
@@ -107,6 +109,7 @@ impl Store {
             paths: paths.clone(),
             health,
             live: Mutex::new(crate::ingest::live::LiveState::default()),
+            stale: std::sync::atomic::AtomicU64::new(0),
         };
         let store = Arc::new(store);
         Arc::clone(&store).load_vectors().await?;
@@ -210,6 +213,10 @@ impl Store {
             Ok((chunks, stale))
         });
         if let Ok((chunks, stale)) = counts {
+            self.stale.store(
+                u64::try_from(stale).unwrap_or(0),
+                std::sync::atomic::Ordering::Relaxed,
+            );
             #[allow(clippy::cast_precision_loss)]
             {
                 self.health.gauge("chunks", chunks as f64);
