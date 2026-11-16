@@ -19,6 +19,7 @@ members = [
     "crates/neuroos-testkit",
     "crates/neuroosctl",
     "bench/ipc-stream",
+    "bench/kernel-check",
     "bench/storage-scan",
 ]
 # The network-ban probe and spike S-05 probe are separate workspaces so they never enter the real build (P0-S05, P0-S11).

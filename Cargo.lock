@@ -1001,6 +1001,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "neuroos-bench-kernel-check"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "neuroos-common",
+ "neuroos-ipc",
+ "neuroos-proto",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "neuroos-bench-storage-scan"
 version = "0.1.0"
 dependencies = [

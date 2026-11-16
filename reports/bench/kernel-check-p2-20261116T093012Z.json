@@ -1,0 +1,19 @@
+{
+  "max_ms": 0.405085,
+  "metric": "NFR-PERF-06 C6 capability check round trip",
+  "n": 20000,
+  "p50_ms": 0.022403,
+  "p999_ms": 0.049023,
+  "p99_ms": 0.032111,
+  "target_p99_ms": 0.5,
+  "conditions": {
+    "date_utc": "2026-11-16T09:30:13Z",
+    "governor": "powersave",
+    "cur_freq_khz": 3992460,
+    "loadavg": "3.24 1.55 1.28 1/1837 149071",
+    "kernel_binary": "release snapshot of commit 571d8a9 (evaluate path unchanged since), installed neuroos-kernel.service",
+    "client": "neuroos-bench-kernel-check, release, one request at a time over kernel/kernel/kernel.sock",
+    "commit": "ee9342b",
+    "measured_by": "Claude"
+  }
+}
