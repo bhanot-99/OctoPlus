@@ -207,3 +207,91 @@ async fn perf_hybrid_query_at_the_chunk_cap() {
     println!("{}", serde_json::to_string_pretty(&report).unwrap());
     let _ = Duration::ZERO;
 }
+
+/// MS soak (phases.md §7.3): a 4-hour synthetic session replayed at 10× (about 24 minutes) into a
+/// real store with the real model; RSS and query latency sampled every minute; the chunk cap is
+/// lowered so it is actually reached and must hold.
+/// `target/release/neuroos-synth-dump --seed 9 --minutes 240 --out target/soak-4h.dump` first.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "24-minute soak, run by hand in release"]
+async fn perf_soak_4h_replayed_at_10x() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let events = neuroos_storage::replay::load(&root.join("target/soak-4h.dump"))
+        .expect("generate the dump first");
+    let m = root.join("models");
+    let emb: Arc<dyn Embedder> = Arc::new(
+        OnnxEmbedder::load(
+            &m.join("runtime/libonnxruntime.so.1.31.1"),
+            &m.join("embedding/bge-small-en-v1.5.onnx"),
+            &m.join("embedding/bge-small-en-v1.5.tokenizer.json"),
+            2,
+        )
+        .unwrap(),
+    );
+    let dir = tempfile::tempdir().unwrap();
+    let cfg = StorageConfig {
+        chunk_cap: 400,
+        ..Default::default()
+    };
+    let store = Arc::new(
+        Store::open(
+            &StorePaths::under(dir.path()),
+            cfg,
+            emb,
+            Health::new("c3", "soak"),
+        )
+        .await
+        .unwrap(),
+    );
+    let rss0 = rss_mib();
+    let s2 = Arc::clone(&store);
+    let replay = tokio::spawn(async move {
+        neuroos_storage::replay::replay_into_store(&s2, &events, Some(10.0)).await
+    });
+    let mut samples: Vec<serde_json::Value> = Vec::new();
+    let mut rng = Rng(99);
+    let words: Vec<String> = [
+        "used", "terminal", "firefox", "code", "build", "notes", "away", "running",
+    ]
+    .iter()
+    .map(|s| (*s).to_owned())
+    .collect();
+    let started = Instant::now();
+    while !replay.is_finished() {
+        tokio::time::sleep(Duration::from_secs(60)).await;
+        let mut lat = run_queries(&store, &mut rng, &words, 20).await;
+        let chunks: i64 = store
+            .read(|c| Ok(c.query_row("SELECT COUNT(*) FROM chunks", [], |r| r.get(0))?))
+            .await
+            .unwrap_or(-1);
+        samples.push(serde_json::json!({"t_s": started.elapsed().as_secs(), "rss_mib": rss_mib(), "p99_ms": pct(&mut lat, 0.99), "chunks": chunks}));
+    }
+    let rep = replay.await.unwrap().unwrap();
+    let chunks: i64 = store
+        .read(|c| Ok(c.query_row("SELECT COUNT(*) FROM chunks", [], |r| r.get(0))?))
+        .await
+        .unwrap();
+    let rss: Vec<f64> = samples
+        .iter()
+        .filter_map(|s| s["rss_mib"].as_f64())
+        .collect();
+    let base = rss.get(4).copied().unwrap_or(rss[0]);
+    let last = *rss.last().unwrap();
+    let growth = (last - base) / base * 100.0;
+    let out = serde_json::json!({
+        "what": "C3 soak: 4 h synthetic session replayed at 10x into a real store, real model, chunk cap 400",
+        "events": rep.events, "entities": rep.entities.len(), "rss_before_mib": rss0, "rss_growth_percent_after_5_min": growth,
+        "final_chunks": chunks, "cap": 400, "samples": samples,
+    });
+    let f = root.join("reports/bench").join(format!(
+        "p4-soak-{}.json",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+    ));
+    std::fs::write(&f, serde_json::to_string_pretty(&out).unwrap()).unwrap();
+    println!("{}", serde_json::to_string_pretty(&out).unwrap());
+    assert!(chunks <= 400, "the cap held");
+    assert!(growth < 3.0, "RSS growth {growth:.2} %");
+}
