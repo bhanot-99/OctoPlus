@@ -49,6 +49,7 @@ fn random_unit_vector(rng: &mut Rng) -> Vec<f32> {
     v
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn bulk(
     store: &Arc<Store>,
     rng: &mut Rng,
