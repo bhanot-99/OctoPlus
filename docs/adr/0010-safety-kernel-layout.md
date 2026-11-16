@@ -34,6 +34,8 @@ Phase 2 builds C6. Four questions were left open by Architecture §8:
 10. **New kernel limits** (PRD NFR-SEC-09 and NFR-SEC-10, labelled T): REVIEW and DANGEROUS requests at most 6 per rolling minute; a request the user denied is refused for 300 s; approve-button delay 1 s; one dialog at a time.
 11. **`llm.generate` is not a skill.** C5 asks C6 about it before every generation (Architecture §6.1). Generating text runs nothing, so C6 answers SAFE for any valid taint and never escalates it; a missing or unknown taint is still refused. It is not in the registry, so it can never be dispatched. Taint stays on the generated text and decides the tier when a skill is dispatched.
 
+12. **Licence exception (owner to approve):** `target-lexicon` is licensed `Apache-2.0 WITH LLVM-exception`. It is a build-time dependency of `gtk4` (through `system-deps` and `cfg-expr`) and is not in any shipped binary. The exception only adds permissions to Apache-2.0. `deny.toml` allows it for this one crate only (rules.md §5 requires an ADR for any licence outside the allowlist).
+
 ## Consequences
 
 - A compromised C6 process has read-write access to the cleanup roots and can reach the Wayland socket. A compromised C5 still cannot: it can only ask, and every non-SAFE action needs the dialog.
