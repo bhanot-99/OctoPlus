@@ -23,6 +23,7 @@ use neuroos_proto::v1::envelope::Body;
 
 pub use privacy::Privacy;
 pub use stream::StreamHandler;
+pub use supervisor::supervise;
 
 /// Handles privacy control requests on `monitor/control` (FR-PRV-01).
 #[derive(Debug)]
