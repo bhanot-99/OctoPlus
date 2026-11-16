@@ -330,11 +330,11 @@ flowchart LR
 
 ### 7.4 Exit criteria
 
-- [ ] Noise gate passes on all dumps.
-- [ ] Search latency and RSS within budget, measured per [rules.md](rules.md) §9.
-- [ ] Crash-consistency passes; backup restore tested end to end.
-- [ ] Forget verified, including the next backup.
-- [ ] Every decision in the ingest filter and taint handling tested.
+- [x] Noise gate passes on all dumps.
+- [x] Search latency and RSS within budget, measured per [rules.md](rules.md) §9.
+- [x] Crash-consistency passes; backup restore tested end to end.
+- [x] Forget verified, including the next backup.
+- [x] Every decision in the ingest filter and taint handling tested.
 - [ ] Phase report; owner sign-off.
 
 ---
