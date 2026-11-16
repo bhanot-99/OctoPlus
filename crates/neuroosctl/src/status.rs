@@ -37,6 +37,36 @@ pub struct ComponentJson {
     pub cgroup_cpu_usage_ns: u64,
     /// The part's own health rows (for C1: one per sensor), with fixed-text details.
     pub subsystems: Vec<SubsystemJson>,
+    /// The part's latency histograms, so a report can show the whole curve, not one number.
+    pub histograms: Vec<HistogramJson>,
+}
+
+/// JSON representation of one latency histogram.
+#[derive(Debug, Serialize, PartialEq, Eq)]
+pub struct HistogramJson {
+    pub name: String,
+    pub sample_count: u64,
+    pub p99_ns: u64,
+    pub upper_bounds_ns: Vec<u64>,
+    pub counts: Vec<u64>,
+}
+
+/// A part's histograms with their own p99.
+#[must_use]
+pub fn histogram_rows(resp: Option<&HealthResponse>) -> Vec<HistogramJson> {
+    resp.map(|r| {
+        r.histograms
+            .iter()
+            .map(|h| HistogramJson {
+                name: h.name.clone(),
+                sample_count: h.sample_count,
+                p99_ns: compute_p99_ns(h),
+                upper_bounds_ns: h.upper_bounds_ns.clone(),
+                counts: h.counts.clone(),
+            })
+            .collect()
+    })
+    .unwrap_or_default()
 }
 
 /// JSON representation of one subsystem row.
@@ -256,6 +286,7 @@ pub async fn run_status(runtime_root: &Path, json: bool, styler: Styler) -> i32 
             cgroup_memory_bytes: part_status.cgroup_memory_bytes,
             cgroup_cpu_usage_ns: part_status.cgroup_cpu_usage_ns,
             subsystems: subsystem_rows(part_status.last.as_ref()),
+            histograms: histogram_rows(part_status.last.as_ref()),
         });
     }
 
