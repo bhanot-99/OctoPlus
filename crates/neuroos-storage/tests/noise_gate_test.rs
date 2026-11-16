@@ -28,7 +28,7 @@ fn dumps() -> Vec<PathBuf> {
     v
 }
 
-fn run(p: &PathBuf, stages: Stages) -> Report {
+fn run(p: &std::path::Path, stages: Stages) -> Report {
     replay::replay_file(p, &StorageConfig::default(), stages).unwrap()
 }
 

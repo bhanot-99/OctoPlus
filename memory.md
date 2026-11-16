@@ -28,7 +28,7 @@
 | Builder / Checker | agy builds, Claude checks (D-23); Claude builds pieces itself where faster (D-21 carried over) |
 | Branch | `phase-4-storage` |
 | Files being changed | `crates/neuroos-storage/**`, `neuroos-common` (`[storage]` config), `neuroos-proto` (two additive fields), `models/manifest.toml`, `neuroos-deploy`, `neuroosctl storage` |
-| Next concrete step | W1 database core (Claude) in parallel with agy's W2/W3/W8 pure modules; then pipeline, queries, lifecycle, service, gate. |
+| Next concrete step | **Phase 4 WIP (branch `phase-4-storage`, usage limit hit mid-build):** done = W0 plan/ADR-0012, W1 db, W2 vectors (agy), W3 fusion (agy), W4 filter, W5 embedder (real model works), W6/W7 pipeline+queries+hybrid, W9 lifecycle, W10 handler/init/units/timers, W11 generator+noise gate. LEFT: fix db_test `one_failing_job…` (broke after the writer 'maintenance' change), spool.rs (agy A3 was interrupted; then enable `pub mod spool_ingest;` in lib.rs and the spool spawn in init), `neuroosctl storage job/search`, install-dev (backups dir, unpack ORT lib, role runtime), IT with real C1, PF/FI/SC/MS, `just ci`, agy review, report, Architecture/PRD sync. Old text: | W1 database core (Claude) in parallel with agy's W2/W3/W8 pure modules; then pipeline, queries, lifecycle, service, gate. |
 
 ---
 

@@ -524,7 +524,10 @@ fn every_user_unit_has_exactly_one_exec() {
             checked += 1;
         }
     }
-    assert_eq!(checked, 12, "7 parts + runtime + model check + 3 storage jobs");
+    assert_eq!(
+        checked, 12,
+        "7 parts + runtime + model check + 3 storage jobs"
+    );
     // Negative control: the checker rejects a unit with ExecStartPre.
     assert!(!single_exec("ExecStartPre=/bin/true\nExecStart=/bin/x\n"));
     assert!(!single_exec("ExecStart=/bin/a\nExecStart=/bin/b\n"));
