@@ -32,6 +32,7 @@ thiserror = { workspace = true }
 tokio = { workspace = true, features = ["sync", "time", "process", "io-util"] }
 toml = { workspace = true }
 tracing = { workspace = true }
+zbus = { workspace = true, features = ["proxy", "service", "p2p"] }
 
 [dev-dependencies]
 neuroos-health = { path = "../neuroos-health", features = ["test-support"] }

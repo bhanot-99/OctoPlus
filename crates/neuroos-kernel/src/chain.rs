@@ -101,7 +101,7 @@ fn read_last_line_info(path: &Path) -> Result<Option<(u64, [u8; 32])>, ChainErro
         return Ok(None);
     }
     let meta = std::fs::metadata(path)?;
-    if meta.len() == 0 {
+    if !meta.is_file() || meta.len() == 0 {
         return Ok(None);
     }
 
@@ -122,6 +122,32 @@ fn read_last_line_info(path: &Path) -> Result<Option<(u64, [u8; 32])>, ChainErro
 
     let hash = sha256_digest(last_line.trim_end_matches('\n').as_bytes());
     Ok(Some((seq, hash)))
+}
+
+/// Truncates an unfinished trailing line (no trailing newline) back to the last newline (BUG-036).
+///
+/// An unacknowledged mid-line write from disk-full/short-write is truncated away; complete
+/// lines that fail JSON parsing remain corrupt.
+fn clean_trailing_partial_line(path: &Path) -> Result<(), ChainError> {
+    if !path.exists() {
+        return Ok(());
+    }
+    let meta = std::fs::metadata(path)?;
+    if !meta.is_file() || meta.len() == 0 {
+        return Ok(());
+    }
+    let bytes = std::fs::read(path)?;
+    if bytes.ends_with(b"\n") {
+        return Ok(());
+    }
+    let valid_len = match bytes.iter().rposition(|&b| b == b'\n') {
+        Some(pos) => pos + 1,
+        None => 0,
+    };
+    let file = OpenOptions::new().write(true).open(path)?;
+    file.set_len(valid_len as u64)?;
+    file.sync_data()?;
+    Ok(())
 }
 
 /// Hash-chained JSON-lines file writer and validator.
@@ -147,6 +173,7 @@ impl ChainedLog {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
+        clean_trailing_partial_line(&path)?;
 
         let file = open_log_file(&path)?;
         let current_bytes = file.metadata()?.len();
@@ -198,6 +225,7 @@ impl ChainedLog {
 
     /// Re-opens and recovers the log state after an I/O error to prevent chain forks.
     fn recover(&mut self) -> Result<(), ChainError> {
+        clean_trailing_partial_line(&self.path)?;
         self.file = open_log_file(&self.path)?;
         let current_bytes = self.file.metadata()?.len();
         self.current_bytes = current_bytes;
@@ -230,18 +258,29 @@ impl ChainedLog {
             let dst = self.rotated_path(i + 1);
             if i == self.keep {
                 if src.exists() {
-                    let _ = std::fs::remove_file(&src);
+                    std::fs::remove_file(&src).map_err(|e| {
+                        self.needs_recovery = true;
+                        ChainError::Io(e)
+                    })?;
                 }
             } else if src.exists() {
-                let _ = std::fs::rename(&src, &dst);
+                std::fs::rename(&src, &dst).map_err(|e| {
+                    self.needs_recovery = true;
+                    ChainError::Io(e)
+                })?;
             }
         }
 
         if self.path.exists() {
-            let _ = std::fs::rename(&self.path, self.rotated_path(1));
+            std::fs::rename(&self.path, self.rotated_path(1)).map_err(|e| {
+                self.needs_recovery = true;
+                ChainError::Io(e)
+            })?;
         }
 
-        self.file = open_log_file(&self.path)?;
+        self.file = open_log_file(&self.path).inspect_err(|_| {
+            self.needs_recovery = true;
+        })?;
         self.current_bytes = 0;
         Ok(())
     }
@@ -756,6 +795,81 @@ mod tests {
             ChainedLog::open_default(&path),
             Err(ChainError::Corrupt)
         ));
+    }
+
+    #[test]
+    fn bug036_short_write_mid_line_truncated_on_open() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("short_write.jsonl");
+
+        let mut log = ChainedLog::open_default(&path).unwrap();
+        log.append(&TestItem {
+            msg: "first".into(),
+            num: 1,
+        })
+        .unwrap();
+        log.append(&TestItem {
+            msg: "second".into(),
+            num: 2,
+        })
+        .unwrap();
+        drop(log);
+
+        // Append a partial unacknowledged line without trailing newline
+        let mut f = OpenOptions::new().append(true).open(&path).unwrap();
+        f.write_all(b"{\"seq\":3,\"msg\":\"parti").unwrap();
+        f.flush().unwrap();
+        drop(f);
+
+        // Opening must truncate partial bytes and succeed with next_seq 3
+        let reopened = ChainedLog::open_default(&path).unwrap();
+        assert_eq!(reopened.next_seq(), 3);
+        drop(reopened);
+
+        let content = std::fs::read_to_string(&path).unwrap();
+        assert!(
+            !content.contains("parti"),
+            "partial bytes must be truncated away"
+        );
+        assert!(content.ends_with('\n'), "file must end with newline");
+
+        // Now append a complete garbage line WITH trailing newline -> must fail Corrupt
+        let mut f = OpenOptions::new().append(true).open(&path).unwrap();
+        f.write_all(b"totally garbage unparsable line\n").unwrap();
+        f.flush().unwrap();
+        drop(f);
+
+        assert!(matches!(
+            ChainedLog::open_default(&path),
+            Err(ChainError::Corrupt)
+        ));
+
+        // Test recover() directly: re-open clean log, simulate mid-write failure by setting
+        // needs_recovery and writing a partial line to disk.
+        let temp2 = tempfile::tempdir().unwrap();
+        let path2 = temp2.path().join("recover_test.jsonl");
+        let mut log2 = ChainedLog::open_default(&path2).unwrap();
+        log2.append(&TestItem {
+            msg: "item1".into(),
+            num: 1,
+        })
+        .unwrap();
+
+        // Write partial line to disk and set recovery flag
+        let mut f2 = OpenOptions::new().append(true).open(&path2).unwrap();
+        f2.write_all(b"{\"seq\":2,\"msg\":\"truncated").unwrap();
+        f2.flush().unwrap();
+        drop(f2);
+        log2.needs_recovery = true;
+
+        // Next append must run recover(), truncate partial bytes, and successfully write seq 2
+        let info2 = log2
+            .append(&TestItem {
+                msg: "item2".into(),
+                num: 2,
+            })
+            .unwrap();
+        assert_eq!(info2.seq, 2);
     }
 
     #[test]

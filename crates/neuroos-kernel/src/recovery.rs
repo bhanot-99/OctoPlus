@@ -40,8 +40,14 @@ pub fn dangling(actions_log: &Path) -> Vec<Dangling> {
     };
     let mut open: BTreeMap<u64, Dangling> = BTreeMap::new();
     let mut by_id: BTreeMap<String, u64> = BTreeMap::new();
-    for (n, line) in BufReader::new(file).lines().map_while(Result::ok).enumerate() {
-        let Ok(v) = serde_json::from_str::<Value>(&line) else { continue };
+    for (n, line) in BufReader::new(file)
+        .lines()
+        .map_while(Result::ok)
+        .enumerate()
+    {
+        let Ok(v) = serde_json::from_str::<Value>(&line) else {
+            continue;
+        };
         let id = v["action_id"].as_str().unwrap_or_default().to_owned();
         match v["kind"].as_str() {
             Some("ATTEMPT") => {
@@ -53,7 +59,10 @@ pub fn dangling(actions_log: &Path) -> Vec<Dangling> {
                         action_id: id,
                         skill: v["skill"].as_str().unwrap_or_default().to_owned(),
                         tier: v["tier"].as_str().unwrap_or("NONE").to_owned(),
-                        taint: v["taint"].as_u64().and_then(|t| u32::try_from(t).ok()).unwrap_or(0),
+                        taint: v["taint"]
+                            .as_u64()
+                            .and_then(|t| u32::try_from(t).ok())
+                            .unwrap_or(0),
                         origin: v["origin"].as_str().unwrap_or("UNSPECIFIED").to_owned(),
                         args_hash: v["args_hash"].as_str().unwrap_or_default().to_owned(),
                     },

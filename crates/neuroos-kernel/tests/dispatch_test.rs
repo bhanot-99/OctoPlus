@@ -323,7 +323,7 @@ async fn broken_dialogs_never_approve() {
 
 #[tokio::test]
 async fn a_dialog_that_never_answers_expires_and_is_killed() {
-    let w = world_with("sleep 30", Duration::from_millis(300), false);
+    let w = world_with("exec sleep 30", Duration::from_millis(300), false);
     let started = std::time::Instant::now();
     let r =
         w.d.dispatch(req("system.cleanup", &cleanup_args(&w), Some(0)))

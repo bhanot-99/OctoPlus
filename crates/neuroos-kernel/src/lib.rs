@@ -16,7 +16,9 @@ pub mod dispatch;
 pub mod egress;
 pub mod kernel_skills;
 pub mod keys;
+pub mod notify;
 pub mod ratelimit;
+pub mod recovery;
 pub mod registry;
 pub mod schema;
 pub mod tier;
@@ -35,6 +37,7 @@ use neuroos_proto::v1::{
 pub use actor::AuditActor;
 pub use dispatch::{DispatchConfig, Dispatcher};
 pub use kernel_skills::ControlSkills;
+pub use notify::{Notifier, NotifyError, Rendered, TEMPLATES, Template, render};
 
 /// The pipeline as the kernel runs it: the real audit actor and C1 control.
 pub type KernelDispatcher = Dispatcher<AuditActor, ControlSkills>;
@@ -46,7 +49,7 @@ pub use registry::{Registry, RegistryError, SandboxConfig, Skill, SkillKind, Tie
 pub use schema::{ArgSchema, SchemaError, canonical_json, validate_args, validate_args_json};
 pub use tier::{Deny, evaluate};
 
-/// Handles capability evaluations and audit requests on `kernel/kernel`.
+/// Handles capability evaluations, notifications, and audit requests on `kernel/kernel`.
 #[derive(Debug, Clone)]
 pub struct KernelHandler {
     registry: Arc<Registry>,
@@ -54,8 +57,11 @@ pub struct KernelHandler {
     evaluations_safe: Arc<AtomicU64>,
     evaluations_review: Arc<AtomicU64>,
     evaluations_denied: Arc<AtomicU64>,
+    notifications_sent: Arc<AtomicU64>,
+    notifications_failed: Arc<AtomicU64>,
     audit: Option<AuditActor>,
     dispatcher: Option<Arc<KernelDispatcher>>,
+    notifier: Notifier,
 }
 
 impl KernelHandler {
@@ -63,6 +69,25 @@ impl KernelHandler {
     #[must_use]
     pub fn with_dispatcher(mut self, dispatcher: Arc<KernelDispatcher>) -> Self {
         self.dispatcher = Some(dispatcher);
+        self
+    }
+
+    /// Overrides the default notification sender.
+    #[must_use]
+    pub fn with_notifier(mut self, notifier: Notifier) -> Self {
+        self.notifier = notifier;
+        self
+    }
+
+    /// Sets notification health counters.
+    #[must_use]
+    pub fn with_notification_counters(
+        mut self,
+        sent: Arc<AtomicU64>,
+        failed: Arc<AtomicU64>,
+    ) -> Self {
+        self.notifications_sent = sent;
+        self.notifications_failed = failed;
         self
     }
 
@@ -75,8 +100,11 @@ impl KernelHandler {
             evaluations_safe: Arc::new(AtomicU64::new(0)),
             evaluations_review: Arc::new(AtomicU64::new(0)),
             evaluations_denied: Arc::new(AtomicU64::new(0)),
+            notifications_sent: Arc::new(AtomicU64::new(0)),
+            notifications_failed: Arc::new(AtomicU64::new(0)),
             audit: None,
             dispatcher: None,
+            notifier: Notifier::new(),
         }
     }
 
@@ -89,8 +117,11 @@ impl KernelHandler {
             evaluations_safe: Arc::new(AtomicU64::new(0)),
             evaluations_review: Arc::new(AtomicU64::new(0)),
             evaluations_denied: Arc::new(AtomicU64::new(0)),
+            notifications_sent: Arc::new(AtomicU64::new(0)),
+            notifications_failed: Arc::new(AtomicU64::new(0)),
             audit: Some(audit),
             dispatcher: None,
+            notifier: Notifier::new(),
         }
     }
 
@@ -111,8 +142,11 @@ impl KernelHandler {
             evaluations_safe,
             evaluations_review,
             evaluations_denied,
+            notifications_sent: Arc::new(AtomicU64::new(0)),
+            notifications_failed: Arc::new(AtomicU64::new(0)),
             audit,
             dispatcher: None,
+            notifier: Notifier::new(),
         }
     }
 
@@ -220,6 +254,42 @@ impl Handler for KernelHandler {
                     false,
                 )),
             },
+            Body::NotifyRequest(req) => {
+                let rendered = match notify::render(&req.template_id, &req.args) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        self.notifications_failed.fetch_add(1, Ordering::Relaxed);
+                        tracing::warn!(
+                            "invalid notify request for template {}: {e}",
+                            req.template_id
+                        );
+                        return Err(HandlerError::new(
+                            ErrorCode::InvalidRequest,
+                            "unknown template or bad arguments",
+                            false,
+                        ));
+                    }
+                };
+
+                match self.notifier.deliver(&rendered).await {
+                    Ok(_) => {
+                        self.notifications_sent.fetch_add(1, Ordering::Relaxed);
+                        Ok(Body::Ack(neuroos_proto::v1::Ack {}))
+                    }
+                    Err(e) => {
+                        self.notifications_failed.fetch_add(1, Ordering::Relaxed);
+                        tracing::warn!(
+                            "notification delivery failed for template {}: {e}",
+                            req.template_id
+                        );
+                        Err(HandlerError::new(
+                            ErrorCode::Unavailable,
+                            "notification service unavailable",
+                            true,
+                        ))
+                    }
+                }
+            }
             _ => Err(HandlerError::new(
                 ErrorCode::InvalidRequest,
                 "unexpected request on kernel socket",
@@ -295,6 +365,13 @@ pub fn init_with(
     // Initialize audit and egress log actor at <data_dir>/audit/
     let audit_dir = kpaths.data_dir.join("audit");
 
+    // Restart mid-dialog → EXPIRED (phases.md §5.3 FI), before anything else writes.
+    // A missing audit folder is created by AuditActor::start; nothing to close then.
+    if audit_dir.is_dir() {
+        close_dangling_actions(&audit_dir).map_err(|e| {
+            neuroos_health::ServiceError::Custom(format!("closing open actions: {e}"))
+        })?;
+    }
     let audit_actor = AuditActor::start(&audit_dir).map_err(|e| {
         tracing::error!(
             "failed to initialize audit logs at {}: {e}",
@@ -316,11 +393,13 @@ pub fn init_with(
         }),
     );
 
-    // Health counters (Architecture §6.6, FR-KER-08)
+    // Health counters (Architecture §6.6, FR-KER-08, FR-NUD-12)
     let evaluations_total = ctx.health.counter("evaluations_total");
     let evaluations_safe = ctx.health.counter("evaluations_safe");
     let evaluations_review = ctx.health.counter("evaluations_review");
     let evaluations_denied = ctx.health.counter("evaluations_denied");
+    let notifications_sent = ctx.health.counter("notifications_sent");
+    let notifications_failed = ctx.health.counter("notifications_failed");
 
     // Sockets for peer connections
     let fetcher_sock = paths::socket_path(&ctx.runtime_dir, Part::Fetcher, "fetch");
@@ -397,7 +476,8 @@ pub fn init_with(
             evaluations_denied,
             Some(audit_actor),
         )
-        .with_dispatcher(dispatcher),
+        .with_dispatcher(dispatcher)
+        .with_notification_counters(notifications_sent, notifications_failed),
     );
 
     ctx.spawn_server("kernel", handler)?;
@@ -464,4 +544,41 @@ fn build_dispatcher(
         audit,
         control,
     ))
+}
+
+/// Records `RESULT EXPIRED` for actions left without a result by a previous run
+/// (crash or restart mid-dialog; phases.md §5.3 FI). Called synchronously
+/// before the audit actor starts and before serving, so nothing interleaves.
+///
+/// # Errors
+/// A [`ChainError`] if the log cannot be written; C6 then refuses to start
+/// (an action without its RESULT must not stay silently open).
+pub fn close_dangling_actions(audit_dir: &std::path::Path) -> Result<usize, ChainError> {
+    let dangling = recovery::dangling(&audit_dir.join("actions.jsonl"));
+    if dangling.is_empty() {
+        return Ok(0);
+    }
+    let mut log = ActionLog::open(audit_dir)?;
+    for d in &dangling {
+        let tier = serde_json::from_value(serde_json::Value::String(d.tier.clone()))
+            .unwrap_or(ActionTier::None);
+        let origin = serde_json::from_value(serde_json::Value::String(d.origin.clone()))
+            .unwrap_or(ActionOrigin::Unspecified);
+        let at = neuroos_common::time::now_ns().unwrap_or(0);
+        log.result(
+            at,
+            &d.action_id,
+            &d.skill,
+            tier,
+            d.taint,
+            origin,
+            &d.args_hash,
+            ActionStatus::Expired,
+        )?;
+    }
+    tracing::warn!(
+        count = dangling.len(),
+        "closed actions left open by a previous run as EXPIRED"
+    );
+    Ok(dangling.len())
 }

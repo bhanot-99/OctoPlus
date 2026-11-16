@@ -434,3 +434,150 @@ async fn test_kernel_audit_tail_verify_and_tamper() {
     let _ = stop_tx.send(true);
     let _ = handle.await;
 }
+
+#[derive(Clone, Default)]
+struct MockDbusNotificationServer {
+    calls: Arc<tokio::sync::Mutex<Vec<(String, String, String)>>>,
+}
+
+#[zbus::interface(name = "org.freedesktop.Notifications")]
+impl MockDbusNotificationServer {
+    #[allow(clippy::too_many_arguments)]
+    async fn notify(
+        &self,
+        app_name: String,
+        _replaces_id: u32,
+        _app_icon: String,
+        summary: String,
+        body: String,
+        _actions: Vec<String>,
+        hints: std::collections::HashMap<String, zbus::OwnedVariant>,
+        expire_timeout: i32,
+    ) -> u32 {
+        assert_eq!(app_name, "NeuroOS");
+        assert_eq!(expire_timeout, -1);
+        assert_eq!(
+            hints.get("urgency").and_then(|v| u8::try_from(v).ok()),
+            Some(1u8)
+        );
+        assert_eq!(
+            hints
+                .get("desktop-entry")
+                .and_then(|v| <&str>::try_from(v).ok()),
+            Some("org.neuroos.Confirm")
+        );
+        self.calls.lock().await.push((app_name, summary, body));
+        42
+    }
+}
+
+#[tokio::test]
+async fn test_kernel_notify_request_handling() {
+    let registry = Arc::new(Registry::load().unwrap());
+
+    // Setup fake D-Bus notification server over P2P unix stream
+    let (client_stream, server_stream) = std::os::unix::net::UnixStream::pair().unwrap();
+    let dbus_server = MockDbusNotificationServer::default();
+    let calls = dbus_server.calls.clone();
+
+    let guid = zbus::Guid::generate();
+    let (_server_conn, client_conn) = tokio::try_join!(
+        zbus::connection::Builder::unix_stream(server_stream)
+            .server(guid)
+            .p2p()
+            .serve_at("/org/freedesktop/Notifications", dbus_server)
+            .build(),
+        zbus::connection::Builder::unix_stream(client_stream)
+            .p2p()
+            .build()
+    )
+    .unwrap();
+
+    let notifier = neuroos_kernel::Notifier::with_connection(client_conn);
+    let handler = Arc::new(KernelHandler::new(registry).with_notifier(notifier));
+
+    let temp_dir = tempfile::tempdir().unwrap();
+    let sock_dir = temp_dir.path().join("kernel");
+    ensure_private_dir(&sock_dir).unwrap();
+    let sock = sock_dir.join("kernel.sock");
+
+    let server = Server::bind(
+        &sock,
+        ServerConfig::new(1024 * 1024, Duration::from_secs(1)),
+    )
+    .await
+    .unwrap();
+
+    let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);
+    let wait = |mut rx: tokio::sync::watch::Receiver<bool>| async move {
+        let _ = rx.wait_for(|s| *s).await;
+    };
+    let handle = tokio::spawn(server.serve(handler, wait(stop_rx)));
+
+    let client = Client::connect(&sock, 1024 * 1024).await.unwrap();
+
+    // 1. Invalid template -> InvalidRequest
+    let err = client
+        .call(
+            Body::NotifyRequest(neuroos_proto::v1::NotifyRequest {
+                template_id: "unknown.template".into(),
+                args: vec![],
+            }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap_err();
+    let wire = err.to_wire();
+    assert_eq!(
+        ErrorCode::try_from(wire.code).unwrap(),
+        ErrorCode::InvalidRequest
+    );
+    assert!(wire.message.contains("unknown template or bad arguments"));
+
+    // 2. Bad arguments (missing required percent for disk.nearly_full) -> InvalidRequest
+    let err = client
+        .call(
+            Body::NotifyRequest(neuroos_proto::v1::NotifyRequest {
+                template_id: "disk.nearly_full".into(),
+                args: vec![],
+            }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap_err();
+    let wire = err.to_wire();
+    assert_eq!(
+        ErrorCode::try_from(wire.code).unwrap(),
+        ErrorCode::InvalidRequest
+    );
+    assert!(wire.message.contains("unknown template or bad arguments"));
+
+    // 3. Valid notification -> Ack and delivered to D-Bus mock
+    let res = client
+        .call(
+            Body::NotifyRequest(neuroos_proto::v1::NotifyRequest {
+                template_id: "disk.nearly_full".into(),
+                args: vec![neuroos_proto::v1::TemplateArg {
+                    name: "percent".into(),
+                    value: 92.0,
+                }],
+            }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap();
+
+    match res {
+        Body::Ack(_) => {}
+        other => panic!("expected Ack, got {other:?}"),
+    }
+
+    let recorded = calls.lock().await;
+    assert_eq!(recorded.len(), 1);
+    assert_eq!(recorded[0].0, "NeuroOS");
+    assert_eq!(recorded[0].1, "Disk nearly full");
+    assert_eq!(recorded[0].2, "Your disk is 92 percent full.");
+
+    let _ = stop_tx.send(true);
+    let _ = handle.await;
+}
