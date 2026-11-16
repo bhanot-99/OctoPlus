@@ -4,10 +4,12 @@
 //! - `monitor/stream`: accepts `MonitorSubscribe` and streams raw `MonitorEvent` frames.
 //! - `monitor/control`: accepts `PauseRequest` and `ResumeRequest`, returns `PrivacyState`.
 
+pub mod anonymise;
 pub mod bus;
 pub mod clock;
 pub mod exclusion;
 pub mod privacy;
+pub mod record;
 pub mod sensor;
 pub mod sensors;
 pub mod stream;
@@ -63,11 +65,29 @@ impl Handler for ControlHandler {
     }
 }
 
-/// Initializes the C1 monitor handlers and registers them with `ServiceContext`.
+/// Start-up options that are not configuration (command-line only).
+#[derive(Debug, Clone, Default)]
+pub struct Options {
+    /// `--record <file>`: write an anonymised dump of the stream (FR-MON-12).
+    pub record: Option<std::path::PathBuf>,
+}
+
+/// Initializes the C1 monitor with default options (no recording).
 ///
 /// # Errors
 /// Returns [`neuroos_health::ServiceError`] if socket registration fails.
 pub fn init(ctx: &mut neuroos_health::ServiceContext) -> Result<(), neuroos_health::ServiceError> {
+    init_with(ctx, &Options::default())
+}
+
+/// Initializes the C1 monitor: privacy gate, bus, stream and control sockets, recorder.
+///
+/// # Errors
+/// Returns [`neuroos_health::ServiceError`] if socket registration or the dump file fails.
+pub fn init_with(
+    ctx: &mut neuroos_health::ServiceContext,
+    options: &Options,
+) -> Result<(), neuroos_health::ServiceError> {
     let clock: Arc<dyn clock::Clock> = Arc::new(clock::SystemClock);
     let privacy = Privacy::new(
         Arc::clone(&clock),
@@ -80,6 +100,22 @@ pub fn init(ctx: &mut neuroos_health::ServiceContext) -> Result<(), neuroos_heal
         clock,
         Arc::clone(&ctx.health),
     );
+    if let Some(path) = &options.record {
+        let writer = record::create_dump(path).map_err(|e| {
+            neuroos_health::ServiceError::Custom(format!("cannot create the dump file: {e}"))
+        })?;
+        let anonymiser = anonymise::Anonymiser::new(&ctx.config.monitor.record_keep_app_ids)
+            .map_err(|e| neuroos_health::ServiceError::Custom(e.to_string()))?;
+        let sub = bus.subscribe();
+        let health = Arc::clone(&ctx.health);
+        let stop = ctx.stop_rx.clone();
+        ctx.spawn_task(async move {
+            match record::run_recorder(sub, writer, anonymiser, health, stop).await {
+                Ok(n) => tracing::info!(events = n, "recording finished"),
+                Err(e) => tracing::error!(error = %e, "recording failed"),
+            }
+        });
+    }
     let stream_handler = Arc::new(StreamHandler::new(bus, ctx.stop_rx.clone()));
     let control_handler = Arc::new(ControlHandler::new(privacy));
 

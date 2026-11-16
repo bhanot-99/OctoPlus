@@ -16,7 +16,14 @@ neuroos-common = { path = "../neuroos-common" }
 neuroos-health = { path = "../neuroos-health" }
 neuroos-ipc = { path = "../neuroos-ipc" }
 neuroos-proto = { path = "../neuroos-proto" }
+rustix.workspace = true
+clap.workspace = true
+getrandom.workspace = true
+hmac.workspace = true
+sha2.workspace = true
 thiserror.workspace = true
+tracing.workspace = true
+zeroize.workspace = true
 tokio = { workspace = true, features = ["sync", "time", "macros", "rt"] }
 
 [dev-dependencies]

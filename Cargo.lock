@@ -1167,14 +1167,21 @@ dependencies = [
 name = "neuroos-monitor"
 version = "0.1.0"
 dependencies = [
+ "clap",
+ "getrandom",
+ "hmac",
  "neuroos-common",
  "neuroos-health",
  "neuroos-ipc",
  "neuroos-proto",
  "proptest",
+ "rustix",
+ "sha2",
  "tempfile",
  "thiserror",
  "tokio",
+ "tracing",
+ "zeroize",
 ]
 
 [[package]]
