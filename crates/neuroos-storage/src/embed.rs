@@ -263,6 +263,19 @@ impl WordPiece {
 
 // ---- the real model -------------------------------------------------------------------------------
 
+/// Loads the ONNX Runtime shared library into the process. Call it **before** the Landlock
+/// sandbox is applied: the library pulls in system libraries (`libstdc++`, …) that the sandbox
+/// no longer lets the process open, so loading it afterwards fails. Calling it again later, from
+/// [`OnnxEmbedder::load`], reuses the loaded library.
+///
+/// # Errors
+/// [`EmbedError::Load`] if the file is missing or is not a usable ONNX Runtime.
+pub fn preload_runtime(lib: &Path) -> Result<(), EmbedError> {
+    ort::init_from(lib)
+        .map(|_| ())
+        .map_err(|_| EmbedError::Load("ONNX Runtime library cannot be loaded"))
+}
+
 /// `bge-small-en-v1.5` through ONNX Runtime (CPU).
 pub struct OnnxEmbedder {
     session: Mutex<Session>,

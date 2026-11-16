@@ -41,6 +41,10 @@ fn main() -> Result<(), ServiceError> {
     private_dir(&backups_dir);
     let dirs = Dirs::resolve(&early_config().storage, &home);
 
+    // The runtime library needs system libraries Landlock will hide, so it is loaded first. A
+    // failure is not fatal: C3 then reports the embedder DEGRADED and serves text search.
+    let _ = neuroos_storage::embed::preload_runtime(&dirs.runtime_lib);
+
     // Architecture §8.2: models and the runtime library read-only; storage, backups and the spool
     // (read and remove) read-write. A missing optional folder is simply not granted.
     let read_only: Vec<PathBuf> = [

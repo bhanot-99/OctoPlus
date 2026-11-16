@@ -12,7 +12,7 @@ pub mod query;
 pub mod replay;
 pub mod search;
 pub mod spool;
-// pub mod spool_ingest; // enabled when spool.rs (agy A3) lands
+pub mod spool_ingest;
 pub mod store;
 pub mod vectors;
 
@@ -83,7 +83,7 @@ fn load_embedder(dirs: &Dirs, health: &Health) -> Arc<dyn Embedder> {
             Arc::new(e)
         }
         Err(e) => {
-            tracing::warn!(error = %e, "embedding model unavailable; text search only");
+            tracing::warn!("embedding model unavailable ({e}); text search only");
             health.set(
                 "embedder",
                 HealthStatus::Degraded,
@@ -167,7 +167,8 @@ pub fn init(ctx: &mut neuroos_health::ServiceContext) -> Result<(), ServiceError
             }
         }
     });
-    // spool: enabled with spool_ingest
+    let spool = spool_ingest::spawn(Arc::clone(&store), dirs.spool, ctx.stop_rx.clone());
+    ctx.handles.extend(spool);
 
     let query = Duration::from_millis(ctx.config.deadlines.storage_query_ms);
     ctx.spawn_server("storage", Arc::new(StorageHandler::new(store, query)))?;
