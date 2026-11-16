@@ -1181,8 +1181,10 @@ dependencies = [
 name = "neuroos-proto"
 version = "0.1.0"
 dependencies = [
+ "proptest",
  "prost",
  "prost-build",
+ "thiserror",
 ]
 
 [[package]]

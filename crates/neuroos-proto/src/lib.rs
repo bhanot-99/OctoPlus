@@ -3,6 +3,8 @@
 //! Parts talk only through these types (R0-11). Every frame is one
 //! [`v1::Envelope`]; see Architecture §5.3.
 
+pub mod dump;
+
 /// `neuroos.v1` — the only contract version.
 #[allow(
     missing_docs,
