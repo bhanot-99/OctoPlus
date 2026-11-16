@@ -1,5 +1,9 @@
 //! Idle and active from `ext_idle_notifier_v1` (FR-MON-02, P3-S02; ADR-0007 decision 2).
-//! The notification that honours idle inhibitors is used, so watching a video is not "idle".
+//! Idle here means "no keyboard or pointer input for the timeout". The protocol's version-2
+//! *input* notification is preferred because it ignores idle inhibitors: C1 reports raw facts,
+//! and a playing video is already reported by the media sensor, so mixing it into "idle" would
+//! hide the difference from the nudge hold rules. On a compositor that only has version 1 the
+//! inhibitor-aware notification is used instead.
 
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -34,6 +38,8 @@ struct WlState {
     tx: mpsc::Sender<Msg>,
     clock: Arc<dyn Clock>,
     notifier: Option<notifier::ExtIdleNotifierV1>,
+    /// The protocol version actually bound (1 or 2).
+    notifier_version: u32,
     seat: Option<wl_seat::WlSeat>,
 }
 
@@ -47,15 +53,22 @@ impl Dispatch<wl_registry::WlRegistry, ()> for WlState {
         qh: &QueueHandle<Self>,
     ) {
         let wl_registry::Event::Global {
-            name, interface, ..
+            name,
+            interface,
+            version,
         } = event
         else {
             return;
         };
         match interface.as_str() {
             "ext_idle_notifier_v1" if state.notifier.is_none() => {
-                state.notifier =
-                    Some(registry.bind::<notifier::ExtIdleNotifierV1, _, _>(name, 1, qh, ()));
+                state.notifier_version = version.min(2);
+                state.notifier = Some(registry.bind::<notifier::ExtIdleNotifierV1, _, _>(
+                    name,
+                    state.notifier_version,
+                    qh,
+                    (),
+                ));
             }
             "wl_seat" if state.seat.is_none() => {
                 state.seat = Some(registry.bind::<wl_seat::WlSeat, _, _>(name, 1, qh, ()));
@@ -123,6 +136,7 @@ fn thread_main(tx: &mpsc::Sender<Msg>, clock: Arc<dyn Clock>, timeout_ms: u32, s
         tx: tx.clone(),
         clock,
         notifier: None,
+        notifier_version: 1,
         seat: None,
     };
     if queue.roundtrip(&mut state).is_err() {
@@ -132,7 +146,11 @@ fn thread_main(tx: &mpsc::Sender<Msg>, clock: Arc<dyn Clock>, timeout_ms: u32, s
         return lost("compositor lacks the idle protocol");
     };
     // Kept alive for the whole loop: dropping the proxy would stop the notifications.
-    let _armed = notifier.get_idle_notification(timeout_ms, &seat, &qh, ());
+    let _armed = if state.notifier_version >= 2 {
+        notifier.get_input_idle_notification(timeout_ms, &seat, &qh, ())
+    } else {
+        notifier.get_idle_notification(timeout_ms, &seat, &qh, ())
+    };
     let _ = tx.blocking_send(Msg::Ready);
     if wl::pump(&mut queue, &mut state, stop) == Err(Lost::Connection) {
         lost("compositor connection lost");

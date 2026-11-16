@@ -486,3 +486,56 @@ fn sensors_are_named_for_health_rows() {
         "idle"
     );
 }
+
+/// Manual evidence, not part of the gate (it needs no keyboard or mouse input for a few
+/// seconds): `cargo nextest run -p neuroos-monitor --run-ignored only -E 'test(manual_)'`.
+/// Closes the ADR-0007 gap "idle events not exercised".
+#[tokio::test]
+#[ignore = "needs a few seconds without input on the real session"]
+async fn manual_real_idle_transition_is_reported_after_the_timeout() {
+    if !have_compositor() {
+        eprintln!("skipped: no Wayland session");
+        return;
+    }
+    let clock: Arc<dyn Clock> = Arc::new(SystemClock);
+    let health = Health::new("neuroos-monitor", "test");
+    let bus = Bus::new(
+        16,
+        Arc::new(PassGate),
+        Arc::clone(&clock),
+        Arc::clone(&health),
+    );
+    let sub = bus.subscribe();
+    let (_snap_tx, snap_rx) = watch::channel(0u64);
+    let (stop_tx, stop_rx) = watch::channel(false);
+    let cfg = MonitorConfig {
+        idle_timeout_s: 3,
+        ..Default::default()
+    };
+    let task = tokio::spawn(supervise(
+        IdleSensor::new(&cfg, snap_rx),
+        bus,
+        clock,
+        health,
+        stop_rx,
+    ));
+    let mut states = Vec::new();
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(20);
+    while tokio::time::Instant::now() < deadline {
+        if let Ok(ev) = tokio::time::timeout(Duration::from_millis(500), sub.next()).await
+            && let Some(Event::Idle(i)) = ev.event
+        {
+            states.push(i.idle);
+            if states.contains(&true) {
+                break;
+            }
+        }
+    }
+    stop_tx.send(true).unwrap();
+    task.await.unwrap();
+    assert_eq!(states.first(), Some(&false), "active at start");
+    assert!(
+        states.contains(&true),
+        "idle must be reported after 3 s without input: {states:?}"
+    );
+}
