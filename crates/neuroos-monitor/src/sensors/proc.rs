@@ -7,9 +7,9 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use neuroos_common::config::MonitorConfig;
 use neuroos_proto::v1::monitor_event::Event;
 use neuroos_proto::v1::{ProcessNode, ProcessTree};
 use tokio::sync::watch;
@@ -212,38 +212,72 @@ pub fn scan(proc_root: &Path) -> Vec<ProcInfo> {
         .collect()
 }
 
-/// Best-effort pid of the application owning a window; used by the focus sensor to fill
-/// `FocusChanged.pid` and to tell this sensor which tree to snapshot.
-#[must_use]
-pub fn resolve_pid(proc_root: &Path, app_id: &str) -> u32 {
-    match_window(app_id, &scan(proc_root)).unwrap_or(0)
+/// A cached process table. The focus sensor looks a window's pid up here in microseconds
+/// (NFR-PERF-07 forbids a `/proc` walk on the capture path); [`ProcSensor`] keeps it fresh.
+#[derive(Debug)]
+pub struct ProcTable {
+    root: PathBuf,
+    procs: RwLock<Arc<Vec<ProcInfo>>>,
 }
 
-/// Emits the focused application's process tree after each focus change.
+impl ProcTable {
+    /// A table over `proc_root`, filled once at creation.
+    #[must_use]
+    pub fn new(proc_root: &Path) -> Arc<Self> {
+        let t = Arc::new(Self {
+            root: proc_root.to_path_buf(),
+            procs: RwLock::new(Arc::new(Vec::new())),
+        });
+        t.refresh();
+        t
+    }
+
+    /// Re-reads `/proc` (blocking: call from the blocking pool).
+    pub fn refresh(&self) {
+        let fresh = Arc::new(scan(&self.root));
+        *self
+            .procs
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = fresh;
+    }
+
+    /// The current table.
+    #[must_use]
+    pub fn snapshot(&self) -> Arc<Vec<ProcInfo>> {
+        Arc::clone(
+            &self
+                .procs
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner),
+        )
+    }
+
+    /// Best-effort pid for a window's app id; 0 when unknown or ambiguous (a hint only).
+    #[must_use]
+    pub fn resolve(&self, app_id: &str) -> u32 {
+        match_window(app_id, &self.snapshot()).unwrap_or(0)
+    }
+}
+
+/// Re-reads the table this often even without a focus change, so a freshly started
+/// application is known by the time it takes focus.
+pub const REFRESH_EVERY: Duration = Duration::from_secs(5);
+
+/// Emits the focused application's process tree after each change of focused app.
 #[derive(Debug)]
 pub struct ProcSensor {
-    proc_root: PathBuf,
-    focus_pid: watch::Receiver<u32>,
+    table: Arc<ProcTable>,
+    focused_app: watch::Receiver<String>,
     settle: Duration,
 }
 
 impl ProcSensor {
-    /// The real `/proc`. `focus_pid` carries the pid hint of the focused window (0 = none).
+    /// `focused_app` carries the app id of the focused window (empty = none).
     #[must_use]
-    pub fn new(_cfg: &MonitorConfig, focus_pid: watch::Receiver<u32>) -> Self {
-        Self::with_root(_cfg, Path::new("/proc"), focus_pid)
-    }
-
-    /// A tree rooted at `proc_root` (tests).
-    #[must_use]
-    pub fn with_root(
-        _cfg: &MonitorConfig,
-        proc_root: &Path,
-        focus_pid: watch::Receiver<u32>,
-    ) -> Self {
+    pub fn new(table: Arc<ProcTable>, focused_app: watch::Receiver<String>) -> Self {
         Self {
-            proc_root: proc_root.to_path_buf(),
-            focus_pid,
+            table,
+            focused_app,
             settle: SETTLE,
         }
     }
@@ -256,24 +290,46 @@ impl Sensor for ProcSensor {
 
     async fn run(&mut self, out: &SensorOut) -> Result<(), SensorError> {
         out.set_ok();
+        let mut refresh = tokio::time::interval(REFRESH_EVERY);
+        refresh.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         loop {
-            self.focus_pid
-                .changed()
-                .await
-                .map_err(|_| SensorError::Unavailable("focus source closed"))?;
-            tokio::time::sleep(self.settle).await;
-            let pid = *self.focus_pid.borrow_and_update();
-            if pid == 0 {
-                continue;
-            }
-            let root = self.proc_root.clone();
-            let observed = out.now_ns();
-            let tree = tokio::task::spawn_blocking(move || snapshot_tree(&scan(&root), pid))
-                .await
-                .map_err(|_| SensorError::Unavailable("process scan failed"))?;
-            if let Some(tree) = tree {
-                out.emit(observed, Event::ProcessTree(tree));
+            tokio::select! {
+                changed = self.focused_app.changed() => {
+                    changed.map_err(|_| SensorError::Unavailable("focus source closed"))?;
+                    tokio::time::sleep(self.settle).await;
+                    let app = self.focused_app.borrow_and_update().clone();
+                    self.emit_tree(out, &app).await?;
+                }
+                _ = refresh.tick() => {
+                    let table = Arc::clone(&self.table);
+                    tokio::task::spawn_blocking(move || table.refresh())
+                        .await
+                        .map_err(|_| SensorError::Unavailable("process scan failed"))?;
+                }
             }
         }
+    }
+}
+
+impl ProcSensor {
+    /// Refreshes the table (the new window's processes now exist) and emits the tree.
+    async fn emit_tree(&self, out: &SensorOut, app_id: &str) -> Result<(), SensorError> {
+        if app_id.is_empty() {
+            return Ok(());
+        }
+        let observed = out.now_ns();
+        let table = Arc::clone(&self.table);
+        let app = app_id.to_owned();
+        let tree = tokio::task::spawn_blocking(move || {
+            table.refresh();
+            let procs = table.snapshot();
+            match_window(&app, &procs).and_then(|pid| snapshot_tree(&procs, pid))
+        })
+        .await
+        .map_err(|_| SensorError::Unavailable("process scan failed"))?;
+        if let Some(tree) = tree {
+            out.emit(observed, Event::ProcessTree(tree));
+        }
+        Ok(())
     }
 }

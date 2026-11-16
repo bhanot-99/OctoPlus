@@ -16,6 +16,7 @@ neuroos-common = { path = "../neuroos-common" }
 neuroos-health = { path = "../neuroos-health" }
 neuroos-ipc = { path = "../neuroos-ipc" }
 neuroos-proto = { path = "../neuroos-proto" }
+cosmic-protocols.workspace = true
 rustix.workspace = true
 clap.workspace = true
 getrandom.workspace = true
@@ -23,6 +24,8 @@ hmac.workspace = true
 sha2.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+wayland-client.workspace = true
+wayland-protocols.workspace = true
 zeroize.workspace = true
 tokio = { workspace = true, features = ["sync", "time", "macros", "rt"] }
 

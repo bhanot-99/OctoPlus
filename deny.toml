@@ -30,6 +30,9 @@ unused-allowed-license = "allow"
 # by gtk4's system-deps; the LLVM exception only adds permissions to Apache-2.0.
 exceptions = [
     { allow = ["Apache-2.0 WITH LLVM-exception"], crate = "target-lexicon" },
+    # ADR-0007 (owner accepted 2026-11-15, risk R-07, PRD §10): COSMIC's window protocol
+    # bindings are GPL-3.0-only. Personal install; the crate is used by C1 alone.
+    { allow = ["GPL-3.0-only"], crate = "cosmic-protocols" },
 ]
 
 [licenses.private]

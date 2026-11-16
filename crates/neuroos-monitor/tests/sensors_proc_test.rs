@@ -4,13 +4,12 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use neuroos_common::config::MonitorConfig;
 use neuroos_health::Health;
 use neuroos_monitor::bus::{Bus, PassGate};
 use neuroos_monitor::clock::{Clock, FakeClock};
 use neuroos_monitor::sensors::proc::{
-    MAX_TREE_NODES, ProcInfo, ProcSensor, arg0_basename, match_window, parse_stat, resolve_pid,
-    scan, snapshot_tree,
+    MAX_TREE_NODES, ProcInfo, ProcSensor, ProcTable, arg0_basename, match_window, parse_stat, scan,
+    snapshot_tree,
 };
 use neuroos_monitor::supervisor::supervise;
 use neuroos_proto::v1::monitor_event::Event;
@@ -157,8 +156,10 @@ fn scan_reads_a_fake_proc_and_skips_junk_and_vanished_entries() {
     std::fs::write(dir.path().join("78"), b"a file, not a dir").unwrap();
     let procs = scan(dir.path());
     assert_eq!(procs.len(), 2);
-    assert_eq!(resolve_pid(dir.path(), "org.example.MyApp"), 50);
-    assert_eq!(resolve_pid(dir.path(), "org.example.Nothing"), 0);
+    let table = ProcTable::new(dir.path());
+    assert_eq!(table.resolve("org.example.MyApp"), 50);
+    assert_eq!(table.resolve("org.example.Nothing"), 0);
+    assert_eq!(table.resolve(""), 0);
     assert_eq!(snapshot_tree(&procs, 50).unwrap().nodes.len(), 2);
     assert!(scan(&dir.path().join("does-not-exist")).is_empty());
 }
@@ -177,13 +178,13 @@ async fn the_sensor_emits_the_tree_once_after_the_settle_delay() {
         Arc::clone(&health),
     );
     let sub = bus.subscribe();
-    let (pid_tx, pid_rx) = tokio::sync::watch::channel(0u32);
-    let sensor = ProcSensor::with_root(&MonitorConfig::default(), dir.path(), pid_rx);
+    let (app_tx, app_rx) = tokio::sync::watch::channel(String::new());
+    let sensor = ProcSensor::new(ProcTable::new(dir.path()), app_rx);
     let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);
     let task = tokio::spawn(supervise(sensor, bus, clock, health, stop_rx));
 
-    pid_tx.send(0).unwrap(); // "no window": nothing to emit
-    pid_tx.send(50).unwrap();
+    app_tx.send(String::new()).unwrap(); // "no window": nothing to emit
+    app_tx.send("org.example.MyApp".into()).unwrap();
     let ev = tokio::time::timeout(Duration::from_secs(5), sub.next())
         .await
         .unwrap();
