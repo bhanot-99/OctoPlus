@@ -51,7 +51,7 @@ Caveat: in the soak the chunk cap (lowered to 400) was never reached (135 chunks
 
 ## 5. Gate run
 
-`just ci`: ALL GREEN (540 Rust tests, 2 skipped; C++ 59/59), run on the branch before the review fixes. After the review fixes: `cargo nextest run -p neuroos-storage` 128 passed, clippy `-D warnings` clean. The final full run is recorded in `memory.md` §9.
+`just ci`: ALL GREEN (540 Rust tests, 2 skipped; C++ 59/59), run on the final commit of the branch (after the review fixes), exit 0.
 
 ## 6. Deviations, bugs and descoped items
 
