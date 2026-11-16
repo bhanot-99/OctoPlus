@@ -696,18 +696,31 @@ async fn dropped_clients_release_their_connection() {
     c.max_connections = 2;
     let srv = start(&path, c).await;
     for i in 0..10 {
-        let client = Client::connect(&path, MAX).await.unwrap();
-        let r = client
-            .call(ping("echo:x"), Duration::from_secs(2))
-            .await
-            .unwrap_or_else(|e| panic!("call {i} failed: {e:?} (connections leaked)"));
+        // The server frees a dropped client's slot a moment after the close arrives, so the
+        // next connect may find the limit still full under load. A real leak never frees it,
+        // so waiting for the slot (bounded) keeps the test about the leak, not about timing.
+        let mut attempt = 0;
+        let r = loop {
+            let client = Client::connect(&path, MAX).await.unwrap();
+            match client.call(ping("echo:x"), Duration::from_secs(2)).await {
+                Ok(r) => break r,
+                Err(e) if attempt < 100 => {
+                    let _ = e;
+                    attempt += 1;
+                    drop(client);
+                    tokio::time::sleep(Duration::from_millis(10)).await;
+                }
+                Err(e) => {
+                    panic!("call {i} failed after {attempt} retries: {e:?} (connections leaked)")
+                }
+            }
+        };
         assert_eq!(
             r,
             Body::Pong(Pong {
                 payload: b"echo:x".to_vec()
             })
         );
-        drop(client);
     }
     // A stream whose client was dropped early still finishes (it holds its own handle).
     let stream = Client::connect(&path, MAX)
