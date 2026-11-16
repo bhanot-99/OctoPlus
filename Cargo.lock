@@ -1286,6 +1286,7 @@ dependencies = [
  "neuroos-proto",
  "neuroos-taint",
  "ort",
+ "proptest",
  "rusqlite",
  "serde",
  "serde_json",

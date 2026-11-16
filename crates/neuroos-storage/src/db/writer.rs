@@ -40,6 +40,12 @@ struct Envelope {
     reply: oneshot::Sender<Result<(), DbError>>,
 }
 
+/// A job's reply channel and what it produced.
+type Settled = (
+    oneshot::Sender<Result<(), DbError>>,
+    Result<Vec<MatrixOp>, DbError>,
+);
+
 /// Most jobs one transaction holds.
 const BATCH_MAX: usize = 64;
 
@@ -147,10 +153,7 @@ fn commit_batch(conn: &Connection, batch: Vec<Envelope>, post_commit: &PostCommi
         reply_all_failed(batch, &kind);
         return;
     }
-    let mut results: Vec<(
-        oneshot::Sender<Result<(), DbError>>,
-        Result<Vec<MatrixOp>, DbError>,
-    )> = Vec::with_capacity(batch.len());
+    let mut results: Vec<Settled> = Vec::with_capacity(batch.len());
     for env in batch {
         let outcome = run_in_savepoint(conn, env.job);
         results.push((env.reply, outcome));
