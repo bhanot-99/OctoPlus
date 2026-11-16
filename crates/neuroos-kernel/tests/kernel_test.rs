@@ -330,6 +330,33 @@ async fn test_kernel_audit_tail_verify_and_tamper() {
         .await
         .unwrap();
 
+    let action_id_tainted = uuid::Uuid::now_v7().to_string();
+    audit_actor
+        .attempt(
+            3_000_000,
+            action_id_tainted.clone(),
+            "system.read_metadata",
+            neuroos_kernel::ActionTier::Review,
+            1,
+            neuroos_kernel::ActionOrigin::Voice,
+            "args_hash_2",
+        )
+        .await
+        .unwrap();
+    audit_actor
+        .result(
+            3_100_000,
+            action_id_tainted,
+            "system.read_metadata",
+            neuroos_kernel::ActionTier::Review,
+            1,
+            neuroos_kernel::ActionOrigin::Voice,
+            "args_hash_2",
+            neuroos_kernel::ActionStatus::DeniedPolicy,
+        )
+        .await
+        .unwrap();
+
     // 3. Tail records via client
     let tail_res = client
         .call(
@@ -341,16 +368,37 @@ async fn test_kernel_audit_tail_verify_and_tamper() {
 
     match tail_res {
         Body::AuditRecords(rec) => {
-            assert_eq!(rec.records.len(), 2);
+            assert_eq!(rec.records.len(), 4);
             assert_eq!(rec.records[0].seq, 1);
             assert_eq!(rec.records[0].kind, "ATTEMPT");
             assert_eq!(rec.records[0].skill, "system.read_metadata");
+            assert_eq!(rec.records[0].tier, "SAFE");
+            assert_eq!(rec.records[0].origin, "CLI");
+            assert_eq!(rec.records[0].taint, 0);
             assert!(!rec.records[0].record_hash.is_empty());
 
             assert_eq!(rec.records[1].seq, 2);
             assert_eq!(rec.records[1].kind, "RESULT");
             assert_eq!(rec.records[1].status, "EXECUTED");
+            assert_eq!(rec.records[1].tier, "SAFE");
+            assert_eq!(rec.records[1].origin, "CLI");
+            assert_eq!(rec.records[1].taint, 0);
             assert!(!rec.records[1].record_hash.is_empty());
+
+            // Tainted read_metadata request: logged as REVIEW, origin VOICE, taint 1
+            assert_eq!(rec.records[2].seq, 3);
+            assert_eq!(rec.records[2].kind, "ATTEMPT");
+            assert_eq!(rec.records[2].skill, "system.read_metadata");
+            assert_eq!(rec.records[2].tier, "REVIEW");
+            assert_eq!(rec.records[2].origin, "VOICE");
+            assert_eq!(rec.records[2].taint, 1);
+
+            assert_eq!(rec.records[3].seq, 4);
+            assert_eq!(rec.records[3].kind, "RESULT");
+            assert_eq!(rec.records[3].status, "DENIED_POLICY");
+            assert_eq!(rec.records[3].tier, "REVIEW");
+            assert_eq!(rec.records[3].origin, "VOICE");
+            assert_eq!(rec.records[3].taint, 1);
         }
         other => panic!("unexpected body {other:?}"),
     }
@@ -367,7 +415,7 @@ async fn test_kernel_audit_tail_verify_and_tamper() {
     match verify_res {
         Body::AuditVerifyResult(rep) => {
             assert!(rep.chain_ok);
-            assert_eq!(rep.records_checked, 2);
+            assert_eq!(rep.records_checked, 4);
             assert_eq!(rep.first_bad_seq, 0);
         }
         other => panic!("unexpected body {other:?}"),

@@ -62,6 +62,9 @@ message AuditRecord {
   string skill = 4;
   string status = 5;
   string record_hash = 6;
+  string tier = 7;
+  uint32 taint = 8;
+  string origin = 9;
 }
 
 message AuditRecords {

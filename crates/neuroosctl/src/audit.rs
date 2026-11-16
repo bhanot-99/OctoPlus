@@ -3,24 +3,25 @@
 use std::path::Path;
 use std::time::Duration;
 
+use jiff::Timestamp;
 use neuroos_common::paths::{self, Part};
 use neuroos_ipc::Client;
 use neuroos_proto::v1::envelope::Body;
-use neuroos_proto::v1::{AuditTailRequest, AuditVerifyRequest};
-use serde::Serialize;
+use neuroos_proto::v1::{AuditRecord, AuditTailRequest, AuditVerifyRequest};
+use serde::{Deserialize, Serialize};
 
 use crate::AuditCommands;
 use crate::style::{Styler, middle_truncate};
 
 /// JSON envelope for `neuroosctl audit tail --json`.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AuditTailJson {
     pub schema: u32,
     pub records: Vec<AuditRecordJson>,
 }
 
 /// JSON record for `neuroosctl audit tail --json`.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AuditRecordJson {
     pub seq: u64,
     pub at_ns: u64,
@@ -28,6 +29,9 @@ pub struct AuditRecordJson {
     pub skill: String,
     pub status: String,
     pub record_hash: String,
+    pub tier: String,
+    pub taint: u32,
+    pub origin: String,
 }
 
 /// JSON output for `neuroosctl audit verify --json`.
@@ -39,9 +43,19 @@ pub struct AuditVerifyJson {
     pub first_bad_seq: Option<u64>,
 }
 
-/// Formats nanoseconds since UNIX epoch into human-readable UTC timestamp `YYYY-MM-DD HH:MM:SS`.
+/// Formats nanoseconds since UNIX epoch into human-readable local timestamp `YYYY-MM-DD HH:MM:SS`.
 #[must_use]
 pub fn format_timestamp(at_ns: u64) -> String {
+    if let Ok(ts) = Timestamp::from_nanosecond(i128::from(at_ns)) {
+        let zoned = ts.to_zoned(jiff::tz::TimeZone::system());
+        return zoned.strftime("%Y-%m-%d %H:%M:%S").to_string();
+    }
+    format_timestamp_utc(at_ns)
+}
+
+/// Fallback UTC timestamp formatting if nanoseconds are out of range.
+#[must_use]
+pub fn format_timestamp_utc(at_ns: u64) -> String {
     let secs = at_ns / 1_000_000_000;
     let days = (secs / 86400) as i64;
     let rem_secs = (secs % 86400) as u32;
@@ -63,6 +77,27 @@ pub fn format_timestamp(at_ns: u64) -> String {
     format!("{y:04}-{m:02}-{d:02} {hours:02}:{mins:02}:{s:02}")
 }
 
+/// Returns the formatted design.md §7 tier label with optional taint tags (e.g. `[REVIEW] [WEB]`).
+#[must_use]
+pub fn format_tier(tier: &str, taint: u32) -> String {
+    let base = match tier {
+        "SAFE" => "[SAFE]",
+        "REVIEW" => "[REVIEW]",
+        "DANGEROUS" => "[DANGEROUS]",
+        "" | "NONE" => "—",
+        other => other,
+    };
+    if (taint & 1) != 0 {
+        if base == "—" {
+            "[WEB]".to_string()
+        } else {
+            format!("{base} [WEB]")
+        }
+    } else {
+        base.to_string()
+    }
+}
+
 /// Returns the formatted design.md §7 tier label for a registered skill.
 #[must_use]
 pub fn skill_tier_label(skill: &str) -> &'static str {
@@ -77,6 +112,24 @@ pub fn skill_tier_label(skill: &str) -> &'static str {
         "shell.exec" => "[DANGEROUS]",
         _ => "—",
     }
+}
+
+/// Formats a single audit record row for text display.
+#[must_use]
+pub fn format_audit_row(record: &AuditRecord, styler: &Styler) -> String {
+    let time_str = format_timestamp(record.at_ns);
+    let tier_label = format_tier(&record.tier, record.taint);
+    let status_label = if record.status.is_empty() {
+        "—"
+    } else {
+        &record.status
+    };
+    let hash_str = styler.dim(&middle_truncate(&record.record_hash, 13));
+
+    format!(
+        "{:<6}{:<21}{:<10}{:<25}{:<18}{:<16}{}",
+        record.seq, time_str, record.kind, record.skill, tier_label, status_label, hash_str,
+    )
 }
 
 /// Executes audit subcommands (`audit tail`, `audit verify`).
@@ -144,6 +197,9 @@ async fn run_audit_tail(
                 skill: r.skill,
                 status: r.status,
                 record_hash: r.record_hash,
+                tier: r.tier,
+                taint: r.taint,
+                origin: r.origin,
             })
             .collect();
         let payload = AuditTailJson {
@@ -160,28 +216,16 @@ async fn run_audit_tail(
         println!(
             "{}{}{}{}{}{}{}",
             styler.bold(&format!("{:<6}", "SEQ")),
-            styler.bold(&format!("{:<21}", "TIME")),
+            styler.bold(&format!("{:<21}", "WHEN (local)")),
             styler.bold(&format!("{:<10}", "ACTION")),
             styler.bold(&format!("{:<25}", "SKILL")),
-            styler.bold(&format!("{:<13}", "TIER")),
-            styler.bold(&format!("{:<12}", "STATUS")),
+            styler.bold(&format!("{:<18}", "TIER")),
+            styler.bold(&format!("{:<16}", "STATUS")),
             styler.bold("HASH"),
         );
 
         for record in &records {
-            let time_str = format_timestamp(record.at_ns);
-            let tier_label = skill_tier_label(&record.skill);
-            let status_label = if record.status.is_empty() {
-                "—"
-            } else {
-                &record.status
-            };
-            let hash_str = styler.dim(&middle_truncate(&record.record_hash, 13));
-
-            println!(
-                "{:<6}{:<21}{:<10}{:<25}{:<13}{:<12}{}",
-                record.seq, time_str, record.kind, record.skill, tier_label, status_label, hash_str,
-            );
+            println!("{}", format_audit_row(record, &styler));
         }
     }
 
@@ -255,10 +299,17 @@ mod tests {
 
     #[test]
     fn test_format_timestamp() {
-        assert_eq!(format_timestamp(0), "1970-01-01 00:00:00");
-        // 2026-11-16 00:00:00 UTC = 1794787200 seconds
+        assert_eq!(format_timestamp_utc(0), "1970-01-01 00:00:00");
         let ns = 1_794_787_200 * 1_000_000_000;
-        assert_eq!(format_timestamp(ns), "2026-11-16 00:00:00");
+        assert_eq!(format_timestamp_utc(ns), "2026-11-16 00:00:00");
+
+        // format_timestamp must return system local time
+        let expected_local = Timestamp::from_nanosecond(0)
+            .unwrap()
+            .to_zoned(jiff::tz::TimeZone::system())
+            .strftime("%Y-%m-%d %H:%M:%S")
+            .to_string();
+        assert_eq!(format_timestamp(0), expected_local);
     }
 
     #[test]

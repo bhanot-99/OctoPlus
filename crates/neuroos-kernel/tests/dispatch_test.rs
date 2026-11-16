@@ -418,3 +418,34 @@ async fn one_dialog_at_a_time() {
     let first = a.await.unwrap().unwrap();
     assert_eq!(first.status, DispatchStatus::Expired as i32);
 }
+
+#[tokio::test]
+async fn an_allow_only_counts_if_the_dialog_exits_cleanly() {
+    // agy review FIND-04: a decision line followed by a failing exit is not an approval.
+    let w = world(&format!("{ALLOW}\nexit 3"));
+    let r =
+        w.d.dispatch(req("system.cleanup", &cleanup_args(&w), Some(0)))
+            .await
+            .unwrap();
+    assert_eq!(r.status, DispatchStatus::Expired as i32);
+    assert!(w.home.join(".cache/thumbs/a.png").exists());
+}
+
+#[tokio::test]
+async fn a_dialog_that_answers_but_never_exits_does_not_hold_the_gate() {
+    // agy review FIND-02: output closed, process alive. C6 must give up and free the gate.
+    let w = world(&format!("{ALLOW}\nexec sleep 30 >&-"));
+    let started = std::time::Instant::now();
+    let r =
+        w.d.dispatch(req("system.cleanup", &cleanup_args(&w), Some(0)))
+            .await
+            .unwrap();
+    assert_eq!(r.status, DispatchStatus::Expired as i32);
+    assert!(started.elapsed() < Duration::from_secs(10));
+    // The gate is free again: the next request reaches its dialog instead of BUSY.
+    let r =
+        w.d.dispatch(req("system.read_metadata", "{}", Some(EXT)))
+            .await
+            .unwrap();
+    assert_ne!(r.status, DispatchStatus::Unspecified as i32);
+}

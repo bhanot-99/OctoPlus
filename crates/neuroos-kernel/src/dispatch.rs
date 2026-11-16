@@ -600,7 +600,13 @@ impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
         if !matches!(read, Ok(Ok(_))) {
             return None;
         }
-        let _ = child.wait().await;
+        // The answer counts only if the dialog also exits cleanly, and only within
+        // a short grace: a dialog that closed its output but never exits must not
+        // hold the one-dialog gate forever (agy review FIND-02, FIND-04).
+        let exited = tokio::time::timeout(DIALOG_GRACE, child.wait()).await;
+        if !matches!(exited, Ok(Ok(s)) if s.success()) {
+            return None; // killed on drop
+        }
         DialogDecision::parse_for(&buf, request)
             .ok()
             .map(|d| d.decision)

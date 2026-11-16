@@ -189,7 +189,7 @@ pub fn generate_kernel_cleanup_dropin(folders: &[PathBuf]) -> Result<String, Dep
             || f.components()
                 .any(|c| matches!(c, std::path::Component::ParentDir))
             || s.chars()
-                .any(|c| c.is_whitespace() || c.is_control() || "\"'%\\;".contains(c));
+                .any(|c| c.is_whitespace() || c.is_control() || "\"'%\\;:".contains(c));
         if bad {
             return Err(DeployError::BadPath(s.to_owned()));
         }

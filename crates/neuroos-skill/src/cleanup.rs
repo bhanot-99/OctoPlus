@@ -57,8 +57,12 @@ pub fn validate(inv: &Invocation, requested: &Path) -> Result<Target, SkillError
     }
     // Must exist (without following a final symlink).
     std::fs::symlink_metadata(requested).map_err(|_| SkillError::PathOutsideAllowlist)?;
+    // `.ok()`: a dangling symlink cannot be the trash, but it may still be a
+    // valid entry to delete below (agy review FIND-03).
     if let Some(trash) = &inv.trash
-        && canonical(trash)? == canonical(requested)?
+        && canonical(trash)
+            .ok()
+            .is_some_and(|t| canonical(requested).ok() == Some(t))
         && !std::fs::symlink_metadata(requested)
             .map_err(|_| SkillError::PathOutsideAllowlist)?
             .file_type()
@@ -334,5 +338,15 @@ mod tests {
         // A link to the trash inside a root is just an entry (the link), never "empty the trash".
         let v = run(&f.inv, &paths(&[&link])).unwrap();
         assert_eq!(v["items"][0]["kind"], "entry");
+    }
+
+    #[test]
+    fn dangling_symlink_in_a_root_can_be_deleted() {
+        // agy review FIND-03: a broken link in the cache is an ordinary entry.
+        let f = fixture(Mode::Run);
+        let link = f.home.join(".cache/broken");
+        std::os::unix::fs::symlink(f.home.join("no-such-target"), &link).unwrap();
+        run(&f.inv, &paths(&[&link])).unwrap();
+        assert!(std::fs::symlink_metadata(&link).is_err());
     }
 }

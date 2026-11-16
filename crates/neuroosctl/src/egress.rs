@@ -152,7 +152,7 @@ async fn run_egress_list(
         println!(
             "{}{}{}{}{}",
             styler.bold(&format!("{:<6}", "SEQ")),
-            styler.bold(&format!("{:<21}", "TIME")),
+            styler.bold(&format!("{:<21}", "WHEN (local)")),
             styler.bold(&format!("{:<20}", "HOST")),
             styler.bold(&format!("{:<42}", "SENT")),
             styler.bold("BYTES (out/in)"),

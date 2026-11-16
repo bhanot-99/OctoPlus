@@ -200,6 +200,21 @@ impl ActionLog {
                     .and_then(|v| v.as_str())
                     .unwrap_or("")
                     .to_string();
+                let tier = val
+                    .get("tier")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let taint = val
+                    .get("taint")
+                    .and_then(|v| v.as_u64())
+                    .map(|v| v as u32)
+                    .unwrap_or(0);
+                let origin = val
+                    .get("origin")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
 
                 proto_records.push(neuroos_proto::v1::AuditRecord {
                     seq,
@@ -208,6 +223,9 @@ impl ActionLog {
                     skill,
                     status,
                     record_hash,
+                    tier,
+                    taint,
+                    origin,
                 });
             }
         }

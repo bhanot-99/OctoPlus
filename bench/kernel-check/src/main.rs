@@ -32,7 +32,11 @@ struct Args {
 }
 
 fn pct(sorted: &[u64], p: f64) -> u64 {
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        clippy::cast_precision_loss
+    )]
     let i = ((sorted.len() as f64 - 1.0) * p).round() as usize;
     sorted.get(i).copied().unwrap_or(0)
 }
@@ -45,7 +49,9 @@ async fn main() -> Result<()> {
         None => paths::runtime_root(std::env::var_os("XDG_RUNTIME_DIR").as_deref())?,
     };
     let sock = paths::socket_path(&root, Part::Kernel, "kernel");
-    let client = Client::connect(&sock, 1024 * 1024).await.context("connect to the kernel")?;
+    let client = Client::connect(&sock, 1024 * 1024)
+        .await
+        .context("connect to the kernel")?;
     // A mix of the paths C5 will take: clean SAFE, tainted escalation, REVIEW, unknown.
     let caps = [
         ("system.disk_report", 0),
@@ -63,7 +69,10 @@ async fn main() -> Result<()> {
         let t = Instant::now();
         let r = client.call(req, Duration::from_millis(50)).await;
         let ns = u64::try_from(t.elapsed().as_nanos()).unwrap_or(u64::MAX);
-        anyhow::ensure!(matches!(r, Ok(Body::EvaluateResult(_))), "unexpected reply: {r:?}");
+        anyhow::ensure!(
+            matches!(r, Ok(Body::EvaluateResult(_))),
+            "unexpected reply: {r:?}"
+        );
         if i >= a.warmup {
             samples.push(ns);
         }

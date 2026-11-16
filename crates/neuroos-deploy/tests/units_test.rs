@@ -594,6 +594,7 @@ fn kernel_cleanup_dropin_validates_paths() {
         "/home/u/%h",
         "/home/u/a\\b",
         "/home/u/a;b",
+        "/home/u/a:/home/u/.config/neuroos",
         "/home/u/a\nExecStart=/bin/sh",
     ] {
         assert!(

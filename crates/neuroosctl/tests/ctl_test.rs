@@ -484,6 +484,9 @@ impl Handler for MockKernelHandler {
                         record_hash:
                             "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
                                 .into(),
+                        tier: "SAFE".into(),
+                        taint: 0,
+                        origin: "CLI".into(),
                     });
                 }
                 Ok(Body::AuditRecords(neuroos_proto::v1::AuditRecords {
@@ -699,4 +702,80 @@ async fn test_egress_list() {
     assert_eq!(exit_list_json, 0);
 
     let _ = stop_kernel.send(true);
+}
+
+#[test]
+fn test_audit_formatting_denied_policy_and_tainted_review() {
+    let styler = Styler::new(ColorChoice::Never);
+
+    // 1. Tainted review record: skill has base tier SAFE, but logged tier is REVIEW with taint 1
+    let tainted_record = neuroos_proto::v1::AuditRecord {
+        seq: 42,
+        at_ns: 1_700_000_000_000_000_000,
+        kind: "ATTEMPT".into(),
+        skill: "system.read_metadata".into(),
+        status: "".into(),
+        record_hash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into(),
+        tier: "REVIEW".into(),
+        taint: 1, // EXTERNAL_UNTRUSTED bit 0
+        origin: "VOICE".into(),
+    };
+
+    let formatted_tainted = neuroosctl::audit::format_audit_row(&tainted_record, &styler);
+    // TIER must show [REVIEW] [WEB], NOT base tier [SAFE]
+    assert!(formatted_tainted.contains("[REVIEW] [WEB]"));
+    assert!(!formatted_tainted.contains("[SAFE]"));
+
+    // 2. DENIED_POLICY status: must fit in STATUS column without overflowing into HASH
+    let denied_record = neuroos_proto::v1::AuditRecord {
+        seq: 43,
+        at_ns: 1_700_000_000_000_000_000,
+        kind: "RESULT".into(),
+        skill: "system.read_metadata".into(),
+        status: "DENIED_POLICY".into(),
+        record_hash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into(),
+        tier: "REVIEW".into(),
+        taint: 1,
+        origin: "VOICE".into(),
+    };
+
+    let formatted_denied = neuroosctl::audit::format_audit_row(&denied_record, &styler);
+    assert!(formatted_denied.contains("DENIED_POLICY"));
+
+    // Verify column alignments:
+    // SEQ (0..6), WHEN (6..27), ACTION (27..37), SKILL (37..62), TIER (62..80), STATUS (80..96), HASH (96..)
+    assert_eq!(&formatted_denied[0..2], "43");
+    assert_eq!(&formatted_denied[27..33], "RESULT");
+    assert_eq!(&formatted_denied[37..57], "system.read_metadata");
+    assert_eq!(&formatted_denied[62..76], "[REVIEW] [WEB]");
+    assert_eq!(&formatted_denied[80..93], "DENIED_POLICY");
+    assert_eq!(&formatted_denied[96..], "012345…abcdef");
+}
+
+#[test]
+fn test_audit_tail_json_serialization() {
+    let json_rec = neuroosctl::audit::AuditRecordJson {
+        seq: 1,
+        at_ns: 1_700_000_000_000_000_000,
+        kind: "RESULT".into(),
+        skill: "system.read_metadata".into(),
+        status: "DENIED_POLICY".into(),
+        record_hash: "abcd1234abcd1234".into(),
+        tier: "REVIEW".into(),
+        taint: 1,
+        origin: "VOICE".into(),
+    };
+    let tail_json = neuroosctl::audit::AuditTailJson {
+        schema: 1,
+        records: vec![json_rec.clone()],
+    };
+    let serialized = serde_json::to_string(&tail_json).unwrap();
+    assert!(serialized.contains("\"schema\":1"));
+    assert!(serialized.contains("\"tier\":\"REVIEW\""));
+    assert!(serialized.contains("\"taint\":1"));
+    assert!(serialized.contains("\"origin\":\"VOICE\""));
+
+    let deserialized: neuroosctl::audit::AuditTailJson = serde_json::from_str(&serialized).unwrap();
+    assert_eq!(deserialized.schema, 1);
+    assert_eq!(deserialized.records[0], json_rec);
 }
