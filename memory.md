@@ -11,11 +11,11 @@
 | Field | Value |
 | :--- | :--- |
 | Last updated | 2026-11-16 |
-| Project stage | **Phase 3 (Monitor, C1) in progress** — started 2026-11-16 on the owner's go-ahead (D-25). Phase 2 signed off and merged. |
+| Project stage | **Phase 3 (Monitor, C1) gate green, awaiting recordings and sign-off** — built 2026-11-16 on the owner's go-ahead (D-25). Phase 2 signed off and merged. |
 | Current phase | Phase 3 — Monitor (C1) |
 | Current story | P3 work packages W0–W10 in `docs/plans/phase-03-monitor-plan.md` |
 | Overall progress | 3 / 11 phases done; Phase 3 started |
-| Health | 🟦 Phase 3 building |
+| Health | 🟨 Phase 3 in gate review |
 | Next milestone | M3 — monitor (C1) |
 
 ---
@@ -26,9 +26,9 @@
 | :--- | :--- |
 | Story | Phase 3 plan W0→W10 (`docs/plans/phase-03-monitor-plan.md`) |
 | Builder / Checker | agy builds, Claude checks (D-23); Claude builds pieces itself where faster (D-21 carried over) |
-| Branch | `phase-3-monitor` |
+| Branch | `phase-3-monitor` (not merged; owner merges) |
 | Files being changed | `crates/neuroos-monitor/**`, `neuroos-common/src/config.rs`, `neuroos-proto` (dump), `neuroosctl` (replay) |
-| Next concrete step | Phase gate: wait for the PF bench, agy review findings, then `just ci` end to end; phase report; owner sign-off. Owner: run the MS recordings (`docs/runbooks/record-monitor-session.md`: ≥ 8 h in ≥ 3 dumps + 1 held-out). |
+| Next concrete step | **Owner:** run the measurement recordings (`docs/runbooks/record-monitor-session.md`, ≥ 8 h in ≥ 3 dumps + 1 held-out), read `reports/phase-03-monitor.md` §8 (ADR-0011, lock "unknown"), sign off, merge `phase-3-monitor`. Then Phase 4 (storage) can use the dumps. |
 
 ---
 
@@ -39,7 +39,7 @@
 | 0 | Foundation and spikes | ✅ | 2026-11-14 | 2026-11-15 | `reports/phase-00-foundation.md` |
 | 1 | Walking skeleton | ✅ | 2026-11-15 | 2026-11-16 | `reports/phase-01-skeleton.md` |
 | 2 | Safety kernel (C6) | ✅ | 2026-11-16 | 2026-11-16 | `reports/phase-02-kernel.md` |
-| 3 | Monitor (C1) | 🟦 | 2026-11-16 | — | `reports/phase-03-monitor.md` |
+| 3 | Monitor (C1) | 🟨 | 2026-11-16 | — | `reports/phase-03-monitor.md` |
 | 4 | Storage (C3) | ⬜ | — | — | `reports/phase-04-storage.md` |
 | 5 | Knowledge and conversation (C5) | ⬜ | — | — | `reports/phase-05-knowledge.md` |
 | 6 | Nudge engine | ⬜ | — | — | `reports/phase-06-nudges.md` |
@@ -58,13 +58,13 @@ Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done �
 
 | Story | Title | Status | Builder | Checker |
 | :--- | :--- | :--- | :--- | :--- |
-| P3-S01 | C3 receives focus changes with app, title, pids, timestamps | In Check | Claude (W5 focus; agy stalled on W3 and was taken over, D-25) | agy review |
-| P3-S02 | C3 receives idle, lock and media events | In Check (lock: unknown by design, ADR-0011) | Claude (W5 idle, W6 media) | agy review |
-| P3-S03 | C3 receives CPU, memory, disk, battery, temperature samples | In Check | Claude (W3, after agy stalled) | agy review |
-| P3-S04 | C3 receives the focused window's process tree | In Check | Claude (W4) | agy review |
-| P3-S05 | Excluded apps and paused periods never leave C1 | In Check | Claude (W2) | agy review |
-| P3-S06 | Record, anonymise and replay a dump | In Check | Claude (dump, anonymiser, recorder), agy (`neuroosctl replay`, checked by Claude) | agy review / Claude |
-| P3-S07 | (P1) File activity for configured folders | In Check | Claude (W7) | agy review |
+| P3-S01 | C3 receives focus changes with app, title, pids, timestamps | Done (pending sign-off) | Claude (W5 focus; agy stalled on W3 and was taken over, D-25) | agy review |
+| P3-S02 | C3 receives idle, lock and media events | Done (pending sign-off; lock unknown by design) | Claude (W5 idle, W6 media) | agy review |
+| P3-S03 | C3 receives CPU, memory, disk, battery, temperature samples | Done (pending sign-off) | Claude (W3, after agy stalled) | agy review |
+| P3-S04 | C3 receives the focused window's process tree | Done (pending sign-off) | Claude (W4) | agy review |
+| P3-S05 | Excluded apps and paused periods never leave C1 | Done (pending sign-off) | Claude (W2) | agy review |
+| P3-S06 | Record, anonymise and replay a dump | Done (pending sign-off) | Claude (dump, anonymiser, recorder), agy (`neuroosctl replay`, checked by Claude) | agy review / Claude |
+| P3-S07 | (P1) File activity for configured folders | Done (pending sign-off) | Claude (W7) | agy review |
 
 Columns: Backlog → Ready → In Progress → In Check → Done.
 
