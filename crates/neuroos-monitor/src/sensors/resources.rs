@@ -170,10 +170,3 @@ impl Sensor for ResourcesSensor {
         }
     }
 }
-
-/// One collection, for tests that read the real machine.
-#[doc(hidden)]
-#[must_use]
-pub fn collect_for_test(proc_root: &Path) -> Option<(CpuTimes, ResourceSample)> {
-    collect(proc_root)
-}

@@ -32,10 +32,15 @@ tokio = { workspace = true, features = ["sync", "time", "macros", "rt"] }
 
 [dev-dependencies]
 neuroos-health = { path = "../neuroos-health", features = ["test-support"] }
+neuroos-monitor = { path = ".", features = ["test-support"] }
 proptest.workspace = true
 zbus = { workspace = true, features = ["proxy", "service"] }
 tempfile.workspace = true
 tokio = { workspace = true, features = ["test-util"] }
+
+[features]
+# Test helpers (a fake clock) for integration tests; never in the shipped binary.
+test-support = []
 
 [lints]
 workspace = true

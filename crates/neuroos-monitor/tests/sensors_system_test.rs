@@ -545,12 +545,15 @@ proptest! {
 
 #[tokio::test]
 async fn local_real_machine_samples_are_sane() {
-    use neuroos_monitor::sensors::resources::{collect_for_test, top_process};
-    let (cpu_a, sample) = collect_for_test(Path::new("/proc")).expect("/proc readable");
-    assert!(sample.mem_total_bytes > 0 && sample.mem_available_bytes <= sample.mem_total_bytes);
+    use neuroos_monitor::sensors::resources::top_process;
+    let read = |f: &str| std::fs::read_to_string(Path::new("/proc").join(f)).unwrap();
+    let cpu_a = resources::parse_cpu_times(&read("stat")).expect("/proc/stat parses");
+    let (total, available) =
+        resources::parse_meminfo(&read("meminfo")).expect("/proc/meminfo parses");
+    assert!(total > 0 && available <= total);
     assert!(top_process(Path::new("/proc"), rustix::param::page_size()).is_some());
     std::thread::sleep(Duration::from_millis(200));
-    let (cpu_b, _) = collect_for_test(Path::new("/proc")).unwrap();
+    let cpu_b = resources::parse_cpu_times(&read("stat")).unwrap();
     if let Some(p) = resources::cpu_percent(cpu_a, cpu_b) {
         assert!((0.0..=100.0).contains(&p));
     }

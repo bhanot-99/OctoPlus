@@ -11,11 +11,11 @@
 | Field | Value |
 | :--- | :--- |
 | Last updated | 2026-11-16 |
-| Project stage | **Phase 3 (Monitor, C1) gate green, awaiting recordings and sign-off** — built 2026-11-16 on the owner's go-ahead (D-25). Phase 2 signed off and merged. |
+| Project stage | **Phase 3 (Monitor, C1) signed off 2026-11-16 (D-27); branch ready to merge** — built 2026-11-16 on the owner's go-ahead (D-25). Phase 2 signed off and merged. |
 | Current phase | Phase 3 — Monitor (C1) |
 | Current story | P3 work packages W0–W10 in `docs/plans/phase-03-monitor-plan.md` |
 | Overall progress | 3 / 11 phases done; Phase 3 started |
-| Health | 🟨 Phase 3 in gate review |
+| Health | 🟩 Phase 3 signed off |
 | Next milestone | M3 — monitor (C1) |
 
 ---
@@ -28,7 +28,7 @@
 | Builder / Checker | agy builds, Claude checks (D-23); Claude builds pieces itself where faster (D-21 carried over) |
 | Branch | `phase-3-monitor` (not merged; owner merges) |
 | Files being changed | `crates/neuroos-monitor/**`, `neuroos-common/src/config.rs`, `neuroos-proto` (dump), `neuroosctl` (replay) |
-| Next concrete step | Owner signs off Phase 3 (ADR-0011, lock "unknown", GPL exception) and merges `phase-3-monitor`; real recordings deferred to integration (D-26). Then Phase 4. |
+| Next concrete step | Owner merges `phase-3-monitor`. Real-use recordings continue in the background (D-26) and are finished at integration. Phase 4 (storage) starts when the owner says. |
 
 ---
 
@@ -39,7 +39,7 @@
 | 0 | Foundation and spikes | ✅ | 2026-11-14 | 2026-11-15 | `reports/phase-00-foundation.md` |
 | 1 | Walking skeleton | ✅ | 2026-11-15 | 2026-11-16 | `reports/phase-01-skeleton.md` |
 | 2 | Safety kernel (C6) | ✅ | 2026-11-16 | 2026-11-16 | `reports/phase-02-kernel.md` |
-| 3 | Monitor (C1) | 🟨 | 2026-11-16 | — | `reports/phase-03-monitor.md` |
+| 3 | Monitor (C1) | ✅ | 2026-11-16 | 2026-11-16 | `reports/phase-03-monitor.md` |
 | 4 | Storage (C3) | ⬜ | — | — | `reports/phase-04-storage.md` |
 | 5 | Knowledge and conversation (C5) | ⬜ | — | — | `reports/phase-05-knowledge.md` |
 | 6 | Nudge engine | ⬜ | — | — | `reports/phase-06-nudges.md` |
@@ -76,8 +76,9 @@ One line each. Anything architectural also gets an ADR.
 
 | Date | ID | Decision | ADR |
 | :--- | :--- | :--- | :--- |
+| 2026-11-16 | D-27 | Owner signed off Phase 3: ADR-0011 accepted as written; session lock state stays "unknown" in v1.0 (no logind call, C1's sandbox is not widened); `cosmic-protocols` GPL exception accepted. Branch cleaned for merge (fake clock behind `test-support`, test-only hook removed, unused `subtle` dropped). | 0011 (Accepted) |
 | 2026-11-16 | D-26 | Owner: all real-use testing (the Phase 3 recordings: ≥ 8 h in ≥ 3 dumps + 1 held-out, and the live fullscreen/compositor-restart checks) is done once the whole project is built and connected, so problems show up with everything working together. Phase 3's "dumps recorded" exit criterion is therefore deferred to the integration phase, not dropped. Consequence: Phase 4's noise gate (KPI-8) can only be exercised on synthetic dumps until then. | — |
-| 2026-11-16 | D-25 | Owner started Phase 3: "create a new branch, elaborate each step, start executing with full coordination of Claude and agy". Plan in `docs/plans/phase-03-monitor-plan.md`; Claude's design calls under that go-ahead (redacted focus for excluded windows, pause = emit nothing + resume snapshot, drop-oldest stream queue, always-anonymised `--record`, dump format in `neuroos-proto`, no `procfs`/`notify` crates, narrow GPL exception for `cosmic-protocols`, lock source by probe) are open to overturn at sign-off. | 0011 (Proposed) |
+| 2026-11-16 | D-25 | Owner started Phase 3: "create a new branch, elaborate each step, start executing with full coordination of Claude and agy". Plan in `docs/plans/phase-03-monitor-plan.md`; Claude's design calls under that go-ahead (redacted focus for excluded windows, pause = emit nothing + resume snapshot, drop-oldest stream queue, always-anonymised `--record`, dump format in `neuroos-proto`, no `procfs`/`notify` crates, narrow GPL exception for `cosmic-protocols`, lock source by probe) are open to overturn at sign-off. | 0011 (Accepted) |
 | 2026-11-16 | D-24 | Owner signed off Phase 2 ("approve all three, raise cap to 128 MiB"): ADR-0010 accepted; `target-lexicon` licence exception approved; C6 hard limit 64 → 128 MiB, dialog allowance +25 → +55 MiB (PRD §6.2, ADR-0010 item 13). | 0010 (Accepted) |
 | 2026-11-16 | D-23 | Owner started Phase 2: "Builder: you and agy - full coordination". Owner named no build folders → OQ-07 closed as trash + `~/.cache`, build folders by config only. Claude's design calls under that go-ahead, open to overturn at sign-off: compiled-in skill manifests, `kernel`-kind skills (privacy.pause), C6 sandbox = union of its children, dialog with cairo renderer, new limits NFR-SEC-09/10. | 0010 (Proposed) |
 | 2026-11-16 | D-22 | Owner signed off Phase 1 ("signoff - approved") and accepted ADR-0009 on Claude's recommendation; `phase_1` merged to `main`. | 0009 |

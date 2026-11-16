@@ -1,6 +1,6 @@
 # ADR-0011 — Monitor privacy gate, recording and lock source
 
-**Status:** Proposed (decisions taken by Claude under the owner's Phase 3 go-ahead, D-25; the owner may overturn at sign-off)
+**Status:** Accepted 2026-11-16 by the owner ("go with your recommend": all decisions as written, lock state stays "unknown")
 **Date:** 2026-11-16
 **Changes:** Architecture §5.2 / §8.2 (C1 sockets and paths), security.md §8 (C1 boundary), PRD OQ-05 (closed in W7), ADR-0007 item 3 (lock source)
 **Evidence:** `reports/phase-03-monitor.md`: lock-source probe (below), `tests/privacy_test.rs` and `tests/anonymise_test.rs` (property tests with negative controls), the live run in the real unit (`scripts/p3-live-check.sh`), `reports/bench/p3-monitor-20261116T155509Z.json`, `just ci` green.

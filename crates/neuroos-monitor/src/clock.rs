@@ -1,7 +1,10 @@
 //! Time source. Everything time-dependent takes a [`Clock`] so tests are exact (AB-13).
 
+#[cfg(any(test, feature = "test-support"))]
 use std::sync::Mutex;
-use std::time::{Duration, Instant};
+#[cfg(any(test, feature = "test-support"))]
+use std::time::Duration;
+use std::time::Instant;
 
 /// UTC wall time for event stamps (AB-8) and a monotonic reading for timers.
 pub trait Clock: Send + Sync + 'static {
@@ -26,6 +29,7 @@ impl Clock for SystemClock {
     }
 }
 
+#[cfg(any(test, feature = "test-support"))]
 /// A clock tests move by hand.
 #[derive(Debug)]
 pub struct FakeClock {
@@ -33,6 +37,7 @@ pub struct FakeClock {
     state: Mutex<(u64, Duration)>,
 }
 
+#[cfg(any(test, feature = "test-support"))]
 impl FakeClock {
     /// Starts at `start_ns` UTC.
     #[must_use]
@@ -64,6 +69,7 @@ impl FakeClock {
     }
 }
 
+#[cfg(any(test, feature = "test-support"))]
 impl Clock for FakeClock {
     fn now_ns(&self) -> u64 {
         self.state

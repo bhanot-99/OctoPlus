@@ -1,7 +1,7 @@
 # Phase 3 — Monitor (C1): Report
 
 **Date:** 2026-11-16 · **Branch:** `phase-3-monitor` · **Builders:** Claude (foundation, privacy gate, bus, all sensors, recorder, anonymiser, dump format, units, tooling); agy (`neuroosctl replay`) · **Checker:** Claude for agy's work (re-ran every check, read the diff); agy for Claude's work (independent review, 9 findings, all valid, all fixed)
-**Status:** 🟨 Gate green — awaiting the measurement recordings and owner sign-off (§8)
+**Status:** ✅ Signed off 2026-11-16 (recordings deferred to integration, D-26)
 
 ## 1. Summary
 
@@ -110,4 +110,4 @@ The review was a read-only pass by agy over every Phase 3 file; each finding was
 
 ## 9. Sign-off
 
-Pending.
+Owner, 2026-11-16: ADR-0011 accepted as written ("go with your recommend"); lock state stays "unknown" in v1.0; `cosmic-protocols` exception accepted. The real-use recordings are deferred to the integration phase (D-26); the first session was started in the background the same day. Phase 3 signed off; the owner merges `phase-3-monitor`.

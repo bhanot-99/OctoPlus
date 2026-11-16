@@ -281,7 +281,7 @@ flowchart LR
 - [x] Performance and RSS measured in the shipped unit. (`reports/bench/p3-monitor-20261116T155509Z.json`)
 - [x] Exclusion, pause and anonymiser proven by property tests.
 - [ ] Dumps recorded; the held-out dump set aside and never used for tuning. (Deferred to the integration phase by the owner, D-26; tooling and runbook ready: `docs/runbooks/record-monitor-session.md`.)
-- [x] OQ-05 closed. [x] Phase report. [ ] Owner sign-off.
+- [x] OQ-05 closed. [x] Phase report. [x] Owner sign-off (2026-11-16, D-27).
 
 ---
 

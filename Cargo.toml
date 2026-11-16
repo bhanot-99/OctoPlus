@@ -57,7 +57,6 @@ gtk4 = { version = "0.11.5", features = ["v4_14"] }
 hmac = "0.13.0"
 seccompiler = "0.5.0"
 sha2 = "0.11.1"
-subtle = "2.6.1"
 uuid = { version = "1.29.2", features = ["v7"] }
 zbus = { version = "6.3.0", default-features = false, features = ["tokio"] }
 zeroize = { version = "1.9.1", features = ["derive"] }
