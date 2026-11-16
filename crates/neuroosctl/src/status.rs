@@ -35,6 +35,45 @@ pub struct ComponentJson {
     pub uptime_ns: u64,
     pub cgroup_memory_bytes: u64,
     pub cgroup_cpu_usage_ns: u64,
+    /// The part's own health rows (for C1: one per sensor), with fixed-text details.
+    pub subsystems: Vec<SubsystemJson>,
+}
+
+/// JSON representation of one subsystem row.
+#[derive(Debug, Serialize, PartialEq, Eq)]
+pub struct SubsystemJson {
+    pub name: String,
+    pub status: String,
+    pub detail: String,
+}
+
+/// The status word for a health status.
+#[must_use]
+pub fn status_word(status: HealthStatus) -> &'static str {
+    match status {
+        HealthStatus::Ok => "OK",
+        HealthStatus::Degraded => "DEGRADED",
+        HealthStatus::Down => "DOWN",
+        HealthStatus::Starting => "STARTING",
+        HealthStatus::Unspecified => "UNSPECIFIED",
+    }
+}
+
+/// A part's subsystem rows, in the order the part reported them.
+#[must_use]
+pub fn subsystem_rows(resp: Option<&HealthResponse>) -> Vec<SubsystemJson> {
+    resp.map(|r| {
+        r.subsystems
+            .iter()
+            .map(|s| SubsystemJson {
+                name: s.name.clone(),
+                status: status_word(HealthStatus::try_from(s.status).unwrap_or(HealthStatus::Down))
+                    .to_owned(),
+                detail: s.detail.clone(),
+            })
+            .collect()
+    })
+    .unwrap_or_default()
 }
 
 /// Formats duration in seconds into human-readable uptime (e.g. `3d 04h`, `12m 30s`).
@@ -216,6 +255,7 @@ pub async fn run_status(runtime_root: &Path, json: bool, styler: Styler) -> i32 
             uptime_ns,
             cgroup_memory_bytes: part_status.cgroup_memory_bytes,
             cgroup_cpu_usage_ns: part_status.cgroup_cpu_usage_ns,
+            subsystems: subsystem_rows(part_status.last.as_ref()),
         });
     }
 
@@ -314,6 +354,19 @@ pub async fn run_status(runtime_root: &Path, json: bool, styler: Styler) -> i32 
                 "{:<20} {}{} {:<16} {:<10} {:<10}",
                 comp_name, status_cell, status_pad, rss_cell, p99_cell, uptime_cell
             );
+        }
+
+        // A part's own rows that are not healthy, e.g. one sensor of C1 (never user content).
+        for part_status in report.parts.iter().filter(|p| p.reachable) {
+            for row in subsystem_rows(part_status.last.as_ref())
+                .iter()
+                .filter(|r| r.status != "OK")
+            {
+                println!(
+                    "  neuroos-{} › {}: {} — {}",
+                    part_status.part, row.name, row.status, row.detail
+                );
+            }
         }
 
         if let Some(bad_part) = first_unhealthy {

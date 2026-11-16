@@ -779,3 +779,51 @@ fn test_audit_tail_json_serialization() {
     assert_eq!(deserialized.schema, 1);
     assert_eq!(deserialized.records[0], json_rec);
 }
+
+#[test]
+fn status_lists_a_parts_subsystem_rows_with_fixed_text() {
+    use neuroos_proto::v1::{HealthResponse, HealthStatus, SubsystemHealth};
+    use neuroosctl::status::{SubsystemJson, subsystem_rows};
+    let resp = HealthResponse {
+        subsystems: vec![
+            SubsystemHealth {
+                name: "disk".into(),
+                status: HealthStatus::Ok as i32,
+                detail: "ok".into(),
+            },
+            SubsystemHealth {
+                name: "focus".into(),
+                status: HealthStatus::Degraded as i32,
+                detail: "compositor connection lost".into(),
+            },
+        ],
+        ..Default::default()
+    };
+    let rows = subsystem_rows(Some(&resp));
+    assert_eq!(rows.len(), 2);
+    assert_eq!(
+        rows[1],
+        SubsystemJson {
+            name: "focus".into(),
+            status: "DEGRADED".into(),
+            detail: "compositor connection lost".into()
+        }
+    );
+    assert!(
+        subsystem_rows(None).is_empty(),
+        "an unreachable part has no rows"
+    );
+    let bad = HealthResponse {
+        subsystems: vec![SubsystemHealth {
+            name: "x".into(),
+            status: 99,
+            detail: String::new(),
+        }],
+        ..Default::default()
+    };
+    assert_eq!(
+        subsystem_rows(Some(&bad))[0].status,
+        "DOWN",
+        "an unknown status is shown as DOWN"
+    );
+}
