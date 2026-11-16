@@ -13,9 +13,9 @@
 | Last updated | 2026-11-16 |
 | Project stage | **Phase 2 in progress** (started 2026-11-16 on branch `phase_2`). |
 | Current phase | Phase 2 — Safety kernel (C6) |
-| Current story | Phase 2 gate (all stories In Check) |
+| Current story | Phase 2 gate green; awaiting owner sign-off |
 | Overall progress | 2 / 11 phases |
-| Health | 🟦 Phase 2 building |
+| Health | 🟨 Phase 2 in gate review |
 | Next milestone | M2 — safety kernel |
 
 ---
@@ -28,7 +28,7 @@
 | Builder / Checker | agy builds, Claude checks (D-23); Claude builds pieces itself where faster (D-21 carried over) |
 | Branch | `phase_2` (one branch for the phase, as in Phase 1) |
 | Files being changed | `crates/neuroos-kernel`, `crates/neuroos-confirm`, `crates/neuroos-common/src/config.rs`, `ui/tokens/` |
-| Next concrete step | Check T1; then T2 audit log, T3 keys and tokens, T4 skill runner and skills, T5 notifications, T6 kernel wiring and units. CPU governor is `powersave` (needs sudo to set `performance`) before PF measurements. |
+| Next concrete step | Owner: sign off Phase 2 and decide (1) C6 memory cap with the dialog open, (2) ADR-0010, (3) `target-lexicon` licence exception — `reports/phase-02-kernel.md` §8. Owner merges `phase_2`. Set CPU governor to `performance` (sudo) before Phase 3 measurements. |
 
 ---
 
@@ -38,7 +38,7 @@
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | 0 | Foundation and spikes | ✅ | 2026-11-14 | 2026-11-15 | `reports/phase-00-foundation.md` |
 | 1 | Walking skeleton | ✅ | 2026-11-15 | 2026-11-16 | `reports/phase-01-skeleton.md` |
-| 2 | Safety kernel (C6) | 🟦 | 2026-11-16 | — | `reports/phase-02-kernel.md` |
+| 2 | Safety kernel (C6) | 🟨 | 2026-11-16 | — | `reports/phase-02-kernel.md` |
 | 3 | Monitor (C1) | ⬜ | — | — | `reports/phase-03-monitor.md` |
 | 4 | Storage (C3) | ⬜ | — | — | `reports/phase-04-storage.md` |
 | 5 | Knowledge and conversation (C5) | ⬜ | — | — | `reports/phase-05-knowledge.md` |
@@ -58,13 +58,13 @@ Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done �
 
 | Story | Title | Status | Builder | Checker |
 | :--- | :--- | :--- | :--- | :--- |
-| P2-S01 | C5 asks whether a capability is allowed and gets a fast answer | In Check (gate) | agy (registry, tier) | Claude |
-| P2-S02 | Anything influenced by web content asks the user first | In Check (gate) | agy | Claude |
-| P2-S03 | Clear approval dialog; approval cannot be faked | In Check (gate) | Claude (dialog, tokens, dispatch) | agy review (T4) |
-| P2-S04 | Skills run in a sandbox with only the access they need | In Check (gate) | Claude (neuroos-skill, seccomp) | agy review (T4) |
-| P2-S05 | Every action has ATTEMPT and RESULT; tampering is detectable | In Check (gate) | agy (log, actor, CLI), Claude (pipeline, recovery) | Claude / agy review |
-| P2-S06 | Disk report and confirmed cleanup of an allowlisted set | In Check (gate) | Claude | agy review (T4) |
-| P2-S07 | Notifications show only fixed wording with numbers | In Check (gate) | agy | Claude |
+| P2-S01 | C5 asks whether a capability is allowed and gets a fast answer | Done (pending sign-off) | agy (registry, tier) | Claude |
+| P2-S02 | Anything influenced by web content asks the user first | Done (pending sign-off) | agy | Claude |
+| P2-S03 | Clear approval dialog; approval cannot be faked | Done (pending sign-off) | Claude (dialog, tokens, dispatch) | agy review (T4) |
+| P2-S04 | Skills run in a sandbox with only the access they need | Done (pending sign-off) | Claude (neuroos-skill, seccomp) | agy review (T4) |
+| P2-S05 | Every action has ATTEMPT and RESULT; tampering is detectable | Done (pending sign-off) | agy (log, actor, CLI), Claude (pipeline, recovery) | Claude / agy review |
+| P2-S06 | Disk report and confirmed cleanup of an allowlisted set | Done (pending sign-off) | Claude | agy review (T4) |
+| P2-S07 | Notifications show only fixed wording with numbers | Done (pending sign-off) | agy | Claude |
 
 Columns: Backlog → Ready → In Progress → In Check → Done.
 
@@ -159,6 +159,7 @@ Newest first. One row per work session.
 
 | Date | Summary | Stories | Builder / Checker | Next step |
 | :--- | :--- | :--- | :--- | :--- |
+| 2026-11-16 | Phase 2 built and gated. agy: registry/tiers/limiter, audit log + CLI, notifications, injection corpus, BUG-036/039 fixes, independent review of Claude's code (4 of 5 findings accepted, BUG-040..043). Claude: dialog, tokens, keys, skill child + seccomp, skills, dispatch, recovery, units, install; real-unit bugs BUG-037/038, gate bug BUG-044. Capability check p99 0.032 ms; C6 hits its 64 MiB cap with the dialog open (owner decision). `just ci` ALL GREEN (297 Rust, 62 C++, cov 84.8 % / 78 %, ASan/TSan). | P2-S01…S07 | agy + Claude / Claude + agy (review) | Owner sign-off |
 | 2026-11-16 | Branch cleanup (dead code, wrong BUG/ADR references, crate READMEs state real Phase 1 behaviour, profraw clutter). Owner signed off Phase 1, ADR-0009 accepted (D-22); merged to `main`. | P1 close | Claude / Claude | Phase 2 when the owner says |
 | 2026-11-16 | Phase 1 gate. Soak 1 failed on healthd RSS (BUG-030), fixed, soak 2 PASS (360 asks, 0 restarts, all parts ≤ 2 %). Bench in the real C4 unit (89 / 11.9 tok/s, peak 2,788 MiB); cold start 2.6 s. Fixed BUG-030…035 (rolling window, world-writable dev install, bench pipefail, E2E cancel never cancelling, stop→start race, SC2 fetcher check). Owner installed C7; reboot needed for group `neuroos`; C7 kill-and-recover 494 ms DOWN / 2,468 ms back. `just ci` ALL GREEN (160 Rust, 62 C++, cov 82.3 % / 78.6 %, ASan/TSan). Report written. | P1 gate | Claude / Claude | Owner sign-off, ADR-0009, merge |
 | 2026-11-15 | Post-sign-off cleanup: fixed BUG-011…015 (S-04 harness reports only measured verdicts, real DNS query; S-05 probe no longer records titles/app ids; probes use rustix/std instead of raw FFI; S-01 total no longer double-counts; S-02 run-time label); removed unused locals, duplicate config-env literal, empty placeholder dirs, build leftovers; README status updated. `just ci` green. | cleanup | Claude / Claude | Owner merges; Phase 1 |
