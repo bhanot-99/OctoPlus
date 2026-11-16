@@ -1,8 +1,8 @@
 # ADR-0010 — Safety kernel layout: compiled-in skills, dialog and skill children, C6 sandbox as the union
 
-**Status:** Proposed — decided by Claude under the owner's Phase 2 go-ahead (D-23); the owner accepts or overturns it at Phase 2 sign-off
+**Status:** Accepted — owner, 2026-11-16, at Phase 2 sign-off (D-24), all items including 12 and 13
 **Date:** 2026-11-16
-**Changes:** Architecture §7.1 (audit folder), §8.2 (C6 and skill-runner rows), §8.4 (who verifies), §16 (`neuroos-confirm`, `ui/tokens`) · PRD §5.9 (`system.cleanup` row), §6.3 (NFR-SEC-09, NFR-SEC-10), §12 OQ-07 · design.md §6.1 (cleanup wording), §6 (wording table lives in code), §11 (tokens file created) · security.md §4.4, §6
+**Changes:** PRD §6.2 (C6 row) · Architecture §7.1 (audit folder), §8.2 (C6 and skill-runner rows), §8.4 (who verifies), §16 (`neuroos-confirm`, `ui/tokens`) · PRD §5.9 (`system.cleanup` row), §6.3 (NFR-SEC-09, NFR-SEC-10), §12 OQ-07 · design.md §6.1 (cleanup wording), §6 (wording table lives in code), §11 (tokens file created) · security.md §4.4, §6
 **Evidence:** GTK4 window RSS on the reference machine, 2026-11-16, release build, one 480 px dialog, measured from `/proc/self/status` after 4 s: default renderer 162 MiB RSS (44 MiB anonymous); `GSK_RENDERER=cairo` 66 MiB RSS (9 MiB anonymous, 34 MiB file-backed). Not yet measured inside C6's unit (Phase 2 gate).
 
 ---
@@ -34,12 +34,13 @@ Phase 2 builds C6. Four questions were left open by Architecture §8:
 10. **New kernel limits** (PRD NFR-SEC-09 and NFR-SEC-10, labelled T): REVIEW and DANGEROUS requests at most 6 per rolling minute; a request the user denied is refused for 300 s; approve-button delay 1 s; one dialog at a time.
 11. **`llm.generate` is not a skill.** C5 asks C6 about it before every generation (Architecture §6.1). Generating text runs nothing, so C6 answers SAFE for any valid taint and never escalates it; a missing or unknown taint is still refused. It is not in the registry, so it can never be dispatched. Taint stays on the generated text and decides the tier when a skill is dispatched.
 
-12. **Licence exception (owner to approve):** `target-lexicon` is licensed `Apache-2.0 WITH LLVM-exception`. It is a build-time dependency of `gtk4` (through `system-deps` and `cfg-expr`) and is not in any shipped binary. The exception only adds permissions to Apache-2.0. `deny.toml` allows it for this one crate only (rules.md §5 requires an ADR for any licence outside the allowlist).
+12. **Licence exception (owner approved 2026-11-16):** `target-lexicon` is licensed `Apache-2.0 WITH LLVM-exception`. It is a build-time dependency of `gtk4` (through `system-deps` and `cfg-expr`) and is not in any shipped binary. The exception only adds permissions to Apache-2.0. `deny.toml` allows it for this one crate only (rules.md §5 requires an ADR for any licence outside the allowlist).
+13. **C6 memory (owner decided 2026-11-16):** measured in the real unit at the Phase 2 gate, C6's cgroup reached the old 64 MiB hard limit while a dialog was open (`memory.events max` 865, no OOM); the dialog process is 49.8 MiB RSS. C6's hard limit is now **128 MiB** and the dialog allowance **+55 MiB** (PRD §6.2). The steady-state total (3,795 MiB) is unchanged: the dialog allowance applies only while a dialog is open, about 2 minutes at most.
 
 ## Consequences
 
 - A compromised C6 process has read-write access to the cleanup roots and can reach the Wayland socket. A compromised C5 still cannot: it can only ask, and every non-SAFE action needs the dialog.
-- The dialog's RSS (about 66 MiB with the cairo renderer, outside the unit) exceeds the PRD's "+25 MiB while a dialog is open". cgroup accounting differs from RSS (shared library pages already charged elsewhere are not counted again), so the real number inside C6's unit is measured at the Phase 2 gate. If it breaks the 64 MiB hard limit, the owner decides: raise the budget, or move the dialog to its own unit.
+- The dialog's RSS (about 66 MiB with the cairo renderer, outside the unit) exceeds the PRD's "+25 MiB while a dialog is open". cgroup accounting differs from RSS (shared library pages already charged elsewhere are not counted again). Measured at the Phase 2 gate, C6 reached the old 64 MiB hard limit; the owner raised C6 to 128 MiB (item 13).
 - Tiers change only by rebuilding the binary.
 - `privacy.pause` does not run in a child process. This is a documented narrowing of FR-KER-05 for skills with no file or network access.
 

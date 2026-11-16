@@ -80,7 +80,7 @@ Conditions: reference machine, **governor `powersave`** (the reboot reset it; `p
 | fmt-check, clippy `-D warnings`, clang-format/tidy, shellcheck, machete | pass |
 | Rust tests (incl. `local_*`: SC proofs 1–3 on the new units, kill-and-recover, E2E ask, real dialog, real skill child) | **297 / 297** |
 | C++ tests (debug) | 62 / 62 |
-| `cargo deny` + network-ban probe | pass (licence exception for `target-lexicon`, ADR-0010 item 12, owner to approve) |
+| `cargo deny` + network-ban probe | pass (licence exception for `target-lexicon`, ADR-0010 item 12, owner approved 2026-11-16) |
 | Coverage | Rust lines **84.78 %** (gate 80 %); C++ lines **78 %** (gate 70 %) |
 | ASan+UBSan, TSan | 59 / 59 each |
 | Result | **ALL GREEN** |
@@ -139,4 +139,4 @@ Also needs the owner: set the CPU governor to `performance` (sudo) before Phase 
 
 ## 9. Sign-off
 
-Pending.
+Owner, 2026-11-16: "approve all three, raise cap to 128 MiB". Decision 1 → option (a): C6 hard limit 128 MiB, dialog allowance +55 MiB (PRD §6.2, ADR-0010 item 13). ADR-0010 accepted. `target-lexicon` licence exception approved. Phase 2 signed off; the owner merges `phase_2`.

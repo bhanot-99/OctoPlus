@@ -11,12 +11,12 @@
 | Field | Value |
 | :--- | :--- |
 | Last updated | 2026-11-16 |
-| Project stage | **Phase 2 in progress** (started 2026-11-16 on branch `phase_2`). |
+| Project stage | **Phase 2 signed off** 2026-11-16; owner merges `phase_2`. Phase 3 starts when the owner says. |
 | Current phase | Phase 2 — Safety kernel (C6) |
-| Current story | Phase 2 gate green; awaiting owner sign-off |
-| Overall progress | 2 / 11 phases |
-| Health | 🟨 Phase 2 in gate review |
-| Next milestone | M2 — safety kernel |
+| Current story | — (between phases) |
+| Overall progress | 3 / 11 phases |
+| Health | 🟩 Phase 2 signed off |
+| Next milestone | M3 — monitor (C1) |
 
 ---
 
@@ -24,11 +24,11 @@
 
 | Field | Value |
 | :--- | :--- |
-| Story | P2-T1 (agy): registry, schemas, tier evaluator, taint escalation, rate limiter. In parallel Claude built `neuroos-confirm` (dialog). |
+| Story | None — Phase 2 closed |
 | Builder / Checker | agy builds, Claude checks (D-23); Claude builds pieces itself where faster (D-21 carried over) |
 | Branch | `phase_2` (one branch for the phase, as in Phase 1) |
 | Files being changed | `crates/neuroos-kernel`, `crates/neuroos-confirm`, `crates/neuroos-common/src/config.rs`, `ui/tokens/` |
-| Next concrete step | Owner: sign off Phase 2 and decide (1) C6 memory cap with the dialog open, (2) ADR-0010, (3) `target-lexicon` licence exception — `reports/phase-02-kernel.md` §8. Owner merges `phase_2`. Set CPU governor to `performance` (sudo) before Phase 3 measurements. |
+| Next concrete step | Owner merges `phase_2` to `main` and sets the CPU governor to `performance` (sudo) before Phase 3 measurements. Phase 3 (C1 monitor) starts when the owner says. |
 
 ---
 
@@ -38,7 +38,7 @@
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | 0 | Foundation and spikes | ✅ | 2026-11-14 | 2026-11-15 | `reports/phase-00-foundation.md` |
 | 1 | Walking skeleton | ✅ | 2026-11-15 | 2026-11-16 | `reports/phase-01-skeleton.md` |
-| 2 | Safety kernel (C6) | 🟨 | 2026-11-16 | — | `reports/phase-02-kernel.md` |
+| 2 | Safety kernel (C6) | ✅ | 2026-11-16 | 2026-11-16 | `reports/phase-02-kernel.md` |
 | 3 | Monitor (C1) | ⬜ | — | — | `reports/phase-03-monitor.md` |
 | 4 | Storage (C3) | ⬜ | — | — | `reports/phase-04-storage.md` |
 | 5 | Knowledge and conversation (C5) | ⬜ | — | — | `reports/phase-05-knowledge.md` |
@@ -76,6 +76,7 @@ One line each. Anything architectural also gets an ADR.
 
 | Date | ID | Decision | ADR |
 | :--- | :--- | :--- | :--- |
+| 2026-11-16 | D-24 | Owner signed off Phase 2 ("approve all three, raise cap to 128 MiB"): ADR-0010 accepted; `target-lexicon` licence exception approved; C6 hard limit 64 → 128 MiB, dialog allowance +25 → +55 MiB (PRD §6.2, ADR-0010 item 13). | 0010 (Accepted) |
 | 2026-11-16 | D-23 | Owner started Phase 2: "Builder: you and agy - full coordination". Owner named no build folders → OQ-07 closed as trash + `~/.cache`, build folders by config only. Claude's design calls under that go-ahead, open to overturn at sign-off: compiled-in skill manifests, `kernel`-kind skills (privacy.pause), C6 sandbox = union of its children, dialog with cairo renderer, new limits NFR-SEC-09/10. | 0010 (Proposed) |
 | 2026-11-16 | D-22 | Owner signed off Phase 1 ("signoff - approved") and accepted ADR-0009 on Claude's recommendation; `phase_1` merged to `main`. | 0009 |
 | 2026-11-16 | D-21 | Owner: Claude may build any piece itself when agy struggles or needs too many rounds; finish Phase 1 unattended overnight; fetcher sudo steps and re-login in the morning. | — |
@@ -127,7 +128,7 @@ Bugs live in `BUGS.md` (created in Phase 0). This table is for blockers and risk
 
 | Date | Type | Item | Owner | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| 2026-11-16 | Risk | **C6 memory with the dialog open, real unit:** cgroup reached the 64 MiB hard limit (peak 64, `memory.events max` 865, no OOM): GTK library page cache is charged to C6 and reclaimed under the cap. Kernel process RSS 5 MiB; dialog process RSS 49.8 MiB. PRD budget "+25 MiB while a dialog is open" is not met by RSS. Owner decides at the gate: raise C6 MemoryMax (Claude suggests 128 MiB) or accept reclaim. | Claude | Open |
+| 2026-11-16 | Risk | **C6 memory with the dialog open, real unit:** cgroup reached the 64 MiB hard limit (peak 64, `memory.events max` 865, no OOM): GTK library page cache is charged to C6 and reclaimed under the cap. Kernel process RSS 5 MiB; dialog process RSS 49.8 MiB. PRD budget "+25 MiB while a dialog is open" is not met by RSS. Owner raised C6 MemoryMax to 128 MiB (D-24). | Claude | Closed 2026-11-16 |
 | 2026-11-15 | Watch | agy's reports can state unmeasured results as fact (TASK 01 R-09, S-04). Every agy claim is re-checked against raw output before it enters an ADR. | Claude | Open |
 | 2026-11-15 | Watch | Chat grading done (delegated to Claude): Qwen3 best, 4.42/5. Every model called ibuprofen + blood-pressure pills "generally safe" — add to Phase 2 safety tests. | Claude | Open |
 | 2026-11-15 | Watch | Memory headroom is thin: total 3,795 of 4,000 MiB. llama.cpp must run with weight repacking off (+1.6 GB otherwise). | Claude | Open |
@@ -159,7 +160,7 @@ Newest first. One row per work session.
 
 | Date | Summary | Stories | Builder / Checker | Next step |
 | :--- | :--- | :--- | :--- | :--- |
-| 2026-11-16 | Phase 2 built and gated. agy: registry/tiers/limiter, audit log + CLI, notifications, injection corpus, BUG-036/039 fixes, independent review of Claude's code (4 of 5 findings accepted, BUG-040..043). Claude: dialog, tokens, keys, skill child + seccomp, skills, dispatch, recovery, units, install; real-unit bugs BUG-037/038, gate bug BUG-044. Capability check p99 0.032 ms; C6 hits its 64 MiB cap with the dialog open (owner decision). `just ci` ALL GREEN (297 Rust, 62 C++, cov 84.8 % / 78 %, ASan/TSan). | P2-S01…S07 | agy + Claude / Claude + agy (review) | Owner sign-off |
+| 2026-11-16 | Phase 2 built and gated. agy: registry/tiers/limiter, audit log + CLI, notifications, injection corpus, BUG-036/039 fixes, independent review of Claude's code (4 of 5 findings accepted, BUG-040..043). Claude: dialog, tokens, keys, skill child + seccomp, skills, dispatch, recovery, units, install; real-unit bugs BUG-037/038, gate bug BUG-044. Capability check p99 0.032 ms; C6 hits its 64 MiB cap with the dialog open → owner raised it to 128 MiB. `just ci` ALL GREEN (297 Rust, 62 C++, cov 84.8 % / 78 %, ASan/TSan). Owner signed off (D-24). | P2-S01…S07 | agy + Claude / Claude + agy (review) | Phase 3 when the owner says |
 | 2026-11-16 | Branch cleanup (dead code, wrong BUG/ADR references, crate READMEs state real Phase 1 behaviour, profraw clutter). Owner signed off Phase 1, ADR-0009 accepted (D-22); merged to `main`. | P1 close | Claude / Claude | Phase 2 when the owner says |
 | 2026-11-16 | Phase 1 gate. Soak 1 failed on healthd RSS (BUG-030), fixed, soak 2 PASS (360 asks, 0 restarts, all parts ≤ 2 %). Bench in the real C4 unit (89 / 11.9 tok/s, peak 2,788 MiB); cold start 2.6 s. Fixed BUG-030…035 (rolling window, world-writable dev install, bench pipefail, E2E cancel never cancelling, stop→start race, SC2 fetcher check). Owner installed C7; reboot needed for group `neuroos`; C7 kill-and-recover 494 ms DOWN / 2,468 ms back. `just ci` ALL GREEN (160 Rust, 62 C++, cov 82.3 % / 78.6 %, ASan/TSan). Report written. | P1 gate | Claude / Claude | Owner sign-off, ADR-0009, merge |
 | 2026-11-15 | Post-sign-off cleanup: fixed BUG-011…015 (S-04 harness reports only measured verdicts, real DNS query; S-05 probe no longer records titles/app ids; probes use rustix/std instead of raw FFI; S-01 total no longer double-counts; S-02 run-time label); removed unused locals, duplicate config-env literal, empty placeholder dirs, build leftovers; README status updated. `just ci` green. | cleanup | Claude / Claude | Owner merges; Phase 1 |

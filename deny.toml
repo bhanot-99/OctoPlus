@@ -26,7 +26,7 @@ allow = [
 confidence-threshold = 0.9
 # The allowlist names licences for crates that arrive in later phases.
 unused-allowed-license = "allow"
-# ADR-0010 (proposed, owner decides at Phase 2 sign-off): build-time only, pulled in
+# ADR-0010 item 12 (owner approved 2026-11-16): build-time only, pulled in
 # by gtk4's system-deps; the LLVM exception only adds permissions to Apache-2.0.
 exceptions = [
     { allow = ["Apache-2.0 WITH LLVM-exception"], crate = "target-lexicon" },

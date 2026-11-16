@@ -357,7 +357,7 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | C4 inference | 2,800 MiB | 3,220 MiB | M: 2,770 MiB peak for one turn, Qwen3-4B Q4_K_M, `-c 2048`, weight repacking off (S-02, ADR-0005) |
 | C4 VRAM (GPU path only) | 3,100 MiB | checked before load: less free → CPU path | M: 3,010 MiB peak, one turn, `-c 2048`, RTX 3050 4 GB (S-02, ADR-0008 addendum) |
 | C5 knowledge | 60 MiB | 96 MiB | T |
-| C6 kernel | 15 MiB (+ 25 MiB while a dialog is open) | 64 MiB | T |
+| C6 kernel | 15 MiB (+ 55 MiB while a dialog is open) | 128 MiB | M: dialog RSS 49.8 MiB, cgroup hit the old 64 MiB limit (Phase 2 gate; ADR-0010 item 13) |
 | C7 fetcher | 15 MiB | 48 MiB | T |
 | healthd | 15 MiB | 32 MiB | T (P: 9 MiB) |
 | **Total** | **≤ 4,000 MiB** (3,795 MiB with the budgets above) | — | T — ADR-0005 |

@@ -27,8 +27,8 @@ pub const MEMORY_MAX_INFERENCE: &str = "3220M";
 /// Hard limit (MemoryMax) for C5 knowledge from PRD §6.2 row C5 knowledge (96 MiB).
 pub const MEMORY_MAX_KNOWLEDGE: &str = "96M";
 
-/// Hard limit (MemoryMax) for C6 kernel from PRD §6.2 row C6 kernel (64 MiB).
-pub const MEMORY_MAX_KERNEL: &str = "64M";
+/// Hard limit (MemoryMax) for C6 kernel from PRD §6.2 row C6 kernel (128 MiB).
+pub const MEMORY_MAX_KERNEL: &str = "128M";
 
 /// Hard limit (MemoryMax) for healthd from PRD §6.2 row healthd (32 MiB).
 pub const MEMORY_MAX_HEALTHD: &str = "32M";
