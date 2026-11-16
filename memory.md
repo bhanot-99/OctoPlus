@@ -10,13 +10,13 @@
 
 | Field | Value |
 | :--- | :--- |
-| Last updated | 2026-11-15 |
-| Project stage | **Phase 1 in gate review** (built 2026-11-15/16 on branch `phase_1`, not merged). Phase 0 signed off and merged to `main`. |
-| Current phase | Phase 1 — Walking skeleton |
-| Current story | Phase 1 gate done: `just ci` all green, `just sc` green, soak PASS, report written; awaiting owner sign-off |
-| Overall progress | 1 / 11 phases |
-| Health | ✅ Phase 0 done; 🟨 Phase 1 in gate review |
-| Next milestone | M1 — walking skeleton |
+| Last updated | 2026-11-16 |
+| Project stage | **Phase 1 done** (signed off 2026-11-16, merged to `main`). Phase 2 not started. |
+| Current phase | Phase 2 — Safety kernel (C6), not started |
+| Current story | — (Phase 2 planning) |
+| Overall progress | 2 / 11 phases |
+| Health | ✅ Phase 0 and Phase 1 done |
+| Next milestone | M2 — safety kernel |
 
 ---
 
@@ -28,7 +28,7 @@
 | Builder / Checker | agy (T1–T4) / Claude; T5 redone by Claude (D-21) |
 | Branch | `phase_1` (owner's choice: one branch for the phase, one commit per story; D-20) |
 | Files being changed | `crates/neuroos-common`, `crates/neuroos-deploy`, `deploy/`, `scripts/`, `justfile` |
-| Next concrete step | Owner: read `reports/phase-01-skeleton.md`, sign off §9, accept or overturn ADR-0009, merge `phase_1` to `main`. Then Phase 2 (safety kernel). Note: CPU governor is `powersave` after the reboot; set `performance` before any Phase 2 measurement. |
+| Next concrete step | Owner decides when to start Phase 2 (phases.md §5) and with which builder. Before any Phase 2 measurement set the CPU governor to `performance` (reset to `powersave` by the reboot). |
 
 ---
 
@@ -37,7 +37,7 @@
 | Phase | Name | Status | Started | Finished | Report |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | 0 | Foundation and spikes | ✅ | 2026-11-14 | 2026-11-15 | `reports/phase-00-foundation.md` |
-| 1 | Walking skeleton | 🟨 | 2026-11-15 | — | `reports/phase-01-skeleton.md` |
+| 1 | Walking skeleton | ✅ | 2026-11-15 | 2026-11-16 | `reports/phase-01-skeleton.md` |
 | 2 | Safety kernel (C6) | ⬜ | — | — | `reports/phase-02-kernel.md` |
 | 3 | Monitor (C1) | ⬜ | — | — | `reports/phase-03-monitor.md` |
 | 4 | Storage (C3) | ⬜ | — | — | `reports/phase-04-storage.md` |
@@ -54,16 +54,17 @@ Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done �
 
 ## 4. Current Phase Board
 
-**Phase 1 — Walking skeleton** (Phase 0 board: `reports/phase-00-foundation.md` §2)
+**Phase 2 — Safety kernel (C6)** (Phase 1 board: `reports/phase-01-skeleton.md` §2)
 
 | Story | Title | Status | Builder | Checker |
 | :--- | :--- | :--- | :--- | :--- |
-| P1-S01 | No network and full hardening in every unit from first start | Done (all 8; C7 system unit installed by owner) | agy (T1) + Claude (BUG-028) | Claude |
-| P1-S02 | Each unit reaches only its allowed sockets | Done | agy (T1) | Claude |
-| P1-S03 | Each process restricts its own file access before input | Done | agy (T2, T3) + Claude (SC3 rewrite, BUG-025) | Claude |
-| P1-S04 | healthd shows real status, memory and latency | Done | agy (T4) + Claude (BUG-027) | Claude |
-| P1-S05 | C4 streams a cancellable completion from the chosen model | Done | agy (T3, T4) | Claude |
-| P1-S06 | `neuroosctl ask` streams an answer through the whole chain | Done | agy (T2, T4) | Claude |
+| P2-S01 | C5 asks whether a capability is allowed and gets a fast answer | Backlog | — | — |
+| P2-S02 | Anything influenced by web content asks the user first | Backlog | — | — |
+| P2-S03 | Clear approval dialog; approval cannot be faked | Backlog | — | — |
+| P2-S04 | Skills run in a sandbox with only the access they need | Backlog | — | — |
+| P2-S05 | Every action has ATTEMPT and RESULT; tampering is detectable | Backlog | — | — |
+| P2-S06 | Disk report and confirmed cleanup of an allowlisted set | Backlog | — | — |
+| P2-S07 | Notifications show only fixed wording with numbers | Backlog | — | — |
 
 Columns: Backlog → Ready → In Progress → In Check → Done.
 
@@ -75,6 +76,7 @@ One line each. Anything architectural also gets an ADR.
 
 | Date | ID | Decision | ADR |
 | :--- | :--- | :--- | :--- |
+| 2026-11-16 | D-22 | Owner signed off Phase 1 ("signoff - approved") and accepted ADR-0009 on Claude's recommendation; `phase_1` merged to `main`. | 0009 |
 | 2026-11-16 | D-21 | Owner: Claude may build any piece itself when agy struggles or needs too many rounds; finish Phase 1 unattended overnight; fetcher sudo steps and re-login in the morning. | — |
 | 2026-11-15 | D-20 | Owner started Phase 1 with agy as builder, on one branch `phase_1`. Claude's design calls (owner may overturn at sign-off): one folder per socket, socket map as code, units generated from it, runtime-folder unit, dev install under `~/.local/opt/neuroos`, C4 hash check by `sha256sum` in ExecStartPre; C++ parts take sockets and peer units as flags from their unit file. | 0009 (Proposed) |
 | 2026-11-15 | D-19 | Owner signed off Phase 0 and delegated the blind chat grading to Claude (Qwen3 best, 4.42/5). After the owner installed `spirv-headers`: Vulkan backend chosen; GPU path enabled on the reference machine (AC only), C4 binds `/dev/nvidia0` + `/dev/nvidiactl`, VRAM budget 3,100 MiB. | 0005, 0008 |
@@ -155,6 +157,7 @@ Newest first. One row per work session.
 
 | Date | Summary | Stories | Builder / Checker | Next step |
 | :--- | :--- | :--- | :--- | :--- |
+| 2026-11-16 | Branch cleanup (dead code, wrong BUG/ADR references, crate READMEs state real Phase 1 behaviour, profraw clutter). Owner signed off Phase 1, ADR-0009 accepted (D-22); merged to `main`. | P1 close | Claude / Claude | Phase 2 when the owner says |
 | 2026-11-16 | Phase 1 gate. Soak 1 failed on healthd RSS (BUG-030), fixed, soak 2 PASS (360 asks, 0 restarts, all parts ≤ 2 %). Bench in the real C4 unit (89 / 11.9 tok/s, peak 2,788 MiB); cold start 2.6 s. Fixed BUG-030…035 (rolling window, world-writable dev install, bench pipefail, E2E cancel never cancelling, stop→start race, SC2 fetcher check). Owner installed C7; reboot needed for group `neuroos`; C7 kill-and-recover 494 ms DOWN / 2,468 ms back. `just ci` ALL GREEN (160 Rust, 62 C++, cov 82.3 % / 78.6 %, ASan/TSan). Report written. | P1 gate | Claude / Claude | Owner sign-off, ADR-0009, merge |
 | 2026-11-15 | Post-sign-off cleanup: fixed BUG-011…015 (S-04 harness reports only measured verdicts, real DNS query; S-05 probe no longer records titles/app ids; probes use rustix/std instead of raw FFI; S-01 total no longer double-counts; S-02 run-time label); removed unused locals, duplicate config-env literal, empty placeholder dirs, build leftovers; README status updated. `just ci` green. | cleanup | Claude / Claude | Owner merges; Phase 1 |
 | 2026-11-15 | Phase 0 signed off. Chat grading (delegated): Qwen3 4.42, Phi 4.00, SmolLM3 3.45. GPU half by Claude: Vulkan prefill ≈ 12–14×, decode ≈ 4×, TTFT 295 ms, VRAM 3,010 MiB, quality same, test-backend-ops 22,362/22,362; works under full baseline incl. MDWE with only nvidia0+nvidiactl. Power sensor unusable. | P0-S08 | Claude / Claude | Owner merges; Phase 1 |

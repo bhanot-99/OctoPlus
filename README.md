@@ -28,7 +28,7 @@ No cloud model, no accounts, no telemetry, no auto-update, no screen capture, no
 
 ## Status
 
-**Phase 1 built, awaiting owner sign-off (branch `phase_1`).** Every part runs as a locked-down service under `neuroos.target`, reports its health to healthd, and recovers by itself after a crash. `neuroosctl ask` streams an answer from the local model through the whole chain. The three security proofs pass against the real services. The fetcher still needs its root install by the owner. Phase 0 was signed off on 2026-11-15. Current state is always in [`memory.md`](memory.md); the phase reports are [`reports/phase-00-foundation.md`](reports/phase-00-foundation.md) and [`reports/phase-01-skeleton.md`](reports/phase-01-skeleton.md).
+**Phase 1 done (signed off 2026-11-16).** Every part runs as a locked-down service under `neuroos.target`, reports its health to healthd, and recovers by itself after a crash. `neuroosctl ask` streams an answer from the local model through the whole chain. The three security proofs pass against the real services. The fetcher runs as its own system user and is the only part with network access (no network code yet). Next: Phase 2, the safety kernel. Current state is always in [`memory.md`](memory.md); the phase reports are [`reports/phase-00-foundation.md`](reports/phase-00-foundation.md) and [`reports/phase-01-skeleton.md`](reports/phase-01-skeleton.md).
 
 ## Documents
 

@@ -1,7 +1,7 @@
 # Phase 1 — Walking Skeleton: Report
 
 **Date:** 2026-11-16 · **Commit:** see §5 · **Builders:** agy (T1–T4, first draft of T5), Claude (T5 rework, IPC/units/fetcher fixes, soak and bench drivers; owner D-21) · **Checker:** Claude (every agy result re-run; agy's T5 rejected and redone)
-**Status:** All exit criteria met; awaiting owner sign-off and the decision on ADR-0009
+**Status:** ✅ Signed off by the owner 2026-11-16; ADR-0009 accepted
 
 ## 1. Summary
 
@@ -150,7 +150,7 @@ The gate took four runs on the last day. Each failure was a real defect and was 
 
 | Item | Status |
 | :--- | :--- |
-| ADR-0009 — one folder per socket, socket map as code, dev install; revised: model check as its own unit, group-shared fetcher sockets | Proposed (D-20), for the owner to accept |
+| ADR-0009 — one folder per socket, socket map as code, dev install; revised: model check as its own unit, group-shared fetcher sockets | Accepted by the owner 2026-11-16 (D-22) |
 | ADR-0002 addendum — one exec per user unit (systemd 255 drops `PrivateNetwork=` otherwise) | Evidence addendum; the rule is enforced by the generator test |
 | D-20 | Owner started Phase 1 with agy; Claude's design calls recorded |
 | D-21 | Owner: Claude may build when agy struggles; finish overnight |
@@ -163,4 +163,4 @@ The gate took four runs on the last day. Each failure was a real defect and was 
 
 ## 9. Sign-off
 
-- [ ] Owner sign-off — name, date
+- [x] Owner sign-off — owner (bhanot-99), 2026-11-16 ("signoff - approved"); ADR-0009 accepted on Claude's recommendation (D-22)

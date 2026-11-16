@@ -1,6 +1,6 @@
 # ADR-0009 — One folder per socket, socket map as code, development install
 
-**Status:** Proposed (decided by Claude while building Phase 1; for the owner to accept or overturn at the Phase 1 sign-off, D-20)
+**Status:** Accepted by the owner 2026-11-16 (D-22; proposed by Claude while building Phase 1, D-20)
 **Date:** 2026-11-15
 **Changes:** Architecture §5.2 (socket paths), §7.1 (dev install prefix), §13 (runtime-folder unit) · security.md §8 (socket-map proof)
 **Evidence:** ADR-0002 finding 5 (a bound folder exposes everything inside it); systemd `BindPaths=` semantics (a missing source is skipped with `-`, or fails the unit without it)

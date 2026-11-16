@@ -726,4 +726,4 @@ Spikes run in Phase 0. Each ends in an ADR that states what was measured, on wha
 | 0006 | Build order | Accepted 2026-11-15 |
 | 0007 | Health and context sensor sources | Accepted 2026-11-15 |
 | 0008 | Optional GPU acceleration for inference (C4) | Accepted 2026-11-14; S-04 and S-02 addenda: Vulkan backend, `/dev/nvidia0` + `/dev/nvidiactl` only, VRAM 3,100 MiB |
-| 0009 | One folder per socket, socket map as code, development install | Proposed 2026-11-15 (D-20); revised 2026-11-16: model check as its own unit, group-shared fetcher sockets |
+| 0009 | One folder per socket, socket map as code, development install | Accepted 2026-11-16 (D-22); revised before acceptance: model check as its own unit, group-shared fetcher sockets |
