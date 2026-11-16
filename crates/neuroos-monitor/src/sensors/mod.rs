@@ -3,6 +3,7 @@
 pub mod battery;
 pub mod cosmic;
 pub mod disk;
+pub mod folders;
 pub mod idle;
 pub mod mpris;
 pub mod proc;

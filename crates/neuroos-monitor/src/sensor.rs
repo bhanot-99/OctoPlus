@@ -96,6 +96,14 @@ impl SensorOut {
         self.health.set(self.name, HealthStatus::Ok, "ok");
     }
 
+    /// Says the sensor works only in part (e.g. a watch limit was reached). `detail` is fixed
+    /// text. The next [`SensorOut::set_ok`] or [`SensorOut::emit`] clears it, so a sensor that
+    /// stays degraded calls this again after emitting.
+    pub fn degraded(&self, detail: &'static str) {
+        self.worked.store(true, Ordering::Release);
+        self.health.set(self.name, HealthStatus::Degraded, detail);
+    }
+
     /// Emits one raw observation made at `observed_at_ns`.
     pub fn emit(&self, observed_at_ns: u64, event: Event) {
         self.set_ok();
@@ -129,4 +137,14 @@ pub trait Sensor: Send + 'static {
     /// Observe and emit through `out`. Return `Err` when the source is lost.
     /// Blocking work belongs on its own thread, never on this task (AB-11).
     fn run(&mut self, out: &SensorOut) -> impl Future<Output = Result<(), SensorError>> + Send;
+}
+
+/// Sets a stop flag when dropped, so a cancelled sensor future stops the thread it started.
+#[derive(Debug)]
+pub struct StopOnDrop(pub Arc<AtomicBool>);
+
+impl Drop for StopOnDrop {
+    fn drop(&mut self) {
+        self.0.store(true, Ordering::Release);
+    }
 }

@@ -21,9 +21,9 @@ use wayland_client::protocol::wl_registry;
 use wayland_client::{Connection, Dispatch, Proxy, QueueHandle};
 
 use super::proc::ProcTable;
-use super::wl::{self, Lost, StopOnDrop};
+use super::wl::{self, Lost};
 use crate::clock::Clock;
-use crate::sensor::{Sensor, SensorError, SensorOut};
+use crate::sensor::{Sensor, SensorError, SensorOut, StopOnDrop};
 
 /// A same-window title or fullscreen change is held back until this long after the last
 /// emission, and only the latest is sent: terminals rewrite their title many times a second.

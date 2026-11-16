@@ -15,9 +15,9 @@ use wayland_protocols::ext::idle_notify::v1::client::{
     ext_idle_notification_v1 as notification, ext_idle_notifier_v1 as notifier,
 };
 
-use super::wl::{self, Lost, StopOnDrop};
+use super::wl::{self, Lost};
 use crate::clock::Clock;
-use crate::sensor::{Sensor, SensorError, SensorOut};
+use crate::sensor::{Sensor, SensorError, SensorOut, StopOnDrop};
 
 /// A change reported by the compositor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -58,13 +58,3 @@ pub fn pump<S>(queue: &mut EventQueue<S>, state: &mut S, stop: &AtomicBool) -> R
 pub fn connect() -> Result<Connection, Lost> {
     Connection::connect_to_env().map_err(|_| Lost::Connection)
 }
-
-/// Sets the flag when dropped: a cancelled sensor future stops its Wayland thread.
-#[derive(Debug)]
-pub struct StopOnDrop(pub std::sync::Arc<AtomicBool>);
-
-impl Drop for StopOnDrop {
-    fn drop(&mut self) {
-        self.0.store(true, Ordering::Release);
-    }
-}
