@@ -149,7 +149,6 @@ impl Sensor for ResourcesSensor {
         loop {
             tick.tick().await;
             let root = self.proc_root.clone();
-            let observed = out.now_ns();
             let sampled = tokio::task::spawn_blocking(move || collect(&root))
                 .await
                 .map_err(|_| SensorError::Unavailable("resource scan failed"))?;
@@ -159,7 +158,8 @@ impl Sensor for ResourcesSensor {
             // The first tick only sets the baseline: a percentage needs two readings.
             if let Some(pct) = prev.and_then(|p| cpu_percent(p, cpu)) {
                 sample.cpu_percent = pct;
-                out.emit(observed, Event::Resources(sample));
+                // Stamped when the reading is complete: the walk of /proc is the observation.
+                out.emit(out.now_ns(), Event::Resources(sample));
             } else {
                 out.set_ok();
             }

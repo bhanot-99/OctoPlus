@@ -12,6 +12,10 @@ name = "neuroos-echo"
 path = "src/bin/neuroos-echo.rs"
 
 [[bin]]
+name = "neuroos-monitor-tail"
+path = "src/bin/neuroos-monitor-tail.rs"
+
+[[bin]]
 name = "neuroos-s04-probe"
 path = "src/bin/neuroos-s04-probe.rs"
 

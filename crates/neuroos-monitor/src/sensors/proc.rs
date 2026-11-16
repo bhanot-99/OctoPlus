@@ -317,7 +317,6 @@ impl ProcSensor {
         if app_id.is_empty() {
             return Ok(());
         }
-        let observed = out.now_ns();
         let table = Arc::clone(&self.table);
         let app = app_id.to_owned();
         let tree = tokio::task::spawn_blocking(move || {
@@ -327,8 +326,9 @@ impl ProcSensor {
         })
         .await
         .map_err(|_| SensorError::Unavailable("process scan failed"))?;
+        // The observation is the finished scan, not its start (NFR-PERF-07 times capture, not the read).
         if let Some(tree) = tree {
-            out.emit(observed, Event::ProcessTree(tree));
+            out.emit(out.now_ns(), Event::ProcessTree(tree));
         }
         Ok(())
     }
