@@ -113,7 +113,9 @@ pub fn socket_path_for_entry(entry: &SocketEntry, runtime_root: &Path) -> PathBu
 fn deadline_for_socket(socket_name: &str, config: &Config) -> Duration {
     match socket_name {
         "health" | "control" => config.deadlines.control(),
-        "storage" => Duration::from_millis(config.deadlines.storage_query_ms),
+        // Queries get their 150 ms inside the handler; forget, purge and the lifecycle jobs are
+        // longer, so the socket itself allows `storage_job_ms` (ADR-0012).
+        "storage" => Duration::from_millis(config.deadlines.storage_job_ms),
         // One socket serves quick checks and dispatches that wait for the dialog;
         // the 50 ms check deadline is the caller's (PRD §6.1).
         "kernel" => Duration::from_millis(config.deadlines.kernel_dispatch_ms),

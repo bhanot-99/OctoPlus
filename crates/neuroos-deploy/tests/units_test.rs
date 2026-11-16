@@ -524,7 +524,7 @@ fn every_user_unit_has_exactly_one_exec() {
             checked += 1;
         }
     }
-    assert_eq!(checked, 9, "7 parts + runtime + model check");
+    assert_eq!(checked, 12, "7 parts + runtime + model check + 3 storage jobs");
     // Negative control: the checker rejects a unit with ExecStartPre.
     assert!(!single_exec("ExecStartPre=/bin/true\nExecStart=/bin/x\n"));
     assert!(!single_exec("ExecStart=/bin/a\nExecStart=/bin/b\n"));
@@ -668,5 +668,71 @@ fn monitor_folders_dropin_binds_read_only_and_validates_paths() {
             generate_monitor_folders_dropin(&[f]).is_err(),
             "accepted {bad}"
         );
+    }
+}
+
+#[test]
+fn storage_unit_sees_backups_and_the_spool_and_the_jobs_are_small_one_shots() {
+    let files = generate_all_files(&manifest_path()).unwrap();
+    let get = |name: &str| {
+        files
+            .iter()
+            .find(|f| f.rel_path == Path::new(&format!("systemd/user/{name}")))
+            .unwrap_or_else(|| panic!("{name} missing"))
+            .content
+            .clone()
+    };
+    let storage = get("neuroos-storage.service");
+    for line in [
+        "BindPaths=%h/.local/share/neuroos/storage",
+        "BindPaths=%h/.local/share/neuroos/backups",
+        "BindPaths=-/var/spool/neuroos-fetcher",
+        "PrivateNetwork=true",
+    ] {
+        assert!(storage.lines().any(|l| l == line), "storage lacks {line}");
+    }
+    for other in [
+        "monitor",
+        "knowledge",
+        "kernel",
+        "inference",
+        "voice",
+        "healthd",
+    ] {
+        let c = get(&format!("neuroos-{other}.service"));
+        assert!(
+            !c.contains("/var/spool/neuroos-fetcher") && !c.contains("neuroos/backups"),
+            "{other} must not see the spool or backups"
+        );
+    }
+    for (job, calendar) in neuroos_deploy::STORAGE_JOBS {
+        let svc = get(&format!("neuroos-storage-{job}.service"));
+        assert!(svc.contains("Type=oneshot") && svc.contains("PrivateNetwork=true"));
+        assert_eq!(
+            svc.lines().filter(|l| l.starts_with("Exec")).count(),
+            1,
+            "exactly one exec"
+        );
+        assert!(svc.contains(&format!(
+            "neuroosctl --runtime-dir %t/neuroos storage job {job}"
+        )));
+        assert!(
+            svc.contains("BindPaths=%t/neuroos/storage/storage"),
+            "only the storage socket"
+        );
+        assert!(
+            !svc.contains("neuroos/storage\n") || svc.contains("storage/storage"),
+            "not the whole runtime"
+        );
+        assert!(
+            !svc.contains("BindPaths=%h"),
+            "a job writes nothing in the home folder"
+        );
+        let timer = get(&format!("neuroos-storage-{job}.timer"));
+        assert!(
+            timer.contains(&format!("OnCalendar={calendar}"))
+                && timer.contains(&format!("Unit=neuroos-storage-{job}.service"))
+        );
+        assert!(timer.contains("Persistent=true"));
     }
 }

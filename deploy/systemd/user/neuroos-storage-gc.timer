@@ -1,0 +1,11 @@
+[Unit]
+Description=Semantic-NeuroOS storage job timer: gc
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=60
+Unit=neuroos-storage-gc.service
+
+[Install]
+WantedBy=timers.target

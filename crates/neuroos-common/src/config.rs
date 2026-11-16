@@ -100,8 +100,11 @@ impl Default for IpcConfig {
 pub struct DeadlinesConfig {
     /// Control calls.
     pub control_ms: u64,
-    /// C3 queries.
+    /// C3 queries. The handler enforces it on queries; the socket's own deadline is `storage_job_ms`.
     pub storage_query_ms: u64,
+    /// C3 jobs that are not queries: forget, purge, backup, GC, roll-up (PRD §6.1 sets queries at
+    /// 150 ms; ADR-0012 item 11 adds this for the rest).
+    pub storage_job_ms: u64,
     /// C6 capability checks (approval time excluded). Enforced by the caller.
     pub kernel_check_ms: u64,
     /// The kernel socket's server deadline: a dispatch waits for the user's
@@ -118,6 +121,7 @@ impl Default for DeadlinesConfig {
         Self {
             control_ms: 250,
             storage_query_ms: 150,
+            storage_job_ms: 120_000,
             kernel_check_ms: 50,
             kernel_dispatch_ms: 155_000,
             generation_ms: 30_000,
@@ -550,6 +554,7 @@ impl Config {
         let all = [
             ("deadlines.control_ms", d.control_ms),
             ("deadlines.storage_query_ms", d.storage_query_ms),
+            ("deadlines.storage_job_ms", d.storage_job_ms),
             ("deadlines.kernel_check_ms", d.kernel_check_ms),
             ("deadlines.generation_ms", d.generation_ms),
             ("deadlines.fetch_ms", d.fetch_ms),

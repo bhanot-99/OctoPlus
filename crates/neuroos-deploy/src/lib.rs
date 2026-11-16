@@ -236,6 +236,74 @@ fn push_monitor_paths(out: &mut String) {
     out.push_str("BindReadOnlyPaths=-%t/bus\n");
 }
 
+/// The storage lifecycle jobs run by systemd timers (FR-STO-11, Architecture §7.5): name, the
+/// `OnCalendar=` that matches the PRD cadence (daily GC, a snapshot every 6 h, an hourly roll-up).
+pub const STORAGE_JOBS: [(&str, &str); 3] = [
+    ("gc", "daily"),
+    ("backup", "*-*-* 00/6:00:00"),
+    ("rollup", "hourly"),
+];
+
+/// A one-shot unit that asks C3 to run one lifecycle job through `neuroosctl`. It sees only the
+/// storage socket, has no network and writes nothing (C3 does the work).
+#[must_use]
+pub fn generate_storage_job_service(job: &str) -> String {
+    let mut out = String::new();
+    out.push_str("[Unit]\n");
+    out.push_str(&format!(
+        "Description=Semantic-NeuroOS storage job: {job}\n"
+    ));
+    out.push_str("After=neuroos-storage.service\n\n[Service]\nType=oneshot\n");
+    for line in [
+        "PrivateNetwork=true",
+        "InaccessiblePaths=-/run/systemd/resolve",
+        "InaccessiblePaths=-/run/dbus/system_bus_socket",
+        "NoNewPrivileges=true",
+        "ProtectSystem=strict",
+        "ProtectHome=tmpfs",
+        "BindReadOnlyPaths=%h/.local/opt/neuroos",
+        "InaccessiblePaths=-/run/neuroos-fetcher",
+        "TemporaryFileSystem=%t/neuroos",
+        "BindPaths=%t/neuroos/storage/storage",
+        "PrivateTmp=true",
+        "PrivateDevices=true",
+        "ProtectKernelTunables=true",
+        "ProtectKernelModules=true",
+        "ProtectKernelLogs=true",
+        "ProtectControlGroups=true",
+        "ProtectClock=true",
+        "ProtectHostname=true",
+        "RestrictNamespaces=true",
+        "RestrictRealtime=true",
+        "RestrictSUIDSGID=true",
+        "RestrictAddressFamilies=AF_UNIX",
+        "LockPersonality=true",
+        "MemoryDenyWriteExecute=true",
+        "SystemCallArchitectures=native",
+        "SystemCallFilter=@system-service",
+        "CapabilityBoundingSet=",
+        "AmbientCapabilities=",
+        "LimitCORE=0",
+        "UMask=0077",
+        "MemoryMax=32M",
+    ] {
+        out.push_str(line);
+        out.push('\n');
+    }
+    out.push_str(&format!(
+        "ExecStart=%h/.local/opt/neuroos/bin/neuroosctl --runtime-dir %t/neuroos storage job {job}\n"
+    ));
+    out
+}
+
+/// The timer for a storage job.
+#[must_use]
+pub fn generate_storage_job_timer(job: &str, calendar: &str) -> String {
+    format!(
+        "[Unit]\nDescription=Semantic-NeuroOS storage job timer: {job}\n\n[Timer]\nOnCalendar={calendar}\nPersistent=true\nRandomizedDelaySec=60\nUnit=neuroos-storage-{job}.service\n\n[Install]\nWantedBy=timers.target\n"
+    )
+}
+
 /// Generates the systemd user service content for `part`.
 #[must_use]
 pub fn generate_user_service(part: Part, llm_model_file: &str) -> String {
@@ -293,6 +361,9 @@ fn generate_user_service_internal(
         }
         Part::Storage => {
             out.push_str("BindPaths=%h/.local/share/neuroos/storage\n");
+            out.push_str("BindPaths=%h/.local/share/neuroos/backups\n");
+            // The fetcher's spool (read and remove, FR-STO-10). Absent until Phase 8: skipped.
+            out.push_str("BindPaths=-/var/spool/neuroos-fetcher\n");
         }
         Part::Kernel => push_kernel_paths(&mut out),
         Part::Monitor => push_monitor_paths(&mut out),
@@ -665,6 +736,18 @@ pub fn generate_all_files(manifest_path: &Path) -> Result<Vec<GeneratedFile>, De
         rel_path: PathBuf::from("systemd/user").join(MODEL_CHECK_UNIT),
         content: generate_model_check_service(),
     });
+
+    // 2c. Storage lifecycle jobs and their timers (FR-STO-11)
+    for (job, calendar) in STORAGE_JOBS {
+        files.push(GeneratedFile {
+            rel_path: PathBuf::from("systemd/user").join(format!("neuroos-storage-{job}.service")),
+            content: generate_storage_job_service(job),
+        });
+        files.push(GeneratedFile {
+            rel_path: PathBuf::from("systemd/user").join(format!("neuroos-storage-{job}.timer")),
+            content: generate_storage_job_timer(job, calendar),
+        });
+    }
 
     // 3. User target
     files.push(GeneratedFile {

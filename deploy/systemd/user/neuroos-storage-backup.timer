@@ -1,0 +1,11 @@
+[Unit]
+Description=Semantic-NeuroOS storage job timer: backup
+
+[Timer]
+OnCalendar=*-*-* 00/6:00:00
+Persistent=true
+RandomizedDelaySec=60
+Unit=neuroos-storage-backup.service
+
+[Install]
+WantedBy=timers.target
