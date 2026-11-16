@@ -28,7 +28,7 @@
 | Builder / Checker | agy builds, Claude checks (D-23); Claude builds pieces itself where faster (D-21 carried over) |
 | Branch | `phase-3-monitor` |
 | Files being changed | `crates/neuroos-monitor/**`, `neuroos-common/src/config.rs`, `neuroos-proto` (dump), `neuroosctl` (replay) |
-| Next concrete step | W1 foundation (Claude), then W3 sensors (agy) in parallel with W2 privacy (Claude). Owner: CPU governor `performance` (sudo) before the W10 measurements; real-use recordings for the MS test (≥ 8 h, ≥ 3 dumps + 1 held-out). |
+| Next concrete step | Phase gate: wait for the PF bench, agy review findings, then `just ci` end to end; phase report; owner sign-off. Owner: run the MS recordings (`docs/runbooks/record-monitor-session.md`: ≥ 8 h in ≥ 3 dumps + 1 held-out). |
 
 ---
 
@@ -58,13 +58,13 @@ Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done �
 
 | Story | Title | Status | Builder | Checker |
 | :--- | :--- | :--- | :--- | :--- |
-| P3-S01 | C3 receives focus changes with app, title, pids, timestamps | Backlog | agy (W5) | Claude |
-| P3-S02 | C3 receives idle, lock and media events | Backlog | agy (W5, W6) | Claude |
-| P3-S03 | C3 receives CPU, memory, disk, battery, temperature samples | Backlog | agy (W3) | Claude |
-| P3-S04 | C3 receives the focused window's process tree | Backlog | agy (W4) | Claude |
-| P3-S05 | Excluded apps and paused periods never leave C1 | Backlog | Claude (W2) | agy review |
-| P3-S06 | Record, anonymise and replay a dump | Backlog | Claude (W8 C1 side), agy (replay) | cross-check |
-| P3-S07 | (P1) File activity for configured folders | Backlog | agy (W7) | Claude |
+| P3-S01 | C3 receives focus changes with app, title, pids, timestamps | In Check | Claude (W5 focus; agy stalled on W3 and was taken over, D-25) | agy review |
+| P3-S02 | C3 receives idle, lock and media events | In Check (lock: unknown by design, ADR-0011) | Claude (W5 idle, W6 media) | agy review |
+| P3-S03 | C3 receives CPU, memory, disk, battery, temperature samples | In Check | Claude (W3, after agy stalled) | agy review |
+| P3-S04 | C3 receives the focused window's process tree | In Check | Claude (W4) | agy review |
+| P3-S05 | Excluded apps and paused periods never leave C1 | In Check | Claude (W2) | agy review |
+| P3-S06 | Record, anonymise and replay a dump | In Check | Claude (dump, anonymiser, recorder), agy (`neuroosctl replay`, checked by Claude) | agy review / Claude |
+| P3-S07 | (P1) File activity for configured folders | In Check | Claude (W7) | agy review |
 
 Columns: Backlog → Ready → In Progress → In Check → Done.
 
