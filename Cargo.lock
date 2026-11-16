@@ -1137,6 +1137,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "neuroos-skill"
+version = "0.1.0"
+dependencies = [
+ "neuroos-sandbox",
+ "rustix",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "neuroos-storage"
 version = "0.1.0"
 dependencies = [

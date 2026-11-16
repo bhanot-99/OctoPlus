@@ -18,7 +18,7 @@ use crate::SandboxError;
 pub enum SyscallProfile {
     /// Read files and directories, write results to stdout.
     ReadOnly,
-    /// Also rename, create directories and unlink (cleanup into the trash).
+    /// Also delete files and directories (cleanup).
     FileMutating,
 }
 
@@ -89,15 +89,10 @@ const BASE: &[&str] = &[
     "restart_syscall",
 ];
 
-/// Added for [`SyscallProfile::FileMutating`].
-const MUTATING: &[&str] = &[
-    "renameat",
-    "renameat2",
-    "unlinkat",
-    "mkdirat",
-    "fsync",
-    "fdatasync",
-];
+/// Added for [`SyscallProfile::FileMutating`]: deletion only (cleanup deletes,
+/// it never moves or creates; ADR-0010 decision 8).
+/// `std::fs::remove_file` uses `unlink`, `remove_dir_all` uses `unlinkat`.
+const MUTATING: &[&str] = &["unlink", "rmdir", "unlinkat"];
 
 /// `EPERM`: a denied syscall fails like a permission error instead of killing
 /// the child, so the skill reports FAILED with a reason.

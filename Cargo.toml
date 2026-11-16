@@ -13,6 +13,7 @@ members = [
     "crates/neuroos-monitor",
     "crates/neuroos-proto",
     "crates/neuroos-sandbox",
+    "crates/neuroos-skill",
     "crates/neuroos-storage",
     "crates/neuroos-taint",
     "crates/neuroos-testkit",
