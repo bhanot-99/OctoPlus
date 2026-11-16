@@ -60,7 +60,7 @@ async fn the_pipeline_ingests_a_replayed_session_and_subscribes_again_when_the_s
         .unwrap(),
     );
     let sock_dir = dir.path().join("monitor/stream");
-    ensure_private_dir(&sock_dir.parent().unwrap().to_path_buf()).unwrap();
+    ensure_private_dir(sock_dir.parent().unwrap()).unwrap();
     ensure_private_dir(&sock_dir).unwrap();
     let sock = sock_dir.join("stream.sock");
     let server = Server::bind(&sock, ServerConfig::new(1 << 20, Duration::from_secs(60)))
