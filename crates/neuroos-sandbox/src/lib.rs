@@ -11,6 +11,8 @@
 //! returns an error and the part must exit. The scope rules (ABI v6) are
 //! applied when available and reported, since PRD §4 does not require them.
 
+pub mod child;
+
 use std::path::{Path, PathBuf};
 
 use landlock::{
@@ -124,4 +126,23 @@ pub fn restrict(policy: &Policy) -> Result<Report, SandboxError> {
 #[must_use]
 pub fn covered(path: &Path, roots: &[PathBuf]) -> bool {
     roots.iter().any(|r| path.starts_with(r))
+}
+
+/// Locks the pages holding `buf` in RAM so a secret is never written to swap
+/// (security.md §4.7 "keys held in locked, zeroised memory", NFR-SEC-06).
+/// The caller keeps `buf` at a stable address (boxed) for its whole life.
+///
+/// # Errors
+/// [`SandboxError::Unsupported`] when the kernel refuses (e.g. `RLIMIT_MEMLOCK`);
+/// callers holding keys must treat that as fatal.
+#[allow(unsafe_code)]
+pub fn lock_memory(buf: &mut [u8]) -> Result<(), SandboxError> {
+    if buf.is_empty() {
+        return Ok(());
+    }
+    // SAFETY: `buf` is a live, exclusively borrowed slice, so the pointer and
+    // length describe valid memory owned by this process. `mlock` only changes
+    // paging behaviour; it never reads or writes the bytes.
+    unsafe { rustix::mm::mlock(buf.as_mut_ptr().cast(), buf.len()) }
+        .map_err(|e| SandboxError::Unsupported(format!("mlock: {e}")))
 }

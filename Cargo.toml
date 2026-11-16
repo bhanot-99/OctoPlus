@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
     "crates/neuroos-common",
+    "crates/neuroos-confirm",
     "crates/neuroos-deploy",
     "crates/neuroos-fetcher",
     "crates/neuroos-health",
@@ -49,6 +50,15 @@ toml = "1.2.1"
 tracing = "0.1.44"
 tracing-journald = "0.3.2"
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["std", "fmt", "env-filter", "registry"] }
+# Phase 2 (C6): crypto, ids, skill sandbox, notifications, dialog (Architecture §14 allowlist).
+gtk4 = { version = "0.11.5", features = ["v4_14"] }
+hmac = "0.13.0"
+seccompiler = "0.5.0"
+sha2 = "0.11.1"
+subtle = "2.6.1"
+uuid = { version = "1.29.2", features = ["v7"] }
+zbus = { version = "6.3.0", default-features = false, features = ["tokio"] }
+zeroize = { version = "1.9.1", features = ["derive"] }
 # Tests
 proptest = "1.12.0"
 tempfile = "3.27.0"

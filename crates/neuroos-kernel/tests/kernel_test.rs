@@ -5,13 +5,15 @@ use std::time::Duration;
 
 use neuroos_ipc::server::{ServerConfig, ensure_private_dir};
 use neuroos_ipc::{Client, Server};
-use neuroos_kernel::KernelHandler;
+use neuroos_kernel::{KernelHandler, Registry};
 use neuroos_proto::v1::envelope::Body;
 use neuroos_proto::v1::{ErrorCode, EvaluateRequest, Ping, Taint, Tier};
+use neuroos_taint::TaintFlags;
 
 #[tokio::test]
 async fn test_kernel_evaluation_and_taint_enforcement() {
-    let handler = Arc::new(KernelHandler::new());
+    let registry = Arc::new(Registry::load().unwrap());
+    let handler = Arc::new(KernelHandler::new(registry));
     let temp_dir = tempfile::tempdir().unwrap();
     let sock_dir = temp_dir.path().join("kernel");
     ensure_private_dir(&sock_dir).unwrap();
@@ -32,11 +34,11 @@ async fn test_kernel_evaluation_and_taint_enforcement() {
 
     let client = Client::connect(&sock, 1024 * 1024).await.unwrap();
 
-    // 1. Valid EvaluateRequest with context_taint
+    // 1. SAFE skill clean -> SAFE / true
     let res = client
         .call(
             Body::EvaluateRequest(EvaluateRequest {
-                capability: "answer".into(),
+                capability: "system.read_metadata".into(),
                 context_taint: Some(Taint { flags: 0 }),
             }),
             Duration::from_millis(500),
@@ -52,11 +54,89 @@ async fn test_kernel_evaluation_and_taint_enforcement() {
         other => panic!("unexpected body {other:?}"),
     }
 
-    // 2. EvaluateRequest with missing context_taint MUST be rejected (rules.md §6.4)
+    // 2. SAFE skill + EXTERNAL_UNTRUSTED -> REVIEW / false
+    let res = client
+        .call(
+            Body::EvaluateRequest(EvaluateRequest {
+                capability: "system.read_metadata".into(),
+                context_taint: Some(Taint {
+                    flags: TaintFlags::EXTERNAL_UNTRUSTED.bits(),
+                }),
+            }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap();
+
+    match res {
+        Body::EvaluateResult(res) => {
+            assert_eq!(res.tier, Tier::Review as i32);
+            assert!(!res.allowed_without_dialog);
+        }
+        other => panic!("unexpected body {other:?}"),
+    }
+
+    // 3. REVIEW skill -> REVIEW / false
+    let res = client
+        .call(
+            Body::EvaluateRequest(EvaluateRequest {
+                capability: "system.cleanup".into(),
+                context_taint: Some(Taint { flags: 0 }),
+            }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap();
+
+    match res {
+        Body::EvaluateResult(res) => {
+            assert_eq!(res.tier, Tier::Review as i32);
+            assert!(!res.allowed_without_dialog);
+        }
+        other => panic!("unexpected body {other:?}"),
+    }
+
+    // 4. Unknown capability -> PermissionDenied error
     let err = client
         .call(
             Body::EvaluateRequest(EvaluateRequest {
-                capability: "answer".into(),
+                capability: "unknown.capability".into(),
+                context_taint: Some(Taint { flags: 0 }),
+            }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap_err();
+    let wire = err.to_wire();
+    assert_eq!(
+        ErrorCode::try_from(wire.code).unwrap(),
+        ErrorCode::PermissionDenied,
+        "unknown capability must be rejected with PermissionDenied"
+    );
+
+    // 5. shell.exec (disabled) -> PermissionDenied error
+    let err = client
+        .call(
+            Body::EvaluateRequest(EvaluateRequest {
+                capability: "shell.exec".into(),
+                context_taint: Some(Taint { flags: 0 }),
+            }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap_err();
+    let wire = err.to_wire();
+    assert_eq!(
+        ErrorCode::try_from(wire.code).unwrap(),
+        ErrorCode::PermissionDenied,
+        "disabled shell.exec must be rejected with PermissionDenied"
+    );
+
+    // 6. Missing context_taint MUST be rejected with InvalidRequest (rules.md §6.4)
+    let err = client
+        .call(
+            Body::EvaluateRequest(EvaluateRequest {
+                capability: "system.read_metadata".into(),
                 context_taint: None,
             }),
             Duration::from_millis(500),
@@ -70,7 +150,7 @@ async fn test_kernel_evaluation_and_taint_enforcement() {
         "missing context_taint must be rejected with InvalidRequest"
     );
 
-    // 3. Invalid body (Ping)
+    // 7. Invalid body (Ping)
     let err = client
         .call(
             Body::Ping(Ping {
@@ -131,7 +211,7 @@ async fn test_kernel_service_init_and_run() {
     let res = client
         .call(
             Body::EvaluateRequest(EvaluateRequest {
-                capability: "answer".into(),
+                capability: "system.read_metadata".into(),
                 context_taint: Some(Taint { flags: 0 }),
             }),
             Duration::from_millis(500),
@@ -139,7 +219,13 @@ async fn test_kernel_service_init_and_run() {
         .await
         .unwrap();
 
-    assert!(matches!(res, Body::EvaluateResult(_)));
+    match res {
+        Body::EvaluateResult(res) => {
+            assert_eq!(res.tier, Tier::Safe as i32);
+            assert!(res.allowed_without_dialog);
+        }
+        other => panic!("unexpected body {other:?}"),
+    }
 
     let _ = stop_tx.send(());
     let res = thread.join().unwrap();

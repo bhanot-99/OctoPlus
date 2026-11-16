@@ -1,0 +1,27 @@
+capability = "memory.forget"
+tier = "REVIEW"
+disabled = false
+implemented = false
+kind = "child"
+
+[args.since_ns]
+type = "int"
+min = 0
+required = false
+
+[args.until_ns]
+type = "int"
+min = 0
+required = false
+
+[args.app]
+type = "string"
+max_len = 128
+required = false
+
+[sandbox]
+read_only = []
+read_write = []
+timeout_ms = 1000
+memory_mib = 16
+cpu_s = 1

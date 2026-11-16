@@ -277,7 +277,7 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | `profile.forget` | REVIEW | Remove personal facts. |
 | `memory.forget` | REVIEW | Purge activity data by time range or app. |
 | `notes.append` | REVIEW | Append to a note. |
-| `system.cleanup` | REVIEW | Free disk space from an allowlist (trash, caches, configured build folders). The dialog lists every item and size. Moves to trash where possible. |
+| `system.cleanup` | REVIEW | Free disk space from an allowlist (trash, caches, configured build folders). The dialog lists every item and size. Deletes the listed cache and build entries permanently and empties the trash; moving to the trash is not possible across C6's sandbox mounts (ADR-0010). |
 | `web.fetch` | REVIEW | Fetch one link. |
 | `web.search` | REVIEW | Run one search and read up to N result pages (N shown in the dialog). |
 | `shell.exec` | DANGEROUS | Disabled by default. |
@@ -380,6 +380,8 @@ The full plan is [security.md](security.md). Binding requirements:
 | NFR-SEC-06 | The HMAC key is a 0600 file, held in zeroised memory, never logged, never sent over IPC. |
 | NFR-SEC-07 | No text from tainted content can lower a tier, run a non-SAFE skill, save a personal fact, or appear in a nudge without the user's confirmation. |
 | NFR-SEC-08 | Security code fails closed. |
+| NFR-SEC-09 | Dialog-fatigue limits: at most 6 REVIEW or DANGEROUS requests per rolling minute; a request the user denied is refused for 300 s; one dialog at a time. Label T (ADR-0010, proposed). |
+| NFR-SEC-10 | The dialog's approve button stays inactive for 1 s after the dialog appears and again each time it regains focus. Label T (ADR-0010, proposed). |
 | NFR-PRIV-01 | No raw audio, screenshots or keystrokes are ever stored. |
 | NFR-PRIV-02 | All user data lives under `~/.local/share/neuroos/` plus the spool, and `purge --all` removes it. |
 | NFR-PRIV-03 | No personal content in logs at `info` or above. |
@@ -517,7 +519,7 @@ The full plan is [security.md](security.md). Binding requirements:
 | OQ-04 | Which Kokoro voice | `af_heart` until the owner's listening test | Phase 7 |
 | OQ-05 | Notes folder and calendar source | `~/Notes`; local `.ics` files | Phase 3 |
 | OQ-06 | Personal install only, or public release | Personal | Phase 10 |
-| OQ-07 | Cleanup allowlist beyond trash and `~/.cache` | Add build folders the owner names | Phase 2 |
+| OQ-07 | Cleanup allowlist beyond trash and `~/.cache` | **Closed 2026-11-16 (ADR-0010):** trash and `~/.cache` only; build folders only through `[kernel] cleanup_build_folders`, empty by default | Phase 2 |
 
 ---
 

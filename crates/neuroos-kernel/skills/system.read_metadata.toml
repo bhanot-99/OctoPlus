@@ -1,0 +1,12 @@
+capability = "system.read_metadata"
+tier = "SAFE"
+disabled = false
+implemented = true
+kind = "child"
+
+[sandbox]
+read_only = ["metadata"]
+read_write = []
+timeout_ms = 2000
+memory_mib = 32
+cpu_s = 1

@@ -1,0 +1,12 @@
+capability = "system.disk_report"
+tier = "SAFE"
+disabled = false
+implemented = true
+kind = "child"
+
+[sandbox]
+read_only = ["cleanup_roots", "trash"]
+read_write = []
+timeout_ms = 10000
+memory_mib = 32
+cpu_s = 5

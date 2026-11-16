@@ -11,11 +11,11 @@
 | Field | Value |
 | :--- | :--- |
 | Last updated | 2026-11-16 |
-| Project stage | **Phase 1 done** (signed off 2026-11-16, merged to `main`). Phase 2 not started. |
-| Current phase | Phase 2 — Safety kernel (C6), not started |
-| Current story | — (Phase 2 planning) |
+| Project stage | **Phase 2 in progress** (started 2026-11-16 on branch `phase_2`). |
+| Current phase | Phase 2 — Safety kernel (C6) |
+| Current story | P2-S01/S02 (agy, T1); P2-S03 dialog (Claude) |
 | Overall progress | 2 / 11 phases |
-| Health | ✅ Phase 0 and Phase 1 done |
+| Health | 🟦 Phase 2 building |
 | Next milestone | M2 — safety kernel |
 
 ---
@@ -24,11 +24,11 @@
 
 | Field | Value |
 | :--- | :--- |
-| Story | P1-S01/S02 — task T1: `neuroos-common::socketmap`, `crates/neuroos-deploy` unit generator, `deploy/`, `scripts/install-dev.sh` |
-| Builder / Checker | agy (T1–T4) / Claude; T5 redone by Claude (D-21) |
-| Branch | `phase_1` (owner's choice: one branch for the phase, one commit per story; D-20) |
-| Files being changed | `crates/neuroos-common`, `crates/neuroos-deploy`, `deploy/`, `scripts/`, `justfile` |
-| Next concrete step | Owner decides when to start Phase 2 (phases.md §5) and with which builder. Before any Phase 2 measurement set the CPU governor to `performance` (reset to `powersave` by the reboot). |
+| Story | P2-T1 (agy): registry, schemas, tier evaluator, taint escalation, rate limiter. In parallel Claude built `neuroos-confirm` (dialog). |
+| Builder / Checker | agy builds, Claude checks (D-23); Claude builds pieces itself where faster (D-21 carried over) |
+| Branch | `phase_2` (one branch for the phase, as in Phase 1) |
+| Files being changed | `crates/neuroos-kernel`, `crates/neuroos-confirm`, `crates/neuroos-common/src/config.rs`, `ui/tokens/` |
+| Next concrete step | Check T1; then T2 audit log, T3 keys and tokens, T4 skill runner and skills, T5 notifications, T6 kernel wiring and units. CPU governor is `powersave` (needs sudo to set `performance`) before PF measurements. |
 
 ---
 
@@ -38,7 +38,7 @@
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | 0 | Foundation and spikes | ✅ | 2026-11-14 | 2026-11-15 | `reports/phase-00-foundation.md` |
 | 1 | Walking skeleton | ✅ | 2026-11-15 | 2026-11-16 | `reports/phase-01-skeleton.md` |
-| 2 | Safety kernel (C6) | ⬜ | — | — | `reports/phase-02-kernel.md` |
+| 2 | Safety kernel (C6) | 🟦 | 2026-11-16 | — | `reports/phase-02-kernel.md` |
 | 3 | Monitor (C1) | ⬜ | — | — | `reports/phase-03-monitor.md` |
 | 4 | Storage (C3) | ⬜ | — | — | `reports/phase-04-storage.md` |
 | 5 | Knowledge and conversation (C5) | ⬜ | — | — | `reports/phase-05-knowledge.md` |
@@ -58,9 +58,9 @@ Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done �
 
 | Story | Title | Status | Builder | Checker |
 | :--- | :--- | :--- | :--- | :--- |
-| P2-S01 | C5 asks whether a capability is allowed and gets a fast answer | Backlog | — | — |
-| P2-S02 | Anything influenced by web content asks the user first | Backlog | — | — |
-| P2-S03 | Clear approval dialog; approval cannot be faked | Backlog | — | — |
+| P2-S01 | C5 asks whether a capability is allowed and gets a fast answer | In Progress | agy | Claude |
+| P2-S02 | Anything influenced by web content asks the user first | In Progress | agy | Claude |
+| P2-S03 | Clear approval dialog; approval cannot be faked | In Progress (dialog built) | Claude (dialog) | agy review |
 | P2-S04 | Skills run in a sandbox with only the access they need | Backlog | — | — |
 | P2-S05 | Every action has ATTEMPT and RESULT; tampering is detectable | Backlog | — | — |
 | P2-S06 | Disk report and confirmed cleanup of an allowlisted set | Backlog | — | — |
@@ -76,6 +76,7 @@ One line each. Anything architectural also gets an ADR.
 
 | Date | ID | Decision | ADR |
 | :--- | :--- | :--- | :--- |
+| 2026-11-16 | D-23 | Owner started Phase 2: "Builder: you and agy - full coordination". Owner named no build folders → OQ-07 closed as trash + `~/.cache`, build folders by config only. Claude's design calls under that go-ahead, open to overturn at sign-off: compiled-in skill manifests, `kernel`-kind skills (privacy.pause), C6 sandbox = union of its children, dialog with cairo renderer, new limits NFR-SEC-09/10. | 0010 (Proposed) |
 | 2026-11-16 | D-22 | Owner signed off Phase 1 ("signoff - approved") and accepted ADR-0009 on Claude's recommendation; `phase_1` merged to `main`. | 0009 |
 | 2026-11-16 | D-21 | Owner: Claude may build any piece itself when agy struggles or needs too many rounds; finish Phase 1 unattended overnight; fetcher sudo steps and re-login in the morning. | — |
 | 2026-11-15 | D-20 | Owner started Phase 1 with agy as builder, on one branch `phase_1`. Claude's design calls (owner may overturn at sign-off): one folder per socket, socket map as code, units generated from it, runtime-folder unit, dev install under `~/.local/opt/neuroos`, C4 hash check by `sha256sum` in ExecStartPre; C++ parts take sockets and peer units as flags from their unit file. | 0009 (Proposed) |
@@ -116,7 +117,7 @@ Mirror of [PRD.md](PRD.md) §12 plus anything blocking the current phase. Close 
 | OQ-04 | Which voice | `af_heart` | Phase 7 | Open |
 | OQ-05 | Notes folder and calendar source | `~/Notes`; local `.ics` files | Phase 3 | Open |
 | OQ-06 | Personal install or public release | Personal | Phase 10 | Open |
-| OQ-07 | Cleanup allowlist | Trash, `~/.cache`, named build folders | Phase 2 | Open |
+| OQ-07 | Cleanup allowlist | Trash, `~/.cache`, named build folders | Phase 2 | **Closed 2026-11-16 (D-23, ADR-0010)** — config list, empty by default |
 
 ---
 
@@ -126,6 +127,7 @@ Bugs live in `BUGS.md` (created in Phase 0). This table is for blockers and risk
 
 | Date | Type | Item | Owner | Status |
 | :--- | :--- | :--- | :--- | :--- |
+| 2026-11-16 | Risk | GTK4 dialog RSS ≈ 66 MiB with the cairo renderer (162 MiB default), outside the unit. PRD allows C6 +25 MiB while a dialog is open, hard limit 64 MiB. Measure inside the C6 unit at the gate; owner decides if over. | Claude | Open |
 | 2026-11-15 | Watch | agy's reports can state unmeasured results as fact (TASK 01 R-09, S-04). Every agy claim is re-checked against raw output before it enters an ADR. | Claude | Open |
 | 2026-11-15 | Watch | Chat grading done (delegated to Claude): Qwen3 best, 4.42/5. Every model called ibuprofen + blood-pressure pills "generally safe" — add to Phase 2 safety tests. | Claude | Open |
 | 2026-11-15 | Watch | Memory headroom is thin: total 3,795 of 4,000 MiB. llama.cpp must run with weight repacking off (+1.6 GB otherwise). | Claude | Open |

@@ -336,8 +336,9 @@ healthd connects to each `health.sock` every 30 s and reads status, RSS, uptime,
 ~/.local/share/neuroos/          # ALL persistent user data
 ├── storage/neuroos.sqlite3 (+ -wal)
 ├── backups/<UTC timestamp>/
-├── actions.jsonl (+ rotations)  # audit log, hash-chained
-├── egress.jsonl  (+ rotations)  # everything sent to the network, hash-chained
+├── audit/                       # C6 only (ADR-0010)
+│   ├── actions.jsonl (+ rotations)  # audit log, hash-chained
+│   └── egress.jsonl  (+ rotations)  # everything sent to the network, hash-chained
 └── soak/
 
 /var/spool/neuroos-fetcher/      # 2770 neuroos-fetcher:neuroos
@@ -480,8 +481,8 @@ Spike S-04 confirmed that every stanza above applies in user scope on the refere
 | C3 | embedding model, spool (read + remove), config | `storage/`, `backups/`, own runtime folder |
 | C4 | language model, config; GPU path only: `/dev/nvidia0` and `/dev/nvidiactl` bound into the private `/dev` (ADR-0008, S-02 addendum) | own runtime folder |
 | C5 | tokenizer, prompt templates, `nudges.toml`, config | own runtime folder |
-| C6 | `hmac.key`, skill manifests, notification bus socket, config | `actions.jsonl*`, `egress.jsonl*`, own runtime folder |
-| skill runner | per-skill, narrower than C6 | per-skill |
+| C6 | `hmac.key`, `/usr`, `/etc/fonts`, dialog and skill binaries, Wayland and session-bus sockets, config (skill manifests are compiled in, ADR-0010) | `audit/`, cleanup roots (`~/.cache`, trash, configured build folders) for its skill children, own runtime folder |
+| skill child (`neuroos-skill`) | per-skill roots only, narrower than C6; never `hmac.key`, `audit/` or sockets. Plus rlimits and a seccomp allowlist (`neuroos-sandbox::child`) | per-skill (cleanup: its roots) |
 | C7 | CA bundle, config | spool, `/run/neuroos-fetcher`; network rule: connect TCP 443 only |
 | healthd | cgroup files, config | `soak/`, own runtime folder |
 
@@ -505,7 +506,7 @@ any error on this path → DENY, audited
 1. C6 creates `action_id` (UUIDv7) and a 128-bit nonce, and writes the `ATTEMPT` record. If that write fails, the action is denied.
 2. C6 starts `neuroos-confirm` as its own child, passing the structured request on stdin. The dialog shows it ([design.md](design.md) §6). For `web.search` the query is editable; the child returns the decision and the final arguments on stdout.
 3. C6 computes `args_hash = SHA-256(canonical(final args))` and `token = HMAC-SHA256(key, action_id ‖ nonce ‖ capability ‖ args_hash ‖ decision ‖ expiry)`, expiry 120 s.
-4. The executor (skill runner or C7) receives the request and token and re-verifies with a constant-time compare. Each nonce is single use.
+4. The executor re-verifies with a constant-time compare: for skills, C6's own dispatch path immediately before it starts the skill child, rebuilding the approval from what will actually run (the child never holds a key, ADR-0010); for fetch and search, C7 with `fetch.key`. Each nonce is single use.
 5. The decision never travels over a socket another part can write to, and there is no voice path to approval.
 
 C7 holds a verification key delivered at install time (readable only by `neuroos-fetcher`), so it can check tokens without trusting the caller's word. Key handling: [security.md](security.md) §6.

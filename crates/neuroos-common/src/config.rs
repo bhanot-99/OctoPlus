@@ -55,6 +55,9 @@ pub struct Config {
     /// Health daemon options.
     #[serde(default)]
     pub healthd: HealthdConfig,
+    /// Safety kernel options (C6, FR-KER-01, FR-KER-08).
+    #[serde(default)]
+    pub kernel: KernelConfig,
     /// Verification hooks (SC proof 3). Read-only probes; they never widen anything.
     #[serde(default)]
     pub debug: DebugConfig,
@@ -140,6 +143,28 @@ impl Default for HealthdConfig {
     }
 }
 
+/// `[kernel]` section (PRD §5.9, Architecture §8.3).
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields, default)]
+pub struct KernelConfig {
+    /// Maximum review/dangerous requests allowed in a rolling 60 s window.
+    pub review_per_minute: u32,
+    /// Cooling period in seconds after user denies a request.
+    pub denial_cooldown_s: u64,
+    /// Build folders permitted for cleanup operations.
+    pub cleanup_build_folders: Vec<PathBuf>,
+}
+
+impl Default for KernelConfig {
+    fn default() -> Self {
+        Self {
+            review_per_minute: 6,
+            denial_cooldown_s: 300,
+            cleanup_build_folders: Vec::new(),
+        }
+    }
+}
+
 impl Config {
     /// Parses and validates config text.
     ///
@@ -197,6 +222,35 @@ impl Config {
                 reason: "scrape interval must be greater than zero",
             });
         }
+        if self.kernel.review_per_minute < 1 {
+            return Err(ConfigError::Invalid {
+                key: "kernel.review_per_minute",
+                reason: "review_per_minute must be at least 1",
+            });
+        }
+        if self.kernel.denial_cooldown_s > 86400 {
+            return Err(ConfigError::Invalid {
+                key: "kernel.denial_cooldown_s",
+                reason: "denial_cooldown_s must not exceed 86400 seconds",
+            });
+        }
+        for path in &self.kernel.cleanup_build_folders {
+            if !path.is_absolute() {
+                return Err(ConfigError::Invalid {
+                    key: "kernel.cleanup_build_folders",
+                    reason: "paths must be absolute",
+                });
+            }
+            if path
+                .components()
+                .any(|c| matches!(c, std::path::Component::ParentDir))
+            {
+                return Err(ConfigError::Invalid {
+                    key: "kernel.cleanup_build_folders",
+                    reason: "paths must not contain '..'",
+                });
+            }
+        }
         Ok(())
     }
 }
@@ -211,6 +265,9 @@ mod tests {
         assert_eq!(cfg, Config::default());
         assert_eq!(cfg.deadlines.control(), Duration::from_millis(250));
         assert_eq!(cfg.ipc.max_frame_bytes, 1_048_576);
+        assert_eq!(cfg.kernel.review_per_minute, 6);
+        assert_eq!(cfg.kernel.denial_cooldown_s, 300);
+        assert!(cfg.kernel.cleanup_build_folders.is_empty());
     }
 
     #[test]
@@ -244,6 +301,10 @@ mod tests {
             "[ipc]\nmax_frame_bytes = 16777217\n",
             "[deadlines]\ncontrol_ms = 0\n",
             "[deadlines]\nfetch_ms = 0\n",
+            "[kernel]\nreview_per_minute = 0\n",
+            "[kernel]\ndenial_cooldown_s = 86401\n",
+            "[kernel]\ncleanup_build_folders = [\"relative/path\"]\n",
+            "[kernel]\ncleanup_build_folders = [\"/var/log/../build\"]\n",
         ] {
             assert!(
                 matches!(
@@ -254,6 +315,14 @@ mod tests {
             );
         }
         assert!(Config::from_toml_str("[ipc]\nmax_frame_bytes = 16777216\n").is_ok());
+        let valid_kernel = "[kernel]\nreview_per_minute = 10\ndenial_cooldown_s = 60\ncleanup_build_folders = [\"/target\"]\n";
+        let cfg = Config::from_toml_str(valid_kernel).unwrap();
+        assert_eq!(cfg.kernel.review_per_minute, 10);
+        assert_eq!(cfg.kernel.denial_cooldown_s, 60);
+        assert_eq!(
+            cfg.kernel.cleanup_build_folders,
+            vec![PathBuf::from("/target")]
+        );
     }
 
     #[test]

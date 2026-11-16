@@ -9,6 +9,8 @@ publish.workspace = true
 
 [dependencies]
 landlock.workspace = true
+rustix = { workspace = true, features = ["mm"] }
+seccompiler = { workspace = true, features = ["json"] }
 thiserror.workspace = true
 
 [dev-dependencies]

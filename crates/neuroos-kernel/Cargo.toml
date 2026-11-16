@@ -16,10 +16,22 @@ neuroos-common = { path = "../neuroos-common" }
 neuroos-health = { path = "../neuroos-health" }
 neuroos-ipc = { path = "../neuroos-ipc" }
 neuroos-proto = { path = "../neuroos-proto" }
+neuroos-taint = { path = "../neuroos-taint" }
+neuroos-sandbox = { path = "../neuroos-sandbox" }
+hmac = { workspace = true }
+rustix = { workspace = true }
+sha2 = { workspace = true }
+zeroize = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
 tokio = { workspace = true, features = ["sync", "time"] }
+toml = { workspace = true }
+tracing = { workspace = true }
 
 [dev-dependencies]
 neuroos-health = { path = "../neuroos-health", features = ["test-support"] }
+proptest = { workspace = true }
 tempfile.workspace = true
 tokio.workspace = true
 

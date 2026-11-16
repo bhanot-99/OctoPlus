@@ -128,16 +128,17 @@ The most important screen in the product. It must be impossible to misunderstand
 │  🛡  NEEDS YOUR OK                                        │  tier badge
 │                                                          │
 │  Clean up disk space                                     │  action title, plain words
-│  NeuroOS will move these to the trash:                   │  exactly what will happen
+│  NeuroOS will permanently delete these. Apps recreate    │  exactly what will happen
+│  caches and build files when needed:                     │
 │                                                          │
 │    ~/projects/app/target            4.2 GiB              │  full list, mono, sizes
 │    ~/.cache/thumbnails              610 MiB              │
-│    Trash (empty permanently)        1.1 GiB              │
+│    Trash (delete permanently)       1.1 GiB              │
 │                                                          │
 │  Total freed: about 5.9 GiB                              │
 │                                                          │
 │  Details ▸                                               │  capability id, action id
-│                       [ Deny ]   [ Allow once ]          │  Deny has focus
+│                       [ Deny ]   [ Delete ]              │  Deny has focus
 │  Expires in 1:54                                         │
 └──────────────────────────────────────────────────────────┘
   width 480 px · modal · always on top
@@ -181,7 +182,7 @@ The most important screen in the product. It must be impossible to misunderstand
 
 1. **Deny has default focus.** `Enter` on open never approves. `Esc` denies.
 2. **The approve button is inactive for the first moment** after the dialog appears, so a keystroke meant for another window cannot approve.
-3. The approve button says what it does: "Allow once", "Send search", "Move to trash". Never "OK" or "Yes".
+3. The approve button says what it does: "Allow once", "Send search", "Delete". Never "OK" or "Yes". The exact wording per capability lives in `crates/neuroos-confirm/src/wording.rs` (ADR-0010).
 4. DANGEROUS tier: the button is the solid danger colour and stays disabled until the user types the phrase shown.
 5. A countdown shows the expiry; at zero the dialog closes and the action is recorded as expired.
 6. Only one dialog at a time.

@@ -1,0 +1,17 @@
+capability = "shell.exec"
+tier = "DANGEROUS"
+disabled = true
+implemented = false
+kind = "child"
+
+[args.command]
+type = "string"
+max_len = 1024
+required = true
+
+[sandbox]
+read_only = []
+read_write = []
+timeout_ms = 1000
+memory_mib = 16
+cpu_s = 1

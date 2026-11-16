@@ -1,0 +1,18 @@
+capability = "calendar.read"
+tier = "SAFE"
+disabled = false
+implemented = false
+kind = "child"
+
+[args.days]
+type = "int"
+min = 1
+max = 31
+required = true
+
+[sandbox]
+read_only = []
+read_write = []
+timeout_ms = 1000
+memory_mib = 16
+cpu_s = 1

@@ -1,0 +1,11 @@
+capability = "privacy.pause"
+tier = "SAFE"
+disabled = false
+implemented = true
+kind = "kernel"
+
+[args.minutes]
+type = "int"
+min = 1
+max = 480
+required = true

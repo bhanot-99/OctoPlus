@@ -529,3 +529,73 @@ fn every_user_unit_has_exactly_one_exec() {
     assert!(!single_exec("ExecStartPre=/bin/true\nExecStart=/bin/x\n"));
     assert!(!single_exec("ExecStart=/bin/a\nExecStart=/bin/b\n"));
 }
+
+#[test]
+fn kernel_paths_per_adr_0010() {
+    let files = generate_all_files(&manifest_path()).unwrap();
+    let kernel = &files
+        .iter()
+        .find(|f| f.rel_path == Path::new("systemd/user/neuroos-kernel.service"))
+        .unwrap()
+        .content;
+    for line in [
+        "BindReadOnlyPaths=%h/.config/neuroos/hmac.key",
+        "BindPaths=%h/.local/share/neuroos/audit",
+        "BindPaths=-%t/wayland-1",
+        "BindPaths=-%t/bus",
+        "BindPaths=-%h/.cache",
+        "BindPaths=-%h/.local/share/Trash",
+    ] {
+        assert!(
+            kernel.lines().any(|l| l == line),
+            "kernel unit lacks {line}"
+        );
+    }
+    // Only C6 gets these; in particular no other part sees the key, the audit log or the cleanup roots.
+    for f in &files {
+        if f.rel_path == Path::new("systemd/user/neuroos-kernel.service") {
+            continue;
+        }
+        for secret in [
+            "hmac.key",
+            "neuroos/audit",
+            "%h/.cache",
+            "Trash",
+            "%t/bus",
+            "wayland",
+        ] {
+            assert!(
+                !f.content.contains(secret),
+                "{} must not mention {secret}",
+                f.rel_path.display()
+            );
+        }
+    }
+}
+
+#[test]
+fn kernel_cleanup_dropin_validates_paths() {
+    use neuroos_deploy::generate_kernel_cleanup_dropin;
+    let ok =
+        generate_kernel_cleanup_dropin(&[PathBuf::from("/home/u/projects/app/target")]).unwrap();
+    assert!(ok.contains("BindPaths=-/home/u/projects/app/target\n"));
+    assert!(
+        generate_kernel_cleanup_dropin(&[])
+            .unwrap()
+            .contains("[Service]")
+    );
+    for bad in [
+        "relative/target",
+        "/home/u/../etc",
+        "/home/u/my target",
+        "/home/u/%h",
+        "/home/u/a\\b",
+        "/home/u/a;b",
+        "/home/u/a\nExecStart=/bin/sh",
+    ] {
+        assert!(
+            generate_kernel_cleanup_dropin(&[PathBuf::from(bad)]).is_err(),
+            "{bad:?} must be refused"
+        );
+    }
+}

@@ -1,0 +1,17 @@
+capability = "profile.remember"
+tier = "SAFE"
+disabled = false
+implemented = false
+kind = "child"
+
+[args.fact]
+type = "string"
+max_len = 512
+required = true
+
+[sandbox]
+read_only = []
+read_write = []
+timeout_ms = 1000
+memory_mib = 16
+cpu_s = 1
