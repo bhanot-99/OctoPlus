@@ -11,7 +11,7 @@ use neuroos_proto::v1::{ErrorCode, MonitorSubscribe, PauseRequest, Ping, ResumeR
 
 #[tokio::test]
 async fn test_control_handler_pause_and_resume() {
-    let handler = Arc::new(ControlHandler::new());
+    let handler = Arc::new(ControlHandler::new(test_privacy()));
     let temp_dir = tempfile::tempdir().unwrap();
     let sock_dir = temp_dir.path().join("control");
     neuroos_ipc::server::ensure_private_dir(&sock_dir).unwrap();
@@ -45,7 +45,8 @@ async fn test_control_handler_pause_and_resume() {
     match res {
         Body::PrivacyState(state) => {
             assert!(state.paused);
-            assert_eq!(state.paused_until_ns, 60_000_000_000);
+            // A timed pause reports a UTC deadline in the future, not the duration echoed back.
+            assert!(state.paused_until_ns > neuroos_common::time::now_ns().unwrap());
         }
         other => panic!("unexpected body {other:?}"),
     }
@@ -190,6 +191,14 @@ fn test_bus() -> Arc<neuroos_monitor::bus::Bus> {
         16,
         Arc::new(neuroos_monitor::bus::PassGate),
         Arc::new(neuroos_monitor::clock::SystemClock),
+        neuroos_health::Health::new("neuroos-monitor", "0.1.0"),
+    )
+}
+
+fn test_privacy() -> Arc<neuroos_monitor::Privacy> {
+    neuroos_monitor::Privacy::new(
+        Arc::new(neuroos_monitor::clock::SystemClock),
+        neuroos_monitor::exclusion::Exclusion::default(),
         neuroos_health::Health::new("neuroos-monitor", "0.1.0"),
     )
 }

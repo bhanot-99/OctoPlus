@@ -6,33 +6,33 @@
 
 pub mod bus;
 pub mod clock;
+pub mod exclusion;
+pub mod privacy;
 pub mod sensor;
 pub mod sensors;
 pub mod stream;
 pub mod supervisor;
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 
 use neuroos_ipc::{Handler, HandlerError, Request, StreamSink};
+use neuroos_proto::v1::ErrorCode;
 use neuroos_proto::v1::envelope::Body;
-use neuroos_proto::v1::{ErrorCode, PrivacyState};
 
+pub use privacy::Privacy;
 pub use stream::StreamHandler;
 
-/// Handles privacy control requests on `monitor/control`.
-#[derive(Debug, Default)]
+/// Handles privacy control requests on `monitor/control` (FR-PRV-01).
+#[derive(Debug)]
 pub struct ControlHandler {
-    paused: AtomicBool,
+    privacy: Arc<Privacy>,
 }
 
 impl ControlHandler {
-    /// Creates a new `ControlHandler`.
+    /// Handler over the shared pause state.
     #[must_use]
-    pub fn new() -> Self {
-        Self {
-            paused: AtomicBool::new(false),
-        }
+    pub fn new(privacy: Arc<Privacy>) -> Self {
+        Self { privacy }
     }
 }
 
@@ -40,19 +40,20 @@ impl Handler for ControlHandler {
     async fn handle(&self, req: Request, _sink: StreamSink) -> Result<Body, HandlerError> {
         match req.body {
             Body::PauseRequest(p) => {
-                self.paused.store(true, Ordering::Relaxed);
-                Ok(Body::PrivacyState(PrivacyState {
-                    paused: true,
-                    paused_until_ns: p.duration_ns,
-                }))
+                let state = self.privacy.pause(p.duration_ns);
+                if p.duration_ns > 0 {
+                    // The timer only wakes the expiry check; a stale timer is harmless
+                    // because `expire_if_due` re-checks the real deadline.
+                    let privacy = Arc::clone(&self.privacy);
+                    let wait = std::time::Duration::from_nanos(p.duration_ns);
+                    tokio::spawn(async move {
+                        tokio::time::sleep(wait).await;
+                        privacy.expire_if_due();
+                    });
+                }
+                Ok(Body::PrivacyState(state))
             }
-            Body::ResumeRequest(_) => {
-                self.paused.store(false, Ordering::Relaxed);
-                Ok(Body::PrivacyState(PrivacyState {
-                    paused: false,
-                    paused_until_ns: 0,
-                }))
-            }
+            Body::ResumeRequest(_) => Ok(Body::PrivacyState(self.privacy.resume())),
             _ => Err(HandlerError::new(
                 ErrorCode::InvalidRequest,
                 "expected PauseRequest or ResumeRequest on control socket",
@@ -68,14 +69,19 @@ impl Handler for ControlHandler {
 /// Returns [`neuroos_health::ServiceError`] if socket registration fails.
 pub fn init(ctx: &mut neuroos_health::ServiceContext) -> Result<(), neuroos_health::ServiceError> {
     let clock: Arc<dyn clock::Clock> = Arc::new(clock::SystemClock);
+    let privacy = Privacy::new(
+        Arc::clone(&clock),
+        exclusion::Exclusion::from_config(&ctx.config.monitor),
+        Arc::clone(&ctx.health),
+    );
     let bus = bus::Bus::new(
         ctx.config.monitor.queue_capacity,
-        Arc::new(bus::PassGate),
+        Arc::clone(&privacy) as Arc<dyn bus::Gate>,
         clock,
         Arc::clone(&ctx.health),
     );
     let stream_handler = Arc::new(StreamHandler::new(bus, ctx.stop_rx.clone()));
-    let control_handler = Arc::new(ControlHandler::new());
+    let control_handler = Arc::new(ControlHandler::new(privacy));
 
     ctx.spawn_server("stream", stream_handler)?;
     ctx.spawn_server("control", control_handler)?;
