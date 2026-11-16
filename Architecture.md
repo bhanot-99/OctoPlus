@@ -238,6 +238,8 @@ flowchart LR
     C1 --> HS
 ```
 
+**Inside C1 (Phase 3, ADR-0011).** Each sensor is its own supervised task: a failure marks only that sensor DEGRADED (fixed-text detail, one health row per sensor in `neuroosctl status`) and restarts it after jittered backoff. Sensors publish to a bus through one gate — pause and the exclusion list, the only things that may stop or change an event (AB-5). An excluded window becomes a redacted focus event (empty app, title and pid) so the previous span still ends; a pause emits nothing at all and is followed by a snapshot of the current state. Each subscriber (C3's stream, the recorder) has a bounded queue that drops its oldest events and counts the loss; a reader that falls too far behind is cut loose by the IPC layer with a retryable error, and a new subscription starts from the latest state of each kind, so a reconnecting C3 is never blind. Blocking sources (Wayland, `/proc`, inotify) run on their own thread or the blocking pool. Window ids are C1's own and never reused; a lost compositor closes every open window before the sensor reconnects. `neuroos-monitor --record <file>` writes an anonymised dump (format in `neuroos-proto::dump`); `neuroosctl replay` prints it or serves it as a live stream for the Phase 4 harness.
+
 Machine-health samples (CPU, memory, disk, battery, heat) are numeric time series. They skip the promotion gate and embedding and go to the `health_samples` table.
 
 ### 6.3 Nudge

@@ -517,7 +517,7 @@ The full plan is [security.md](security.md). Binding requirements:
 | OQ-02 | Search provider | Decide by a short comparison in Phase 8 | Phase 8 |
 | OQ-03 | Default quiet hours and which nudges start enabled | 22:00–08:00; all enabled except break reminders set to notify | Phase 6 |
 | OQ-04 | Which Kokoro voice | `af_heart` until the owner's listening test | Phase 7 |
-| OQ-05 | Notes folder and calendar source | `~/Notes`; local `.ics` files | Phase 3 |
+| OQ-05 | Notes folder and calendar source | **Closed 2026-11-16 (Phase 3):** no folder is watched by default; the user lists folders in `[[monitor.folders]]` with a kind (`git`, `notes`, `calendar`). `~/Notes` and local `.ics` files are the suggested entries, not defaults, so nothing is read without the user's say-so (R0-8 spirit, FR-MON-11) | Phase 3 |
 | OQ-06 | Personal install only, or public release | Personal | Phase 10 |
 | OQ-07 | Cleanup allowlist beyond trash and `~/.cache` | **Closed 2026-11-16 (ADR-0010):** trash and `~/.cache` only; build folders only through `[kernel] cleanup_build_folders`, empty by default | Phase 2 |
 

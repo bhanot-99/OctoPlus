@@ -187,8 +187,9 @@ A control without a test is a hope. Each row is an exit criterion of the phase n
 | Dialog safety | Enter does not approve; Allow delay; edit re-binds the hash | 2 |
 | Skill sandbox | Each skill tries to read `hmac.key`, write outside its allowlist, open a socket; all fail | 2 |
 | Audit and ledger integrity | Tampered line detected; a failed `ATTEMPT` write denies the action | 2, 8 |
-| Anonymiser | A placeholder cannot be reproduced without the key; two runs never match | 3 |
-| Exclusion and pause | Property test over random window sequences: excluded apps never appear | 3 |
+| Anonymiser | A placeholder cannot be reproduced without the key; two runs never match. Proven by `neuroos-monitor` `tests/anonymise_test.rs`: keyed placeholder is not a plain hash, sentinel text in every text field never survives (property test, with a negative control that shows the check can fail), the key is not in the dump bytes, the dump is mode 0600 and never overwrites a file | 3 |
+| Exclusion and pause | Property test over random window, process-tree, sample, pause, resume and clock sequences against an independent model of the pause timer: excluded apps, excluded title markers and everything during a pause never leave (`tests/privacy_test.rs`, with a negative control that shows a leaky gate is caught); a socket-level test shows the same through a real subscriber. The property test found and fixed a leak where a window focused during a pause could be missed after resume | 3 |
+| Monitor surface | C1's unit sees the compositor socket and the session bus read-only, never the system bus or the accessibility bus; no other unit sees either (`neuroos-deploy` unit tests). Sensor text from other programs (media metadata) is stripped of control characters and capped; file watching never follows symlinks and never reads file contents; a stalled subscriber is cut loose without slowing any sensor (`tests/foundation_test.rs`) | 3 |
 | Taint preservation | Property tests through ingest, merge, de-duplication, query and prompt assembly | 4, 5 |
 | Forget | After forget: zero rows, zero text-index hits, zero vectors; gone from the next backup | 4 |
 | Control-token neutralisation | Corpus of control sequences in titles, notes, questions, evidence | 5 |
@@ -221,6 +222,7 @@ Stated plainly so nobody relies on a protection that is not there.
 | RR-7 | A compromised fetcher can make requests nobody approved | It holds no private data; detected by capture-versus-ledger comparison; bounded by its sandbox. |
 | RR-8 | The wake word can be triggered by other audio | Only SAFE skills run hands-free; nothing is approved by voice. |
 | RR-9 | Third-party model and audio runtimes are large C++ code bases | Contained by sandboxing, no network, memory limits; pinned and hash-checked. |
+| RR-11 | Window titles, app ids and media tags are personal and are sent raw on C1's stream to C3 (C1 never filters, AB-5) | Only the storage unit may subscribe (peer-unit check). Excluded apps and paused periods never leave C1. Recordings are anonymised before they touch disk. Lock state is not observable on COSMIC inside C1's allowed surface (ADR-0011), so it is reported as unknown and the nudge policy holds |
 | RR-10 | With optional GPU offload on, C4 talks to a large proprietary GPU kernel driver | Only C4, only when enabled (off by default); C4 has no network, no home access and no user data on disk; device access limited to an allowlist (ADR-0008). Not present on the CPU path. |
 
 ---
