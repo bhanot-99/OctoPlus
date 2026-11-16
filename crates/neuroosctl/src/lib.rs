@@ -5,6 +5,7 @@
 pub mod ask;
 pub mod audit;
 pub mod egress;
+pub mod run;
 pub mod status;
 pub mod style;
 
@@ -65,6 +66,20 @@ pub enum Commands {
     Audit {
         #[command(subcommand)]
         command: AuditCommands,
+    },
+
+    /// Ask the safety kernel to run one skill (a dialog appears for REVIEW skills).
+    Run {
+        /// Capability id, e.g. `system.disk_report`.
+        capability: String,
+
+        /// Arguments as a JSON object.
+        #[arg(long)]
+        args: Option<String>,
+
+        /// Mark the request as influenced by web content (it can only make it stricter).
+        #[arg(long)]
+        web_tainted: bool,
     },
 
     /// Inspect the safety kernel network egress ledger.

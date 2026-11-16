@@ -29,6 +29,20 @@ async fn main() {
         Commands::Ask { question, json, .. } => {
             run_ask(&runtime_root, question, json, styler).await
         }
+        Commands::Run {
+            capability,
+            args,
+            web_tainted,
+        } => {
+            neuroosctl::run::run_skill(
+                &runtime_root,
+                &capability,
+                args.as_deref(),
+                web_tainted,
+                styler,
+            )
+            .await
+        }
         Commands::Audit { command } => run_audit(&runtime_root, command, styler).await,
         Commands::Egress { command } => run_egress(&runtime_root, command, styler).await,
     };
