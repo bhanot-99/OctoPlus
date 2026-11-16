@@ -8,6 +8,9 @@ use serde_json::Value;
 use crate::registry::{Registry, Tier};
 use crate::schema::validate_args;
 
+/// C5's check before any generation (Architecture §6.1). Not a skill: not in the registry.
+pub const GENERATE: &str = "llm.generate";
+
 /// Denial reasons for capability evaluation.
 ///
 /// Contains no user content in error messages (rules.md R0-10).
@@ -43,6 +46,16 @@ pub fn evaluate(
     taint: Option<u32>,
     args: Option<&Value>,
 ) -> Result<Tier, Deny> {
+    if capability == GENERATE {
+        // Generating text runs nothing (Architecture §6.1, ADR-0010 decision 11):
+        // it is answered SAFE with a valid taint and can never be dispatched.
+        // Taint travels with the generated text and is checked at dispatch.
+        TaintFlags::decode(taint).map_err(|e| match e {
+            TaintError::Missing => Deny::MissingTaint,
+            TaintError::UnknownBits(_) => Deny::BadTaint,
+        })?;
+        return Ok(Tier::Safe);
+    }
     let skill = registry.get(capability).ok_or(Deny::Unknown)?;
 
     let flags = TaintFlags::decode(taint).map_err(|e| match e {
@@ -298,5 +311,23 @@ mod tests {
                 Err(Deny::Unknown)
             );
         }
+    }
+
+    #[test]
+    fn generation_is_safe_under_any_valid_taint_but_needs_taint() {
+        let registry = Registry::load().unwrap();
+        for t in [0, 1, 2, 4, 7, 15] {
+            assert_eq!(evaluate(&registry, GENERATE, Some(t), None), Ok(Tier::Safe));
+        }
+        assert_eq!(
+            evaluate(&registry, GENERATE, None, None),
+            Err(Deny::MissingTaint)
+        );
+        assert_eq!(
+            evaluate(&registry, GENERATE, Some(1 << 31), None),
+            Err(Deny::BadTaint)
+        );
+        // Not a skill: it can never be dispatched.
+        assert!(registry.get(GENERATE).is_none());
     }
 }

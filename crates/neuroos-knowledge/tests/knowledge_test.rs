@@ -175,10 +175,10 @@ async fn test_happy_path_ask_streaming_and_cancellation() {
     assert_eq!(ask_requests.load(Ordering::Relaxed), 1);
     assert_eq!(ask_completed.load(Ordering::Relaxed), 1);
 
-    // Verify mock C6 was called with capability "answer"
+    // Verify mock C6 was called with capability "llm.generate"
     assert_eq!(
         *mock_c6.last_capability.lock().unwrap(),
-        Some("answer".into())
+        Some("llm.generate".into())
     );
 
     // Clean shutdown

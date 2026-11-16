@@ -32,6 +32,7 @@ Phase 2 builds C6. Four questions were left open by Architecture §8:
 8. **Cleanup deletes; it does not move to the trash.** Inside C6's unit, `~/.cache`, the trash and each build folder are separate bind mounts. `rename` between mounts fails (`EXDEV`), so "move to trash" would mean copying every byte first: slow, and it needs free space on a disk that is already full. Cleanup therefore permanently deletes the listed cache and build entries (apps recreate them) and empties the trash. The dialog says "permanently delete", lists every item with its size, and the button reads "Delete". PRD FR-KER-10 allowed "moves to trash where possible"; in this sandbox it is not possible.
 9. **Audit files live in `~/.local/share/neuroos/audit/`** (`actions.jsonl`, `egress.jsonl` and their rotations), so C6's unit binds exactly that folder and never the data root, where C3's database lives.
 10. **New kernel limits** (PRD NFR-SEC-09 and NFR-SEC-10, labelled T): REVIEW and DANGEROUS requests at most 6 per rolling minute; a request the user denied is refused for 300 s; approve-button delay 1 s; one dialog at a time.
+11. **`llm.generate` is not a skill.** C5 asks C6 about it before every generation (Architecture §6.1). Generating text runs nothing, so C6 answers SAFE for any valid taint and never escalates it; a missing or unknown taint is still refused. It is not in the registry, so it can never be dispatched. Taint stays on the generated text and decides the tier when a skill is dispatched.
 
 ## Consequences
 

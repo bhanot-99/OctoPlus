@@ -499,6 +499,7 @@ evaluate(capability, taint):
         return REVIEW
     return skill.tier                      # never lower than base
 any error on this path → DENY, audited
+# llm.generate (C5, before generating): SAFE for any valid taint, never dispatchable (ADR-0010)
 ```
 
 ### 8.4 Approval protocol

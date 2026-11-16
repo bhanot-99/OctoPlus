@@ -1,7 +1,7 @@
 //! Semantic-NeuroOS Knowledge and Nudge Engine (C5).
 //!
 //! Implements the thin `AskRequest` path for the Phase 1 walking skeleton:
-//! 1. `EvaluateRequest` to C6 (`answer`, taint 0).
+//! 1. `EvaluateRequest` to C6 (`llm.generate`, taint 0; Architecture §6.1).
 //! 2. `QueryHybrid` to C3 (fail-soft if C3 down: empty evidence, taint 0).
 //! 3. Build ChatML prompt with named persona constant, `<untrusted_document>` wrapper,
 //!    and `stable_prefix_chars`.
@@ -107,7 +107,7 @@ impl Handler for KnowledgeHandler {
 
                 // 1. EvaluateRequest to C6 (answer, taint 0)
                 let eval_req = Body::EvaluateRequest(EvaluateRequest {
-                    capability: "answer".to_string(),
+                    capability: "llm.generate".to_string(),
                     context_taint: Some(Taint { flags: 0 }),
                 });
 
