@@ -184,10 +184,10 @@ async fn test_part_at_99_percent_budget_reporting_ok_stays_ok_in_aggregate() {
 
     let config = Config::from_toml_str("").unwrap();
 
-    // Storage budget is 240 MiB. 99% is ~237.6 MiB.
-    // Set storage RSS to 238 MiB (99% of budget).
+    // Storage budget is 320 MiB (ADR-0012). 99% is ~316.8 MiB.
+    // Set storage RSS to 317 MiB (99% of budget).
     let storage_sock = paths::health_socket(&runtime_root, Part::Storage);
-    let high_rss = 238 * 1024 * 1024;
+    let high_rss = 317 * 1024 * 1024;
     let storage_resp = HealthResponse {
         component: "neuroos-storage".to_string(),
         version: "0.1.0".to_string(),

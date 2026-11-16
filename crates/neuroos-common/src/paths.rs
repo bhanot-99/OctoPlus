@@ -78,7 +78,7 @@ impl Part {
         match self {
             Part::Monitor => 30,
             Part::Voice => 620,
-            Part::Storage => 240,
+            Part::Storage => 320,
             Part::Inference => 2800,
             Part::Knowledge => 60,
             Part::Kernel => 15,
@@ -89,7 +89,7 @@ impl Part {
 }
 
 /// Total system RSS budget in MiB (PRD §6.2: sum of budgets, <= 4000 MiB cap).
-pub const TOTAL_RSS_BUDGET_MIB: u64 = 3795;
+pub const TOTAL_RSS_BUDGET_MIB: u64 = 3875;
 
 /// Fetcher sockets live outside the user runtime root (Architecture §5.2).
 pub const FETCHER_RUNTIME_DIR: &str = "/run/neuroos-fetcher";

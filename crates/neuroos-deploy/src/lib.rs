@@ -18,8 +18,8 @@ pub const MEMORY_MAX_MONITOR: &str = "48M";
 /// Hard limit (MemoryMax) for C2 voice from PRD §6.2 row C2 voice (768 MiB).
 pub const MEMORY_MAX_VOICE: &str = "768M";
 
-/// Hard limit (MemoryMax) for C3 storage from PRD §6.2 row C3 storage (320 MiB).
-pub const MEMORY_MAX_STORAGE: &str = "320M";
+/// Hard limit (MemoryMax) for C3 storage from PRD §6.2 row C3 storage (400 MiB; ADR-0012 item 10).
+pub const MEMORY_MAX_STORAGE: &str = "400M";
 
 /// Hard limit (MemoryMax) for C4 inference from PRD §6.2 row C4 inference (3,220 MiB).
 pub const MEMORY_MAX_INFERENCE: &str = "3220M";
