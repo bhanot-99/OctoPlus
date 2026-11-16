@@ -92,9 +92,11 @@ pub fn user_relevant(m: &Mount) -> bool {
         })
 }
 
-/// User-relevant mounts, each mount point once and each (device, root) once: a second mount
-/// of the same thing is dropped, while distinct roots on one device (Btrfs subvolumes such as
-/// `/` and `/home`) are both kept (review F4).
+/// User-relevant mounts, each mount point once and each *filesystem* once: a folder bound
+/// from the same device (the unit's own bind mounts, `mount --bind`) reports the whole
+/// filesystem again, so it is dropped. Btrfs is the exception: its subvolumes (`/`, `/home`)
+/// are mounted from one device with different roots and are separate mounts to the user, so
+/// there the (device, root) pair is the identity (review F4).
 #[must_use]
 pub fn relevant_mounts(text: &str) -> Vec<Mount> {
     let mut points = HashSet::new();
@@ -103,7 +105,12 @@ pub fn relevant_mounts(text: &str) -> Vec<Mount> {
         .into_iter()
         .filter(user_relevant)
         .filter(|m| {
-            points.insert(m.mount_point.clone()) && fs.insert((m.dev.clone(), m.root.clone()))
+            let root = if m.fstype == "btrfs" {
+                m.root.clone()
+            } else {
+                String::new()
+            };
+            points.insert(m.mount_point.clone()) && fs.insert((m.dev.clone(), root))
         })
         .collect()
 }

@@ -199,15 +199,8 @@ fn mountinfo_keeps_only_user_filesystems_once_and_decodes_escapes() {
         .collect();
     assert_eq!(
         points,
-        vec![
-            "/",
-            "/boot/efi",
-            "/mnt/bind",
-            "/media/u/My Drive",
-            "/home",
-            "/btrfsroot"
-        ],
-        "distinct roots on one device are kept (Btrfs subvolumes, a bind of a subfolder); a repeat of the same (device, root) is dropped"
+        vec!["/", "/boot/efi", "/media/u/My Drive", "/home", "/btrfsroot"],
+        "a bound subfolder of ext4 is the same filesystem and is dropped; Btrfs subvolumes (same device, different root) are kept; a repeat of the same subvolume is dropped"
     );
     assert_eq!(disk::decode_octal(r"a\040b\011c\134d"), "a b\tc\\d");
     assert_eq!(disk::decode_octal(r"\04"), r"\04", "short escapes stay");
