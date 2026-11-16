@@ -138,9 +138,23 @@ PY
 find "$dev_models" -type d -exec chmod 0755 {} +
 find "$dev_models" -type f ! -name SHA256SUMS -exec chmod 0444 {} +
 
+echo "=== 5b. ONNX Runtime library for C3 (ADR-0012) ==="
+# The pinned archive (manifest role "runtime", hash already checked by fetch-models) holds one
+# file C3 needs: the shared library. Unpack just that file next to the other libraries.
+ort_tgz="$dev_models/runtime/onnxruntime-linux-x64-1.31.1.tgz"
+if [[ -f "$ort_tgz" ]]; then
+  ort_tmp="$(mktemp -d)"
+  tar -xzf "$ort_tgz" -C "$ort_tmp" --strip-components=2 onnxruntime-linux-x64-1.31.1/lib/libonnxruntime.so.1.31.1
+  install -m 0755 "$ort_tmp/libonnxruntime.so.1.31.1" "$dev_lib/libonnxruntime.so.1.31.1"
+  rm -rf "$ort_tmp"
+  echo "Installed libonnxruntime.so.1.31.1 into $dev_lib"
+else
+  echo "note: $ort_tgz missing (run just fetch-models); C3 will run without the embedding model"
+fi
+
 echo "=== 6. Creating local share directories ==="
 install -d -m 0700 "$HOME/.local/share/neuroos/storage" "$HOME/.local/share/neuroos/soak" \
-  "$HOME/.local/share/neuroos/audit"
+  "$HOME/.local/share/neuroos/audit" "$HOME/.local/share/neuroos/backups"
 
 echo "=== 6b. C6 approval key (security.md §6, ADR-0010 decision 6) ==="
 # 32 random bytes, 0600, created once. An existing key is kept (rotation is a
