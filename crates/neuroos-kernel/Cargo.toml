@@ -18,6 +18,10 @@ neuroos-ipc = { path = "../neuroos-ipc" }
 neuroos-proto = { path = "../neuroos-proto" }
 neuroos-taint = { path = "../neuroos-taint" }
 neuroos-sandbox = { path = "../neuroos-sandbox" }
+neuroos-confirm = { path = "../neuroos-confirm", default-features = false }
+neuroos-skill = { path = "../neuroos-skill" }
+getrandom = { workspace = true }
+uuid = { workspace = true }
 hmac = { workspace = true }
 rustix = { workspace = true }
 sha2 = { workspace = true }
@@ -25,7 +29,7 @@ zeroize = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
-tokio = { workspace = true, features = ["sync", "time"] }
+tokio = { workspace = true, features = ["sync", "time", "process", "io-util"] }
 toml = { workspace = true }
 tracing = { workspace = true }
 

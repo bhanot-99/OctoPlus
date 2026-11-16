@@ -3,6 +3,8 @@
 #![allow(clippy::print_stdout, clippy::print_stderr)]
 
 pub mod ask;
+pub mod audit;
+pub mod egress;
 pub mod status;
 pub mod style;
 
@@ -51,6 +53,67 @@ pub enum Commands {
         question: String,
 
         /// Emit stream events as JSON lines.
+        #[arg(long)]
+        json: bool,
+
+        /// Suppress non-essential output.
+        #[arg(long, short)]
+        quiet: bool,
+    },
+
+    /// Inspect and verify the safety kernel action audit log.
+    Audit {
+        #[command(subcommand)]
+        command: AuditCommands,
+    },
+
+    /// Inspect the safety kernel network egress ledger.
+    Egress {
+        #[command(subcommand)]
+        command: EgressCommands,
+    },
+}
+
+/// Subcommands under `neuroosctl audit`.
+#[derive(Debug, Subcommand)]
+pub enum AuditCommands {
+    /// Tail the most recent action audit log records.
+    Tail {
+        /// Maximum number of records to return (default 20, max 1000).
+        #[arg(long, default_value_t = 20)]
+        limit: u32,
+
+        /// Emit structured machine-readable JSON.
+        #[arg(long)]
+        json: bool,
+
+        /// Suppress non-essential output.
+        #[arg(long, short)]
+        quiet: bool,
+    },
+
+    /// Verify cryptographic hash-chain integrity of the audit log.
+    Verify {
+        /// Emit structured machine-readable JSON.
+        #[arg(long)]
+        json: bool,
+
+        /// Suppress non-essential output.
+        #[arg(long, short)]
+        quiet: bool,
+    },
+}
+
+/// Subcommands under `neuroosctl egress`.
+#[derive(Debug, Subcommand)]
+pub enum EgressCommands {
+    /// List recorded network egress events.
+    List {
+        /// Maximum number of records to return (default 20, max 1000).
+        #[arg(long, default_value_t = 20)]
+        limit: u32,
+
+        /// Emit structured machine-readable JSON.
         #[arg(long)]
         json: bool,
 

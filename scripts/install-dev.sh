@@ -56,6 +56,8 @@ candidates=(
   "neuroos-inference"
   "neuroos-monitor"
   "neuroos-kernel"
+  "neuroos-confirm"
+  "neuroos-skill"
   "neuroos-knowledge"
   "neuroos-voice"
   "neuroosctl"
@@ -137,7 +139,26 @@ find "$dev_models" -type d -exec chmod 0755 {} +
 find "$dev_models" -type f ! -name SHA256SUMS -exec chmod 0444 {} +
 
 echo "=== 6. Creating local share directories ==="
-install -d -m 0700 "$HOME/.local/share/neuroos/storage" "$HOME/.local/share/neuroos/soak"
+install -d -m 0700 "$HOME/.local/share/neuroos/storage" "$HOME/.local/share/neuroos/soak" \
+  "$HOME/.local/share/neuroos/audit"
+
+echo "=== 6b. C6 approval key (security.md §6, ADR-0010 decision 6) ==="
+# 32 random bytes, 0600, created once. An existing key is kept (rotation is a
+# separate command, Phase 8); a key with the wrong size or mode is an error.
+key_dir="$HOME/.config/neuroos"
+key="$key_dir/hmac.key"
+install -d -m 0700 "$key_dir"
+if [[ -L "$key" ]]; then
+  echo "error: $key is a symlink; refusing" >&2; exit 1
+elif [[ -e "$key" ]]; then
+  if [[ "$(stat -c %s "$key")" != 32 || "$(stat -c %a "$key")" != 600 ]]; then
+    echo "error: $key exists with the wrong size or mode (want 32 bytes, 0600)" >&2; exit 1
+  fi
+  echo "Kept existing $key"
+else
+  (umask 077 && head -c 32 /dev/urandom > "$key.tmp" && mv "$key.tmp" "$key")
+  echo "Created $key"
+fi
 
 echo "=== 7. Installing systemd user units ==="
 user_systemd="$HOME/.config/systemd/user"
@@ -148,6 +169,9 @@ for u in "$root/deploy/systemd/user/"*; do
     echo "Copied $(basename "$u") to $user_systemd"
   fi
 done
+
+# C6 cleanup roots from [kernel] cleanup_build_folders (OQ-07, ADR-0010).
+"$root/target/release/neuroos-gen-units" --kernel-dropin "$HOME/.config/neuroos/config.toml" "$user_systemd"
 
 echo "=== 8. Reloading user systemd daemon ==="
 if ! systemctl --user daemon-reload 2>/dev/null; then

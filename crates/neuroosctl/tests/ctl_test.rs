@@ -453,3 +453,250 @@ async fn test_run_ask_streaming_and_errors() {
     assert_eq!(exit_cancel, 130);
     let _ = stop_cancel.send(());
 }
+
+#[derive(Debug, Clone)]
+struct MockKernelHandler {
+    chain_ok: bool,
+    first_bad_seq: u64,
+}
+
+impl Handler for MockKernelHandler {
+    async fn handle(&self, req: Request, _sink: StreamSink) -> Result<Body, HandlerError> {
+        match req.body {
+            Body::AuditTailRequest(tail) => {
+                let count = if tail.limit == 0 {
+                    20
+                } else {
+                    tail.limit.min(1000)
+                };
+                let mut records = Vec::new();
+                for i in 1..=count.min(2) {
+                    records.push(neuroos_proto::v1::AuditRecord {
+                        seq: u64::from(i),
+                        at_ns: 1_700_000_000_000_000_000,
+                        kind: if i == 1 {
+                            "ATTEMPT".into()
+                        } else {
+                            "RESULT".into()
+                        },
+                        skill: "system.read_metadata".into(),
+                        status: if i == 1 { "".into() } else { "EXECUTED".into() },
+                        record_hash:
+                            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                                .into(),
+                    });
+                }
+                Ok(Body::AuditRecords(neuroos_proto::v1::AuditRecords {
+                    records,
+                }))
+            }
+            Body::AuditVerifyRequest(_) => Ok(Body::AuditVerifyResult(
+                neuroos_proto::v1::AuditVerifyResult {
+                    chain_ok: self.chain_ok,
+                    records_checked: 10,
+                    first_bad_seq: self.first_bad_seq,
+                },
+            )),
+            Body::EgressListRequest(list) => {
+                let count = if list.limit == 0 {
+                    20
+                } else {
+                    list.limit.min(1000)
+                };
+                let mut records = Vec::new();
+                for _ in 1..=count.min(2) {
+                    records.push(neuroos_proto::v1::EgressRecord {
+                        at_ns: 1_700_000_000_000_000_000,
+                        host: "api.example.com".into(),
+                        sent_text: "what is the weather today?".into(),
+                        bytes_out: 1024,
+                        bytes_in: 2048,
+                    });
+                }
+                Ok(Body::EgressRecords(neuroos_proto::v1::EgressRecords {
+                    records,
+                }))
+            }
+            _ => Err(HandlerError::new(
+                ErrorCode::InvalidRequest,
+                "unknown request",
+                false,
+            )),
+        }
+    }
+}
+
+async fn start_mock_kernel(
+    runtime_root: PathBuf,
+    chain_ok: bool,
+    first_bad_seq: u64,
+) -> tokio::sync::watch::Sender<bool> {
+    let sock = paths::socket_path(&runtime_root, Part::Kernel, "kernel");
+    if let Some(parent) = sock.parent() {
+        ensure_private_dir(parent).unwrap();
+    }
+    let server = Server::bind(
+        &sock,
+        ServerConfig::new(1024 * 1024, Duration::from_secs(1)),
+    )
+    .await
+    .unwrap();
+    let (stop_tx, mut stop_rx) = tokio::sync::watch::channel(false);
+    let wait = async move {
+        let _ = stop_rx.wait_for(|s| *s).await;
+    };
+    let handler = Arc::new(MockKernelHandler {
+        chain_ok,
+        first_bad_seq,
+    });
+    tokio::spawn(server.serve(handler, wait));
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    stop_tx
+}
+
+#[tokio::test]
+async fn test_audit_tail_and_verify() {
+    let tmp = tempdir().unwrap();
+    let runtime_root = tmp.path().join("audit_test");
+    let styler = Styler::new(ColorChoice::Never);
+
+    // 1. Connection error when kernel not running -> exit code 1
+    let exit_offline = neuroosctl::audit::run_audit(
+        &runtime_root,
+        neuroosctl::AuditCommands::Verify {
+            json: false,
+            quiet: false,
+        },
+        styler,
+    )
+    .await;
+    assert_eq!(exit_offline, 1);
+
+    // 2. Start mock kernel with chain_ok = true
+    let stop_kernel = start_mock_kernel(runtime_root.clone(), true, 0).await;
+
+    let exit_tail = neuroosctl::audit::run_audit(
+        &runtime_root,
+        neuroosctl::AuditCommands::Tail {
+            limit: 10,
+            json: false,
+            quiet: false,
+        },
+        styler,
+    )
+    .await;
+    assert_eq!(exit_tail, 0);
+
+    let exit_tail_json = neuroosctl::audit::run_audit(
+        &runtime_root,
+        neuroosctl::AuditCommands::Tail {
+            limit: 10,
+            json: true,
+            quiet: false,
+        },
+        styler,
+    )
+    .await;
+    assert_eq!(exit_tail_json, 0);
+
+    let exit_verify = neuroosctl::audit::run_audit(
+        &runtime_root,
+        neuroosctl::AuditCommands::Verify {
+            json: false,
+            quiet: false,
+        },
+        styler,
+    )
+    .await;
+    assert_eq!(exit_verify, 0);
+
+    let exit_verify_json = neuroosctl::audit::run_audit(
+        &runtime_root,
+        neuroosctl::AuditCommands::Verify {
+            json: true,
+            quiet: false,
+        },
+        styler,
+    )
+    .await;
+    assert_eq!(exit_verify_json, 0);
+
+    let _ = stop_kernel.send(true);
+
+    // 3. Start mock kernel with chain_ok = false, first_bad_seq = 42 -> exit code 3
+    let runtime_root_broken = tmp.path().join("audit_broken");
+    let stop_broken = start_mock_kernel(runtime_root_broken.clone(), false, 42).await;
+
+    let exit_broken = neuroosctl::audit::run_audit(
+        &runtime_root_broken,
+        neuroosctl::AuditCommands::Verify {
+            json: false,
+            quiet: false,
+        },
+        styler,
+    )
+    .await;
+    assert_eq!(exit_broken, 3);
+
+    let exit_broken_json = neuroosctl::audit::run_audit(
+        &runtime_root_broken,
+        neuroosctl::AuditCommands::Verify {
+            json: true,
+            quiet: false,
+        },
+        styler,
+    )
+    .await;
+    assert_eq!(exit_broken_json, 3);
+
+    let _ = stop_broken.send(true);
+}
+
+#[tokio::test]
+async fn test_egress_list() {
+    let tmp = tempdir().unwrap();
+    let runtime_root = tmp.path().join("egress_test");
+    let styler = Styler::new(ColorChoice::Never);
+
+    // 1. Connection error when kernel not running -> exit code 1
+    let exit_offline = neuroosctl::egress::run_egress(
+        &runtime_root,
+        neuroosctl::EgressCommands::List {
+            limit: 10,
+            json: false,
+            quiet: false,
+        },
+        styler,
+    )
+    .await;
+    assert_eq!(exit_offline, 1);
+
+    // 2. Start mock kernel
+    let stop_kernel = start_mock_kernel(runtime_root.clone(), true, 0).await;
+
+    let exit_list = neuroosctl::egress::run_egress(
+        &runtime_root,
+        neuroosctl::EgressCommands::List {
+            limit: 10,
+            json: false,
+            quiet: false,
+        },
+        styler,
+    )
+    .await;
+    assert_eq!(exit_list, 0);
+
+    let exit_list_json = neuroosctl::egress::run_egress(
+        &runtime_root,
+        neuroosctl::EgressCommands::List {
+            limit: 10,
+            json: true,
+            quiet: false,
+        },
+        styler,
+    )
+    .await;
+    assert_eq!(exit_list_json, 0);
+
+    let _ = stop_kernel.send(true);
+}

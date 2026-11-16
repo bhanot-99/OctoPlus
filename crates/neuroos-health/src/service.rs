@@ -114,7 +114,9 @@ fn deadline_for_socket(socket_name: &str, config: &Config) -> Duration {
     match socket_name {
         "health" | "control" => config.deadlines.control(),
         "storage" => Duration::from_millis(config.deadlines.storage_query_ms),
-        "kernel" => Duration::from_millis(config.deadlines.kernel_check_ms),
+        // One socket serves quick checks and dispatches that wait for the dialog;
+        // the 50 ms check deadline is the caller's (PRD §6.1).
+        "kernel" => Duration::from_millis(config.deadlines.kernel_dispatch_ms),
         "knowledge" => Duration::from_millis(config.deadlines.generation_ms),
         "fetch" => Duration::from_millis(config.deadlines.fetch_ms),
         _ => Duration::from_secs(3600), // streaming sockets

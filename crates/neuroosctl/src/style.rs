@@ -114,3 +114,44 @@ impl Styler {
         }
     }
 }
+
+/// Truncates string in the middle with an ellipsis `…` (design.md §7).
+///
+/// Example: `middle_truncate("a1b2c3...d4e5f6", 13)` -> `"a1b2c3…d4e5f6"`.
+#[must_use]
+pub fn middle_truncate(s: &str, target_len: usize) -> String {
+    let char_count = s.chars().count();
+    if char_count <= target_len {
+        return s.to_string();
+    }
+    if target_len == 0 {
+        return String::new();
+    }
+    if target_len == 1 {
+        return "…".to_string();
+    }
+
+    let keep = target_len - 1;
+    let left = keep.div_ceil(2);
+    let right = keep - left;
+
+    let left_str: String = s.chars().take(left).collect();
+    let right_str: String = s.chars().skip(char_count - right).collect();
+
+    format!("{left_str}…{right_str}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_middle_truncate() {
+        assert_eq!(middle_truncate("short", 10), "short");
+        assert_eq!(middle_truncate("exactlength", 11), "exactlength");
+        assert_eq!(middle_truncate("0123456789abcdef", 13), "012345…abcdef");
+        assert_eq!(middle_truncate("hello world", 5), "he…ld");
+        assert_eq!(middle_truncate("hello", 1), "…");
+        assert_eq!(middle_truncate("hello", 0), "");
+    }
+}

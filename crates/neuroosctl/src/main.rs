@@ -7,6 +7,8 @@ use std::path::PathBuf;
 use clap::Parser;
 use neuroos_common::paths;
 use neuroosctl::ask::run_ask;
+use neuroosctl::audit::run_audit;
+use neuroosctl::egress::run_egress;
 use neuroosctl::status::run_status;
 use neuroosctl::style::Styler;
 use neuroosctl::{Cli, Commands};
@@ -27,6 +29,8 @@ async fn main() {
         Commands::Ask { question, json, .. } => {
             run_ask(&runtime_root, question, json, styler).await
         }
+        Commands::Audit { command } => run_audit(&runtime_root, command, styler).await,
+        Commands::Egress { command } => run_egress(&runtime_root, command, styler).await,
     };
 
     std::process::exit(exit_code);

@@ -98,7 +98,8 @@ pub fn load(path: &Path) -> Result<SecretKey, KeyError> {
     let mut key = SecretKey(Box::new([0u8; KEY_LEN]));
     neuroos_sandbox::lock_memory(&mut key.0[..]).map_err(|_| KeyError::Lock)?;
     let mut file = std::fs::File::from(fd);
-    file.read_exact(&mut key.0[..]).map_err(|_| KeyError::Read)?;
+    file.read_exact(&mut key.0[..])
+        .map_err(|_| KeyError::Read)?;
     // A file that grew between fstat and read is refused too.
     let mut extra = [0u8; 1];
     if file.read(&mut extra).map_err(|_| KeyError::Read)? != 0 {
@@ -132,7 +133,10 @@ mod tests {
     #[test]
     fn refuses_bad_files() {
         let d = tempfile::tempdir().unwrap();
-        assert!(matches!(load(&d.path().join("missing")), Err(KeyError::Open(_))));
+        assert!(matches!(
+            load(&d.path().join("missing")),
+            Err(KeyError::Open(_))
+        ));
         for mode in [0o640, 0o604, 0o660, 0o666] {
             let p = write_key(d.path(), &[1u8; KEY_LEN], mode);
             assert!(matches!(load(&p), Err(KeyError::Mode)), "{mode:o}");
@@ -150,6 +154,9 @@ mod tests {
 
     #[test]
     fn debug_hides_bytes() {
-        assert_eq!(format!("{:?}", SecretKey::from_bytes([7; KEY_LEN])), "SecretKey(..)");
+        assert_eq!(
+            format!("{:?}", SecretKey::from_bytes([7; KEY_LEN])),
+            "SecretKey(..)"
+        );
     }
 }

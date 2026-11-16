@@ -30,8 +30,24 @@ fn print_help() {
           --out-dir <DIR>      Output directory (default: <repo-root>/deploy)\n  \
           --manifest <PATH>    Path to models/manifest.toml (default: <repo-root>/models/manifest.toml)\n  \
           --check              Verify generated files match disk without modifying\n  \
+          --kernel-dropin <CONFIG> <UNIT_DIR>\n                       Write C6's cleanup-folder drop-in from [kernel] cleanup_build_folders\n  \
           -h, --help           Show this help"
     );
+}
+
+/// Writes `<unit_dir>/neuroos-kernel.service.d/cleanup-folders.conf` (OQ-07, ADR-0010).
+/// A missing config file means the defaults: no build folders.
+fn write_kernel_dropin(config: &std::path::Path, unit_dir: &std::path::Path) -> Result<()> {
+    let cfg = neuroos_common::config::Config::load_from(config)
+        .with_context(|| format!("loading {}", config.display()))?;
+    let text = neuroos_deploy::generate_kernel_cleanup_dropin(&cfg.kernel.cleanup_build_folders)
+        .context("building the drop-in")?;
+    let dir = unit_dir.join("neuroos-kernel.service.d");
+    std::fs::create_dir_all(&dir).with_context(|| format!("creating {}", dir.display()))?;
+    let path = dir.join("cleanup-folders.conf");
+    std::fs::write(&path, text).with_context(|| format!("writing {}", path.display()))?;
+    println!("Wrote {}", path.display());
+    Ok(())
 }
 
 fn main() -> Result<()> {
@@ -64,6 +80,12 @@ fn main() -> Result<()> {
             }
             "--check" => {
                 check_mode = true;
+            }
+            "--kernel-dropin" => {
+                let (Some(config), Some(unit_dir)) = (args.get(i + 1), args.get(i + 2)) else {
+                    anyhow::bail!("--kernel-dropin requires <CONFIG> <UNIT_DIR>");
+                };
+                return write_kernel_dropin(&PathBuf::from(config), &PathBuf::from(unit_dir));
             }
             other => {
                 anyhow::bail!("unknown argument '{other}'. Run with --help for usage.");

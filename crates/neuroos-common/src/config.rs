@@ -96,8 +96,11 @@ pub struct DeadlinesConfig {
     pub control_ms: u64,
     /// C3 queries.
     pub storage_query_ms: u64,
-    /// C6 capability checks (approval time excluded).
+    /// C6 capability checks (approval time excluded). Enforced by the caller.
     pub kernel_check_ms: u64,
+    /// The kernel socket's server deadline: a dispatch waits for the user's
+    /// approval (120 s, Architecture §8.4) plus the longest skill (30 s), plus margin.
+    pub kernel_dispatch_ms: u64,
     /// A whole generation from C4.
     pub generation_ms: u64,
     /// One fetch by C7.
@@ -110,6 +113,7 @@ impl Default for DeadlinesConfig {
             control_ms: 250,
             storage_query_ms: 150,
             kernel_check_ms: 50,
+            kernel_dispatch_ms: 155_000,
             generation_ms: 30_000,
             fetch_ms: 15_000,
         }

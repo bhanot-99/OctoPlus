@@ -157,8 +157,10 @@ fn push_kernel_paths(out: &mut String) {
     // comes from WAYLAND_DISPLAY in the user manager's environment.
     out.push_str("BindPaths=-%t/wayland-0\n");
     out.push_str("BindPaths=-%t/wayland-1\n");
-    // Desktop notifications (FR-KER-09) go over the session bus.
+    // Desktop notifications (FR-KER-09) go over the session bus; the dialog's
+    // screen-reader support (design.md §6.4 rule 9) needs the accessibility bus.
     out.push_str("BindPaths=-%t/bus\n");
+    out.push_str("BindPaths=-%t/at-spi\n");
     // Cleanup roots (OQ-07): caches and the trash.
     out.push_str("BindPaths=-%h/.cache\n");
     out.push_str("BindPaths=-%h/.local/share/Trash\n");

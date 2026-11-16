@@ -119,6 +119,103 @@ mod tests {
     }
 
     #[test]
+    fn hand_written_expectations() {
+        let registry = Registry::load().unwrap();
+
+        let clean = Some(0);
+        let external = Some(TaintFlags::EXTERNAL_UNTRUSTED.bits());
+        let user_model = Some((TaintFlags::USER_PROVIDED | TaintFlags::MODEL_GENERATED).bits());
+        let bad_bits = Some(1 << 31);
+
+        // 1. SAFE skills: clean -> Safe, external -> Review, user_model -> Safe
+        let safe_skills = [
+            "system.read_metadata",
+            "system.disk_report",
+            "privacy.pause",
+            "profile.remember",
+            "calendar.read",
+            "notes.search",
+        ];
+        for skill in safe_skills {
+            assert_eq!(
+                evaluate(&registry, skill, clean, None),
+                Ok(Tier::Safe),
+                "skill {skill} clean must be Safe"
+            );
+            assert_eq!(
+                evaluate(&registry, skill, external, None),
+                Ok(Tier::Review),
+                "skill {skill} external must escalate to Review"
+            );
+            assert_eq!(
+                evaluate(&registry, skill, user_model, None),
+                Ok(Tier::Safe),
+                "skill {skill} user_model must be Safe"
+            );
+            assert_eq!(
+                evaluate(&registry, skill, None, None),
+                Err(Deny::MissingTaint),
+                "skill {skill} None taint must be MissingTaint"
+            );
+            assert_eq!(
+                evaluate(&registry, skill, bad_bits, None),
+                Err(Deny::BadTaint),
+                "skill {skill} bad bits must be BadTaint"
+            );
+        }
+
+        // 2. REVIEW skills: clean -> Review, external -> Review
+        let review_skills = [
+            "profile.forget",
+            "memory.forget",
+            "notes.append",
+            "system.cleanup",
+            "web.fetch",
+            "web.search",
+        ];
+        for skill in review_skills {
+            assert_eq!(
+                evaluate(&registry, skill, clean, None),
+                Ok(Tier::Review),
+                "skill {skill} clean must be Review"
+            );
+            assert_eq!(
+                evaluate(&registry, skill, external, None),
+                Ok(Tier::Review),
+                "skill {skill} external must be Review"
+            );
+            assert_eq!(
+                evaluate(&registry, skill, None, None),
+                Err(Deny::MissingTaint),
+                "skill {skill} None taint must be MissingTaint"
+            );
+            assert_eq!(
+                evaluate(&registry, skill, bad_bits, None),
+                Err(Deny::BadTaint),
+                "skill {skill} bad bits must be BadTaint"
+            );
+        }
+
+        // 3. shell.exec (DANGEROUS & disabled): clean and external -> Disabled
+        assert_eq!(
+            evaluate(&registry, "shell.exec", clean, None),
+            Err(Deny::Disabled)
+        );
+        assert_eq!(
+            evaluate(&registry, "shell.exec", external, None),
+            Err(Deny::Disabled)
+        );
+        assert_eq!(
+            evaluate(&registry, "shell.exec", None, None),
+            Err(Deny::MissingTaint)
+        );
+        assert_eq!(
+            evaluate(&registry, "shell.exec", bad_bits, None),
+            Err(Deny::BadTaint)
+        );
+    }
+
+    #[test]
     fn disabled_skill_evaluation_across_all_taints() {
         // Specifically tests shell.exec (disabled=true in registry)
         let registry = Registry::load().unwrap();

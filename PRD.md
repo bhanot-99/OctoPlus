@@ -345,7 +345,7 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | NFR-PERF-10 | Nudge: condition holds → nudge decided | ≤ 60 s | T |
 | NFR-PERF-11 | Token frame C4 → C5 added latency | ≤ 1 ms p99 | M: 0.58 ms p99 (spike S-03, ADR-0003) |
 
-**IPC deadlines:** control calls 250 ms; C3 queries 150 ms; C6 checks 50 ms (approval time excluded); generation 30 s; fetch 15 s.
+**IPC deadlines:** control calls 250 ms; C3 queries 150 ms; C6 checks 50 ms (approval time excluded; set by the caller); C6 dispatch 155 s (120 s approval window + 30 s longest skill + 5 s margin; the kernel socket's server deadline, ADR-0010); generation 30 s; fetch 15 s.
 
 ### 6.2 Resources
 

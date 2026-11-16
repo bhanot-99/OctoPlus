@@ -127,7 +127,7 @@ Bugs live in `BUGS.md` (created in Phase 0). This table is for blockers and risk
 
 | Date | Type | Item | Owner | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| 2026-11-16 | Risk | GTK4 dialog RSS ≈ 66 MiB with the cairo renderer (162 MiB default), outside the unit. PRD allows C6 +25 MiB while a dialog is open, hard limit 64 MiB. Measure inside the C6 unit at the gate; owner decides if over. | Claude | Open |
+| 2026-11-16 | Risk | GTK4 dialog (release, cairo) in a hardened transient unit with MDWE and MemoryMax=64M: works; cgroup charge 17.4 MiB (anon 9.8 + shmem 6.2), process RSS 50.6 MiB (35 MiB shared library pages). PRD "+25 MiB while a dialog is open" is met by cgroup charge, not by RSS. Re-measure in the real C6 unit at the gate; owner decides the reading. | Claude | Open |
 | 2026-11-15 | Watch | agy's reports can state unmeasured results as fact (TASK 01 R-09, S-04). Every agy claim is re-checked against raw output before it enters an ADR. | Claude | Open |
 | 2026-11-15 | Watch | Chat grading done (delegated to Claude): Qwen3 best, 4.42/5. Every model called ibuprofen + blood-pressure pills "generally safe" — add to Phase 2 safety tests. | Claude | Open |
 | 2026-11-15 | Watch | Memory headroom is thin: total 3,795 of 4,000 MiB. llama.cpp must run with weight repacking off (+1.6 GB otherwise). | Claude | Open |

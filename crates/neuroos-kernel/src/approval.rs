@@ -155,7 +155,12 @@ impl NonceSet {
     /// # Errors
     /// [`TokenError::Full`] when too many approvals are outstanding;
     /// [`TokenError::Replayed`] if the nonce is already registered.
-    pub fn register(&mut self, nonce: [u8; 16], expires_at_ns: u64, now_ns: u64) -> Result<(), TokenError> {
+    pub fn register(
+        &mut self,
+        nonce: [u8; 16],
+        expires_at_ns: u64,
+        now_ns: u64,
+    ) -> Result<(), TokenError> {
         self.prune(now_ns);
         if self.live.len() >= MAX_OUTSTANDING_NONCES {
             return Err(TokenError::Full);
@@ -248,7 +253,10 @@ mod tests {
         let mut n = fresh(&a);
         assert_eq!(n.verify(&key(7), &a, &t, NOW + SEC), Ok(()));
         // Replay of the same token.
-        assert_eq!(n.verify(&key(7), &a, &t, NOW + 2 * SEC), Err(TokenError::Replayed));
+        assert_eq!(
+            n.verify(&key(7), &a, &t, NOW + 2 * SEC),
+            Err(TokenError::Replayed)
+        );
     }
 
     #[test]
@@ -272,17 +280,26 @@ mod tests {
         let t = issue(&key(7), &a).unwrap();
         let mut other_args = a.clone();
         other_args.args_hash = args_hash(r#"{"paths":["/etc"]}"#);
-        assert_eq!(fresh(&a).verify(&key(7), &other_args, &t, NOW), Err(TokenError::BadMac));
+        assert_eq!(
+            fresh(&a).verify(&key(7), &other_args, &t, NOW),
+            Err(TokenError::BadMac)
+        );
         let mut other_cap = a.clone();
         other_cap.capability = "system.disk_report".into();
-        assert_eq!(fresh(&a).verify(&key(7), &other_cap, &t, NOW), Err(TokenError::BadMac));
+        assert_eq!(
+            fresh(&a).verify(&key(7), &other_cap, &t, NOW),
+            Err(TokenError::BadMac)
+        );
     }
 
     #[test]
     fn wrong_key_fails() {
         let a = approval();
         let t = issue(&key(7), &a).unwrap();
-        assert_eq!(fresh(&a).verify(&key(8), &a, &t, NOW), Err(TokenError::BadMac));
+        assert_eq!(
+            fresh(&a).verify(&key(8), &a, &t, NOW),
+            Err(TokenError::BadMac)
+        );
     }
 
     #[test]
@@ -293,7 +310,10 @@ mod tests {
             for bit in 0..8 {
                 let mut bad = t.clone();
                 bad.0[byte] ^= 1 << bit;
-                assert_eq!(fresh(&a).verify(&key(7), &a, &bad, NOW), Err(TokenError::BadMac));
+                assert_eq!(
+                    fresh(&a).verify(&key(7), &a, &bad, NOW),
+                    Err(TokenError::BadMac)
+                );
             }
         }
     }
@@ -330,14 +350,20 @@ mod tests {
         let mut a = approval();
         a.verdict = Verdict::Deny;
         let t = issue(&key(7), &a).unwrap();
-        assert_eq!(fresh(&a).verify(&key(7), &a, &t, NOW), Err(TokenError::NotAllowed));
+        assert_eq!(
+            fresh(&a).verify(&key(7), &a, &t, NOW),
+            Err(TokenError::NotAllowed)
+        );
     }
 
     #[test]
     fn unregistered_nonce_is_replay() {
         let a = approval();
         let t = issue(&key(7), &a).unwrap();
-        assert_eq!(NonceSet::new().verify(&key(7), &a, &t, NOW), Err(TokenError::Replayed));
+        assert_eq!(
+            NonceSet::new().verify(&key(7), &a, &t, NOW),
+            Err(TokenError::Replayed)
+        );
     }
 
     #[test]
@@ -345,7 +371,10 @@ mod tests {
         let mut a = approval();
         a.expires_at_ns = NOW + MAX_TOKEN_LIFETIME_NS + 1;
         let t = issue(&key(7), &a).unwrap();
-        assert_eq!(fresh(&a).verify(&key(7), &a, &t, NOW), Err(TokenError::ExpiryOutOfRange));
+        assert_eq!(
+            fresh(&a).verify(&key(7), &a, &t, NOW),
+            Err(TokenError::ExpiryOutOfRange)
+        );
     }
 
     #[test]
@@ -356,7 +385,10 @@ mod tests {
             nonce[..8].copy_from_slice(&(i as u64).to_le_bytes());
             n.register(nonce, NOW + SEC, NOW).unwrap();
         }
-        assert_eq!(n.register([0xff; 16], NOW + SEC, NOW), Err(TokenError::Full));
+        assert_eq!(
+            n.register([0xff; 16], NOW + SEC, NOW),
+            Err(TokenError::Full)
+        );
         // After they expire, room returns.
         assert_eq!(n.register([0xff; 16], NOW + 3 * SEC, NOW + 2 * SEC), Ok(()));
         assert_eq!(n.len(), 1);

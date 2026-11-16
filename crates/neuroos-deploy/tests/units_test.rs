@@ -543,6 +543,7 @@ fn kernel_paths_per_adr_0010() {
         "BindPaths=%h/.local/share/neuroos/audit",
         "BindPaths=-%t/wayland-1",
         "BindPaths=-%t/bus",
+        "BindPaths=-%t/at-spi",
         "BindPaths=-%h/.cache",
         "BindPaths=-%h/.local/share/Trash",
     ] {

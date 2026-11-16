@@ -5,9 +5,16 @@
 //! - Rejects missing `context_taint` with [`ErrorCode::InvalidRequest`] (rules.md R0-4).
 //! - Rejects disabled or unknown capabilities with [`ErrorCode::PermissionDenied`].
 //! - Escalates SAFE to REVIEW under `EXTERNAL_UNTRUSTED` taint (FR-KER-03).
+//! - Manages hash-chained audit and egress ledgers with rotation and verification (FR-KER-06, FR-KER-07, Architecture §8.5).
 //! - Connects via [`ReconnectingClient`] to fetcher and `monitor/control` (probe: DEGRADED when either is down).
 
+pub mod actor;
 pub mod approval;
+pub mod audit;
+pub mod chain;
+pub mod dispatch;
+pub mod egress;
+pub mod kernel_skills;
 pub mod keys;
 pub mod ratelimit;
 pub mod registry;
@@ -21,14 +28,25 @@ use std::time::Duration;
 use neuroos_common::paths::{self, Part};
 use neuroos_ipc::{Handler, HandlerError, ReconnectingClient, Request, StreamSink};
 use neuroos_proto::v1::envelope::Body;
-use neuroos_proto::v1::{ErrorCode, EvaluateResult, HealthStatus};
+use neuroos_proto::v1::{
+    AuditRecords, AuditVerifyResult, EgressRecords, ErrorCode, EvaluateResult, HealthStatus,
+};
 
+pub use actor::AuditActor;
+pub use dispatch::{DispatchConfig, Dispatcher};
+pub use kernel_skills::ControlSkills;
+
+/// The pipeline as the kernel runs it: the real audit actor and C1 control.
+pub type KernelDispatcher = Dispatcher<AuditActor, ControlSkills>;
+pub use audit::{ActionKind, ActionLog, ActionOrigin, ActionRecord, ActionStatus, ActionTier};
+pub use chain::{AppendInfo, ChainError, ChainedLog, VerifyReport};
+pub use egress::{EgressLog, EgressRecordData};
 pub use ratelimit::{LimitKey, Limited, ReviewLimiter};
 pub use registry::{Registry, RegistryError, SandboxConfig, Skill, SkillKind, Tier};
 pub use schema::{ArgSchema, SchemaError, canonical_json, validate_args, validate_args_json};
 pub use tier::{Deny, evaluate};
 
-/// Handles capability evaluations on `kernel/kernel`.
+/// Handles capability evaluations and audit requests on `kernel/kernel`.
 #[derive(Debug, Clone)]
 pub struct KernelHandler {
     registry: Arc<Registry>,
@@ -36,9 +54,18 @@ pub struct KernelHandler {
     evaluations_safe: Arc<AtomicU64>,
     evaluations_review: Arc<AtomicU64>,
     evaluations_denied: Arc<AtomicU64>,
+    audit: Option<AuditActor>,
+    dispatcher: Option<Arc<KernelDispatcher>>,
 }
 
 impl KernelHandler {
+    /// Adds the dispatch pipeline (FR-KER-04/05/06).
+    #[must_use]
+    pub fn with_dispatcher(mut self, dispatcher: Arc<KernelDispatcher>) -> Self {
+        self.dispatcher = Some(dispatcher);
+        self
+    }
+
     /// Creates a new `KernelHandler` with the given registry and standalone counters.
     #[must_use]
     pub fn new(registry: Arc<Registry>) -> Self {
@@ -48,17 +75,35 @@ impl KernelHandler {
             evaluations_safe: Arc::new(AtomicU64::new(0)),
             evaluations_review: Arc::new(AtomicU64::new(0)),
             evaluations_denied: Arc::new(AtomicU64::new(0)),
+            audit: None,
+            dispatcher: None,
         }
     }
 
-    /// Creates a new `KernelHandler` with registered health counters.
+    /// Creates a new `KernelHandler` with an active audit log actor.
     #[must_use]
+    pub fn with_audit(registry: Arc<Registry>, audit: AuditActor) -> Self {
+        Self {
+            registry,
+            evaluations_total: Arc::new(AtomicU64::new(0)),
+            evaluations_safe: Arc::new(AtomicU64::new(0)),
+            evaluations_review: Arc::new(AtomicU64::new(0)),
+            evaluations_denied: Arc::new(AtomicU64::new(0)),
+            audit: Some(audit),
+            dispatcher: None,
+        }
+    }
+
+    /// Creates a new `KernelHandler` with registered health counters and audit actor.
+    #[must_use]
+    #[allow(clippy::too_many_arguments)]
     pub fn with_counters(
         registry: Arc<Registry>,
         evaluations_total: Arc<AtomicU64>,
         evaluations_safe: Arc<AtomicU64>,
         evaluations_review: Arc<AtomicU64>,
         evaluations_denied: Arc<AtomicU64>,
+        audit: Option<AuditActor>,
     ) -> Self {
         Self {
             registry,
@@ -66,6 +111,8 @@ impl KernelHandler {
             evaluations_safe,
             evaluations_review,
             evaluations_denied,
+            audit,
+            dispatcher: None,
         }
     }
 
@@ -73,6 +120,12 @@ impl KernelHandler {
     #[must_use]
     pub fn registry(&self) -> &Arc<Registry> {
         &self.registry
+    }
+
+    /// Returns a reference to the audit actor if configured.
+    #[must_use]
+    pub fn audit(&self) -> Option<&AuditActor> {
+        self.audit.as_ref()
     }
 }
 
@@ -115,9 +168,61 @@ impl Handler for KernelHandler {
                     }
                 }
             }
+            Body::AuditTailRequest(tail_req) => {
+                let actor = self.audit.as_ref().ok_or_else(|| {
+                    HandlerError::new(ErrorCode::Unavailable, "audit log not configured", false)
+                })?;
+                let limit = if tail_req.limit == 0 {
+                    20
+                } else {
+                    tail_req.limit.min(1000) as usize
+                };
+                let records = actor.tail(limit).await.map_err(|e| {
+                    tracing::warn!("audit tail failed: {e}");
+                    HandlerError::new(ErrorCode::Internal, "audit tail failed", false)
+                })?;
+                Ok(Body::AuditRecords(AuditRecords { records }))
+            }
+            Body::AuditVerifyRequest(_) => {
+                let actor = self.audit.as_ref().ok_or_else(|| {
+                    HandlerError::new(ErrorCode::Unavailable, "audit log not configured", false)
+                })?;
+                let report = actor.verify().await.map_err(|e| {
+                    tracing::warn!("audit verify failed: {e}");
+                    HandlerError::new(ErrorCode::Internal, "audit verify failed", false)
+                })?;
+                Ok(Body::AuditVerifyResult(AuditVerifyResult {
+                    chain_ok: report.chain_ok,
+                    records_checked: report.records_checked,
+                    first_bad_seq: report.first_bad_seq,
+                }))
+            }
+            Body::EgressListRequest(list_req) => {
+                let actor = self.audit.as_ref().ok_or_else(|| {
+                    HandlerError::new(ErrorCode::Unavailable, "egress log not configured", false)
+                })?;
+                let limit = if list_req.limit == 0 {
+                    20
+                } else {
+                    list_req.limit.min(1000) as usize
+                };
+                let records = actor.egress_list(limit).await.map_err(|e| {
+                    tracing::warn!("egress list failed: {e}");
+                    HandlerError::new(ErrorCode::Internal, "egress list failed", false)
+                })?;
+                Ok(Body::EgressRecords(EgressRecords { records }))
+            }
+            Body::DispatchRequest(d) => match &self.dispatcher {
+                Some(p) => p.dispatch(d).await.map(Body::DispatchResult),
+                None => Err(HandlerError::new(
+                    ErrorCode::Unavailable,
+                    "dispatch not configured",
+                    false,
+                )),
+            },
             _ => Err(HandlerError::new(
                 ErrorCode::InvalidRequest,
-                "expected EvaluateRequest on kernel socket",
+                "unexpected request on kernel socket",
                 false,
             )),
         }
@@ -129,10 +234,87 @@ impl Handler for KernelHandler {
 /// # Errors
 /// Returns [`neuroos_health::ServiceError`] on failure.
 pub fn init(ctx: &mut neuroos_health::ServiceContext) -> Result<(), neuroos_health::ServiceError> {
+    init_with(ctx, &KernelPaths::from_env()?)
+}
+
+/// Where C6 keeps and finds its files. Tests pass their own; services use [`KernelPaths::from_env`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KernelPaths {
+    /// The user's home (default cleanup roots, `~` in the dialog).
+    pub home: std::path::PathBuf,
+    /// `~/.config/neuroos` (holds `hmac.key`).
+    pub config_dir: std::path::PathBuf,
+    /// `~/.local/share/neuroos` (holds `audit/`).
+    pub data_dir: std::path::PathBuf,
+}
+
+impl KernelPaths {
+    /// From `HOME`, `XDG_CONFIG_HOME` and `XDG_DATA_HOME`.
+    ///
+    /// # Errors
+    /// [`neuroos_health::ServiceError`] when `HOME` is missing or relative.
+    pub fn from_env() -> Result<Self, neuroos_health::ServiceError> {
+        let fail = |what: String| neuroos_health::ServiceError::Custom(what);
+        let home = std::env::var_os("HOME")
+            .map(std::path::PathBuf::from)
+            .filter(|p| p.is_absolute())
+            .ok_or_else(|| fail("HOME is not set".into()))?;
+        let config_dir = paths::config_dir(
+            std::env::var_os("XDG_CONFIG_HOME").as_deref(),
+            Some(home.as_os_str()),
+        )
+        .map_err(|e| fail(format!("no config folder: {e}")))?;
+        let data_dir = paths::data_dir(
+            std::env::var_os("XDG_DATA_HOME").as_deref(),
+            Some(home.as_os_str()),
+        )
+        .map_err(|e| fail(format!("no data folder: {e}")))?;
+        Ok(Self {
+            home,
+            config_dir,
+            data_dir,
+        })
+    }
+}
+
+/// [`init`] with explicit folders.
+///
+/// # Errors
+/// Returns [`neuroos_health::ServiceError`] on failure (missing key, broken audit log, …).
+pub fn init_with(
+    ctx: &mut neuroos_health::ServiceContext,
+    kpaths: &KernelPaths,
+) -> Result<(), neuroos_health::ServiceError> {
+    tracing::info!("Initializing Semantic-NeuroOS Safety Kernel (C6)");
+
     // Load skill registry compiled into binary
     let registry = Arc::new(Registry::load().map_err(|e| {
         neuroos_health::ServiceError::Custom(format!("failed to load skill registry: {e}"))
     })?);
+
+    // Initialize audit and egress log actor at <data_dir>/audit/
+    let audit_dir = kpaths.data_dir.join("audit");
+
+    let audit_actor = AuditActor::start(&audit_dir).map_err(|e| {
+        tracing::error!(
+            "failed to initialize audit logs at {}: {e}",
+            audit_dir.display()
+        );
+        neuroos_health::ServiceError::Custom(format!("failed to initialize audit logs: {e}"))
+    })?;
+
+    // Register health probe for action log (reports DOWN if action log in error state)
+    let action_health = audit_actor.health_flag();
+    ctx.health.probe(
+        "action_log",
+        Box::new(move || {
+            if action_health.load(Ordering::Relaxed) {
+                (HealthStatus::Ok, "")
+            } else {
+                (HealthStatus::Down, "action log in error state")
+            }
+        }),
+    );
 
     // Health counters (Architecture §6.6, FR-KER-08)
     let evaluations_total = ctx.health.counter("evaluations_total");
@@ -199,15 +381,87 @@ pub fn init(ctx: &mut neuroos_health::ServiceContext) -> Result<(), neuroos_heal
         }
     });
 
-    let handler = Arc::new(KernelHandler::with_counters(
-        registry,
-        evaluations_total,
-        evaluations_safe,
-        evaluations_review,
-        evaluations_denied,
-    ));
+    let dispatcher = Arc::new(build_dispatcher(
+        ctx,
+        kpaths,
+        Arc::clone(&registry),
+        audit_actor.clone(),
+        ControlSkills::new(monitor_client, ctx.config.deadlines.control()),
+    )?);
+    let handler = Arc::new(
+        KernelHandler::with_counters(
+            registry,
+            evaluations_total,
+            evaluations_safe,
+            evaluations_review,
+            evaluations_denied,
+            Some(audit_actor),
+        )
+        .with_dispatcher(dispatcher),
+    );
 
     ctx.spawn_server("kernel", handler)?;
     ctx.health.set_ready();
     Ok(())
+}
+
+/// Environment the dialog child gets; nothing else of C6's environment is passed on.
+const DIALOG_ENV: [&str; 6] = [
+    "WAYLAND_DISPLAY",
+    "XDG_RUNTIME_DIR",
+    "DBUS_SESSION_BUS_ADDRESS",
+    "HOME",
+    "LANG",
+    "XDG_DATA_DIRS",
+];
+
+/// Paths of the C6 child binaries: next to `neuroos-kernel` itself.
+///
+/// # Errors
+/// [`neuroos_health::ServiceError`] if the kernel cannot locate its own binary.
+pub fn sibling_binaries()
+-> Result<(std::path::PathBuf, std::path::PathBuf), neuroos_health::ServiceError> {
+    let exe = std::env::current_exe()
+        .map_err(|e| neuroos_health::ServiceError::Custom(format!("own path: {e}")))?;
+    let dir = exe
+        .parent()
+        .ok_or_else(|| neuroos_health::ServiceError::Custom("own path has no folder".into()))?;
+    Ok((dir.join("neuroos-confirm"), dir.join("neuroos-skill")))
+}
+
+fn build_dispatcher(
+    ctx: &neuroos_health::ServiceContext,
+    kpaths: &KernelPaths,
+    registry: Arc<Registry>,
+    audit: AuditActor,
+    control: ControlSkills,
+) -> Result<KernelDispatcher, neuroos_health::ServiceError> {
+    let fail = |what: &str| neuroos_health::ServiceError::Custom(what.to_owned());
+    let home = kpaths.home.clone();
+    let config_dir = &kpaths.config_dir;
+    // Fail closed (security.md §6): no usable key, no kernel.
+    let key =
+        keys::load(&config_dir.join("hmac.key")).map_err(|e| fail(&format!("hmac.key: {e}")))?;
+    let (dialog_bin, skill_bin) = sibling_binaries()?;
+    let dialog_env = DIALOG_ENV
+        .iter()
+        .filter_map(|k| std::env::var(k).ok().map(|v| ((*k).to_owned(), v)))
+        .collect();
+    let cfg = DispatchConfig {
+        dialog_bin,
+        skill_bin,
+        home,
+        build_folders: ctx.config.kernel.cleanup_build_folders.clone(),
+        dialog_env,
+        approval_window: dispatch::APPROVAL_WINDOW,
+        review_per_minute: ctx.config.kernel.review_per_minute,
+        denial_cooldown_s: ctx.config.kernel.denial_cooldown_s,
+    };
+    Ok(Dispatcher::new(
+        registry,
+        Arc::new(key),
+        cfg,
+        audit,
+        control,
+    ))
 }

@@ -18,6 +18,7 @@ BindPaths=%h/.local/share/neuroos/audit
 BindPaths=-%t/wayland-0
 BindPaths=-%t/wayland-1
 BindPaths=-%t/bus
+BindPaths=-%t/at-spi
 BindPaths=-%h/.cache
 BindPaths=-%h/.local/share/Trash
 InaccessiblePaths=-/run/neuroos-fetcher/health
