@@ -203,7 +203,13 @@ async fn process(
     let mut events_in_batch = 0usize;
     let mut tick = tokio::time::interval(Duration::from_millis(store.cfg.ingest_flush_ms));
     tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    let mut epoch = store.forget_epoch.load(Ordering::SeqCst);
     loop {
+        let now_epoch = store.forget_epoch.load(Ordering::SeqCst);
+        if now_epoch != epoch {
+            epoch = now_epoch;
+            filter.reset_counters();
+        }
         tokio::select! {
             ev = rx.recv() => {
                 let Some(ev) = ev else { break };

@@ -152,6 +152,7 @@ impl Store {
     /// unchanged if its transaction fails).
     pub async fn forget(self: &Arc<Self>, r: ForgetRequest) -> Result<ForgetResult, DbError> {
         let scope = Scope::from_request(&r)?;
+        let (live_app, live_from, live_to) = (scope.app_id.clone(), scope.from_ns, scope.to_ns);
         let rows = Arc::new(AtomicU64::new(0));
         let vectors = Arc::new(AtomicU64::new(0));
         let (r2, v2, sc) = (Arc::clone(&rows), Arc::clone(&vectors), scope.clone());
@@ -173,6 +174,18 @@ impl Store {
         tokio::task::spawn_blocking(move || scrub_backups(&root, &scope))
             .await
             .map_err(|_| DbError::WriterGone)??;
+        {
+            let mut live = self
+                .live
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            live.forget(
+                &live_app,
+                u64::try_from(live_from).unwrap_or(0),
+                u64::try_from(live_to).unwrap_or(u64::MAX),
+            );
+        }
+        self.forget_epoch.fetch_add(1, Ordering::SeqCst);
         self.refresh_gauges();
         Ok(ForgetResult {
             rows_deleted: rows.load(Ordering::Relaxed),
@@ -232,6 +245,7 @@ impl Store {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .clear();
+        self.forget_epoch.fetch_add(1, Ordering::SeqCst);
         self.refresh_gauges();
         Ok(())
     }

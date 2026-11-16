@@ -309,6 +309,9 @@ impl OnnxEmbedder {
         let text = std::fs::read_to_string(tokenizer)
             .map_err(|_| EmbedError::Load("tokenizer file unreadable"))?;
         let tokenizer = WordPiece::from_json(&text)?;
+        if !lib.is_file() {
+            return Err(EmbedError::Load("ONNX Runtime library not found"));
+        }
         let env = ort::init_from(lib)
             .map_err(|_| EmbedError::Load("ONNX Runtime library cannot be loaded"))?
             .build()

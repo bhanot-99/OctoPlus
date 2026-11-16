@@ -38,6 +38,22 @@ pub struct LiveState {
 }
 
 impl LiveState {
+    /// Drops what a forget removed from the database: the open window if it is in scope, and the
+    /// health samples in the time range (only when no app is named, as in the database).
+    pub fn forget(&mut self, app_id: &str, from_ns: u64, to_ns: u64) {
+        if let Some(w) = &self.window
+            && (app_id.is_empty() || w.app_id == app_id)
+            && w.start_ns >= from_ns
+            && w.start_ns <= to_ns
+        {
+            self.window = None;
+        }
+        if app_id.is_empty() {
+            self.ring
+                .retain(|e| e.observed_at_ns < from_ns || e.observed_at_ns > to_ns);
+        }
+    }
+
     /// Updates from one C1 event.
     pub fn apply(&mut self, ev: &MonitorEvent) {
         let at = ev.observed_at_ns;

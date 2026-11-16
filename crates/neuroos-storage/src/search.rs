@@ -6,7 +6,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::PoisonError;
-use std::sync::atomic::Ordering;
 
 use neuroos_proto::v1::{Domain, Evidence, HybridResult, QueryHybrid, Taint};
 use neuroos_taint::TaintFlags;
@@ -154,7 +153,6 @@ impl Store {
         let text_ranked: Vec<u64> = text_ids.into_iter().filter(keep).collect();
         let fused = rrf(&[&vec_ranked, &text_ranked], rk);
         let best = 2.0 / (f64::from(rk) + 1.0);
-        let stale_any = self.stale.load(Ordering::Relaxed) > 0;
         let mut evidence: Vec<Evidence> = Vec::new();
         let mut by_text: HashMap<String, usize> = HashMap::new();
         for (id, fused_score) in fused {
@@ -162,7 +160,8 @@ impl Store {
             let score = cosine
                 .get(&id)
                 .map_or(fused_score / best, |c| f64::from(*c));
-            if score < q.min_score {
+            // min_score gates the vector similarity; a text-only hit has none and is kept.
+            if cosine.contains_key(&id) && score < q.min_score {
                 continue;
             }
             let mut flags = TaintFlags::from_bits_truncate(row.taint);
@@ -195,12 +194,11 @@ impl Store {
                 break;
             }
         }
-        let stale_index = stale_any
-            || evidence.iter().any(|e| {
-                e.taint
-                    .as_ref()
-                    .is_some_and(|t| t.flags & TaintFlags::STALE_INDEX.bits() != 0)
-            });
+        let stale_index = evidence.iter().any(|e| {
+            e.taint
+                .as_ref()
+                .is_some_and(|t| t.flags & TaintFlags::STALE_INDEX.bits() != 0)
+        });
         Ok(HybridResult {
             evidence,
             stale_index,

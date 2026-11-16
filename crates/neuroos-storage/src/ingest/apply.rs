@@ -160,6 +160,11 @@ fn source_gone(
         s.query_map(params![domain, kind, label], |r| r.get(0))?
             .collect::<Result<_, _>>()?
     };
+    // Chunks first, explicitly: a foreign-key cascade must not be what keeps the text index in step.
+    c.execute(
+        "DELETE FROM chunks WHERE entity_id IN (SELECT id FROM entities WHERE domain = ?1 AND kind = ?2 AND label = ?3)",
+        params![domain, kind, label],
+    )?;
     c.execute(
         "DELETE FROM entities WHERE domain = ?1 AND kind = ?2 AND label = ?3",
         params![domain, kind, label],

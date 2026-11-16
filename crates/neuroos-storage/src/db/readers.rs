@@ -55,13 +55,31 @@ impl ReaderPool {
                     .unwrap_or_else(PoisonError::into_inner);
             }
         };
-        let out = f(&conn);
-        self.idle
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .push(conn);
-        self.available.notify_one();
-        out
+        // Returned on drop, so a panicking closure cannot shrink the pool.
+        struct Back<'a> {
+            pool: &'a ReaderPool,
+            conn: Option<Connection>,
+        }
+        impl Drop for Back<'_> {
+            fn drop(&mut self) {
+                if let Some(c) = self.conn.take() {
+                    self.pool
+                        .idle
+                        .lock()
+                        .unwrap_or_else(PoisonError::into_inner)
+                        .push(c);
+                    self.pool.available.notify_one();
+                }
+            }
+        }
+        let back = Back {
+            pool: self,
+            conn: Some(conn),
+        };
+        match back.conn.as_ref() {
+            Some(c) => f(c),
+            None => Err(DbError::WriterGone),
+        }
     }
 
     /// Connections currently idle (health, tests).

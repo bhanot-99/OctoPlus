@@ -299,6 +299,24 @@ impl IngestFilter {
         for (k, _) in stale.into_iter().take(drop_n) {
             self.counters.remove(&k);
         }
+        // Still over: the oldest promoted ones go too (their state is saved in `event_counters`).
+        if self.counters.len() > COUNTER_CAP {
+            let mut old: Vec<(String, u64)> = self
+                .counters
+                .iter()
+                .map(|(k, c)| (k.clone(), c.last_ns))
+                .collect();
+            old.sort_by_key(|(_, t)| *t);
+            let n = self.counters.len() - COUNTER_CAP + COUNTER_CAP / 8;
+            for (k, _) in old.into_iter().take(n) {
+                self.counters.remove(&k);
+            }
+        }
+    }
+
+    /// Drops every in-memory counter (after a forget or purge, so none can be written back).
+    pub fn reset_counters(&mut self) {
+        self.counters.clear();
     }
 
     // ---- window focus and idle ---------------------------------------------------------------

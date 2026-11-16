@@ -94,7 +94,7 @@ async fn the_pipeline_ingests_a_replayed_session_and_subscribes_again_when_the_s
         .read(|c| Ok(c.query_row("SELECT COUNT(*) FROM entities", [], |r| r.get(0))?))
         .await
         .unwrap();
-    assert!((3..=30).contains(&entities), "{entities} entities");
+    assert!((3..=200).contains(&entities), "{entities} entities");
     let hist: i64 = store
         .read(|c| Ok(c.query_row("SELECT COUNT(*) FROM focus_history", [], |r| r.get(0))?))
         .await

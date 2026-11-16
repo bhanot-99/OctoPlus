@@ -77,6 +77,8 @@ pub struct Store {
     pub(crate) live: Mutex<crate::ingest::live::LiveState>,
     /// Chunks not embedded by the current model (kept fresh by the gauges and re-embedding).
     pub(crate) stale: std::sync::atomic::AtomicU64,
+    /// Bumped by forget and purge; the ingest task drops its in-memory counters when it changes.
+    pub(crate) forget_epoch: std::sync::atomic::AtomicU64,
 }
 
 impl std::fmt::Debug for Store {
@@ -110,6 +112,7 @@ impl Store {
             health,
             live: Mutex::new(crate::ingest::live::LiveState::default()),
             stale: std::sync::atomic::AtomicU64::new(0),
+            forget_epoch: std::sync::atomic::AtomicU64::new(0),
         };
         let store = Arc::new(store);
         Arc::clone(&store).load_vectors().await?;
