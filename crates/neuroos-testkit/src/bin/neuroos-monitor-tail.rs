@@ -3,6 +3,8 @@
 //! app ids or paths (R0-10). C1 accepts only the storage unit on that socket, so the live check
 //! (`scripts/p3-live-check.sh`) runs this inside a transient unit with that name. Not shipped.
 
+#![allow(clippy::print_stdout)] // a dev tool whose output is its result
+
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::time::Duration;
