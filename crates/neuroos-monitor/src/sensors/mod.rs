@@ -4,6 +4,7 @@ pub mod battery;
 pub mod cosmic;
 pub mod disk;
 pub mod idle;
+pub mod mpris;
 pub mod proc;
 pub mod resources;
 pub mod thermal;

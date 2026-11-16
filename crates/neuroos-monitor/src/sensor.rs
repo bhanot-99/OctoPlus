@@ -108,6 +108,11 @@ impl SensorOut {
         });
     }
 
+    /// Sets a gauge in the part's health (e.g. how many players are watched).
+    pub fn gauge(&self, name: &str, value: f64) {
+        self.health.gauge(name, value);
+    }
+
     /// Whether the sensor reported working since the last call (supervisor use).
     #[must_use]
     pub fn take_worked(&self) -> bool {
