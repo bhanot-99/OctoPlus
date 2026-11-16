@@ -827,3 +827,15 @@ fn status_lists_a_parts_subsystem_rows_with_fixed_text() {
         "an unknown status is shown as DOWN"
     );
 }
+
+#[test]
+fn storage_jobs_are_named_and_purge_is_not_one_of_them() {
+    use neuroos_proto::v1::LifecycleJob;
+    use neuroosctl::storage::job_from_name;
+    assert_eq!(job_from_name("gc"), Some(LifecycleJob::Gc));
+    assert_eq!(job_from_name("backup"), Some(LifecycleJob::Backup));
+    assert_eq!(job_from_name("rollup"), Some(LifecycleJob::Rollup));
+    for bad in ["purge", "", "GC", "gc ", "forget"] {
+        assert_eq!(job_from_name(bad), None, "{bad:?}");
+    }
+}

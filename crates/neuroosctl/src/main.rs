@@ -10,6 +10,7 @@ use neuroosctl::ask::run_ask;
 use neuroosctl::audit::run_audit;
 use neuroosctl::egress::run_egress;
 use neuroosctl::status::run_status;
+use neuroosctl::storage::run_storage;
 use neuroosctl::style::Styler;
 use neuroosctl::{Cli, Commands};
 
@@ -43,6 +44,7 @@ async fn main() {
             )
             .await
         }
+        Commands::Storage { command } => run_storage(&runtime_root, command, styler).await,
         Commands::Audit { command } => run_audit(&runtime_root, command, styler).await,
         Commands::Egress { command } => run_egress(&runtime_root, command, styler).await,
         Commands::Replay {

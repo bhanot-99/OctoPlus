@@ -8,6 +8,7 @@ pub mod egress;
 pub mod replay;
 pub mod run;
 pub mod status;
+pub mod storage;
 pub mod style;
 
 use std::path::PathBuf;
@@ -63,6 +64,12 @@ pub enum Commands {
         quiet: bool,
     },
 
+    /// Storage: run a lifecycle job (gc, backup, rollup) or search what C3 remembers.
+    Storage {
+        #[command(subcommand)]
+        command: StorageCommands,
+    },
+
     /// Inspect and verify the safety kernel action audit log.
     Audit {
         #[command(subcommand)]
@@ -105,6 +112,24 @@ pub enum Commands {
         /// Emit one JSON object per line.
         #[arg(long)]
         json: bool,
+    },
+}
+
+/// Subcommands under `neuroosctl storage`.
+#[derive(Debug, Subcommand)]
+pub enum StorageCommands {
+    /// Run one lifecycle job now: `gc`, `backup` or `rollup` (the systemd timers call this).
+    Job {
+        /// Job name.
+        name: String,
+    },
+    /// Hybrid search over what C3 remembers (prints personal text to the terminal).
+    Search {
+        /// What to look for.
+        text: String,
+        /// Most results.
+        #[arg(long, default_value_t = 5)]
+        top_k: u32,
     },
 }
 
