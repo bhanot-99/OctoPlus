@@ -6,7 +6,7 @@
 #
 # Fields (all required):
 #   id         stable name used in config and health
-#   role       llm | embedding | stt | tts | wake | vad
+#   role       llm | embedding | stt | tts | wake | vad | runtime
 #   file       path under the models folder
 #   url        https:// source, pinned to an exact revision
 #   sha256     lowercase hex digest of the file
@@ -31,3 +31,36 @@ url = "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/a06e94
 sha256 = "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597"
 size_bytes = 2497281120
 license = "Apache-2.0"
+
+# --- Embedding model for C3 (FR-STO-03, Phase 4, ADR-0012). BAAI/bge-small-en-v1.5, MIT, 384 dimensions.
+# Revision = the repo commit sha; the ONNX file's sha256 equals the repo's LFS oid.
+
+[[model]]
+id = "embedding-bge-small-en-v1.5-onnx"
+role = "embedding"
+file = "embedding/bge-small-en-v1.5.onnx"
+url = "https://huggingface.co/BAAI/bge-small-en-v1.5/resolve/5c38ec7c405ec4b44b94cc5a9bb96e735b38267a/onnx/model.onnx"
+sha256 = "828e1496d7fabb79cfa4dcd84fa38625c0d3d21da474a00f08db0f559940cf35"
+size_bytes = 133093490
+license = "MIT"
+
+[[model]]
+id = "embedding-bge-small-en-v1.5-tokenizer"
+role = "embedding"
+file = "embedding/bge-small-en-v1.5.tokenizer.json"
+url = "https://huggingface.co/BAAI/bge-small-en-v1.5/resolve/5c38ec7c405ec4b44b94cc5a9bb96e735b38267a/tokenizer.json"
+sha256 = "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66"
+size_bytes = 711396
+license = "MIT"
+
+# --- ONNX Runtime 1.31.1 (CPU), loaded dynamically by C3 (ADR-0012). install-dev.sh unpacks
+# lib/libonnxruntime.so.1.31.1 into ~/.local/opt/neuroos/lib.
+
+[[model]]
+id = "runtime-onnxruntime-1.31.1-linux-x64"
+role = "runtime"
+file = "runtime/onnxruntime-linux-x64-1.31.1.tgz"
+url = "https://github.com/microsoft/onnxruntime/releases/download/v1.31.1/onnxruntime-linux-x64-1.31.1.tgz"
+sha256 = "c849e36a1ef3e22d4ff217b9d1ce4a3cf5b9467b975610913ae959ad5b16bdc9"
+size_bytes = 11413655
+license = "MIT"
