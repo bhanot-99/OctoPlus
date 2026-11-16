@@ -28,7 +28,7 @@
 | Builder / Checker | agy builds, Claude checks (D-23); Claude builds pieces itself where faster (D-21 carried over) |
 | Branch | `phase-3-monitor` (not merged; owner merges) |
 | Files being changed | `crates/neuroos-monitor/**`, `neuroos-common/src/config.rs`, `neuroos-proto` (dump), `neuroosctl` (replay) |
-| Next concrete step | **Owner:** run the measurement recordings (`docs/runbooks/record-monitor-session.md`, ≥ 8 h in ≥ 3 dumps + 1 held-out), read `reports/phase-03-monitor.md` §8 (ADR-0011, lock "unknown"), sign off, merge `phase-3-monitor`. Then Phase 4 (storage) can use the dumps. |
+| Next concrete step | Owner signs off Phase 3 (ADR-0011, lock "unknown", GPL exception) and merges `phase-3-monitor`; real recordings deferred to integration (D-26). Then Phase 4. |
 
 ---
 
@@ -76,6 +76,7 @@ One line each. Anything architectural also gets an ADR.
 
 | Date | ID | Decision | ADR |
 | :--- | :--- | :--- | :--- |
+| 2026-11-16 | D-26 | Owner: all real-use testing (the Phase 3 recordings: ≥ 8 h in ≥ 3 dumps + 1 held-out, and the live fullscreen/compositor-restart checks) is done once the whole project is built and connected, so problems show up with everything working together. Phase 3's "dumps recorded" exit criterion is therefore deferred to the integration phase, not dropped. Consequence: Phase 4's noise gate (KPI-8) can only be exercised on synthetic dumps until then. | — |
 | 2026-11-16 | D-25 | Owner started Phase 3: "create a new branch, elaborate each step, start executing with full coordination of Claude and agy". Plan in `docs/plans/phase-03-monitor-plan.md`; Claude's design calls under that go-ahead (redacted focus for excluded windows, pause = emit nothing + resume snapshot, drop-oldest stream queue, always-anonymised `--record`, dump format in `neuroos-proto`, no `procfs`/`notify` crates, narrow GPL exception for `cosmic-protocols`, lock source by probe) are open to overturn at sign-off. | 0011 (Proposed) |
 | 2026-11-16 | D-24 | Owner signed off Phase 2 ("approve all three, raise cap to 128 MiB"): ADR-0010 accepted; `target-lexicon` licence exception approved; C6 hard limit 64 → 128 MiB, dialog allowance +25 → +55 MiB (PRD §6.2, ADR-0010 item 13). | 0010 (Accepted) |
 | 2026-11-16 | D-23 | Owner started Phase 2: "Builder: you and agy - full coordination". Owner named no build folders → OQ-07 closed as trash + `~/.cache`, build folders by config only. Claude's design calls under that go-ahead, open to overturn at sign-off: compiled-in skill manifests, `kernel`-kind skills (privacy.pause), C6 sandbox = union of its children, dialog with cairo renderer, new limits NFR-SEC-09/10. | 0010 (Proposed) |

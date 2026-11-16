@@ -280,7 +280,7 @@ flowchart LR
 - [x] Every sensor emits correct events on the reference machine and reports its own health. (Lock state is "unknown" by design, ADR-0011; evidence in `reports/phase-03-monitor.md` §3.)
 - [x] Performance and RSS measured in the shipped unit. (`reports/bench/p3-monitor-20261116T155509Z.json`)
 - [x] Exclusion, pause and anonymiser proven by property tests.
-- [ ] Dumps recorded; the held-out dump set aside and never used for tuning. (Needs the owner's real use: `docs/runbooks/record-monitor-session.md`.)
+- [ ] Dumps recorded; the held-out dump set aside and never used for tuning. (Deferred to the integration phase by the owner, D-26; tooling and runbook ready: `docs/runbooks/record-monitor-session.md`.)
 - [x] OQ-05 closed. [x] Phase report. [ ] Owner sign-off.
 
 ---
