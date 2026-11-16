@@ -1,46 +1,24 @@
 //! Semantic-NeuroOS Context Monitor (C1).
 //!
 //! Serves:
-//! - `monitor/stream`: accepts [`MonitorSubscribe`], keeps the stream open, sends nothing yet.
-//! - `monitor/control`: accepts [`PauseRequest`] and [`ResumeRequest`], returns [`PrivacyState`].
+//! - `monitor/stream`: accepts `MonitorSubscribe` and streams raw `MonitorEvent` frames.
+//! - `monitor/control`: accepts `PauseRequest` and `ResumeRequest`, returns `PrivacyState`.
+
+pub mod bus;
+pub mod clock;
+pub mod sensor;
+pub mod sensors;
+pub mod stream;
+pub mod supervisor;
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use neuroos_ipc::{Handler, HandlerError, Request, StreamSink};
 use neuroos_proto::v1::envelope::Body;
-use neuroos_proto::v1::{Ack, ErrorCode, PrivacyState};
+use neuroos_proto::v1::{ErrorCode, PrivacyState};
 
-/// Handles incoming stream subscriptions on `monitor/stream`.
-#[derive(Debug, Clone)]
-pub struct StreamHandler {
-    stop_rx: tokio::sync::watch::Receiver<bool>,
-}
-
-impl StreamHandler {
-    /// Creates a new `StreamHandler`.
-    #[must_use]
-    pub fn new(stop_rx: tokio::sync::watch::Receiver<bool>) -> Self {
-        Self { stop_rx }
-    }
-}
-
-impl Handler for StreamHandler {
-    async fn handle(&self, req: Request, _sink: StreamSink) -> Result<Body, HandlerError> {
-        match req.body {
-            Body::MonitorSubscribe(_) => {
-                let mut rx = self.stop_rx.clone();
-                let _ = rx.wait_for(|s| *s).await;
-                Ok(Body::Ack(Ack {}))
-            }
-            _ => Err(HandlerError::new(
-                ErrorCode::InvalidRequest,
-                "expected MonitorSubscribe on stream socket",
-                false,
-            )),
-        }
-    }
-}
+pub use stream::StreamHandler;
 
 /// Handles privacy control requests on `monitor/control`.
 #[derive(Debug, Default)]
@@ -89,7 +67,14 @@ impl Handler for ControlHandler {
 /// # Errors
 /// Returns [`neuroos_health::ServiceError`] if socket registration fails.
 pub fn init(ctx: &mut neuroos_health::ServiceContext) -> Result<(), neuroos_health::ServiceError> {
-    let stream_handler = Arc::new(StreamHandler::new(ctx.stop_rx.clone()));
+    let clock: Arc<dyn clock::Clock> = Arc::new(clock::SystemClock);
+    let bus = bus::Bus::new(
+        ctx.config.monitor.queue_capacity,
+        Arc::new(bus::PassGate),
+        clock,
+        Arc::clone(&ctx.health),
+    );
+    let stream_handler = Arc::new(StreamHandler::new(bus, ctx.stop_rx.clone()));
     let control_handler = Arc::new(ControlHandler::new());
 
     ctx.spawn_server("stream", stream_handler)?;

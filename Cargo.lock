@@ -1172,6 +1172,7 @@ dependencies = [
  "neuroos-ipc",
  "neuroos-proto",
  "tempfile",
+ "thiserror",
  "tokio",
 ]
 

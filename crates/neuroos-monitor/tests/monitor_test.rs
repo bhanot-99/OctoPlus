@@ -89,7 +89,7 @@ async fn test_control_handler_pause_and_resume() {
 #[tokio::test]
 async fn test_stream_handler_subscribes_and_keeps_open() {
     let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);
-    let handler = Arc::new(StreamHandler::new(stop_rx));
+    let handler = Arc::new(StreamHandler::new(test_bus(), stop_rx));
 
     let temp_dir = tempfile::tempdir().unwrap();
     let sock_dir = temp_dir.path().join("stream");
@@ -183,4 +183,13 @@ async fn test_monitor_service_init_and_run() {
     let _ = stop_tx.send(());
     let res = thread.join().unwrap();
     assert!(res.is_ok());
+}
+
+fn test_bus() -> Arc<neuroos_monitor::bus::Bus> {
+    neuroos_monitor::bus::Bus::new(
+        16,
+        Arc::new(neuroos_monitor::bus::PassGate),
+        Arc::new(neuroos_monitor::clock::SystemClock),
+        neuroos_health::Health::new("neuroos-monitor", "0.1.0"),
+    )
 }

@@ -58,6 +58,9 @@ pub struct Config {
     /// Safety kernel options (C6, FR-KER-01, FR-KER-08).
     #[serde(default)]
     pub kernel: KernelConfig,
+    /// Context monitor options (C1, FR-MON-01..12).
+    #[serde(default)]
+    pub monitor: MonitorConfig,
     /// Verification hooks (SC proof 3). Read-only probes; they never widen anything.
     #[serde(default)]
     pub debug: DebugConfig,
@@ -169,6 +172,113 @@ impl Default for KernelConfig {
     }
 }
 
+/// What a watched folder holds (FR-MON-11, OQ-05).
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum FolderKind {
+    /// A git repository: HEAD, index and refs.
+    Git,
+    /// Notes: markdown and text files.
+    Notes,
+    /// Calendar: `.ics` files.
+    Calendar,
+}
+
+/// One folder C1 watches (FR-MON-11).
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct FolderConfig {
+    /// Absolute path of the folder.
+    pub path: PathBuf,
+    /// What it holds.
+    pub kind: FolderKind,
+}
+
+/// `[monitor]` section (PRD §5.2). Defaults are the PRD values.
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields, default)]
+pub struct MonitorConfig {
+    /// CPU and memory sampling interval, seconds (FR-MON-04).
+    pub cpu_interval_s: u64,
+    /// Disk sampling interval, seconds (FR-MON-05).
+    pub disk_interval_s: u64,
+    /// Battery re-emit interval, seconds (FR-MON-06).
+    pub battery_interval_s: u64,
+    /// Temperature sampling interval, seconds (FR-MON-07).
+    pub thermal_interval_s: u64,
+    /// Idle timeout, seconds (FR-MON-02).
+    pub idle_timeout_s: u64,
+    /// Events one subscriber may have queued before the oldest are dropped.
+    pub queue_capacity: usize,
+    /// Extra app ids to exclude, added to the defaults (FR-PRV-02). A trailing `*` is a prefix match.
+    pub exclude_apps: Vec<String>,
+    /// Extra title substrings that mark a window as private (FR-PRV-02).
+    pub exclude_title_substrings: Vec<String>,
+    /// Remove the built-in exclusion defaults. Off unless the user says so.
+    pub drop_default_exclusions: bool,
+    /// Folders to watch (FR-MON-11).
+    pub folders: Vec<FolderConfig>,
+    /// App ids a recording may keep in clear text, added to the built-in list (FR-MON-12).
+    pub record_keep_app_ids: Vec<String>,
+}
+
+impl Default for MonitorConfig {
+    fn default() -> Self {
+        Self {
+            cpu_interval_s: 5,
+            disk_interval_s: 60,
+            battery_interval_s: 60,
+            thermal_interval_s: 10,
+            idle_timeout_s: 60,
+            queue_capacity: 1024,
+            exclude_apps: Vec::new(),
+            exclude_title_substrings: Vec::new(),
+            drop_default_exclusions: false,
+            folders: Vec::new(),
+            record_keep_app_ids: Vec::new(),
+        }
+    }
+}
+
+impl MonitorConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        let intervals = [
+            ("monitor.cpu_interval_s", self.cpu_interval_s),
+            ("monitor.disk_interval_s", self.disk_interval_s),
+            ("monitor.battery_interval_s", self.battery_interval_s),
+            ("monitor.thermal_interval_s", self.thermal_interval_s),
+            ("monitor.idle_timeout_s", self.idle_timeout_s),
+        ];
+        for (key, v) in intervals {
+            if v == 0 {
+                return Err(ConfigError::Invalid {
+                    key,
+                    reason: "must be greater than zero",
+                });
+            }
+        }
+        if self.queue_capacity == 0 {
+            return Err(ConfigError::Invalid {
+                key: "monitor.queue_capacity",
+                reason: "must be greater than zero",
+            });
+        }
+        for f in &self.folders {
+            let bad = !f.path.is_absolute()
+                || f.path
+                    .components()
+                    .any(|c| matches!(c, std::path::Component::ParentDir));
+            if bad {
+                return Err(ConfigError::Invalid {
+                    key: "monitor.folders",
+                    reason: "paths must be absolute and must not contain '..'",
+                });
+            }
+        }
+        Ok(())
+    }
+}
+
 impl Config {
     /// Parses and validates config text.
     ///
@@ -197,6 +307,7 @@ impl Config {
     }
 
     fn validate(&self) -> Result<(), ConfigError> {
+        self.monitor.validate()?;
         let frame = self.ipc.max_frame_bytes;
         if frame == 0 || frame > FRAME_BYTES_CEILING {
             return Err(ConfigError::Invalid {
@@ -272,6 +383,32 @@ mod tests {
         assert_eq!(cfg.kernel.review_per_minute, 6);
         assert_eq!(cfg.kernel.denial_cooldown_s, 300);
         assert!(cfg.kernel.cleanup_build_folders.is_empty());
+    }
+
+    #[test]
+    fn monitor_defaults_are_the_prd_values() {
+        let m = Config::default().monitor;
+        assert_eq!((m.cpu_interval_s, m.disk_interval_s), (5, 60));
+        assert_eq!(
+            (m.battery_interval_s, m.thermal_interval_s, m.idle_timeout_s),
+            (60, 10, 60)
+        );
+        assert!(!m.drop_default_exclusions);
+    }
+
+    #[test]
+    fn monitor_rejects_zero_intervals_unknown_keys_and_relative_folders() {
+        for bad in [
+            "[monitor]\ncpu_interval_s = 0\n",
+            "[monitor]\nqueue_capacity = 0\n",
+            "[monitor]\nnonsense = 1\n",
+            "[[monitor.folders]]\npath = \"Notes\"\nkind = \"notes\"\n",
+            "[[monitor.folders]]\npath = \"/home/u/../x\"\nkind = \"git\"\n",
+        ] {
+            assert!(Config::from_toml_str(bad).is_err(), "accepted: {bad}");
+        }
+        let ok = "[[monitor.folders]]\npath = \"/home/u/Notes\"\nkind = \"notes\"\n";
+        assert_eq!(Config::from_toml_str(ok).unwrap().monitor.folders.len(), 1);
     }
 
     #[test]
