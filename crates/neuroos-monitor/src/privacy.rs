@@ -6,7 +6,7 @@
 //! anything; a process tree is dropped while an excluded window is focused; a process name
 //! on the exclusion list is blanked in samples. Resuming asks the sensors for a snapshot.
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
@@ -34,6 +34,8 @@ pub struct Privacy {
     exclusion: Exclusion,
     health: Arc<Health>,
     pause: Mutex<Pause>,
+    /// Bumped on every pause and resume (see [`Gate::state_epoch`]).
+    epoch: AtomicU64,
     /// True while the last focus event was an excluded window.
     excluded_focus: AtomicBool,
     /// Bumped on every resume; sensors that hold state re-emit it when it changes.
@@ -70,6 +72,7 @@ impl Privacy {
             exclusion,
             health,
             pause: Mutex::new(Pause::Running),
+            epoch: AtomicU64::new(0),
             excluded_focus: AtomicBool::new(false),
             snapshot_tx,
         })
@@ -96,6 +99,7 @@ impl Privacy {
                 .checked_add(Duration::from_nanos(duration_ns))
         };
         *self.lock_pause() = Pause::Paused { until };
+        self.epoch.fetch_add(1, Ordering::AcqRel);
         self.health.gauge("paused", 1.0);
         self.state()
     }
@@ -109,6 +113,7 @@ impl Privacy {
             was
         };
         if was_paused {
+            self.epoch.fetch_add(1, Ordering::AcqRel);
             self.health.gauge("paused", 0.0);
             self.snapshot_tx.send_modify(|g| *g = g.wrapping_add(1));
         }
@@ -163,6 +168,12 @@ impl Privacy {
 impl Gate for Privacy {
     fn snapshot_allowed(&self) -> bool {
         !self.is_paused()
+    }
+
+    fn state_epoch(&self) -> u64 {
+        // A timed pause that has run out ends here too, so the epoch moves before it is read.
+        self.expire_if_due();
+        self.epoch.load(Ordering::Acquire)
     }
 
     fn admit(&self, mut event: MonitorEvent) -> Option<MonitorEvent> {

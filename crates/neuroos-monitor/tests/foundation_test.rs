@@ -376,3 +376,66 @@ async fn a_stalled_socket_subscriber_never_blocks_publishing_and_loses_only_old_
     stop_tx.send(true).unwrap();
     let _ = serve.await;
 }
+
+/// Review F2 (agy): a player that vanishes while paused must not stay "playing" in the snapshot
+/// handed to late subscribers after the pause.
+#[test]
+fn state_remembered_before_a_pause_does_not_outlive_it() {
+    use neuroos_monitor::exclusion::Exclusion;
+    use neuroos_monitor::privacy::Privacy;
+    use neuroos_proto::v1::{DiskSample, MediaChanged, PlaybackState};
+    let clock = Arc::new(FakeClock::new(1));
+    let health = Health::new("neuroos-monitor", "test");
+    let privacy = Privacy::new(
+        Arc::clone(&clock) as Arc<dyn Clock>,
+        Exclusion::default(),
+        Arc::clone(&health),
+    );
+    let bus = Bus::new(
+        16,
+        Arc::clone(&privacy) as Arc<dyn neuroos_monitor::bus::Gate>,
+        clock as Arc<dyn Clock>,
+        health,
+    );
+    let ev = |t, e| MonitorEvent {
+        observed_at_ns: t,
+        event: Some(e),
+    };
+    bus.publish(ev(
+        1,
+        Event::Media(MediaChanged {
+            player: "spotify".into(),
+            state: PlaybackState::Playing as i32,
+            title: "Secret".into(),
+            ..Default::default()
+        }),
+    ));
+    bus.publish(ev(2, Event::Idle(IdleChanged { idle: true })));
+    bus.publish(ev(
+        3,
+        Event::Disk(DiskSample {
+            mount_point: "/".into(),
+            ..Default::default()
+        }),
+    ));
+    privacy.pause(0);
+    // The player quits while paused: its STOPPED event is dropped by the gate.
+    bus.publish(ev(
+        4,
+        Event::Media(MediaChanged {
+            player: "spotify".into(),
+            state: PlaybackState::Stopped as i32,
+            ..Default::default()
+        }),
+    ));
+    privacy.resume();
+    let late = bus.subscribe();
+    let got: Vec<u64> = std::iter::from_fn(|| late.try_next())
+        .map(|e| e.observed_at_ns)
+        .collect();
+    assert_eq!(
+        got,
+        vec![3],
+        "stale media/idle/focus state is gone; the sensors re-emit live state on resume; plain samples stay"
+    );
+}

@@ -255,6 +255,13 @@ fn drain(fd: &OwnedFd) -> std::io::Result<Vec<Seen>> {
 
 impl FoldersSensor {
     fn handle(&self, w: &mut Watches, co: &mut Coalescer, out: &SensorOut, ev: &Seen) {
+        // The kernel ended this watch (the folder was deleted or unmounted): forget it, or dead
+        // entries would use up the watch limit over time (review F8).
+        if ev.mask.contains(ReadFlags::IGNORED) {
+            w.by_wd.remove(&ev.wd);
+            w.limit_hit = false;
+            return;
+        }
         let Some(dir) = w.by_wd.get(&ev.wd).cloned() else {
             return;
         };

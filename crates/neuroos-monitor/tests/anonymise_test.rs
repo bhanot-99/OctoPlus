@@ -243,3 +243,21 @@ async fn recorder_writes_an_anonymised_complete_dump_and_the_key_is_nowhere_in_i
         0o600
     );
 }
+
+/// Review F3 (agy): `--record session.dump` (no folder) must resolve to a real folder.
+#[test]
+fn a_bare_record_file_name_resolves_to_the_working_folder() {
+    let (file, dir) =
+        neuroos_monitor::record::resolve_path(std::path::Path::new("session.dump")).unwrap();
+    assert!(file.is_absolute() && dir.is_absolute());
+    assert_eq!(file.parent().unwrap(), dir);
+    assert!(dir.is_dir(), "Landlock needs a folder that exists");
+    let (file, dir) =
+        neuroos_monitor::record::resolve_path(std::path::Path::new("/tmp/x/y.dump")).unwrap();
+    assert_eq!(
+        (file.to_str().unwrap(), dir.to_str().unwrap()),
+        ("/tmp/x/y.dump", "/tmp/x")
+    );
+    let (_, dir) = neuroos_monitor::record::resolve_path(std::path::Path::new("/y.dump")).unwrap();
+    assert_eq!(dir.to_str().unwrap(), "/");
+}

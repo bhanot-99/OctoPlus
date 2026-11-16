@@ -164,6 +164,19 @@ fn scan_reads_a_fake_proc_and_skips_junk_and_vanished_entries() {
     assert!(scan(&dir.path().join("does-not-exist")).is_empty());
 }
 
+fn focus_ev(app: &str) -> neuroos_proto::v1::MonitorEvent {
+    neuroos_proto::v1::MonitorEvent {
+        observed_at_ns: 1,
+        event: Some(Event::Focus(neuroos_proto::v1::FocusChanged {
+            app_id: app.into(),
+            title: String::new(),
+            pid: 0,
+            fullscreen: false,
+            fullscreen_known: true,
+        })),
+    }
+}
+
 #[tokio::test(start_paused = true)]
 async fn the_sensor_emits_the_tree_once_after_the_settle_delay() {
     let dir = tempfile::tempdir().unwrap();
@@ -178,21 +191,66 @@ async fn the_sensor_emits_the_tree_once_after_the_settle_delay() {
         Arc::clone(&health),
     );
     let sub = bus.subscribe();
-    let (app_tx, app_rx) = tokio::sync::watch::channel(String::new());
-    let sensor = ProcSensor::new(ProcTable::new(dir.path()), app_rx);
+    let sensor = ProcSensor::new(ProcTable::new(dir.path()), Arc::clone(&bus));
     let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);
-    let task = tokio::spawn(supervise(sensor, bus, clock, health, stop_rx));
+    let task = tokio::spawn(supervise(sensor, Arc::clone(&bus), clock, health, stop_rx));
 
-    app_tx.send(String::new()).unwrap(); // "no window": nothing to emit
-    app_tx.send("org.example.MyApp".into()).unwrap();
-    let ev = tokio::time::timeout(Duration::from_secs(5), sub.next())
-        .await
-        .unwrap();
-    let Some(Event::ProcessTree(t)) = ev.event else {
-        panic!("tree expected")
+    bus.publish(focus_ev("")); // "no window": nothing to emit
+    bus.publish(focus_ev("org.example.MyApp"));
+    let tree = loop {
+        let ev = tokio::time::timeout(Duration::from_secs(5), sub.next())
+            .await
+            .unwrap();
+        if let Some(Event::ProcessTree(t)) = ev.event {
+            break t;
+        }
     };
-    assert_eq!((t.root_pid, t.nodes.len()), (50, 2));
+    assert_eq!((tree.root_pid, tree.nodes.len()), (50, 2));
     assert!(sub.try_next().is_none(), "exactly one tree");
+    stop_tx.send(true).unwrap();
+    task.await.unwrap();
+}
+
+/// Review F1 (agy): the process sensor learns the focused app from the events that PASSED the
+/// gate, so an excluded app is never scanned for and its tree can never be published after the
+/// focus moves on.
+#[tokio::test(start_paused = true)]
+async fn an_excluded_apps_process_tree_is_never_built_even_if_focus_moves_on_quickly() {
+    use neuroos_monitor::exclusion::Exclusion;
+    let dir = tempfile::tempdir().unwrap();
+    fake_proc(dir.path(), 70, 1, "secretvault", "secretvault\0");
+    fake_proc(dir.path(), 71, 1, "alacritty", "alacritty\0");
+    let clock: Arc<dyn Clock> = Arc::new(FakeClock::new(1));
+    let health = Health::new("neuroos-monitor", "test");
+    let privacy = neuroos_monitor::Privacy::new(
+        Arc::clone(&clock),
+        Exclusion::new(&["secretvault*"], &[]),
+        Arc::clone(&health),
+    );
+    let bus = Bus::new(
+        32,
+        Arc::clone(&privacy) as Arc<dyn neuroos_monitor::bus::Gate>,
+        Arc::clone(&clock),
+        Arc::clone(&health),
+    );
+    let sub = bus.subscribe();
+    let sensor = ProcSensor::new(ProcTable::new(dir.path()), Arc::clone(&bus));
+    let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);
+    let task = tokio::spawn(supervise(sensor, Arc::clone(&bus), clock, health, stop_rx));
+
+    bus.publish(focus_ev("secretvault")); // redacted by the gate: the sensor sees an empty app
+    bus.publish(focus_ev("alacritty")); // focus moves on before any settle delay ends
+    let mut roots = Vec::new();
+    while let Ok(ev) = tokio::time::timeout(Duration::from_secs(3), sub.next()).await {
+        if let Some(Event::ProcessTree(t)) = ev.event {
+            roots.push(t.root_pid);
+            assert!(
+                t.nodes.iter().all(|n| n.name != "secretvault"),
+                "the excluded app leaked"
+            );
+        }
+    }
+    assert_eq!(roots, vec![71], "only the visible app's tree is emitted");
     stop_tx.send(true).unwrap();
     task.await.unwrap();
 }

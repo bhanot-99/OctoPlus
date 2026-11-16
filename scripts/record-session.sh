@@ -48,7 +48,8 @@ CONF
     [[ -e "$state" ]] || { echo "not recording" >&2; exit 1; }
     file="$(sed -n 1p "$state")"
     systemctl --user stop neuroos-record-sampler.service 2>/dev/null || true
-    rm -rf "$dropin_dir"
+    rm -f "$dropin_dir/record.conf"
+    rmdir "$dropin_dir" 2>/dev/null || true
     systemctl --user daemon-reload
     systemctl --user stop neuroos-monitor.service   # a clean stop writes the dump's end record
     rm -f "$state"

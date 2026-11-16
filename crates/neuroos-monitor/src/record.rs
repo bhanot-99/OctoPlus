@@ -20,6 +20,19 @@ use crate::bus::Subscription;
 /// How often buffered events reach the disk, so a crash loses at most this much.
 const FLUSH_EVERY: Duration = Duration::from_secs(1);
 
+/// The dump path made absolute, and the folder Landlock must allow writing in. A bare file
+/// name has the empty path as its parent, which Landlock cannot open (review F3).
+///
+/// # Errors
+/// An I/O error if the working directory is unknown.
+pub fn resolve_path(path: &Path) -> std::io::Result<(std::path::PathBuf, std::path::PathBuf)> {
+    let abs = std::path::absolute(path)?;
+    let dir = abs
+        .parent()
+        .map_or_else(|| std::path::PathBuf::from("/"), Path::to_path_buf);
+    Ok((abs, dir))
+}
+
 /// Creates the dump file, mode 0600, refusing to overwrite an existing one.
 ///
 /// # Errors

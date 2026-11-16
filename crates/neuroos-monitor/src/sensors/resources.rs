@@ -152,8 +152,11 @@ impl Sensor for ResourcesSensor {
             let sampled = tokio::task::spawn_blocking(move || collect(&root))
                 .await
                 .map_err(|_| SensorError::Unavailable("resource scan failed"))?;
+            // One unreadable or odd reading must not end the sensor (review F6): say so and try
+            // again at the next tick. A /proc that stays unreadable keeps the sensor DEGRADED.
             let Some((cpu, mut sample)) = sampled else {
-                return Err(SensorError::Unavailable("/proc stat or meminfo unreadable"));
+                out.degraded("/proc stat or meminfo unreadable");
+                continue;
             };
             // The first tick only sets the baseline: a percentage needs two readings.
             if let Some(pct) = prev.and_then(|p| cpu_percent(p, cpu)) {

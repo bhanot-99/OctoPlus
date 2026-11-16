@@ -200,12 +200,11 @@ fn setup() -> (Arc<Bus>, Subscription, SensorOut) {
     (bus, sub, out)
 }
 
-fn focus_sensor() -> (FocusSensor, watch::Receiver<String>, watch::Sender<u64>) {
-    let (app_tx, app_rx) = watch::channel(String::new());
+fn focus_sensor() -> (FocusSensor, watch::Sender<u64>) {
     let (snap_tx, snap_rx) = watch::channel(0u64);
     let dir = tempfile::tempdir().unwrap();
     let table = ProcTable::new(dir.path());
-    (FocusSensor::new(table, app_tx, snap_rx), app_rx, snap_tx)
+    (FocusSensor::new(table, snap_rx), snap_tx)
 }
 
 fn upd(at: u64, u: Update) -> Msg {
@@ -237,7 +236,7 @@ fn focus_of(ev: &MonitorEvent) -> (String, String, bool, bool) {
 #[tokio::test(start_paused = true)]
 async fn the_sensor_emits_focus_changes_with_the_time_they_were_observed() {
     let (_bus, sub, out) = setup();
-    let (mut sensor, app_rx, _snap) = focus_sensor();
+    let (mut sensor, _snap) = focus_sensor();
     let (tx, rx) = mpsc::channel(64);
     tx.send(Msg::Ready).await.unwrap();
     for m in window(1, "firefox", "Home", ACTIVE, 42) {
@@ -255,11 +254,6 @@ async fn the_sensor_emits_focus_changes_with_the_time_they_were_observed() {
         focus_of(&first),
         ("firefox".into(), "Home".into(), false, true)
     );
-    assert_eq!(
-        *app_rx.borrow(),
-        "",
-        "after the loss the focused app is cleared again"
-    );
     let closed = sub.try_next().unwrap();
     assert_eq!(
         focus_of(&closed),
@@ -271,7 +265,7 @@ async fn the_sensor_emits_focus_changes_with_the_time_they_were_observed() {
 #[tokio::test(start_paused = true)]
 async fn title_churn_in_one_window_is_coalesced_but_a_window_switch_is_immediate() {
     let (_bus, sub, out) = setup();
-    let (mut sensor, _app, _snap) = focus_sensor();
+    let (mut sensor, _snap) = focus_sensor();
     let (tx, rx) = mpsc::channel(256);
     for m in window(1, "term", "t0", ACTIVE, 1) {
         tx.send(m).await.unwrap();
@@ -314,7 +308,7 @@ async fn title_churn_in_one_window_is_coalesced_but_a_window_switch_is_immediate
 #[tokio::test(start_paused = true)]
 async fn a_snapshot_request_re_emits_the_current_focus_even_if_unchanged() {
     let (_bus, sub, out) = setup();
-    let (mut sensor, _app, snap) = focus_sensor();
+    let (mut sensor, snap) = focus_sensor();
     let (tx, rx) = mpsc::channel(64);
     for m in window(1, "firefox", "Home", FULL, 5) {
         tx.send(m).await.unwrap();
@@ -336,7 +330,7 @@ async fn a_snapshot_request_re_emits_the_current_focus_even_if_unchanged() {
 #[tokio::test(start_paused = true)]
 async fn losing_the_compositor_is_a_clean_error_with_a_fixed_message() {
     let (_bus, _sub, out) = setup();
-    let (mut sensor, _app, _snap) = focus_sensor();
+    let (mut sensor, _snap) = focus_sensor();
     let (tx, rx) = mpsc::channel(4);
     tx.send(Msg::Lost("no compositor to connect to"))
         .await
@@ -419,10 +413,9 @@ async fn local_the_real_compositor_reports_the_current_focus_and_the_idle_baseli
     let sub = bus.subscribe();
     let (stop_tx, stop_rx) = watch::channel(false);
 
-    let (app_tx, _app_rx) = watch::channel(String::new());
     let (_snap_tx, snap_rx) = watch::channel(0u64);
     let table = ProcTable::new(std::path::Path::new("/proc"));
-    let focus = FocusSensor::new(table, app_tx, snap_rx.clone());
+    let focus = FocusSensor::new(table, snap_rx.clone());
     let idle = IdleSensor::new(&MonitorConfig::default(), snap_rx);
     let t1 = tokio::spawn(supervise(
         focus,
@@ -484,10 +477,9 @@ async fn local_the_real_compositor_reports_the_current_focus_and_the_idle_baseli
 
 #[test]
 fn sensors_are_named_for_health_rows() {
-    let (app_tx, _app_rx) = watch::channel(String::new());
     let (_s, snap_rx) = watch::channel(0u64);
     let dir = tempfile::tempdir().unwrap();
-    let f = FocusSensor::new(ProcTable::new(dir.path()), app_tx, snap_rx.clone());
+    let f = FocusSensor::new(ProcTable::new(dir.path()), snap_rx.clone());
     assert_eq!(f.name(), "focus");
     assert_eq!(
         IdleSensor::new(&MonitorConfig::default(), snap_rx).name(),

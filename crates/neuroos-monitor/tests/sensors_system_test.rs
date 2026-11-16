@@ -182,6 +182,9 @@ const MOUNTINFO: &str = "\
 25 22 259:1 / /boot/efi rw - vfat /dev/nvme0n1p1 rw
 26 22 259:2 /home/u/data /mnt/bind rw - ext4 /dev/nvme0n1p2 rw
 27 22 8:17 / /media/u/My\\040Drive rw - exfat /dev/sdb1 rw
+31 22 0:35 /@home /home rw - btrfs /dev/nvme0n1p3 rw
+32 22 0:35 /@ /btrfsroot rw - btrfs /dev/nvme0n1p3 rw
+33 22 0:35 /@home /home/copy rw - btrfs /dev/nvme0n1p3 rw
 28 22 0:40 / /snap/core/1 ro - squashfs /dev/loop0 ro
 29 22 0:41 / /run/user/1000 rw - tmpfs tmpfs rw
 30 22 259:2 / / rw - ext4 /dev/nvme0n1p2 rw
@@ -194,7 +197,18 @@ fn mountinfo_keeps_only_user_filesystems_once_and_decodes_escapes() {
         .into_iter()
         .map(|m| m.mount_point)
         .collect();
-    assert_eq!(points, vec!["/", "/boot/efi", "/media/u/My Drive"]);
+    assert_eq!(
+        points,
+        vec![
+            "/",
+            "/boot/efi",
+            "/mnt/bind",
+            "/media/u/My Drive",
+            "/home",
+            "/btrfsroot"
+        ],
+        "distinct roots on one device are kept (Btrfs subvolumes, a bind of a subfolder); a repeat of the same (device, root) is dropped"
+    );
     assert_eq!(disk::decode_octal(r"a\040b\011c\134d"), "a b\tc\\d");
     assert_eq!(disk::decode_octal(r"\04"), r"\04", "short escapes stay");
     assert_eq!(disk::decode_octal(r"\999"), r"\999", "non-octal stays");
@@ -562,4 +576,23 @@ async fn local_real_machine_samples_are_sane() {
         let c = thermal::parse_millidegrees(&std::fs::read_to_string(path).unwrap()).unwrap();
         assert!((-20.0..=130.0).contains(&c));
     }
+}
+
+/// Review F6 (agy): one unreadable reading must not end the sensor; it degrades and recovers.
+#[tokio::test(start_paused = true)]
+async fn resources_sensor_survives_a_bad_reading_and_recovers() {
+    let dir = tempfile::tempdir().unwrap();
+    fake_proc(dir.path(), STAT1);
+    let (sub, stop, task) = start(ResourcesSensor::with_root(&cfg(), dir.path()));
+    assert!(next(&sub, 2).await.is_none(), "baseline tick");
+    write(dir.path(), "proc/meminfo", "garbage\n"); // a bad reading
+    assert!(next(&sub, 6).await.is_none(), "no event from a bad reading");
+    write(dir.path(), "proc/meminfo", MEMINFO);
+    write(dir.path(), "proc/stat", STAT2);
+    let ev = next(&sub, 12)
+        .await
+        .expect("the same sensor instance recovers without a restart");
+    assert!(matches!(ev.event, Some(Event::Resources(_))));
+    stop.send(true).unwrap();
+    task.await.unwrap();
 }

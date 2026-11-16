@@ -26,6 +26,13 @@ pub trait Gate: Send + Sync + 'static {
     fn snapshot_allowed(&self) -> bool {
         true
     }
+
+    /// Changes whenever the remembered *live* state (focus, idle, lock, media) can no longer be
+    /// trusted, e.g. across a pause: a player may have quit while its events were dropped.
+    /// The sensors re-emit that state on resume, so forgetting it loses nothing.
+    fn state_epoch(&self) -> u64 {
+        0
+    }
 }
 
 /// Lets everything through (tests and the foundation only).
@@ -35,6 +42,25 @@ pub struct PassGate;
 impl Gate for PassGate {
     fn admit(&self, event: MonitorEvent) -> Option<MonitorEvent> {
         Some(event)
+    }
+}
+
+/// The remembered states and the gate epoch they belong to.
+#[derive(Debug, Default)]
+struct Latest {
+    epoch: u64,
+    events: HashMap<String, MonitorEvent>,
+}
+
+impl Latest {
+    /// Forgets live state if the epoch moved since it was remembered (see [`Gate::state_epoch`]).
+    fn sync(&mut self, epoch: u64) {
+        if self.epoch != epoch {
+            self.epoch = epoch;
+            self.events.retain(|k, _| {
+                !(k == "focus" || k == "idle" || k == "lock" || k.starts_with("media:"))
+            });
+        }
     }
 }
 
@@ -96,7 +122,7 @@ impl Drop for Subscription {
 pub struct Bus {
     gate: Arc<dyn Gate>,
     /// The last event of every state-like kind, so a late subscriber starts informed.
-    latest: Mutex<HashMap<String, MonitorEvent>>,
+    latest: Mutex<Latest>,
     clock: Arc<dyn Clock>,
     health: Arc<Health>,
     capacity: usize,
@@ -127,7 +153,7 @@ impl Bus {
         health.gauge("subscribers", 0.0);
         Arc::new(Self {
             gate,
-            latest: Mutex::new(HashMap::new()),
+            latest: Mutex::new(Latest::default()),
             clock,
             capacity: capacity.max(1),
             subs: Mutex::new(Vec::new()),
@@ -182,8 +208,9 @@ impl Bus {
             Some(Event::ProcessTree(_) | Event::File(_)) | None => return,
         };
         let mut latest = lock(&self.latest);
-        if latest.len() < LATEST_CAP || latest.contains_key(&key) {
-            latest.insert(key, event.clone());
+        latest.sync(self.gate.state_epoch());
+        if latest.events.len() < LATEST_CAP || latest.events.contains_key(&key) {
+            latest.events.insert(key, event.clone());
         }
     }
 
@@ -203,7 +230,11 @@ impl Bus {
             dropped: AtomicU64::new(0),
         });
         if self.gate.snapshot_allowed() {
-            let mut known: Vec<MonitorEvent> = lock(&self.latest).values().cloned().collect();
+            let mut known: Vec<MonitorEvent> = {
+                let mut latest = lock(&self.latest);
+                latest.sync(self.gate.state_epoch());
+                latest.events.values().cloned().collect()
+            };
             known.sort_by_key(|e| e.observed_at_ns);
             let mut items = lock(&queue.items);
             // The newest `capacity` states, oldest first.

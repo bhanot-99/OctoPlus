@@ -93,7 +93,6 @@ pub fn spawn_sensors(
 ) -> Vec<tokio::task::JoinHandle<()>> {
     use sensors::{battery, cosmic, disk, folders, idle, mpris, proc, resources, thermal};
     let table = proc::ProcTable::new(std::path::Path::new("/proc"));
-    let (focused_tx, focused_rx) = tokio::sync::watch::channel(String::new());
     let snapshot = privacy.snapshot_requests();
     let clock: Arc<dyn clock::Clock> = Arc::new(clock::SystemClock);
     let mut handles = Vec::new();
@@ -115,10 +114,9 @@ pub fn spawn_sensors(
     run!(thermal::ThermalSensor::new(cfg));
     run!(cosmic::FocusSensor::new(
         Arc::clone(&table),
-        focused_tx,
         snapshot.clone()
     ));
-    run!(proc::ProcSensor::new(table, focused_rx));
+    run!(proc::ProcSensor::new(table, Arc::clone(bus)));
     run!(idle::IdleSensor::new(cfg, snapshot.clone()));
     run!(mpris::MprisSensor::new(snapshot));
     run!(folders::FoldersSensor::new(cfg));

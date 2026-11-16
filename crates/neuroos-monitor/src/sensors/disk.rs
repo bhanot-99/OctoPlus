@@ -92,17 +92,19 @@ pub fn user_relevant(m: &Mount) -> bool {
         })
 }
 
-/// User-relevant mounts, each mount point once and each device once, so a bind-mounted
-/// folder (same device, different root) does not double-count its filesystem: `statvfs`
-/// reports the whole filesystem either way.
+/// User-relevant mounts, each mount point once and each (device, root) once: a second mount
+/// of the same thing is dropped, while distinct roots on one device (Btrfs subvolumes such as
+/// `/` and `/home`) are both kept (review F4).
 #[must_use]
 pub fn relevant_mounts(text: &str) -> Vec<Mount> {
     let mut points = HashSet::new();
-    let mut fs = HashSet::new();
+    let mut fs: HashSet<(String, String)> = HashSet::new();
     parse_mountinfo(text)
         .into_iter()
         .filter(user_relevant)
-        .filter(|m| points.insert(m.mount_point.clone()) && fs.insert(m.dev.clone()))
+        .filter(|m| {
+            points.insert(m.mount_point.clone()) && fs.insert((m.dev.clone(), m.root.clone()))
+        })
         .collect()
 }
 
@@ -121,6 +123,24 @@ pub fn usage_from(blocks: u64, frsize: u64, bfree: u64, bavail: u64) -> Option<(
 fn usage(mount_point: &str) -> Option<(u64, u64, u64)> {
     let s = rustix::fs::statvfs(mount_point).ok()?;
     usage_from(s.f_blocks, s.f_frsize, s.f_bfree, s.f_bavail)
+}
+
+/// One reading of every relevant mount. A mount whose `statvfs` fails (gone, no permission)
+/// is skipped this time; an unreadable mountinfo is an error.
+fn sample_all(mountinfo: &Path) -> std::io::Result<Vec<DiskSample>> {
+    let text = std::fs::read_to_string(mountinfo)?;
+    Ok(relevant_mounts(&text)
+        .into_iter()
+        .filter_map(|m| {
+            let (total, used, free) = usage(&m.mount_point)?;
+            Some(DiskSample {
+                mount_point: m.mount_point,
+                total_bytes: total,
+                used_bytes: used,
+                free_bytes: free,
+            })
+        })
+        .collect())
 }
 
 /// Samples every relevant mount every `disk_interval_s`.
@@ -158,25 +178,19 @@ impl Sensor for DiskSensor {
         tick.set_missed_tick_behavior(MissedTickBehavior::Delay);
         loop {
             tick.tick().await;
-            let text =
-                std::fs::read_to_string(&self.mountinfo).map_err(|source| SensorError::Io {
+            // Reading mountinfo and `statvfs` can stall on a hung drive or FUSE mount, so the
+            // whole sample runs on the blocking pool (AB-11, review F5).
+            let path = self.mountinfo.clone();
+            let samples = tokio::task::spawn_blocking(move || sample_all(&path))
+                .await
+                .map_err(|_| SensorError::Unavailable("disk scan failed"))?
+                .map_err(|source| SensorError::Io {
                     detail: "mountinfo unreadable",
                     source,
                 })?;
             out.set_ok();
-            for m in relevant_mounts(&text) {
-                // A mount whose statvfs fails (gone, no permission) is skipped this tick.
-                if let Some((total, used, free)) = usage(&m.mount_point) {
-                    out.emit(
-                        out.now_ns(),
-                        Event::Disk(DiskSample {
-                            mount_point: m.mount_point,
-                            total_bytes: total,
-                            used_bytes: used,
-                            free_bytes: free,
-                        }),
-                    );
-                }
+            for d in samples {
+                out.emit(out.now_ns(), Event::Disk(d));
             }
         }
     }

@@ -206,8 +206,10 @@ struct WlState {
 
 impl WlState {
     fn send(&self, u: Update) {
-        // A full channel or a gone receiver ends the loop through the stop flag; losing one
-        // event here cannot be worse than blocking the compositor connection.
+        // Block rather than drop: a lost `Done` or `Closed` would leave the Tracker out of step
+        // with the compositor for good. This thread has nothing else to do, a slow consumer
+        // only makes the compositor buffer events briefly, and a gone receiver makes this
+        // return at once (the thread then ends through the stop flag).
         let _ = self.tx.blocking_send(Msg::Update(self.clock.now_ns(), u));
     }
 }
@@ -321,23 +323,17 @@ fn thread_main(tx: &mpsc::Sender<Msg>, clock: Arc<dyn Clock>, stop: &AtomicBool)
 #[derive(Debug)]
 pub struct FocusSensor {
     table: Arc<ProcTable>,
-    focused_app: watch::Sender<String>,
     snapshot: watch::Receiver<u64>,
     next_uid: u64,
 }
 
 impl FocusSensor {
-    /// `table` supplies the pid hint, `focused_app` tells the process sensor what is focused,
-    /// and `snapshot` asks for a re-emit after a pause (ADR-0011 decision 2).
+    /// `table` supplies the pid hint and `snapshot` asks for a re-emit after a pause
+    /// (ADR-0011 decision 2).
     #[must_use]
-    pub fn new(
-        table: Arc<ProcTable>,
-        focused_app: watch::Sender<String>,
-        snapshot: watch::Receiver<u64>,
-    ) -> Self {
+    pub fn new(table: Arc<ProcTable>, snapshot: watch::Receiver<u64>) -> Self {
         Self {
             table,
-            focused_app,
             snapshot,
             next_uid: 1,
         }
@@ -397,13 +393,6 @@ impl FocusSensor {
                 fullscreen_known: f.uid != 0,
             }),
         );
-        self.focused_app.send_if_modified(|cur| {
-            let changed = *cur != f.app_id;
-            if changed {
-                cur.clone_from(&f.app_id);
-            }
-            changed
-        });
     }
 
     /// The uid the next window will get; grows across restarts, never repeats.

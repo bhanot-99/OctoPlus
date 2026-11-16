@@ -12,8 +12,8 @@ use std::time::Duration;
 
 use neuroos_proto::v1::monitor_event::Event;
 use neuroos_proto::v1::{ProcessNode, ProcessTree};
-use tokio::sync::watch;
 
+use crate::bus::Bus;
 use crate::sensor::{Sensor, SensorError, SensorOut};
 
 /// Most processes one tree may hold, so a fork bomb cannot blow the frame limit (FR-MON-08).
@@ -264,20 +264,25 @@ impl ProcTable {
 pub const REFRESH_EVERY: Duration = Duration::from_secs(5);
 
 /// Emits the focused application's process tree after each change of focused app.
+///
+/// The focused app is read from the focus events that **passed the privacy gate** (the bus),
+/// not from the focus sensor directly: an excluded window arrives here as an empty app id, so
+/// its processes are never even looked up, and a tree cannot outlive a focus change into
+/// leaking an excluded app (review F1, ADR-0011).
 #[derive(Debug)]
 pub struct ProcSensor {
     table: Arc<ProcTable>,
-    focused_app: watch::Receiver<String>,
+    bus: Arc<Bus>,
     settle: Duration,
 }
 
 impl ProcSensor {
-    /// `focused_app` carries the app id of the focused window (empty = none).
+    /// Watches the focus events on `bus`.
     #[must_use]
-    pub fn new(table: Arc<ProcTable>, focused_app: watch::Receiver<String>) -> Self {
+    pub fn new(table: Arc<ProcTable>, bus: Arc<Bus>) -> Self {
         Self {
             table,
-            focused_app,
+            bus,
             settle: SETTLE,
         }
     }
@@ -290,14 +295,31 @@ impl Sensor for ProcSensor {
 
     async fn run(&mut self, out: &SensorOut) -> Result<(), SensorError> {
         out.set_ok();
+        // A fresh subscription per run also receives the latest focus, so a restart catches up.
+        let sub = self.bus.subscribe();
         let mut refresh = tokio::time::interval(REFRESH_EVERY);
         refresh.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+        let mut current = String::new();
         loop {
             tokio::select! {
-                changed = self.focused_app.changed() => {
-                    changed.map_err(|_| SensorError::Unavailable("focus source closed"))?;
+                ev = sub.next() => {
+                    let Some(Event::Focus(f)) = ev.event else { continue };
+                    if f.app_id == current {
+                        continue;
+                    }
+                    current = f.app_id;
+                    if current.is_empty() {
+                        continue;
+                    }
+                    // Wait for the new window's processes, then look at whichever app is
+                    // focused *now*: a quick switch away makes this scan unnecessary.
                     tokio::time::sleep(self.settle).await;
-                    let app = self.focused_app.borrow_and_update().clone();
+                    while let Some(newer) = sub.try_next() {
+                        if let Some(Event::Focus(f)) = newer.event {
+                            current = f.app_id;
+                        }
+                    }
+                    let app = current.clone();
                     self.emit_tree(out, &app).await?;
                 }
                 _ = refresh.tick() => {

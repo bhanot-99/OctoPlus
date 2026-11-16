@@ -392,3 +392,35 @@ async fn no_folders_configured_is_healthy_and_silent() {
     assert!(rig.quiet().await);
     rig.finish().await;
 }
+
+/// Review F8 (agy): a deleted watched folder frees its watch, so a busy notes tree never
+/// exhausts the limit with dead entries.
+#[tokio::test]
+async fn deleting_a_watched_folder_frees_its_watch() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().to_path_buf();
+    std::fs::create_dir(root.join("a")).unwrap();
+    // Two watches only: the root and `a`.
+    let rig = start(FoldersSensor::with_max_watches(
+        &cfg(&[(&root, FolderKind::Notes)]),
+        2,
+    ))
+    .await;
+    assert_eq!(rig.status().0, HealthStatus::Ok);
+    std::fs::remove_dir(root.join("a")).unwrap();
+    tokio::time::sleep(Duration::from_millis(300)).await; // the kernel's IN_IGNORED arrives
+    std::fs::create_dir(root.join("b")).unwrap();
+    tokio::time::sleep(Duration::from_millis(300)).await; // `b` gets the freed watch
+    std::fs::write(root.join("b/note.md"), "x").unwrap();
+    let seen = rig.all().await;
+    assert!(
+        seen.iter().any(|f| f.path.ends_with("b/note.md")),
+        "a file in the new folder must be seen once the dead watch is gone: {seen:?}"
+    );
+    assert_eq!(
+        rig.status().0,
+        HealthStatus::Ok,
+        "no false 'watch limit reached'"
+    );
+    rig.finish().await;
+}

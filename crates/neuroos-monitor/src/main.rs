@@ -39,8 +39,16 @@ fn watched_folders(explicit: Option<&PathBuf>) -> Vec<PathBuf> {
 
 fn main() -> Result<(), ServiceError> {
     let args = Args::parse();
+    // Landlock is applied before init: the dump's folder must be writable, and a bare file
+    // name must still resolve to a real folder (review F3).
+    let record = args
+        .record
+        .as_deref()
+        .map(neuroos_monitor::record::resolve_path)
+        .transpose()
+        .map_err(|e| ServiceError::Custom(format!("cannot resolve the --record path: {e}")))?;
     let options = Options {
-        record: args.record.clone(),
+        record: record.as_ref().map(|(file, _)| file.clone()),
     };
     // Architecture §8.2: C1 reads /proc (granted by default), /sys and the configured folders.
     let mut read_only = vec![PathBuf::from("/sys")];
@@ -53,9 +61,8 @@ fn main() -> Result<(), ServiceError> {
         ServiceBuilder::new(Part::Monitor, "neuroos-monitor", env!("CARGO_PKG_VERSION"))
             .extra_read_only(read_only)
             .args(args.common);
-    if let Some(dir) = args.record.as_deref().and_then(std::path::Path::parent) {
-        // Landlock is applied before init: the dump's folder must be writable.
-        builder = builder.extra_read_write(vec![dir.to_path_buf()]);
+    if let Some((_, dir)) = record {
+        builder = builder.extra_read_write(vec![dir]);
     }
     builder.run(move |ctx| neuroos_monitor::init_with(ctx, &options))
 }
