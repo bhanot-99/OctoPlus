@@ -15,6 +15,18 @@ Phase 3 builds C1. ADR-0007 fixed the sensor sources but left the lock source op
 
 The ten decisions in `docs/plans/phase-03-monitor-plan.md` §1 stand as this ADR's decision text. In short: an excluded window becomes a redacted focus event; pause emits nothing and is followed by a resume snapshot; the stream queue drops oldest and counts; `--record` always anonymises with a per-run discarded key; the dump format lives in `neuroos-proto`; replay can serve a stream socket; no `procfs`/`notify` crates; `cosmic-protocols` gets a narrow GPL exception in `deny.toml`; lock state comes from the session bus or a Wayland observer chosen by a probe, and stays `unknown` (nudges hold) if neither works.
 
+### Lock-source probe (2026-11-16, reference machine, COSMIC session)
+
+| Candidate | Result |
+| :--- | :--- |
+| Session bus `org.freedesktop.ScreenSaver` (owner: `cosmic-idle`) | Introspected: only `Inhibit` and `UnInhibit`. No `GetActive`, no `ActiveChanged`. Cannot observe lock. |
+| Session bus `org.gnome.ScreenSaver` | Not present. |
+| Session bus `com.system76.CosmicSession` | Only `Exit` and `Restart`. |
+| Wayland observer protocol | None. `ext_session_lock_v1` is the *locker's* protocol (held by `cosmic-greeter`), not an observer. |
+| logind `LockedHint` (system bus, `loginctl show-session`) | Readable, currently `no`; not shown to flip on a real lock (locking the owner's screen was not done). Needs the system bus, which ADR-0002 and ADR-0007 keep out of every unit. |
+
+**Result:** no verified lock source exists inside C1's allowed surface. Lock state stays **unknown** (`LockChanged` is not emitted without a real source) and the nudge policy holds on unknown, as ADR-0007 item 3 already says. Reopening this needs an owner decision to allow a read-only, single-property logind call, which would widen C1's sandbox (R0-3), so it is listed for sign-off rather than done.
+
 ## Consequences
 
 C3 sees "focus ended, nothing known" instead of a gap. Paused time is truly absent from every sink. Dumps are safe to commit but cannot be de-anonymised, even by the owner. The lock decision is final only after the probe result is added here.
