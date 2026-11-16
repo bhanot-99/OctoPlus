@@ -172,6 +172,8 @@ done
 
 # C6 cleanup roots from [kernel] cleanup_build_folders (OQ-07, ADR-0010).
 "$root/target/release/neuroos-gen-units" --kernel-dropin "$HOME/.config/neuroos/config.toml" "$user_systemd"
+# C1 watched folders from [[monitor.folders]] (FR-MON-11, OQ-05).
+"$root/target/release/neuroos-gen-units" --monitor-dropin "$HOME/.config/neuroos/config.toml" "$user_systemd"
 
 echo "=== 8. Reloading user systemd daemon ==="
 if ! systemctl --user daemon-reload 2>/dev/null; then

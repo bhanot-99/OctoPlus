@@ -558,6 +558,9 @@ fn kernel_paths_per_adr_0010() {
         if f.rel_path == Path::new("systemd/user/neuroos-kernel.service") {
             continue;
         }
+        // C1 also sees the compositor and the session bus, read-only (ADR-0007, ADR-0011);
+        // `monitor_unit_gets_compositor_and_session_bus_read_only_and_nothing_wider` pins that form.
+        let is_monitor = f.rel_path == Path::new("systemd/user/neuroos-monitor.service");
         for secret in [
             "hmac.key",
             "neuroos/audit",
@@ -567,6 +570,9 @@ fn kernel_paths_per_adr_0010() {
             "wayland",
             "SystemCallFilter=seccomp",
         ] {
+            if is_monitor && (secret == "%t/bus" || secret == "wayland") {
+                continue;
+            }
             assert!(
                 !f.content.contains(secret),
                 "{} must not mention {secret}",
@@ -600,6 +606,67 @@ fn kernel_cleanup_dropin_validates_paths() {
         assert!(
             generate_kernel_cleanup_dropin(&[PathBuf::from(bad)]).is_err(),
             "{bad:?} must be refused"
+        );
+    }
+}
+
+#[test]
+fn monitor_unit_gets_compositor_and_session_bus_read_only_and_nothing_wider() {
+    let files = generate_all_files(&manifest_path()).unwrap();
+    let unit = files
+        .iter()
+        .find(|f| f.rel_path == Path::new("systemd/user/neuroos-monitor.service"))
+        .unwrap();
+    for line in [
+        "BindReadOnlyPaths=-%t/wayland-0",
+        "BindReadOnlyPaths=-%t/wayland-1",
+        "BindReadOnlyPaths=-%t/bus",
+        "InaccessiblePaths=-/run/dbus/system_bus_socket",
+        "PrivateNetwork=true",
+    ] {
+        assert!(unit.content.contains(line), "missing {line}");
+    }
+    // Read-only only: no writable bind of the bus or the compositor, no accessibility bus.
+    assert!(!unit.content.contains("BindPaths=-%t/bus"));
+    assert!(!unit.content.contains("at-spi"));
+    // Other parts do not get the compositor or the bus (AB-7).
+    let storage = files
+        .iter()
+        .find(|f| f.rel_path == Path::new("systemd/user/neuroos-storage.service"))
+        .unwrap();
+    assert!(!storage.content.contains("wayland") && !storage.content.contains("%t/bus"));
+}
+
+#[test]
+fn monitor_folders_dropin_binds_read_only_and_validates_paths() {
+    use neuroos_common::config::{FolderConfig, FolderKind};
+    use neuroos_deploy::generate_monitor_folders_dropin;
+    let ok = generate_monitor_folders_dropin(&[FolderConfig {
+        path: PathBuf::from("/home/u/Notes"),
+        kind: FolderKind::Notes,
+    }])
+    .unwrap();
+    assert!(ok.contains("[Service]\nBindReadOnlyPaths=-/home/u/Notes\n"));
+    assert!(!ok.contains("BindPaths=-"), "never writable");
+    assert!(
+        !generate_monitor_folders_dropin(&[])
+            .unwrap()
+            .contains("BindReadOnlyPaths")
+    );
+    for bad in [
+        "relative/dir",
+        "/a/../b",
+        "/has space",
+        "/pct%h",
+        "/semi;colon",
+    ] {
+        let f = FolderConfig {
+            path: PathBuf::from(bad),
+            kind: FolderKind::Git,
+        };
+        assert!(
+            generate_monitor_folders_dropin(&[f]).is_err(),
+            "accepted {bad}"
         );
     }
 }

@@ -31,6 +31,7 @@ fn print_help() {
           --manifest <PATH>    Path to models/manifest.toml (default: <repo-root>/models/manifest.toml)\n  \
           --check              Verify generated files match disk without modifying\n  \
           --kernel-dropin <CONFIG> <UNIT_DIR>\n                       Write C6's cleanup-folder drop-in from [kernel] cleanup_build_folders\n  \
+          --monitor-dropin <CONFIG> <UNIT_DIR>\n                       Write C1's watched-folder drop-in from [[monitor.folders]]\n  \
           -h, --help           Show this help"
     );
 }
@@ -45,6 +46,21 @@ fn write_kernel_dropin(config: &std::path::Path, unit_dir: &std::path::Path) -> 
     let dir = unit_dir.join("neuroos-kernel.service.d");
     std::fs::create_dir_all(&dir).with_context(|| format!("creating {}", dir.display()))?;
     let path = dir.join("cleanup-folders.conf");
+    std::fs::write(&path, text).with_context(|| format!("writing {}", path.display()))?;
+    println!("Wrote {}", path.display());
+    Ok(())
+}
+
+/// Writes `<unit_dir>/neuroos-monitor.service.d/folders.conf` (FR-MON-11, OQ-05).
+/// A missing config file means the defaults: no watched folders.
+fn write_monitor_dropin(config: &std::path::Path, unit_dir: &std::path::Path) -> Result<()> {
+    let cfg = neuroos_common::config::Config::load_from(config)
+        .with_context(|| format!("loading {}", config.display()))?;
+    let text = neuroos_deploy::generate_monitor_folders_dropin(&cfg.monitor.folders)
+        .context("building the drop-in")?;
+    let dir = unit_dir.join("neuroos-monitor.service.d");
+    std::fs::create_dir_all(&dir).with_context(|| format!("creating {}", dir.display()))?;
+    let path = dir.join("folders.conf");
     std::fs::write(&path, text).with_context(|| format!("writing {}", path.display()))?;
     println!("Wrote {}", path.display());
     Ok(())
@@ -86,6 +102,12 @@ fn main() -> Result<()> {
                     anyhow::bail!("--kernel-dropin requires <CONFIG> <UNIT_DIR>");
                 };
                 return write_kernel_dropin(&PathBuf::from(config), &PathBuf::from(unit_dir));
+            }
+            "--monitor-dropin" => {
+                let (Some(config), Some(unit_dir)) = (args.get(i + 1), args.get(i + 2)) else {
+                    anyhow::bail!("--monitor-dropin requires <CONFIG> <UNIT_DIR>");
+                };
+                return write_monitor_dropin(&PathBuf::from(config), &PathBuf::from(unit_dir));
             }
             other => {
                 anyhow::bail!("unknown argument '{other}'. Run with --help for usage.");
