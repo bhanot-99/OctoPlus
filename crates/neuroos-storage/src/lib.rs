@@ -4,6 +4,7 @@
 //! - Accepts [`QueryHybrid`], returns stub [`HybridResult`] with [`Evidence`] and non-empty [`Taint`].
 //! - Subscribes to `monitor/stream` via [`ReconnectingClient`], reporting DEGRADED when absent.
 
+pub mod db;
 pub mod fusion;
 pub mod spool;
 pub mod vectors;
