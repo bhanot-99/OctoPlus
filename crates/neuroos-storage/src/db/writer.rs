@@ -209,20 +209,24 @@ fn commit_batch(conn: &Connection, batch: Vec<Envelope>, post_commit: &PostCommi
     }
     match conn.execute_batch("COMMIT") {
         Ok(()) => {
+            // The matrix changes land *before* any caller hears "committed", so a query that
+            // starts after an ingest returns always sees that ingest's vectors.
             let mut ops = Vec::new();
+            let mut replies = Vec::with_capacity(results.len());
             for (reply, outcome) in results {
                 match outcome {
                     Ok(o) => {
                         ops.extend(o);
-                        let _ = reply.send(Ok(()));
+                        replies.push((reply, Ok(())));
                     }
-                    Err(e) => {
-                        let _ = reply.send(Err(e));
-                    }
+                    Err(e) => replies.push((reply, Err(e))),
                 }
             }
             if !ops.is_empty() {
                 post_commit(ops);
+            }
+            for (reply, r) in replies {
+                let _ = reply.send(r);
             }
         }
         Err(e) => {

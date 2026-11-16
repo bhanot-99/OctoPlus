@@ -24,7 +24,9 @@ pub const MAX_TERM_CHARS: usize = 40;
 #[must_use]
 pub fn rrf(rankings: &[&[u64]], k: u32) -> Vec<(u64, f64)> {
     let k_f64 = f64::from(k.max(1));
-    let mut scores: HashMap<u64, f64> = HashMap::new();
+    // Terms per id, summed in a fixed order below: float addition is not associative, and two ids
+    // with the same set of ranks must get bit-identical scores so the id tie-break decides.
+    let mut terms: HashMap<u64, Vec<f64>> = HashMap::new();
 
     for list in rankings {
         let mut seen = HashSet::with_capacity(list.len());
@@ -32,13 +34,27 @@ pub fn rrf(rankings: &[&[u64]], k: u32) -> Vec<(u64, f64)> {
             if seen.insert(id) {
                 let rank = (idx.saturating_add(1)) as f64;
                 let rrf_score = 1.0f64 / (k_f64 + rank);
-                *scores.entry(id).or_insert(0.0) += rrf_score;
+                terms.entry(id).or_default().push(rrf_score);
             }
         }
     }
 
-    let mut result: Vec<(u64, f64)> = scores.into_iter().collect();
-    result.sort_unstable_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    let mut result: Vec<(u64, f64)> = terms
+        .into_iter()
+        .map(|(id, mut t)| {
+            t.sort_unstable_by(f64::total_cmp);
+            (id, t.iter().sum())
+        })
+        .collect();
+    // Mathematically equal sums built from different ranks (1/30 + 1/6 = 1/5) differ in the last
+    // bit; ordering uses the score on a 1e-12 grid so those tie and the smaller id wins. A grid
+    // key (not a tolerance comparison) keeps the order total, which `sort` requires.
+    #[allow(clippy::cast_possible_truncation)]
+    let key = |s: f64| (s * 1e12).round() as i64;
+    result.sort_unstable_by(|a, b| key(b.1).cmp(&key(a.1)).then_with(|| a.0.cmp(&b.0)));
+    // Tied scores come out identical, so "non-increasing" holds exactly.
+    #[allow(clippy::cast_precision_loss)]
+    result.iter_mut().for_each(|r| r.1 = key(r.1) as f64 / 1e12);
     result
 }
 

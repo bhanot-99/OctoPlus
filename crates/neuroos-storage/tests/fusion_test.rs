@@ -189,10 +189,13 @@ proptest! {
             }
         }
 
+        // Each id's score matches the naive reference. Ids are compared by id, not position:
+        // mathematically equal sums (1/30 + 1/6 = 1/5) may differ in the last bit in the reference.
         prop_assert_eq!(res.len(), reference.len());
-        for i in 0..res.len() {
-            prop_assert_eq!(res[i].0, reference[i].0);
-            prop_assert!((res[i].1 - reference[i].1).abs() < 1e-9);
+        let want: std::collections::HashMap<u64, f64> = reference.iter().copied().collect();
+        for (id, score) in &res {
+            let r = want.get(id);
+            prop_assert!(r.is_some_and(|r| (r - score).abs() < 1e-9), "id {} score {} vs {:?}", id, score, r);
         }
     }
 }
