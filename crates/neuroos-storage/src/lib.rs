@@ -4,6 +4,10 @@
 //! - Accepts [`QueryHybrid`], returns stub [`HybridResult`] with [`Evidence`] and non-empty [`Taint`].
 //! - Subscribes to `monitor/stream` via [`ReconnectingClient`], reporting DEGRADED when absent.
 
+pub mod fusion;
+pub mod spool;
+pub mod vectors;
+
 use std::sync::Arc;
 use std::time::Duration;
 

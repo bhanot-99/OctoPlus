@@ -94,6 +94,7 @@ message HealthSignals {
   bool fullscreen = 4;
   bool media_playing = 5;
   uint64 active_since_ns = 6;
+  bool locked_known = 7;     // false in v1.0: lock state is unknown (ADR-0011); `locked` is then meaningless
 }
 
 // C5 -> C3 after a turn (domain voice_interaction).
@@ -164,6 +165,7 @@ enum LifecycleJob {
   LIFECYCLE_JOB_GC = 1;
   LIFECYCLE_JOB_BACKUP = 2;
   LIFECYCLE_JOB_ROLLUP = 3;
+  LIFECYCLE_JOB_PURGE = 4;   // FR-PRV-06: removes every byte of user data; kernel only (ADR-0012)
 }
 
 message RunLifecycleJob {

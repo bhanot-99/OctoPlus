@@ -64,6 +64,9 @@ zeroize = { version = "1.9.1", features = ["derive"] }
 cosmic-protocols = { version = "0.2.0", default-features = false, features = ["client"] }
 wayland-client = "0.31.15"
 wayland-protocols = { version = "0.32.13", features = ["client", "staging"] }
+# Phase 4 (C3): embedding. No `fastembed` (HTTP client, R0-1), no `tokenizers` (its hash-table crates fail cargo-deny: BSL-1.0, unmaintained fxhash; WordPiece is written by hand) and no `ort` binary download:
+# the runtime is loaded from a pinned, hash-checked file (ADR-0012).
+ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "load-dynamic", "api-31"] }
 # Tests
 proptest = "1.12.0"
 tempfile = "3.27.0"

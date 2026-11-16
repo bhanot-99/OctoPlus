@@ -11,11 +11,11 @@
 | Field | Value |
 | :--- | :--- |
 | Last updated | 2026-11-16 |
-| Project stage | **Phase 3 (Monitor, C1) signed off 2026-11-16 (D-27); branch ready to merge** — built 2026-11-16 on the owner's go-ahead (D-25). Phase 2 signed off and merged. |
-| Current phase | Phase 3 — Monitor (C1) |
-| Current story | P3 work packages W0–W10 in `docs/plans/phase-03-monitor-plan.md` |
-| Overall progress | 3 / 11 phases done; Phase 3 started |
-| Health | 🟩 Phase 3 signed off |
+| Project stage | **Phase 4 (Storage, C3) in progress** — started 2026-11-16 on the owner's go-ahead (D-28). Phase 3 merged to main. |
+| Current phase | Phase 4 — Storage (C3) |
+| Current story | P4 work packages W0–W12 in `docs/plans/phase-04-storage-plan.md` |
+| Overall progress | 4 / 11 phases done; Phase 4 started |
+| Health | 🟦 Phase 4 building |
 | Next milestone | M3 — monitor (C1) |
 
 ---
@@ -24,11 +24,11 @@
 
 | Field | Value |
 | :--- | :--- |
-| Story | Phase 3 plan W0→W10 (`docs/plans/phase-03-monitor-plan.md`) |
+| Story | Phase 4 plan W0→W12 (`docs/plans/phase-04-storage-plan.md`) |
 | Builder / Checker | agy builds, Claude checks (D-23); Claude builds pieces itself where faster (D-21 carried over) |
-| Branch | `phase-3-monitor` (not merged; owner merges) |
-| Files being changed | `crates/neuroos-monitor/**`, `neuroos-common/src/config.rs`, `neuroos-proto` (dump), `neuroosctl` (replay) |
-| Next concrete step | Owner merges `phase-3-monitor`. Real-use recordings continue in the background (D-26) and are finished at integration. Phase 4 (storage) starts when the owner says. |
+| Branch | `phase-4-storage` |
+| Files being changed | `crates/neuroos-storage/**`, `neuroos-common` (`[storage]` config), `neuroos-proto` (two additive fields), `models/manifest.toml`, `neuroos-deploy`, `neuroosctl storage` |
+| Next concrete step | W1 database core (Claude) in parallel with agy's W2/W3/W8 pure modules; then pipeline, queries, lifecycle, service, gate. |
 
 ---
 
@@ -40,7 +40,7 @@
 | 1 | Walking skeleton | ✅ | 2026-11-15 | 2026-11-16 | `reports/phase-01-skeleton.md` |
 | 2 | Safety kernel (C6) | ✅ | 2026-11-16 | 2026-11-16 | `reports/phase-02-kernel.md` |
 | 3 | Monitor (C1) | ✅ | 2026-11-16 | 2026-11-16 | `reports/phase-03-monitor.md` |
-| 4 | Storage (C3) | ⬜ | — | — | `reports/phase-04-storage.md` |
+| 4 | Storage (C3) | 🟦 | 2026-11-16 | — | `reports/phase-04-storage.md` |
 | 5 | Knowledge and conversation (C5) | ⬜ | — | — | `reports/phase-05-knowledge.md` |
 | 6 | Nudge engine | ⬜ | — | — | `reports/phase-06-nudges.md` |
 | 7 | Voice (C2) | ⬜ | — | — | `reports/phase-07-voice.md` |
@@ -54,17 +54,19 @@ Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done �
 
 ## 4. Current Phase Board
 
-**Phase 3 — Monitor (C1)** (Phase 2 board: `reports/phase-02-kernel.md`)
+**Phase 4 — Storage (C3)** (Phase 3 board: `reports/phase-03-monitor.md` §2)
 
 | Story | Title | Status | Builder | Checker |
 | :--- | :--- | :--- | :--- | :--- |
-| P3-S01 | C3 receives focus changes with app, title, pids, timestamps | Done (pending sign-off) | Claude (W5 focus; agy stalled on W3 and was taken over, D-25) | agy review |
-| P3-S02 | C3 receives idle, lock and media events | Done (pending sign-off; lock unknown by design) | Claude (W5 idle, W6 media) | agy review |
-| P3-S03 | C3 receives CPU, memory, disk, battery, temperature samples | Done (pending sign-off) | Claude (W3, after agy stalled) | agy review |
-| P3-S04 | C3 receives the focused window's process tree | Done (pending sign-off) | Claude (W4) | agy review |
-| P3-S05 | Excluded apps and paused periods never leave C1 | Done (pending sign-off) | Claude (W2) | agy review |
-| P3-S06 | Record, anonymise and replay a dump | Done (pending sign-off) | Claude (dump, anonymiser, recorder), agy (`neuroosctl replay`, checked by Claude) | agy review / Claude |
-| P3-S07 | (P1) File activity for configured folders | Done (pending sign-off) | Claude (W7) | agy review |
+| P4-S01 | Noisy events never become stored entities | Backlog | Claude (W4) | agy review |
+| P4-S02 | Events land in the right domain with the right taint | Backlog | Claude (W4) | agy review |
+| P4-S03 | Most relevant chunks for a question within budget | Backlog | Claude (W5–W7), agy (W2, W3) | agy review / Claude |
+| P4-S04 | Focus at a moment, activity over a range | Backlog | Claude (W7) | agy review |
+| P4-S05 | Current and recent health signals | Backlog | Claude (W7) | agy review |
+| P4-S06 | Fetched documents stored untrusted, taint survives merges | Backlog | agy (W8 pure), Claude (W8 ingest) | cross-check |
+| P4-S07 | Old data expires, cap held, backups | Backlog | Claude (W9) | agy review |
+| P4-S08 | Model change re-embeds without downtime | Backlog | Claude (W9) | agy review |
+| P4-S09 | Forget and purge remove everything they say | Backlog | Claude (W9) | agy review |
 
 Columns: Backlog → Ready → In Progress → In Check → Done.
 
@@ -76,6 +78,7 @@ One line each. Anything architectural also gets an ADR.
 
 | Date | ID | Decision | ADR |
 | :--- | :--- | :--- | :--- |
+| 2026-11-16 | D-28 | Owner started Phase 4 and went to sleep: "create a new branch, elaborate each step, start executing with Claude and agy, finish the whole phase by morning". Answers given first: **download the embedding model and runtime** (approved), **synthetic dumps** for the noise gate until real ones exist. Plan: `docs/plans/phase-04-storage-plan.md`; Claude's design calls under the go-ahead (own WordPiece tokenizer instead of the `tokenizers` crate, forget scrubs backups at once, spool format v1, additive proto fields `LIFECYCLE_JOB_PURGE` and `HealthSignals.locked_known`, budgets restated from measurement) are open to overturn at sign-off. | 0012 (Proposed) |
 | 2026-11-16 | D-27 | Owner signed off Phase 3: ADR-0011 accepted as written; session lock state stays "unknown" in v1.0 (no logind call, C1's sandbox is not widened); `cosmic-protocols` GPL exception accepted. Branch cleaned for merge (fake clock behind `test-support`, test-only hook removed, unused `subtle` dropped). | 0011 (Accepted) |
 | 2026-11-16 | D-26 | Owner: all real-use testing (the Phase 3 recordings: ≥ 8 h in ≥ 3 dumps + 1 held-out, and the live fullscreen/compositor-restart checks) is done once the whole project is built and connected, so problems show up with everything working together. Phase 3's "dumps recorded" exit criterion is therefore deferred to the integration phase, not dropped. Consequence: Phase 4's noise gate (KPI-8) can only be exercised on synthetic dumps until then. | — |
 | 2026-11-16 | D-25 | Owner started Phase 3: "create a new branch, elaborate each step, start executing with full coordination of Claude and agy". Plan in `docs/plans/phase-03-monitor-plan.md`; Claude's design calls under that go-ahead (redacted focus for excluded windows, pause = emit nothing + resume snapshot, drop-oldest stream queue, always-anonymised `--record`, dump format in `neuroos-proto`, no `procfs`/`notify` crates, narrow GPL exception for `cosmic-protocols`, lock source by probe) are open to overturn at sign-off. | 0011 (Accepted) |

@@ -61,6 +61,9 @@ pub struct Config {
     /// Context monitor options (C1, FR-MON-01..12).
     #[serde(default)]
     pub monitor: MonitorConfig,
+    /// Storage engine options (C3, FR-STO-01..13).
+    #[serde(default)]
+    pub storage: StorageConfig,
     /// Verification hooks (SC proof 3). Read-only probes; they never widen anything.
     #[serde(default)]
     pub debug: DebugConfig,
@@ -279,6 +282,233 @@ impl MonitorConfig {
     }
 }
 
+/// `[storage]` section (PRD §5.3, §6.2, §6.5). Defaults are the PRD values.
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields, default)]
+pub struct StorageConfig {
+    /// Live-chunk cap (PRD §6.2, FR-STO-06).
+    pub chunk_cap: usize,
+    /// Read-only connections in the reader pool (ADR-0004).
+    pub reader_pool: usize,
+    /// Operations the writer queue holds before senders wait.
+    pub write_queue: usize,
+    /// Most events one ingest batch holds.
+    pub ingest_batch: usize,
+    /// A batch is flushed at least this often, in milliseconds.
+    pub ingest_flush_ms: u64,
+    /// Occurrences that promote an item (FR-STO-01 stage 3).
+    pub promote_min_occurrences: u32,
+    /// Active dwell, in seconds, above which an item is promoted (FR-STO-01 stage 3).
+    pub promote_min_dwell_s: u64,
+    /// A media change counts as interaction if its player was focused within this many seconds (stage 4).
+    pub media_interaction_s: u64,
+    /// App-id prefixes of NeuroOS's own windows, dropped at stage 2 (FR-STO-01).
+    pub own_app_prefixes: Vec<String>,
+    /// Process names that mean "build job" at stage 1 (FR-STO-01). Never stored as entities.
+    pub build_process_names: Vec<String>,
+    /// Threads the exact vector scan uses (ADR-0004 item 3).
+    pub scan_threads: usize,
+    /// Vector candidates and text candidates taken before fusion (FR-STO-05).
+    pub query_candidates: usize,
+    /// Most results one query may return.
+    pub query_top_k_max: u32,
+    /// Reciprocal-rank-fusion constant.
+    pub rrf_k: u32,
+    /// Retention in days: focus history, window and process activity (PRD §6.5).
+    pub retention_focus_days: u32,
+    /// Raw health samples (PRD §6.5).
+    pub retention_health_raw_days: u32,
+    /// Hourly health summaries (PRD §6.5).
+    pub retention_health_rollup_days: u32,
+    /// Media playback (PRD §6.5).
+    pub retention_media_days: u32,
+    /// Voice interactions (PRD §6.5).
+    pub retention_voice_days: u32,
+    /// Web documents (PRD §6.5).
+    pub retention_web_days: u32,
+    /// Nudge log (PRD §6.5).
+    pub retention_nudge_days: u32,
+    /// Backup interval in hours (FR-STO-11); used by the generated timer.
+    pub backup_interval_h: u32,
+    /// Backups kept (FR-STO-11).
+    pub backup_keep: usize,
+    /// Folder C7 leaves fetched documents in (FR-STO-10).
+    pub spool_dir: PathBuf,
+    /// Largest spool file accepted, in bytes (security.md §4.2).
+    pub spool_max_bytes: u64,
+    /// How often the spool folder is looked at, in seconds.
+    pub spool_poll_s: u64,
+    /// Folder holding the embedding model and its tokenizer (manifest). Empty = `~/.local/opt/neuroos/models/embedding`.
+    pub embedding_dir: PathBuf,
+    /// The ONNX Runtime shared library. Empty = `~/.local/opt/neuroos/lib/libonnxruntime.so.1.31.1`.
+    pub onnxruntime_lib: PathBuf,
+}
+
+impl Default for StorageConfig {
+    fn default() -> Self {
+        let own = vec!["org.neuroos.".to_owned()];
+        let build = [
+            "rustc",
+            "cargo",
+            "cc1",
+            "cc1plus",
+            "gcc",
+            "g++",
+            "cc",
+            "c++",
+            "clang",
+            "clang++",
+            "ld",
+            "lld",
+            "ld.lld",
+            "ld.bfd",
+            "ld.gold",
+            "as",
+            "ar",
+            "ranlib",
+            "ninja",
+            "make",
+            "cmake",
+            "cargo-clippy",
+            "clippy-driver",
+            "rustdoc",
+            "tsc",
+            "webpack",
+            "javac",
+            "go",
+            "gradle",
+            "mvn",
+        ]
+        .iter()
+        .map(|s| (*s).to_owned())
+        .collect();
+        Self {
+            chunk_cap: 30_000,
+            reader_pool: 4,
+            write_queue: 1024,
+            ingest_batch: 64,
+            ingest_flush_ms: 250,
+            promote_min_occurrences: 3,
+            promote_min_dwell_s: 5,
+            media_interaction_s: 10,
+            own_app_prefixes: own,
+            build_process_names: build,
+            scan_threads: 4,
+            query_candidates: 50,
+            query_top_k_max: 20,
+            rrf_k: 60,
+            retention_focus_days: 30,
+            retention_health_raw_days: 7,
+            retention_health_rollup_days: 30,
+            retention_media_days: 14,
+            retention_voice_days: 90,
+            retention_web_days: 30,
+            retention_nudge_days: 90,
+            backup_interval_h: 6,
+            backup_keep: 8,
+            spool_dir: PathBuf::from("/var/spool/neuroos-fetcher"),
+            spool_max_bytes: 256 * 1024,
+            spool_poll_s: 2,
+            embedding_dir: PathBuf::new(),
+            onnxruntime_lib: PathBuf::new(),
+        }
+    }
+}
+
+impl StorageConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        let nonzero = [
+            ("storage.chunk_cap", self.chunk_cap as u64),
+            ("storage.reader_pool", self.reader_pool as u64),
+            ("storage.write_queue", self.write_queue as u64),
+            ("storage.ingest_batch", self.ingest_batch as u64),
+            ("storage.ingest_flush_ms", self.ingest_flush_ms),
+            (
+                "storage.promote_min_occurrences",
+                u64::from(self.promote_min_occurrences),
+            ),
+            ("storage.scan_threads", self.scan_threads as u64),
+            ("storage.query_candidates", self.query_candidates as u64),
+            ("storage.query_top_k_max", u64::from(self.query_top_k_max)),
+            ("storage.rrf_k", u64::from(self.rrf_k)),
+            (
+                "storage.backup_interval_h",
+                u64::from(self.backup_interval_h),
+            ),
+            ("storage.backup_keep", self.backup_keep as u64),
+            ("storage.spool_max_bytes", self.spool_max_bytes),
+            ("storage.spool_poll_s", self.spool_poll_s),
+            (
+                "storage.retention_focus_days",
+                u64::from(self.retention_focus_days),
+            ),
+            (
+                "storage.retention_health_raw_days",
+                u64::from(self.retention_health_raw_days),
+            ),
+            (
+                "storage.retention_health_rollup_days",
+                u64::from(self.retention_health_rollup_days),
+            ),
+            (
+                "storage.retention_media_days",
+                u64::from(self.retention_media_days),
+            ),
+            (
+                "storage.retention_voice_days",
+                u64::from(self.retention_voice_days),
+            ),
+            (
+                "storage.retention_web_days",
+                u64::from(self.retention_web_days),
+            ),
+            (
+                "storage.retention_nudge_days",
+                u64::from(self.retention_nudge_days),
+            ),
+        ];
+        for (key, v) in nonzero {
+            if v == 0 {
+                return Err(ConfigError::Invalid {
+                    key,
+                    reason: "must be greater than zero",
+                });
+            }
+        }
+        if self.chunk_cap > 1_000_000 {
+            return Err(ConfigError::Invalid {
+                key: "storage.chunk_cap",
+                reason: "must not exceed 1,000,000",
+            });
+        }
+        if self.reader_pool > 64 || self.scan_threads > 64 {
+            return Err(ConfigError::Invalid {
+                key: "storage.reader_pool",
+                reason: "reader_pool and scan_threads must not exceed 64",
+            });
+        }
+        for p in [&self.spool_dir, &self.embedding_dir, &self.onnxruntime_lib] {
+            let bad = !p.as_os_str().is_empty()
+                && (!p.is_absolute()
+                    || p.components()
+                        .any(|c| matches!(c, std::path::Component::ParentDir)));
+            if bad {
+                return Err(ConfigError::Invalid {
+                    key: "storage.spool_dir",
+                    reason: "paths must be absolute and must not contain '..'",
+                });
+            }
+        }
+        if self.own_app_prefixes.iter().any(String::is_empty) {
+            return Err(ConfigError::Invalid {
+                key: "storage.own_app_prefixes",
+                reason: "an empty prefix would match every window",
+            });
+        }
+        Ok(())
+    }
+}
+
 impl Config {
     /// Parses and validates config text.
     ///
@@ -308,6 +538,7 @@ impl Config {
 
     fn validate(&self) -> Result<(), ConfigError> {
         self.monitor.validate()?;
+        self.storage.validate()?;
         let frame = self.ipc.max_frame_bytes;
         if frame == 0 || frame > FRAME_BYTES_CEILING {
             return Err(ConfigError::Invalid {
@@ -409,6 +640,41 @@ mod tests {
         }
         let ok = "[[monitor.folders]]\npath = \"/home/u/Notes\"\nkind = \"notes\"\n";
         assert_eq!(Config::from_toml_str(ok).unwrap().monitor.folders.len(), 1);
+    }
+
+    #[test]
+    fn storage_defaults_are_the_prd_values_and_bad_values_are_refused() {
+        let s = Config::default().storage;
+        assert_eq!(
+            (s.chunk_cap, s.backup_keep, s.backup_interval_h),
+            (30_000, 8, 6)
+        );
+        assert_eq!((s.promote_min_occurrences, s.promote_min_dwell_s), (3, 5));
+        assert_eq!(
+            (s.retention_focus_days, s.retention_health_raw_days),
+            (30, 7)
+        );
+        assert_eq!(
+            (
+                s.retention_media_days,
+                s.retention_voice_days,
+                s.retention_web_days
+            ),
+            (14, 90, 30)
+        );
+        for bad in [
+            "[storage]\nchunk_cap = 0\n",
+            "[storage]\nchunk_cap = 5000000\n",
+            "[storage]\nreader_pool = 100\n",
+            "[storage]\nbackup_keep = 0\n",
+            "[storage]\nnonsense = 1\n",
+            "[storage]\nspool_dir = \"relative/dir\"\n",
+            "[storage]\nspool_dir = \"/a/../b\"\n",
+            "[storage]\nown_app_prefixes = [\"\"]\n",
+        ] {
+            assert!(Config::from_toml_str(bad).is_err(), "accepted: {bad}");
+        }
+        assert!(Config::from_toml_str("[storage]\nchunk_cap = 100\n").is_ok());
     }
 
     #[test]

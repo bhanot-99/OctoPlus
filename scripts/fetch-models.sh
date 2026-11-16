@@ -53,7 +53,7 @@ extra = set(data) - allowed
 if extra:
     sys.exit(f"manifest: unknown top-level keys {sorted(extra)}")
 need = ["id", "role", "file", "url", "sha256", "size_bytes", "license"]
-roles = {"llm", "embedding", "stt", "tts", "wake", "vad"}
+roles = {"llm", "embedding", "stt", "tts", "wake", "vad", "runtime"}
 seen = set()
 for m in data.get("model", []):
     missing = [k for k in need if k not in m]
