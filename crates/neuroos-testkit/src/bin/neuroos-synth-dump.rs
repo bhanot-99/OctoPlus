@@ -231,6 +231,20 @@ fn video(at: u64, rng: &mut Rng, out: &mut Vec<MonitorEvent>) -> u64 {
     t + 10 * SEC
 }
 
+/// Alt-tabbing through many windows for a second each: the noise the promotion gate exists for.
+fn flicker(at: u64, rng: &mut Rng, out: &mut Vec<MonitorEvent>) -> u64 {
+    let mut t = at;
+    for i in 0..45 {
+        out.push(focus(
+            t,
+            &format!("com.example.popup{}", rng.below(1000) + i * 1000),
+            ph(rng, 500),
+        ));
+        t += (1 + rng.below(2)) * SEC;
+    }
+    t
+}
+
 fn dialogs(at: u64, out: &mut Vec<MonitorEvent>) {
     out.push(focus(at, "org.neuroos.Confirm", "t_ownwindow0001".into()));
     out.push(tree(at + 2 * SEC, "neuroos-confirm", &["gtk-helper"], 0));
@@ -281,7 +295,7 @@ fn main() -> Result<()> {
     // at random. `block` runs one situation starting at `t` and returns when it ends.
     let mut block = 0u64;
     while t < end {
-        let pick = if block < 10 { block } else { rng.below(10) };
+        let pick = if block < 11 { block } else { rng.below(11) };
         block += 1;
         match pick {
             0 | 1 => {
@@ -307,6 +321,7 @@ fn main() -> Result<()> {
                 folders(t, &mut rng, &mut events);
                 t += 60 * SEC;
             }
+            10 => t = flicker(t, &mut rng, &mut events),
             _ => {
                 // Away from the computer: 2 to 15 minutes.
                 events.push(ev(t + 60 * SEC, Event::Idle(IdleChanged { idle: true })));

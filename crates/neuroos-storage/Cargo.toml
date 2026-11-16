@@ -27,7 +27,12 @@ thiserror.workspace = true
 tracing.workspace = true
 tokio = { workspace = true, features = ["sync", "time", "macros", "rt"] }
 
+[features]
+# Test helpers (a handler without per-message unit checks); never in the shipped binary.
+test-support = []
+
 [dev-dependencies]
+neuroos-storage = { path = ".", features = ["test-support"] }
 neuroos-health = { path = "../neuroos-health", features = ["test-support"] }
 proptest.workspace = true
 tempfile.workspace = true

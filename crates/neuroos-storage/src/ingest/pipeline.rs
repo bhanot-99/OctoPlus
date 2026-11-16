@@ -47,6 +47,18 @@ impl Store {
     /// [`DbError::DiskFull`] when the disk is full (the caller pauses and retries), or any other
     /// [`DbError`]. An embedding failure is not an error: the text is stored without a vector.
     pub async fn ingest(self: &Arc<Self>, outputs: Vec<Output>) -> Result<IngestStats, DbError> {
+        self.ingest_from(outputs, SOURCE).await
+    }
+
+    /// As [`Store::ingest`], tagging the stored chunks with where they came from (`c1`, `c7`).
+    ///
+    /// # Errors
+    /// As [`Store::ingest`].
+    pub async fn ingest_from(
+        self: &Arc<Self>,
+        outputs: Vec<Output>,
+        source: &'static str,
+    ) -> Result<IngestStats, DbError> {
         let mut stats = IngestStats::default();
         for o in &outputs {
             match o {
@@ -83,7 +95,7 @@ impl Store {
         self.db
             .writer()
             .exec(move |c| {
-                let mut ops = apply_batch(c, &prepared, SOURCE)?;
+                let mut ops = apply_batch(c, &prepared, source)?;
                 ops.extend(trim_to_cap(c, cap)?);
                 Ok(ops)
             })
