@@ -303,6 +303,11 @@ fn generate_user_service_internal(
     out.push_str("MemoryDenyWriteExecute=true\n");
     out.push_str("SystemCallArchitectures=native\n");
     out.push_str("SystemCallFilter=@system-service landlock_create_ruleset landlock_add_rule landlock_restrict_self\n");
+    if part == Part::Kernel {
+        // Skill children install their own, narrower seccomp filter (ADR-0010
+        // decision 2). Adding a filter can only take syscalls away, never give them.
+        out.push_str("SystemCallFilter=seccomp\n");
+    }
     out.push_str("CapabilityBoundingSet=\n");
     out.push_str("AmbientCapabilities=\n");
     out.push_str("LimitCORE=0\n");

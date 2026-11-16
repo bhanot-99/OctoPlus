@@ -546,6 +546,7 @@ fn kernel_paths_per_adr_0010() {
         "BindPaths=-%t/at-spi",
         "BindPaths=-%h/.cache",
         "BindPaths=-%h/.local/share/Trash",
+        "SystemCallFilter=seccomp",
     ] {
         assert!(
             kernel.lines().any(|l| l == line),
@@ -564,6 +565,7 @@ fn kernel_paths_per_adr_0010() {
             "Trash",
             "%t/bus",
             "wayland",
+            "SystemCallFilter=seccomp",
         ] {
             assert!(
                 !f.content.contains(secret),

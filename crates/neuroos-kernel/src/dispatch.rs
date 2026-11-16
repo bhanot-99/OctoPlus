@@ -581,7 +581,9 @@ impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
             .env("GSK_RENDERER", "cairo")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
+            // Inherited: goes to C6's journal (codes only, no user content). Not /dev/null,
+            // which C6's Landlock policy does not grant.
+            .stderr(Stdio::inherit())
             .kill_on_drop(true);
         let mut child = cmd.spawn().ok()?;
         let mut stdin = child.stdin.take()?;
@@ -667,10 +669,12 @@ impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
             .env_clear()
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
+            // Inherited: goes to C6's journal (codes only, no user content). Not /dev/null,
+            // which C6's Landlock policy does not grant.
+            .stderr(Stdio::inherit())
             .kill_on_drop(true)
             .spawn()
-            .map_err(|_| "spawn".to_owned())?;
+            .map_err(|e| format!("spawn errno {}", e.raw_os_error().unwrap_or(0)))?;
         let mut stdin = child.stdin.take().ok_or("stdin")?;
         stdin
             .write_all(canonical.as_bytes())
