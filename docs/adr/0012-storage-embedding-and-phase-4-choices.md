@@ -17,6 +17,14 @@ The ten decisions in `docs/plans/phase-04-storage-plan.md` §1 stand as this ADR
 
 Pinned: `bge-small-en-v1.5` (MIT; repo commit `5c38ec7c…`, ONNX sha256 `828e1496…` equals the repo's LFS oid), its `tokenizer.json`, and `onnxruntime-linux-x64-1.31.1` (MIT, sha256 `c849e36a…`).
 
+### Additions made while building (Claude, 2026-11-17, same go-ahead)
+
+- **Item 11, deadlines:** `deadlines.storage_job_ms` (default 120 s) is the storage socket's server deadline; the 150 ms query deadline of PRD §6.1 is enforced inside the handler on queries only, so forget, purge and backups are not cut short.
+- **Item 12, stale vectors:** a vector from another model is not comparable with a query embedded now, so it is not kept in the matrix; text search covers those chunks until they are re-embedded (this refines Architecture §7.5's "queries keep using old vectors").
+- **Item 13, budget:** measured process RSS with the real model and the full 30,000-chunk cap is 309 MiB (about 234 MiB of it before any data), so the C3 budget becomes 320 MiB and `MemoryMax` 400 MiB; the total stays within the 4,000 MiB limit (3,875 MiB).
+- **Item 14, writer:** matrix changes are applied before a write is acknowledged (found by a flaky test: a query right after an ingest could miss its vectors).
+- **Item 15, ONNX Runtime** is loaded before Landlock.
+
 ## Consequences
 
 - C3 loads about 130 MB of weights on top of the vector matrix, so its RSS rises above the Phase 1 estimate; the real number goes into PRD §6.2 and may raise `MemoryMax` (decision 10).

@@ -378,6 +378,17 @@ WAL mode, `synchronous=NORMAL`, `auto_vacuum=INCREMENTAL`, foreign keys on.
 - The cap on live chunks (PRD §6.2) bounds both memory and scan time. There is no approximate index in v1.0; spike S-01 proves the scan meets NFR-PERF-04.
 - If a future corpus outgrows the cap, the options, in order, are: tighter retention, 8-bit vectors, then an approximate index. Each needs an ADR.
 
+**As built (Phase 4, ADR-0012).**
+
+- *Ingest.* C3 subscribes to C1's stream; a pure filter turns events into items (stage 1 folds a process tree to its root and marks a build; stage 2 drops NeuroOS's own windows; stage 3 promotes after the configured occurrences or active dwell, idle time not counted; stage 4 stores media only if its player was focused within the interaction window). Promoted items become an entity plus a chunk with a fixed-template text; the same (entity, text) is one chunk and taint is unioned in SQL. Focus segments go to `focus_history`, samples to `health_samples`, promotion counters to `event_counters` so a restart keeps its progress. A batch is one writer job: rows, text index and matrix change together, and the matrix is updated *before* the write is acknowledged.
+- *Stale vectors.* The matrix holds only vectors made by the current model. Chunks from another model (or with no vector because embedding failed) stay searchable by text, are flagged `STALE_INDEX` in results, and are re-embedded in the background; each joins the matrix as it is finished.
+- *Deadlines.* The handler enforces the 150 ms query deadline on queries; the socket itself allows `deadlines.storage_job_ms` for forget, purge and lifecycle jobs.
+- *Peer checks per message.* Forget, personal facts and purge only from the kernel unit; turn summaries and the nudge log only from the knowledge unit; lifecycle jobs from anyone the socket admits except the knowledge part (purge: kernel only).
+- *Forget.* One transaction removes chunks (and with them text-index entries and vectors), history, counters, and, for a time range without an app, health samples and nudge-log rows; deleted content is overwritten (`secure_delete`), the text index is merged, and every existing backup is scrubbed the same way at once. Personal facts have their own remove.
+- *Spool format v1* (what C7 must write): one UTF-8 JSON object `{"version":1,"url","title","fetched_at_ns","text"}` in a file named `[A-Za-z0-9._-]{1,128}.json`, a regular file no larger than the configured limit, no other keys. C3 forces `EXTERNAL_UNTRUSTED`, stores the text in chunks of at most 1,200 characters, and deletes every file it looks at, accepted or not.
+- *Jobs.* `neuroos-storage-{gc,backup,rollup}.timer` run one-shot units that call `neuroosctl storage job <name>`; a backup is `VACUUM INTO` a temporary folder, fsync, atomic rename, keep the newest 8.
+- *Embedding.* ONNX Runtime is loaded before the Landlock sandbox is applied (its system libraries cannot be opened afterwards); the model's SHA-256 is checked against the pinned value at load.
+
 ### 7.3 Domains
 
 | # | Domain | Source | Default taint |
