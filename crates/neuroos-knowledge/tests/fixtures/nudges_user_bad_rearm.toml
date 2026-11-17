@@ -1,0 +1,3 @@
+[rule.disk_nearly_full]
+fire_at = 80
+rearm = 85

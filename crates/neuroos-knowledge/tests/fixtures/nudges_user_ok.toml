@@ -1,0 +1,10 @@
+[rule.battery_low]
+fire_at = 10
+rearm = 18
+
+[rule.custom_session]
+signal = "session.active_minutes"
+fire_at = 45
+rearm = 10
+priority = "info"
+template = "session.long"
