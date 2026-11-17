@@ -175,10 +175,12 @@ TEST(TurnMachineTest, BargeInInAwaitingAnswer) {
   t += 500'000'000;
   const auto acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechStarted, .now_ns = t});
   EXPECT_EQ(tm.state(), TurnState::kCapturing);
-  ASSERT_EQ(acts.size(), 3U);
-  EXPECT_EQ(acts[0], (TurnAction{.kind = TurnActionKind::kCancelReply}));
-  EXPECT_EQ(acts[1], (TurnAction{.kind = TurnActionKind::kSendBargeIn}));
-  EXPECT_EQ(acts[2], (TurnAction{.kind = TurnActionKind::kBeginUtterance, .with_backlog = true}));
+  // The output is flushed too: a preamble or first sentence may already be queued (review F2).
+  ASSERT_EQ(acts.size(), 4U);
+  EXPECT_EQ(acts[0], (TurnAction{.kind = TurnActionKind::kFlushOutput}));
+  EXPECT_EQ(acts[1], (TurnAction{.kind = TurnActionKind::kCancelReply}));
+  EXPECT_EQ(acts[2], (TurnAction{.kind = TurnActionKind::kSendBargeIn}));
+  EXPECT_EQ(acts[3], (TurnAction{.kind = TurnActionKind::kBeginUtterance, .with_backlog = true}));
 }
 
 TEST(TurnMachineTest, WakeWordDuringFollowUpIsNotFollowUp) {

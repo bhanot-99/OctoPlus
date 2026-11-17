@@ -31,16 +31,21 @@ std::uint64_t WallNs() {
 class RestartingTts final : public Tts {
  public:
   RestartingTts(std::unique_ptr<Tts> engine, KokoroPaths paths)
-      : engine_(std::move(engine)), paths_(std::move(paths)) {}
-  [[nodiscard]] int sample_rate() const override { return engine_->sample_rate(); }
+      : rate_(engine->sample_rate()), engine_(std::move(engine)), paths_(std::move(paths)) {}
+  [[nodiscard]] int sample_rate() const override { return rate_; }
   Result<std::vector<std::int16_t>> Synthesize(std::string_view text) override {
-    auto r = engine_->Synthesize(text);
-    if (r.ok()) {
-      return r;
+    if (engine_) {
+      auto r = engine_->Synthesize(text);
+      if (r.ok()) {
+        return r;
+      }
+      // Free the failed engine BEFORE building the next: two Kokoro sessions at once would
+      // double the model memory and risk the unit's memory limit (the review's F4).
+      engine_.reset();
     }
     auto fresh = MakeKokoroTts(paths_);
     if (!fresh.ok()) {
-      return r;
+      return fresh.error();  // no engine now; the next call tries again
     }
     engine_ = std::move(fresh).value();
     ++restarts_;
@@ -49,6 +54,7 @@ class RestartingTts final : public Tts {
   [[nodiscard]] int restarts() const { return restarts_; }
 
  private:
+  int rate_;
   std::unique_ptr<Tts> engine_;
   KokoroPaths paths_;
   int restarts_ = 0;
@@ -70,7 +76,10 @@ class RealRuntime final : public VoiceRuntime {
     }
   }
 
-  // Owned in this order so the pipeline is destroyed before what it points at.
+  // Members are destroyed in reverse order of declaration, so the order here is the shutdown
+  // order: the executors (their worker threads are joined, pending jobs dropped) and the link
+  // first, then the pipeline they call into, then the engines and devices it points at (the
+  // review's F1: a job running on a worker must never meet a destroyed pipeline).
   std::unique_ptr<AudioSource> source;
   std::unique_ptr<AudioSink> sink;
   std::unique_ptr<MicBusyProbe> probe;
@@ -78,10 +87,10 @@ class RealRuntime final : public VoiceRuntime {
   std::unique_ptr<WakeWord> wake;
   std::unique_ptr<Stt> stt;
   std::unique_ptr<Tts> tts;
+  std::unique_ptr<VoicePipeline> pipeline_;
   std::unique_ptr<KnowledgeLink> link;
   std::unique_ptr<ThreadExecutor> stt_exec;
   std::unique_ptr<ThreadExecutor> tts_exec;
-  std::unique_ptr<VoicePipeline> pipeline_;
 };
 
 Error Fail(const std::string& what) {

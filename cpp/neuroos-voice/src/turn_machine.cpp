@@ -149,7 +149,11 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
         state_entered_ns_ = e.now_ns;
         speech_started_in_capture_ = true;
         utterance_is_follow_up_ = false;
+        // A preamble or a first sentence may already be queued with the current epoch: flush
+        // so that nothing of the old reply is spoken over the user (the review's F2).
         return {
+            TurnAction{
+                .kind = TurnActionKind::kFlushOutput, .with_backlog = false, .in_follow_up = false},
             TurnAction{
                 .kind = TurnActionKind::kCancelReply, .with_backlog = false, .in_follow_up = false},
             TurnAction{

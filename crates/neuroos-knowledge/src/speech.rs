@@ -6,6 +6,9 @@
 /// Longest piece sent to C2 in one frame (C2 may split further for the speech engine).
 pub const MAX_PIECE_CHARS: usize = 220;
 
+/// Most text kept while waiting for a sentence to end.
+const MAX_BUFFERED_BYTES: usize = 4096;
+
 const ABBREVIATIONS: &[&str] = &[
     "dr", "mr", "mrs", "ms", "prof", "st", "vs", "e.g", "i.e", "etc",
 ];
@@ -194,11 +197,25 @@ impl SentenceStream {
         } else {
             cleaned
         };
-        let (done, rest) = split_complete(&work);
-        self.buf = format!("{rest}{pending}");
-        done.into_iter()
+        let (done, mut rest) = split_complete(&work);
+        let mut out: Vec<String> = done
+            .into_iter()
             .flat_map(|p| cap(p, MAX_PIECE_CHARS))
-            .collect()
+            .collect();
+        // A model that never ends a sentence must not grow this buffer without bound: past the
+        // cap, what is waiting is spoken as pieces (cut at a space) instead (review F5).
+        if rest.len() > MAX_BUFFERED_BYTES {
+            out.extend(cap(std::mem::take(&mut rest), MAX_PIECE_CHARS));
+        }
+        // The same for an unclosed code fence: the fence and what follows it are dropped once
+        // they are longer than the cap, so the buffer stays small.
+        let pending = if pending.len() > MAX_BUFFERED_BYTES {
+            String::new()
+        } else {
+            pending
+        };
+        self.buf = format!("{rest}{pending}");
+        out
     }
 
     /// The final unfinished piece, if any, and empties the stream.
@@ -273,6 +290,27 @@ mod tests {
             got,
             vec!["Caf\u{e9} \u{65e5}\u{672c}\u{8a9e} is fine.", "Next."]
         );
+    }
+
+    #[test]
+    fn a_stream_that_never_ends_a_sentence_has_a_bounded_buffer() {
+        let mut s = SentenceStream::new();
+        let mut spoken = 0;
+        for _ in 0..2000 {
+            spoken += s.feed("word word word word ").len();
+        }
+        assert!(s.buf.len() <= MAX_BUFFERED_BYTES + 64, "{}", s.buf.len());
+        assert!(
+            spoken > 100,
+            "it was spoken in pieces, not held back: {spoken}"
+        );
+        // And an unclosed code fence does not hold the buffer either.
+        let mut f = SentenceStream::new();
+        f.feed("```");
+        for _ in 0..2000 {
+            f.feed("let x = 1; ");
+        }
+        assert!(f.buf.len() <= MAX_BUFFERED_BYTES + 64, "{}", f.buf.len());
     }
 
     #[test]

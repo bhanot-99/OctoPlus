@@ -375,6 +375,31 @@ TEST(VoicePipeline, ANudgeIsRefusedWhileATurnIsInProgress) {
   EXPECT_TRUE(s.error().retryable);
 }
 
+TEST(VoicePipeline, ANudgeIsRefusedWhileAnotherAppHoldsTheMicrophone) {
+  Rig r;
+  r.probe.busy = true;
+  const NudgeArg a{"percent", 92.0};
+  const auto s = r.p->SpeakNudge("disk.nearly_full", std::span<const NudgeArg>(&a, 1));
+  EXPECT_FALSE(s.ok());
+  EXPECT_TRUE(s.error().retryable);
+  r.Settle();
+  EXPECT_TRUE(r.tts.spoken.empty());
+  r.probe.busy = false;
+  EXPECT_TRUE(r.p->SpeakNudge("disk.nearly_full", std::span<const NudgeArg>(&a, 1)).ok());
+}
+
+TEST(VoicePipeline, ABargeInWhileAwaitingTheAnswerDropsWhatWasAlreadyQueued) {
+  Rig r;
+  r.AskByVoice();
+  r.link.receiver->OnSpeak("Queued before the user interrupted.");
+  // The synthesis job is queued but has not run: the machine is still awaiting the answer.
+  ASSERT_TRUE(r.p->status().turn_in_progress);
+  r.Frames(1000, 3);  // the user speaks over it
+  r.Settle();
+  EXPECT_TRUE(r.sink.writes.empty()) << "nothing of the old reply is spoken (review F2)";
+  EXPECT_EQ(r.link.cancels.load(), 1);
+}
+
 TEST(VoicePipeline, ABadNudgeTemplateOrArgumentsIsRefusedAndNothingIsSpoken) {
   Rig r;
   const NudgeArg wrong{"free_gib", 4.0};

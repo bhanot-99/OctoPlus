@@ -228,7 +228,6 @@ class VoicePipeline final : public ReplyReceiver {
   std::uint64_t capture_wall_start_ns_ = 0;
   std::string pending_text_;
   bool pending_follow_up_ = false;
-  bool began_from_follow_up_ = false;
   bool capture_after_wake_ = false;  // the utterance began at a wake word
 
   bool reply_audio_started_ = false;

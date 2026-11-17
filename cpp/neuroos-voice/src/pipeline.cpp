@@ -656,6 +656,13 @@ Status VoicePipeline::SpeakNudge(std::string_view template_id, std::span<const N
     if (machine_.turn_in_progress()) {
       return Error{.message = "a turn is in progress", .retryable = true, .code = 11};
     }
+    // Whoever asks (C5's policy, or the owner's `nudges test --voice`), never over another
+    // application's use of the microphone, a likely call (FR-VOI-10; the review's F3).
+    if (d_.mic_probe != nullptr && d_.mic_probe->OtherAppCapturing()) {
+      return Error{.message = "the microphone is in use by another application",
+                   .retryable = true,
+                   .code = 11};
+    }
     epoch = ++epoch_;
     reply_audio_started_ = false;
   }

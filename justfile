@@ -32,6 +32,7 @@ cpp-configure preset=cpp_preset:
 build: preflight (cpp-configure cpp_preset)
     cargo build --workspace --all-targets --locked
     cd cpp && cmake --build --preset {{cpp_preset}} --parallel
+    scripts/build-voice.sh
 
 # Linters: clippy, clang-format, clang-tidy, shellcheck, unused deps (NFR-QA-02).
 lint: build
