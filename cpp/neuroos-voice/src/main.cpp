@@ -63,9 +63,10 @@ int main(int argc, char* argv[]) {
   if (std::filesystem::exists("/proc")) {
     sandbox_policy.read_only.emplace_back("/proc");
   }
-  // Audio and speech (Phase 7): the voice models, the install folder (shared libraries), the
-  // system libraries PipeWire and espeak-ng load plugins and data from, and the audio server's
-  // own socket. Nothing else, and nothing writable apart from sockets (no audio file, FR-VOI-01).
+  // Audio and speech (Phase 7): the voice models only (not the install folder: the landlock canary
+  // lives there, SC proof 3), the system libraries PipeWire and espeak-ng load plugins and data
+  // from, and the audio server's own socket. Nothing else, and nothing writable apart from sockets
+  // (no audio file, FR-VOI-01).
   const auto add_ro = [&](const std::filesystem::path& p) {
     if (!p.empty() && std::filesystem::exists(p)) {
       sandbox_policy.read_only.push_back(p);
@@ -73,8 +74,6 @@ int main(int argc, char* argv[]) {
   };
   if (!cfg.models_dir.empty()) {
     add_ro(cfg.models_dir);
-    std::error_code ec;
-    add_ro(std::filesystem::canonical("/proc/self/exe", ec).parent_path().parent_path());
     add_ro("/usr/lib/x86_64-linux-gnu");
     add_ro("/usr/share/pipewire");
     add_ro("/usr/share/espeak-ng-data");
