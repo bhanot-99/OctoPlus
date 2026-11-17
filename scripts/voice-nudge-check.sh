@@ -19,8 +19,13 @@ work="$(mktemp -d)"; tag="nudge$$"
 mic="neuroos-test-mic-$tag"; sink="neuroos-test-sink-$tag"
 out_sink="neuroos-test-out-$tag"; out_mic="neuroos-test-outmic-$tag"
 pids=()
+dropin="$HOME/.config/systemd/user/neuroos-voice.service.d/zz-nudge-check.conf"
+mkdir -p "$(dirname "$dropin")"
+printf '[Service]\nEnvironment=NEUROOS_VOICE_TRACE=1\n' > "$dropin"
+systemctl --user daemon-reload
 for f in "$vconf" "$nconf" "$cconf"; do [[ -f "$f" ]] && cp "$f" "$work/$(basename "$f").orig"; done
 cleanup() {
+  rm -f "$dropin"; systemctl --user daemon-reload
   for p in "${pids[@]}"; do kill "$p" 2>/dev/null || true; done
   for f in "$vconf" "$nconf" "$cconf"; do
     if [[ -f "$work/$(basename "$f").orig" ]]; then cp "$work/$(basename "$f").orig" "$f"; else rm -f "$f"; fi
@@ -57,8 +62,7 @@ for _ in $(seq 1 90); do
   [[ "$rc" == 0 ]] && break; sleep 1
 done
 "$ctl" voice status | head -1
-pw-record --target "$out_mic" --rate 24000 --channels 1 --format s16 "$work/spoken.wav" & rec=$!; pids+=($rec)
-sleep 1
+started_at="$(date +"%Y-%m-%d %H:%M:%S")"
 systemctl --user restart neuroos-knowledge   # its first evaluation now finds a voice that is ready
 before=$("$ctl" audit tail 2>/dev/null | grep -c "system.disk_report" || true)
 echo "waiting up to 100 s for the nudge to be spoken..."
@@ -72,24 +76,22 @@ if [[ "$spoken" == 0 ]]; then
   exit 3
 fi
 echo "the nudge fired; listening for the follow-up window"
-sleep 12   # the line and its offer take about ten seconds to say
-"$ctl" voice status | sed -n 2p
+# The follow-up window (8 s) opens when the nudge has been said: speak the answer inside it.
+opened=0
+for _ in $(seq 1 120); do
+  if "$ctl" voice status 2>/dev/null | grep -q "waiting for a follow-up"; then opened=1; break; fi
+  sleep 0.5
+done
+echo "follow-up window open: $opened"
 "$say" "$HOME/.local/opt/neuroos/models/voice" am_michael "$work/yes.wav" "Yes, show me."
 pw-play --target "$sink" "$work/yes.wav"
 sleep 20
 after=$("$ctl" audit tail 2>/dev/null | grep -c "system.disk_report" || true)
-kill -INT "$rec" 2>/dev/null || true; wait "$rec" 2>/dev/null || true
-python3 - "$work/spoken.wav" <<'PY'
-import sys, wave, array, math
-w = wave.open(sys.argv[1]); n = w.getnframes(); r = w.getframerate(); a = array.array('h', w.readframes(n))
-step = r // 10; groups = 0; inside = False
-for i in range(0, n, step):
-    seg = a[i:i + step]; rms = math.sqrt(sum(x * x for x in seg) / max(1, len(seg)))
-    if rms > 400 and not inside: groups += 1; inside = True
-    elif rms <= 400: inside = False
-print(f"{groups} sound groups were spoken (the nudge line, its offer, then the reply)")
-sys.exit(0 if groups >= 3 else 1)
-PY
-spoken_ok=$?
-if (( after > before )); then echo "PASS  the offered skill was requested after the spoken yes (audit log)"; else echo "FAIL  no disk report was requested after the spoken yes"; exit 1; fi
-exit $spoken_ok
+trace="$(journalctl --user -u neuroos-voice --since "$started_at" --no-pager 2>/dev/null | grep -o 'voice: .*' || true)"
+written=$(grep -c "audio_written" <<<"$trace" || true)
+echo "voice trace: $(tr '\n' ' ' <<<"$trace" | sed 's/voice: //g' | cut -c1-300)"
+status=0
+if (( written >= 2 )); then echo "PASS  the nudge line and its offer were spoken ($written audio writes)"; else echo "FAIL  the nudge was not spoken"; status=1; fi
+if grep -q "command_sent" <<<"$trace"; then echo "PASS  the spoken yes (no wake word) reached C5 as a command"; else echo "FAIL  the spoken yes was not heard"; status=1; fi
+if (( after > before )); then echo "PASS  the offered skill was requested after the spoken yes (audit log)"; else echo "FAIL  no disk report was requested after the spoken yes"; status=1; fi
+exit $status

@@ -457,9 +457,9 @@ impl NudgeHandle {
 
     /// Asks C2 about the moment; unavailable voice when C2 is not reachable.
     pub async fn voice_view(&self) -> VoiceView {
-        if !self.peers.voice.is_connected() {
-            return VoiceView::default();
-        }
+        // No `is_connected` shortcut: the first evaluation after a start would otherwise find a
+        // link that has not been dialled yet and show a nudge that could have been spoken. The
+        // client fails fast (and backs off) when C2 is not there.
         match self
             .peers
             .voice
@@ -477,9 +477,6 @@ impl NudgeHandle {
     /// Speaks a nudge through C2 from a template id and numbers (FR-VOI-11, R0-6); false if C2
     /// cannot take it, in which case the caller shows a notification instead.
     pub async fn speak(&self, rule_id: &str, template: &str, args: &[(String, f64)]) -> bool {
-        if !self.peers.voice.is_connected() {
-            return false;
-        }
         let body = Body::SpeakNudge(neuroos_proto::v1::SpeakNudge {
             rule_id: rule_id.to_string(),
             template_id: template.to_string(),
