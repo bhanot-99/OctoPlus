@@ -41,6 +41,38 @@ if(NEUROOS_WITH_LLAMA)
   add_subdirectory(third_party/llama.cpp SYSTEM EXCLUDE_FROM_ALL)
 endif()
 
+# Real engines for C2 (Phase 7): ONNX Runtime, whisper.cpp, PipeWire, espeak-ng. whisper.cpp and
+# llama.cpp each bundle their own ggml, so the two are never built in one tree: the `voice`
+# presets build C2 with the engines, the other presets build C4 with llama.cpp.
+option(NEUROOS_WITH_VOICE_ENGINES "Build C2 with its real engines" OFF)
+if(NEUROOS_WITH_VOICE_ENGINES)
+  if(NEUROOS_WITH_LLAMA)
+    message(FATAL_ERROR "NEUROOS_WITH_VOICE_ENGINES and NEUROOS_WITH_LLAMA bundle two ggml copies; use the voice presets")
+  endif()
+  set(WHISPER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+  set(WHISPER_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+  set(WHISPER_BUILD_SERVER OFF CACHE BOOL "" FORCE)
+  set(GGML_NATIVE ON CACHE BOOL "" FORCE)
+  set(GGML_VULKAN OFF CACHE BOOL "" FORCE)
+  add_subdirectory(third_party/whisper.cpp SYSTEM EXCLUDE_FROM_ALL)
+
+  # ONNX Runtime: the pinned release from models/runtime (unpacked by install-dev.sh and by hand).
+  set(NEUROOS_ORT_DIR "${CMAKE_SOURCE_DIR}/../models/runtime/onnxruntime-linux-x64-1.31.1"
+      CACHE PATH "Unpacked ONNX Runtime release")
+  if(NOT EXISTS "${NEUROOS_ORT_DIR}/include/onnxruntime_cxx_api.h")
+    message(FATAL_ERROR "ONNX Runtime not found in ${NEUROOS_ORT_DIR}: run `tar xzf models/runtime/onnxruntime-linux-x64-1.31.1.tgz -C models/runtime`")
+  endif()
+  add_library(onnxruntime SHARED IMPORTED)
+  set_target_properties(onnxruntime PROPERTIES
+    IMPORTED_LOCATION "${NEUROOS_ORT_DIR}/lib/libonnxruntime.so.1.31.1"
+    IMPORTED_SONAME "libonnxruntime.so.1")
+  target_include_directories(onnxruntime INTERFACE "${NEUROOS_ORT_DIR}/include")
+
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(PIPEWIRE REQUIRED IMPORTED_TARGET libpipewire-0.3)
+  pkg_check_modules(ESPEAK REQUIRED IMPORTED_TARGET espeak-ng)
+endif()
+
 add_subdirectory(proto)
 add_subdirectory(libneuroos)
 add_subdirectory(neuroos-inference)

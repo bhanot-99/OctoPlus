@@ -30,6 +30,9 @@ class AudioSource {
   virtual Status Start(FrameCallback on_audio) = 0;
   virtual void Stop() = 0;
   [[nodiscard]] virtual bool running() const = 0;
+  // Called once, from a worker thread, when the device goes away while capturing. A removed
+  // microphone does not look removed by sample flow, so the loss is reported explicitly.
+  virtual void SetOnLost(std::function<void()> /*cb*/) {}
 };
 
 // A speaker. Audio is queued; `Flush` drops everything queued and playing at once (NFR-PERF-08).
