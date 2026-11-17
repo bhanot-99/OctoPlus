@@ -41,8 +41,21 @@ fn print_help() {
 fn write_kernel_dropin(config: &std::path::Path, unit_dir: &std::path::Path) -> Result<()> {
     let cfg = neuroos_common::config::Config::load_from(config)
         .with_context(|| format!("loading {}", config.display()))?;
-    let text = neuroos_deploy::generate_kernel_cleanup_dropin(&cfg.kernel.cleanup_build_folders)
-        .context("building the drop-in")?;
+    use neuroos_common::config::FolderKind;
+    let of_kind = |kind: FolderKind| -> Vec<std::path::PathBuf> {
+        cfg.monitor
+            .folders
+            .iter()
+            .filter(|f| f.kind == kind)
+            .map(|f| f.path.clone())
+            .collect()
+    };
+    let text = neuroos_deploy::generate_kernel_folders_dropin(
+        &cfg.kernel.cleanup_build_folders,
+        &of_kind(FolderKind::Notes),
+        &of_kind(FolderKind::Calendar),
+    )
+    .context("building the drop-in")?;
     let dir = unit_dir.join("neuroos-kernel.service.d");
     std::fs::create_dir_all(&dir).with_context(|| format!("creating {}", dir.display()))?;
     let path = dir.join("cleanup-folders.conf");
