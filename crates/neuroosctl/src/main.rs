@@ -9,6 +9,7 @@ use neuroos_common::paths;
 use neuroosctl::ask::{AskOptions, run_ask};
 use neuroosctl::audit::run_audit;
 use neuroosctl::egress::run_egress;
+use neuroosctl::nudges::run_nudges;
 use neuroosctl::profile::run_profile;
 use neuroosctl::status::run_status;
 use neuroosctl::storage::run_storage;
@@ -62,6 +63,7 @@ async fn main() {
             .await
         }
         Commands::Storage { command } => run_storage(&runtime_root, command, styler).await,
+        Commands::Nudges { command } => run_nudges(&runtime_root, command, styler).await,
         Commands::Profile { command } => run_profile(&runtime_root, command, styler).await,
         Commands::Audit { command } => run_audit(&runtime_root, command, styler).await,
         Commands::Egress { command } => run_egress(&runtime_root, command, styler).await,
