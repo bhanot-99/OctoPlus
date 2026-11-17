@@ -363,6 +363,86 @@ fn forget_args(
     Ok(args)
 }
 
+/// Longest raw result text spoken for the read-only skills.
+const MAX_SPOKEN_RESULT: usize = 400;
+
+/// Fixed sentence for a refused or failed dispatch.
+#[must_use]
+pub const fn speak_not_done(status: DispatchOutcome) -> &'static str {
+    match status {
+        DispatchOutcome::Rejected => "Okay, I won't do that.",
+        DispatchOutcome::Expired => "That timed out, so I didn't do it.",
+        DispatchOutcome::Failed => "That didn't work.",
+    }
+}
+
+/// Why a dispatch did not execute.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DispatchOutcome {
+    /// The user said no (or policy did).
+    Rejected,
+    /// The confirmation timed out.
+    Expired,
+    /// The skill failed.
+    Failed,
+}
+
+/// The sentence for an executed skill. Write skills get a fixed line; read-only skills get
+/// their result flattened to plain words and neutralised, because the result is data the
+/// kernel returned, not our own template (FR-KNO-06).
+#[must_use]
+pub fn speak_result(skill: &str, result_json: &str) -> String {
+    let n = serde_json::from_str::<Value>(result_json)
+        .ok()
+        .and_then(|v| v.get("rows_deleted").and_then(Value::as_u64));
+    match skill {
+        "privacy.pause" => "Okay, I've paused.".to_string(),
+        "profile.remember" => "Okay, I'll remember that.".to_string(),
+        "profile.forget" => "Okay, I've forgotten that.".to_string(),
+        "memory.forget" => n.map_or_else(
+            || "Done, I've forgotten that.".to_string(),
+            |n| format!("Done, I removed {n} items."),
+        ),
+        "notes.append" => "Okay, I added it to your note.".to_string(),
+        _ => {
+            let flat = flatten(result_json);
+            let cut: String = flat.chars().take(MAX_SPOKEN_RESULT).collect();
+            if cut.is_empty() {
+                "Done.".to_string()
+            } else {
+                format!("Here's what I found: {}", crate::sanitize::neutralise(&cut))
+            }
+        }
+    }
+}
+
+/// JSON to plain words: keys and scalars joined with spaces, markup characters dropped.
+fn flatten(json: &str) -> String {
+    fn walk(v: &Value, out: &mut Vec<String>) {
+        match v {
+            Value::String(s) => out.push(s.clone()),
+            Value::Number(n) => out.push(n.to_string()),
+            Value::Bool(b) => out.push(b.to_string()),
+            Value::Array(a) => a.iter().for_each(|x| walk(x, out)),
+            Value::Object(o) => o.iter().for_each(|(k, x)| {
+                out.push(k.replace('_', " "));
+                walk(x, out);
+            }),
+            Value::Null => {}
+        }
+    }
+    let Ok(v) = serde_json::from_str::<Value>(json) else {
+        return String::new();
+    };
+    let mut parts = Vec::new();
+    walk(&v, &mut parts);
+    parts
+        .join(", ")
+        .chars()
+        .filter(|c| !c.is_control() && !matches!(c, '<' | '>' | '*' | '#' | '`'))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

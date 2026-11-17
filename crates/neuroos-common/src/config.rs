@@ -527,8 +527,8 @@ pub struct KnowledgeConfig {
     pub min_score_milli: u32,
     /// A retrieval score (thousandths) at or above which a turn counts as a desktop answer (Architecture §11 step 3).
     pub desktop_route_score_milli: u32,
-    /// Prompt block budgets in tokens (ADR-0005 decision 3).
-    pub persona_tokens: u32,
+    /// Prompt block budgets in tokens (ADR-0005 decision 3). The persona block is a constant,
+    /// cached prefix and is never cut, so it has no budget here.
     /// Personal-facts block.
     pub facts_tokens: u32,
     /// Focus-context block.
@@ -543,6 +543,8 @@ pub struct KnowledgeConfig {
     pub history_turns: u32,
     /// The follow-up window in seconds; history ends when it closes (FR-VOI-08, FR-KNO-09).
     pub followup_window_s: u64,
+    /// The same window for typed turns, which have no spoken answer to wait for (ADR-0013).
+    pub typed_followup_window_s: u64,
     /// Focus-history window, in seconds, either side of the asked-about instant (FR-STO-07).
     pub focus_window_s: u64,
     /// Longest answer asked of C4, in tokens.
@@ -557,7 +559,6 @@ impl Default for KnowledgeConfig {
             evidence_top_k: 5,
             min_score_milli: 0,
             desktop_route_score_milli: 0,
-            persona_tokens: 128,
             facts_tokens: 48,
             focus_tokens: 32,
             history_tokens: 48,
@@ -565,6 +566,7 @@ impl Default for KnowledgeConfig {
             bytes_per_token: 3,
             history_turns: 4,
             followup_window_s: 8,
+            typed_followup_window_s: 120,
             focus_window_s: 30,
             max_answer_tokens: 512,
             max_fact_bytes: 512,
@@ -576,7 +578,6 @@ impl KnowledgeConfig {
     fn validate(&self) -> Result<(), ConfigError> {
         let nonzero = [
             ("knowledge.evidence_top_k", u64::from(self.evidence_top_k)),
-            ("knowledge.persona_tokens", u64::from(self.persona_tokens)),
             ("knowledge.facts_tokens", u64::from(self.facts_tokens)),
             ("knowledge.focus_tokens", u64::from(self.focus_tokens)),
             ("knowledge.history_tokens", u64::from(self.history_tokens)),
@@ -584,6 +585,10 @@ impl KnowledgeConfig {
             ("knowledge.bytes_per_token", u64::from(self.bytes_per_token)),
             ("knowledge.history_turns", u64::from(self.history_turns)),
             ("knowledge.followup_window_s", self.followup_window_s),
+            (
+                "knowledge.typed_followup_window_s",
+                self.typed_followup_window_s,
+            ),
             ("knowledge.focus_window_s", self.focus_window_s),
             (
                 "knowledge.max_answer_tokens",
