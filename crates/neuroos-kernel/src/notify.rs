@@ -87,6 +87,18 @@ pub const TEMPLATES: &[Template] = &[
         args: &[],
     },
     Template {
+        id: "nudge.while_away",
+        title: "While you were away",
+        body: "{count} things needed your attention while you were away or busy.",
+        args: &["count"],
+    },
+    Template {
+        id: "nudge.test",
+        title: "Test nudge",
+        body: "This is a test of the nudge system. Nothing needs attention.",
+        args: &[],
+    },
+    Template {
         id: "cleanup.done",
         title: "Cleanup finished",
         body: "Freed {freed_gib} GiB.",
@@ -357,6 +369,40 @@ mod tests {
         .unwrap();
         assert_eq!(r.title, "Cleanup finished");
         assert_eq!(r.body, "Freed 4.2 GiB.");
+    }
+
+    #[test]
+    fn nudge_templates_render_and_merge_count_is_validated() {
+        let r = render(
+            "nudge.while_away",
+            &[TemplateArg {
+                name: "count".into(),
+                value: 3.0,
+            }],
+        )
+        .unwrap();
+        assert_eq!(r.title, "While you were away");
+        assert_eq!(
+            r.body,
+            "3 things needed your attention while you were away or busy."
+        );
+        let t = render("nudge.test", &[]).unwrap();
+        assert_eq!(t.title, "Test nudge");
+        // Free text can never ride in: the argument is a number and the name must match.
+        assert_eq!(
+            render("nudge.while_away", &[]),
+            Err(NotifyError::BadArguments)
+        );
+        assert_eq!(
+            render(
+                "nudge.while_away",
+                &[TemplateArg {
+                    name: "count".into(),
+                    value: f64::NAN
+                }]
+            ),
+            Err(NotifyError::BadValue)
+        );
     }
 
     #[test]

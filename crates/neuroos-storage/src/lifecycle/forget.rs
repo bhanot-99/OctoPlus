@@ -99,7 +99,8 @@ pub fn apply(c: &Connection, s: &Scope) -> Result<(Forgotten, Vec<i64>), DbError
             params![s.from_ns, s.to_ns],
         )? as u64;
         out.rows += c.execute(
-            "DELETE FROM nudge_log WHERE at_ns BETWEEN ?1 AND ?2",
+            // Switch rows are settings: forgetting a stretch of history does not switch a nudge back on.
+            "DELETE FROM nudge_log WHERE at_ns BETWEEN ?1 AND ?2 AND outcome NOT IN (9, 10)",
             params![s.from_ns, s.to_ns],
         )? as u64;
     }

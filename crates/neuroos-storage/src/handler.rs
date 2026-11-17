@@ -127,6 +127,11 @@ impl Handler for StorageHandler {
                 let facts = self.timed(s.profile_list(r.relevant_to)).await?;
                 Ok(Body::ProfileFacts(ProfileFacts { facts }))
             }
+            Body::QueryNudgeLog(q) => {
+                Ok(Body::NudgeLogEntries(neuroos_proto::v1::NudgeLogEntries {
+                    entries: self.timed(s.nudge_log_since(q.since_ns)).await?,
+                }))
+            }
             Body::StoreInteraction(i) if self.allowed(Who::Knowledge, unit) => {
                 s.store_interaction(i).await.map_err(map_err)?;
                 Ok(Body::Ack(Ack {}))

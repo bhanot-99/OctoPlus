@@ -380,3 +380,77 @@ async fn interactions_and_nudges_are_stored_with_their_taint() {
         .unwrap();
     assert_eq!(n, 1);
 }
+
+/// The nudge engine rebuilds cooldowns, snoozes and switches from this log (ADR-0014).
+#[tokio::test]
+async fn the_nudge_log_fold_keeps_switches_past_retention_and_forget() {
+    use neuroos_proto::v1::{ForgetRequest, NudgeOutcome};
+    const DAY: u64 = 86_400 * S;
+    let (s, _d) = store().await;
+    let log = |rule: &str, outcome: NudgeOutcome, at: u64| {
+        let s = s.clone();
+        let rule = rule.to_string();
+        async move {
+            s.store_nudge(StoreNudgeLog {
+                rule_id: rule,
+                outcome: outcome as i32,
+                at_ns: at,
+            })
+            .await
+            .unwrap();
+        }
+    };
+    let now = 400 * DAY;
+    log("disk_nearly_full", NudgeOutcome::Disabled, 10 * DAY).await; // very old switch
+    log("disk_nearly_full", NudgeOutcome::Notified, 11 * DAY).await; // old history
+    log("running_hot", NudgeOutcome::Notified, now - 2 * DAY).await;
+    log("running_hot", NudgeOutcome::Snoozed, now - DAY).await;
+
+    // GC at 90-day retention drops old history but never a switch.
+    let st = s.gc(now).await.unwrap();
+    assert_eq!(st.nudge_rows, 1);
+    let all = s.nudge_log_since(0).await.unwrap();
+    let kinds: Vec<(&str, i32)> = all
+        .iter()
+        .map(|e| (e.rule_id.as_str(), e.outcome))
+        .collect();
+    assert_eq!(
+        kinds,
+        vec![
+            ("disk_nearly_full", NudgeOutcome::Disabled as i32),
+            ("running_hot", NudgeOutcome::Notified as i32),
+            ("running_hot", NudgeOutcome::Snoozed as i32),
+        ]
+    );
+    // `since` limits history but a switch from long ago still comes back, oldest first.
+    let recent = s.nudge_log_since(now - DAY).await.unwrap();
+    assert_eq!(recent.len(), 2);
+    assert_eq!(recent[0].outcome, NudgeOutcome::Disabled as i32);
+    assert_eq!(recent[1].outcome, NudgeOutcome::Snoozed as i32);
+
+    // Forgetting a stretch of history does not switch a nudge back on.
+    log("long_session", NudgeOutcome::Enabled, now - 3 * DAY).await;
+    s.forget(ForgetRequest {
+        from_ns: now - 5 * DAY,
+        to_ns: now,
+        app_id: String::new(),
+    })
+    .await
+    .unwrap();
+    let after = s.nudge_log_since(0).await.unwrap();
+    assert!(
+        after
+            .iter()
+            .any(|e| e.outcome == NudgeOutcome::Enabled as i32)
+    );
+    assert!(
+        after
+            .iter()
+            .any(|e| e.outcome == NudgeOutcome::Disabled as i32)
+    );
+    assert!(
+        !after
+            .iter()
+            .any(|e| e.outcome == NudgeOutcome::Snoozed as i32)
+    );
+}

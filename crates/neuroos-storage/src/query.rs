@@ -236,6 +236,39 @@ impl Store {
             .await
     }
 
+    /// The nudge log for rebuilding the nudge engine's state (ADR-0014): every row since
+    /// `since_ns` (newest 5,000 at most) plus every switch row (`ENABLED`, `DISABLED`) whatever
+    /// its age, oldest first. Switches are settings, so retention and time-range forget keep them.
+    ///
+    /// # Errors
+    /// [`DbError`] on read failure.
+    pub async fn nudge_log_since(
+        self: &Arc<Self>,
+        since_ns: u64,
+    ) -> Result<Vec<neuroos_proto::v1::NudgeLogEntry>, DbError> {
+        use neuroos_proto::v1::NudgeOutcome;
+        let switches = [NudgeOutcome::Enabled as i64, NudgeOutcome::Disabled as i64];
+        self.read(move |c| {
+            let mut s = c.prepare(
+                "SELECT rule_id, outcome, at_ns FROM nudge_log \
+                 WHERE (at_ns >= ?1 AND id > (SELECT COALESCE(MAX(id), 0) - 5000 FROM nudge_log)) \
+                    OR outcome IN (?2, ?3) \
+                 ORDER BY at_ns, id",
+            )?;
+            let rows = s
+                .query_map(params![signed(since_ns), switches[0], switches[1]], |r| {
+                    Ok(neuroos_proto::v1::NudgeLogEntry {
+                        rule_id: r.get(0)?,
+                        outcome: i32::try_from(r.get::<_, i64>(1)?).unwrap_or(0),
+                        at_ns: unsigned(r.get(2)?),
+                    })
+                })?
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(rows)
+        })
+        .await
+    }
+
     /// Lists personal facts; a non-empty `relevant_to` keeps those sharing a word with it.
     ///
     /// # Errors

@@ -152,8 +152,11 @@ pub fn run_gc(
         params![focus_cut],
     )? as u64;
     let nudge_cut = now.saturating_sub(i64::from(cfg.retention_nudge_days).saturating_mul(DAY_NS));
-    stats.nudge_rows =
-        c.execute("DELETE FROM nudge_log WHERE at_ns < ?1", params![nudge_cut])? as u64;
+    stats.nudge_rows = c.execute(
+        // Switch rows (ENABLED = 10, DISABLED = 9) are settings, not history: they stay.
+        "DELETE FROM nudge_log WHERE at_ns < ?1 AND outcome NOT IN (9, 10)",
+        params![nudge_cut],
+    )? as u64;
     let roll_cut =
         now.saturating_sub(i64::from(cfg.retention_health_rollup_days).saturating_mul(DAY_NS));
     stats.health_rows = c.execute(
