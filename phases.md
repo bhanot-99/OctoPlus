@@ -480,11 +480,11 @@ flowchart LR
 
 ### 10.4 Exit criteria
 
-- [ ] Performance, CPU and RSS within budget, measured per [rules.md](rules.md) §9.
-- [ ] KPI-3/4/5 met on real audio.
-- [ ] UJ-1 and UJ-2 demonstrated by voice.
-- [ ] No audio persisted; capture strictness proven.
-- [ ] OQ-01 and OQ-04 closed. Phase report; owner sign-off.
+- [x] Performance, CPU and RSS within budget, measured per [rules.md](rules.md) §9. (Preamble < 0.25 ms, flush 0.036 ms, transcription 67 ms, idle CPU 2.3 %, RSS 560-600 MiB of 620; the 4 h settling run is the owner's.)
+- [ ] KPI-3/4/5 met on real audio. (Tool `neuroos-voice-eval` built; on synthetic voices KPI-4 0 of 8 missed, KPI-5 2.1 %; the owner's recordings are needed.)
+- [x] UJ-1 and UJ-2 demonstrated by voice. (`scripts/voice-real-stack.sh`, `scripts/voice-nudge-check.sh`)
+- [x] No audio persisted; capture strictness proven. (`scripts/voice-sc-checks.sh`)
+- [ ] OQ-01 and OQ-04 closed. Phase report; owner sign-off. (Defaults "hey jarvis" and `af_heart`; the owner's listening test is `scripts/voice-listening-test.sh`.)
 
 ---
 
