@@ -11,11 +11,11 @@
 | Field | Value |
 | :--- | :--- |
 | Last updated | 2026-11-17 |
-| Project stage | **Phase 5 (Knowledge and conversation, C5) in progress** on branch `phase-5`; Phase 4 signed off and merged. |
-| Current phase | Phase 5 — Knowledge and conversation (C5) |
+| Project stage | **Phase 5 (Knowledge and conversation, C5) built and in gate review** on branch `phase-5` (2026-11-17); waiting for the owner: grade KPI-12, decide BUG-070, sign off. Phase 4 signed off and merged. |
+| Current phase | Phase 5 — Knowledge and conversation (C5), gate review |
 | Current story | P5 work packages W0–W16 in `docs/plans/phase-05-knowledge-plan.md` |
 | Overall progress | 5 / 11 phases done |
-| Health | 🟦 Phase 5 started |
+| Health | 🟨 Phase 5 in gate review (KPI-13 on unseen wording ≈ 80 %, BUG-070; KPI-1 needs recordings) |
 | Next milestone | M4 — knowledge (C5) |
 
 ---
@@ -28,7 +28,7 @@
 | Builder / Checker | agy builds small pure modules and child skills, Claude builds orchestrator, assembler, kernel skills; the other side checks (D-23, D-21 carried over) |
 | Branch | `phase-5` |
 | Files being changed | `crates/neuroos-knowledge/**`, `neuroos-common` (`[knowledge]` config), `neuroos-proto` (`AskRequest.at_ns`), `neuroos-kernel` skills, `neuroos-skill`, `neuroosctl profile` and `ask` |
-| Next concrete step | W1–W6 pure modules (agy), W7 assembler (Claude). |
+| Next concrete step | Owner: grade `reports/p5-kpi12-transcript.md`, decide BUG-070 and the open items in `reports/phase-05-knowledge.md` §6, accept ADR-0013, sign off and merge. Then plan Phase 6 (nudge engine). |
 
 ---
 
@@ -41,7 +41,7 @@
 | 2 | Safety kernel (C6) | ✅ | 2026-11-16 | 2026-11-16 | `reports/phase-02-kernel.md` |
 | 3 | Monitor (C1) | ✅ | 2026-11-16 | 2026-11-16 | `reports/phase-03-monitor.md` |
 | 4 | Storage (C3) | ✅ | 2026-11-16 | 2026-11-17 | `reports/phase-04-storage.md` |
-| 5 | Knowledge and conversation (C5) | 🟦 | 2026-11-17 | — | `reports/phase-05-knowledge.md` |
+| 5 | Knowledge and conversation (C5) | 🟨 | 2026-11-17 | — | `reports/phase-05-knowledge.md` |
 | 6 | Nudge engine | ⬜ | — | — | `reports/phase-06-nudges.md` |
 | 7 | Voice (C2) | ⬜ | — | — | `reports/phase-07-voice.md` |
 | 8 | Fetcher and search (C7) | ⬜ | — | — | `reports/phase-08-fetcher.md` |
@@ -58,14 +58,14 @@ Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done �
 
 | Story | Title | Status | Builder | Checker |
 | :--- | :--- | :--- | :--- | :--- |
-| P5-S01 | "This" means the window I was looking at | Ready | agy (W4), Claude (W12) | Claude / agy review |
-| P5-S02 | Activity answers grounded; status answer when a part is down | Ready | agy (W5), Claude (W12) | Claude / agy review |
-| P5-S03 | Every turn goes down the right route | Ready | agy (W1) | Claude |
-| P5-S04 | Right taint to C6; outside text cannot break the prompt | Ready | agy (W2, W3), Claude (W7) | Claude / agy review |
-| P5-S05 | Follow-ups without repeating | Ready | agy (W6) | Claude |
-| P5-S06 | Sensible, honest everyday answers | Ready | agy (W8), Claude (W7) | Claude |
-| P5-S07 | Remembers facts I ask it to, uses them when relevant | Ready | agy (W9), Claude (W11, W13) | Claude / agy review |
-| P5-S08 | Pause, forget, search notes, add a note | Ready | Claude (W10, W11), agy (W11 child skills) | Claude / agy review |
+| P5-S01 | "This" means the window I was looking at | Done | agy (parse), Claude (wiring) | Claude |
+| P5-S02 | Grounded answers; status answer when a part is down | Done | agy (selection), Claude | Claude |
+| P5-S03 | Every turn goes down the right route | Done, KPI-13 caveat (BUG-070) | agy (router), Claude (generalised) | Claude |
+| P5-S04 | Right taint to C6; outside text cannot break the prompt | Done | agy (sanitiser), Claude (assembler) | Claude, agy review |
+| P5-S05 | Follow-ups without repeating | Done | agy | Claude |
+| P5-S06 | Sensible, honest everyday answers | Done, KPI-12 ungraded | agy (rules), Claude | owner |
+| P5-S07 | Remembers facts I ask it to, uses them when relevant | Done | agy (relevance), Claude (kernel, CLI) | Claude, agy review |
+| P5-S08 | Pause, forget, search notes, add a note | Done (cleanup, web deferred) | Claude, agy (corpus) | agy review |
 
 Columns: Backlog → Ready → In Progress → In Check → Done.
 
@@ -77,6 +77,7 @@ One line each. Anything architectural also gets an ADR.
 
 | Date | ID | Decision | ADR |
 | :--- | :--- | :--- | :--- |
+| 2026-11-17 | D-30 | While finishing Phase 5 under D-29, Claude also changed other parts, all open to overturn at sign-off: **C4 now enforces a grammar** (it had none; BUG-063), the **kernel** gained notes/calendar folder roots, a per-skill write limit and Landlock grants for the notes folders, the **unit generator** binds them into C6's unit, ADR-0005's focus budget grew 32 → 48 tokens, `system.cleanup` and `web.*` are not callable from the action route, a window title counts as untrusted. KPI-13/KPI-2 first-run numbers on four fresh sets are recorded as measured (75–81 % and 88–98 %), not tuned away. Review by agy: 10 findings, 8 fixed, 2 documented as design. | 0013 (Proposed) |
 | 2026-11-17 | D-29 | Owner started Phase 5: "you are already connected with agy, so understand your role and agy's role and start executing phase 5 as planned". Plan: `docs/plans/phase-05-knowledge-plan.md`. Claude's design calls under that go-ahead (pure router with fixtures, byte-based token estimate, control-token neutraliser, kernel-kind profile/forget skills, facts saved only on the user's word, fixed status and lookup lines, additive `AskRequest.at_ns`) are open to overturn at sign-off. | 0013 (Proposed) |
 | 2026-11-16 | D-28 | Owner started Phase 4 and went to sleep: "create a new branch, elaborate each step, start executing with Claude and agy, finish the whole phase by morning". Answers given first: **download the embedding model and runtime** (approved), **synthetic dumps** for the noise gate until real ones exist. Plan: `docs/plans/phase-04-storage-plan.md`; Claude's design calls under the go-ahead (own WordPiece tokenizer instead of the `tokenizers` crate, forget scrubs backups at once, spool format v1, additive proto fields `LIFECYCLE_JOB_PURGE` and `HealthSignals.locked_known`, budgets restated from measurement) are open to overturn at sign-off. | 0012 (Proposed) |
 | 2026-11-16 | D-27 | Owner signed off Phase 3: ADR-0011 accepted as written; session lock state stays "unknown" in v1.0 (no logind call, C1's sandbox is not widened); `cosmic-protocols` GPL exception accepted. Branch cleaned for merge (fake clock behind `test-support`, test-only hook removed, unused `subtle` dropped). | 0011 (Accepted) |
