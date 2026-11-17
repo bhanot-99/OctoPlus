@@ -7,6 +7,8 @@
 # the disk threshold so the nudge fires on a normal disk. Restores both settings at the end.
 # The nudge engine still obeys its own rules: if the desktop reports you idle or the screen
 # locked, the nudge is held and this script says so instead of failing.
+# The cleanup function is run by the trap, which shellcheck cannot see.
+# shellcheck disable=SC2317
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -37,9 +39,9 @@ trap cleanup EXIT
 [[ -x "$say" ]] || { echo "build neuroos-voice-say first"; exit 2; }
 
 pw-loopback -c 1 -m '[ MONO ]' --capture-props="media.class=Audio/Sink node.name=$sink" \
-  --playback-props="media.class=Audio/Source node.name=$mic" & pids+=($!)
+  --playback-props="media.class=Audio/Source node.name=$mic" & pids+=("$!")
 pw-loopback -c 1 -m '[ MONO ]' --capture-props="media.class=Audio/Sink node.name=$out_sink" \
-  --playback-props="media.class=Audio/Source node.name=$out_mic" & pids+=($!)
+  --playback-props="media.class=Audio/Source node.name=$out_mic" & pids+=("$!")
 sleep 2
 printf 'capture_node = %s\nplayback_node = %s\n' "$mic" "$out_sink" > "$vconf"
 cat > "$nconf" <<'TOML'

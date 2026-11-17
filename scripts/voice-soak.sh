@@ -6,6 +6,8 @@
 # service never restarts. Nothing is audible. Restores voice.conf at the end.
 #
 #   voice-soak.sh [HOURS] [OUT.csv]        (SOAK_SECONDS=1200 voice-soak.sh for a short run)
+# The cleanup function is run by the trap, which shellcheck cannot see.
+# shellcheck disable=SC2317
 set -euo pipefail
 hours="${1:-4}"; out="${2:-voice-soak.csv}"
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -20,8 +22,8 @@ cleanup() { for p in "${pids[@]}"; do kill "$p" 2>/dev/null || true; done
   systemctl --user restart neuroos-voice || true; rm -rf "$work"; }
 trap cleanup EXIT
 [[ -x "$say" ]] || { echo "build neuroos-voice-say first"; exit 2; }
-pw-loopback -c 1 -m '[ MONO ]' --capture-props="media.class=Audio/Sink node.name=$sink" --playback-props="media.class=Audio/Source node.name=$mic" & pids+=($!)
-pw-loopback -c 1 -m '[ MONO ]' --capture-props="media.class=Audio/Sink node.name=$out_sink" --playback-props="media.class=Audio/Source node.name=$out_mic" & pids+=($!)
+pw-loopback -c 1 -m '[ MONO ]' --capture-props="media.class=Audio/Sink node.name=$sink" --playback-props="media.class=Audio/Source node.name=$mic" & pids+=("$!")
+pw-loopback -c 1 -m '[ MONO ]' --capture-props="media.class=Audio/Sink node.name=$out_sink" --playback-props="media.class=Audio/Source node.name=$out_mic" & pids+=("$!")
 sleep 2
 printf 'capture_node = %s\nplayback_node = %s\n' "$mic" "$out_sink" > "$conf"
 systemctl --user restart neuroos-voice

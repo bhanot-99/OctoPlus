@@ -8,6 +8,8 @@
 # voice-release tree built (neuroos-voice-say).
 #
 #   voice-real-stack.sh [QUESTION]     default: "Hey Jarvis, what is two plus two?"
+# The cleanup function is run by the trap, which shellcheck cannot see.
+# shellcheck disable=SC2317
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -21,10 +23,10 @@ mic="neuroos-test-mic-$tag"; sink="neuroos-test-sink-$tag"
 out_sink="neuroos-test-out-$tag"; out_mic="neuroos-test-outmic-$tag"
 pids=()
 had_conf=0
-[[ -f "$conf" ]] && { had_conf=1; cp "$conf" "$work/voice.conf.orig"; }
+if [[ -f "$conf" ]]; then had_conf=1; cp "$conf" "$work/voice.conf.orig"; fi
 
 cleanup() {
-  [[ -n "${KEEP_ANSWER:-}" ]] && cp "$work/answer.wav" "$KEEP_ANSWER" 2>/dev/null || true
+  if [[ -n "${KEEP_ANSWER:-}" ]]; then cp "$work/answer.wav" "$KEEP_ANSWER" 2>/dev/null || true; fi
   for p in "${pids[@]}"; do kill "$p" 2>/dev/null || true; done
   if [[ "$had_conf" == 1 ]]; then cp "$work/voice.conf.orig" "$conf"; else rm -f "$conf"; fi
   systemctl --user restart neuroos-voice || true
@@ -35,9 +37,9 @@ trap cleanup EXIT
 [[ -x "$say" ]] || { echo "build neuroos-voice-say first (cmake --build --preset voice-release --target neuroos-voice-say)"; exit 2; }
 
 pw-loopback -c 1 -m '[ MONO ]' --capture-props="media.class=Audio/Sink node.name=$sink" \
-  --playback-props="media.class=Audio/Source node.name=$mic" & pids+=($!)
+  --playback-props="media.class=Audio/Source node.name=$mic" & pids+=("$!")
 pw-loopback -c 1 -m '[ MONO ]' --capture-props="media.class=Audio/Sink node.name=$out_sink" \
-  --playback-props="media.class=Audio/Source node.name=$out_mic" & pids+=($!)
+  --playback-props="media.class=Audio/Source node.name=$out_mic" & pids+=("$!")
 sleep 2
 
 printf 'capture_node = %s\nplayback_node = %s\n' "$mic" "$out_sink" > "$conf"
@@ -51,7 +53,7 @@ done
 
 "$say" "$HOME/.local/opt/neuroos/models/voice" am_michael "$work/q.wav" "$question"
 rec_start=$(date +%s.%N)
-pw-record --target "$out_mic" --rate 24000 --channels 1 --format s16 "$work/answer.wav" & rec=$!; pids+=($rec)
+pw-record --target "$out_mic" --rate 24000 --channels 1 --format s16 "$work/answer.wav" & rec=$!; pids+=("$rec")
 sleep 1
 pw-play --target "$sink" "$work/q.wav"
 play_end=$(date +%s.%N)

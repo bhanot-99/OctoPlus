@@ -4,6 +4,8 @@
 # ~/.config/neuroos/voice.conf as `voice = af_heart` (then `systemctl --user restart neuroos-voice`).
 #
 #   voice-listening-test.sh [VOICE...]      default: af_heart af_bella af_nicole am_michael
+# The cleanup function is run by the trap, which shellcheck cannot see.
+# shellcheck disable=SC2317
 set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 say="$root/cpp/build/voice-release/neuroos-voice/neuroos-voice-say"

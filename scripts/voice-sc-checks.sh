@@ -6,6 +6,8 @@
 #      no new audio file appears anywhere under the home folder or the temp folders (FR-VOI-01);
 #   3. the live process holds no file open for writing (the Landlock policy grants none).
 # Needs the stack running and `just install-dev` done. Restores voice.conf at the end.
+# The cleanup function is run by the trap, which shellcheck cannot see.
+# shellcheck disable=SC2317
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
