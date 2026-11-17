@@ -24,6 +24,8 @@ enum JsonAskEvent<'a> {
         route_name: &'static str,
         taint: u32,
         used_web: bool,
+        status_only: bool,
+        degraded: bool,
     },
 }
 
@@ -132,6 +134,8 @@ where
         }
     };
 
+    // Exit 1 when the text was only a status sentence: scripts and tests must not take it for an answer.
+    let mut status_only = false;
     loop {
         tokio::select! {
             () = &mut cancel_signal => {
@@ -163,6 +167,7 @@ where
                         }
                     }
                     Some(Ok(Body::AnswerDone(done))) => {
+                        status_only = done.status_only;
                         if json {
                             let taint = done.taint.as_ref().map_or(0, |t| t.flags);
                             let ev = JsonAskEvent::Done {
@@ -170,12 +175,25 @@ where
                                 route_name: route_name(done.route),
                                 taint,
                                 used_web: done.used_web,
+                                status_only: done.status_only,
+                                degraded: done.degraded,
                             };
                             if let Ok(line) = serde_json::to_string(&ev) {
                                 println!("{line}");
                             }
                         } else {
                             println!();
+                            if done.status_only {
+                                eprintln!(
+                                    "{}",
+                                    styler.error("a part is not running, so this is a status line, not an answer")
+                                );
+                            } else if done.degraded {
+                                eprintln!(
+                                    "{}",
+                                    styler.hint("answered without all of its data (a part was slow or down)")
+                                );
+                            }
                             if explain {
                                 let taint = done.taint.as_ref().map_or(0, |t| t.flags);
                                 eprintln!(
@@ -211,7 +229,7 @@ where
         }
     }
 
-    0
+    i32::from(status_only)
 }
 
 #[cfg(test)]

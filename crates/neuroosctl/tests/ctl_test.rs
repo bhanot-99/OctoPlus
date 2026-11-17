@@ -301,6 +301,8 @@ enum MockKnowledgeBehavior {
     PermissionDenied,
     InternalError,
     Slow,
+    /// The answer is only a status sentence for a part that is down (FR-KNO-10).
+    StatusOnly,
 }
 
 #[derive(Debug, Clone)]
@@ -333,6 +335,20 @@ impl Handler for MockKnowledgeHandler {
                     route: Route::GeneralChat as i32,
                     taint: None,
                     used_web: false,
+                    ..AnswerDone::default()
+                }))
+            }
+            MockKnowledgeBehavior::StatusOnly => {
+                let _ = sink
+                    .send(Body::AnswerChunk(AnswerChunk {
+                        text: "My thinking part isn't running right now.".into(),
+                    }))
+                    .await;
+                Ok(Body::AnswerDone(AnswerDone {
+                    route: Route::GeneralChat as i32,
+                    status_only: true,
+                    degraded: true,
+                    ..AnswerDone::default()
                 }))
             }
             MockKnowledgeBehavior::Normal => match req.body {
@@ -346,6 +362,7 @@ impl Handler for MockKnowledgeHandler {
                         route: Route::GeneralChat as i32,
                         taint: None,
                         used_web: false,
+                        ..AnswerDone::default()
                     }))
                 }
                 _ => Err(HandlerError::unsupported()),
@@ -454,6 +471,23 @@ async fn test_run_ask_streaming_and_errors() {
     .await;
     assert_eq!(exit_err, 1);
     let _ = stop_err.send(());
+
+    // A status sentence for a down part is not an answer: exit 1, so scripts retry.
+    let runtime_root_status = tmp.path().join("status");
+    let stop_status = start_mock_knowledge(
+        runtime_root_status.clone(),
+        MockKnowledgeBehavior::StatusOnly,
+    )
+    .await;
+    let exit_status = run_ask(
+        &runtime_root_status,
+        "hello".to_string(),
+        AskOptions::default(),
+        styler,
+    )
+    .await;
+    assert_eq!(exit_status, 1);
+    let _ = stop_status.send(());
 
     // Cancellation test with immediate cancel signal
     let runtime_root_cancel = tmp.path().join("cancel");

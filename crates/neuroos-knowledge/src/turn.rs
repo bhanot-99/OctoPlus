@@ -236,10 +236,18 @@ impl KnowledgeHandler {
     }
 
     fn done(route: Route, taint: TaintFlags) -> Body {
+        Self::done_with(route, taint, false, false)
+    }
+
+    /// A closing frame that says whether the text was only a status sentence and whether some
+    /// part's data was missing (FR-KNO-10, phases.md FI "flagged").
+    fn done_with(route: Route, taint: TaintFlags, status_only: bool, degraded: bool) -> Body {
         Body::AnswerDone(AnswerDone {
             route: route as i32,
             taint: Some(taint_msg(taint)),
             used_web: false,
+            status_only,
+            degraded,
         })
     }
 
@@ -564,7 +572,12 @@ impl KnowledgeHandler {
             && let Some(line) = status::status_line(status::Part::Storage, Need::Evidence)
         {
             Self::say(sink, line).await?;
-            return Ok(Self::done(Route::DesktopAnswer, self.base_taint()));
+            return Ok(Self::done_with(
+                Route::DesktopAnswer,
+                self.base_taint(),
+                true,
+                true,
+            ));
         }
 
         // Evidence only goes into the prompt on the desktop route (FR-CHT-01); a stale index is
@@ -659,7 +672,7 @@ impl KnowledgeHandler {
         })
         .await;
         self.metrics.completed.fetch_add(1, Ordering::Relaxed);
-        Ok(Self::done(route, turn_taint))
+        Ok(Self::done_with(route, turn_taint, false, c3_down))
     }
 
     /// Evidence, focus and facts from C3 in parallel under one deadline each (FR-KNO-10).
@@ -782,7 +795,12 @@ impl KnowledgeHandler {
     ) -> Result<Body, HandlerError> {
         let line = status::status_line(down, Need::Evidence).unwrap_or("Something is not running.");
         Self::say(sink, line).await?;
-        Ok(Self::done(Route::GeneralChat, self.base_taint()))
+        Ok(Self::done_with(
+            Route::GeneralChat,
+            self.base_taint(),
+            true,
+            true,
+        ))
     }
 
     /// Streams the answer to the client; returns the kept answer text, or `None` when C4 cannot

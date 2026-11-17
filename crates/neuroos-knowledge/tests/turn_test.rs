@@ -955,13 +955,17 @@ async fn c4_down_gives_a_status_line_inside_the_control_deadline() {
     })
     .await;
     let t = Instant::now();
-    let (said, _) = s.ask("tell me a joke").await;
+    let (said, done) = s.ask("tell me a joke").await;
     assert!(
         t.elapsed() < Duration::from_millis(250 + 100),
         "{:?}",
         t.elapsed()
     );
     assert!(said.contains("thinking part"), "{said}");
+    assert!(
+        done.status_only && done.degraded,
+        "a status line is not an answer"
+    );
     assert_eq!(s.c4_unavailable.load(Ordering::Relaxed), 1);
 }
 
@@ -975,6 +979,10 @@ async fn c3_down_still_answers_a_general_question_flagged_degraded() {
     let (said, done) = s.ask("what is the capital of France").await;
     assert_eq!(said, "Fine.");
     assert_eq!(route(&done), Route::GeneralChat);
+    assert!(
+        done.degraded && !done.status_only,
+        "answered, but without C3's data: flagged"
+    );
     assert_eq!(s.c3_degraded.load(Ordering::Relaxed), 1);
 }
 
@@ -990,6 +998,7 @@ async fn c3_down_cannot_answer_about_your_activity_and_says_so() {
     assert!(t.elapsed() < Duration::from_millis(250 + 100));
     assert!(said.contains("memory isn't available"), "{said}");
     assert_eq!(route(&done), Route::DesktopAnswer);
+    assert!(done.status_only && done.degraded);
     assert!(s.rec().prompts.is_empty(), "no generation without evidence");
 }
 
