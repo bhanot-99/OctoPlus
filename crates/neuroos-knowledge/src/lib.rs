@@ -12,6 +12,7 @@ pub mod chat;
 pub mod deictic;
 pub mod evidence;
 pub mod facts;
+pub mod nudge;
 pub mod prompt;
 pub mod router;
 pub mod sanitize;

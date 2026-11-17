@@ -67,6 +67,9 @@ pub struct Config {
     /// Knowledge and conversation options (C5, FR-KNO-01..10, FR-CHT, FR-PRO).
     #[serde(default)]
     pub knowledge: KnowledgeConfig,
+    /// Nudge engine options (C5, FR-NUD-01…12).
+    #[serde(default)]
+    pub nudges: NudgesConfig,
     /// Verification hooks (SC proof 3). Read-only probes; they never widen anything.
     #[serde(default)]
     pub debug: DebugConfig,
@@ -625,6 +628,118 @@ impl KnowledgeConfig {
     }
 }
 
+/// How a nudge is delivered (FR-NUD-07).
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum NudgeDelivery {
+    /// Spoken (Phase 7); a notification until then.
+    Voice,
+    /// A desktop notification.
+    Notify,
+    /// Never delivered.
+    Off,
+}
+
+/// `[nudges]` section (PRD §5.5, OQ-03 defaults).
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields, default)]
+pub struct NudgesConfig {
+    /// Master switch.
+    pub enabled: bool,
+    /// Seconds between rule evaluations (FR-NUD-01).
+    pub tick_s: u64,
+    /// Quiet hours start, minutes after local midnight (OQ-03: 22:00).
+    pub quiet_start_min: u32,
+    /// Quiet hours end, minutes after local midnight (OQ-03: 08:00).
+    pub quiet_end_min: u32,
+    /// Global quiet mode: notifications only (FR-NUD-07).
+    pub quiet_mode: bool,
+    /// Delivery for info rules.
+    pub deliver_info: NudgeDelivery,
+    /// Delivery for important rules.
+    pub deliver_important: NudgeDelivery,
+    /// Delivery for urgent rules.
+    pub deliver_urgent: NudgeDelivery,
+    /// Most spoken nudges per hour (FR-NUD-06).
+    pub max_spoken_per_hour: u32,
+    /// Most spoken nudges per day (FR-NUD-06).
+    pub max_spoken_per_day: u32,
+    /// Most held nudges at once.
+    pub max_held: usize,
+    /// Seconds a text reply to a notification is still taken as a reply (FR-NUD-09).
+    pub reply_window_s: u64,
+    /// Hours "not now" snoozes a rule (FR-NUD-09).
+    pub snooze_h: u64,
+    /// A gap between two ticks longer than this, or a clock that goes back, resets hold timers.
+    pub max_gap_s: u64,
+    /// Monitor data older than this many seconds counts as "paused or gone".
+    pub stale_after_s: u64,
+}
+
+impl Default for NudgesConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            tick_s: 30,
+            quiet_start_min: 22 * 60,
+            quiet_end_min: 8 * 60,
+            quiet_mode: false,
+            deliver_info: NudgeDelivery::Notify,
+            deliver_important: NudgeDelivery::Voice,
+            deliver_urgent: NudgeDelivery::Voice,
+            max_spoken_per_hour: 3,
+            max_spoken_per_day: 8,
+            max_held: 16,
+            reply_window_s: 120,
+            snooze_h: 4,
+            max_gap_s: 300,
+            stale_after_s: 180,
+        }
+    }
+}
+
+impl NudgesConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        let nonzero = [
+            ("nudges.tick_s", self.tick_s),
+            (
+                "nudges.max_spoken_per_hour",
+                u64::from(self.max_spoken_per_hour),
+            ),
+            (
+                "nudges.max_spoken_per_day",
+                u64::from(self.max_spoken_per_day),
+            ),
+            ("nudges.max_held", self.max_held as u64),
+            ("nudges.reply_window_s", self.reply_window_s),
+            ("nudges.snooze_h", self.snooze_h),
+            ("nudges.max_gap_s", self.max_gap_s),
+            ("nudges.stale_after_s", self.stale_after_s),
+        ];
+        for (key, v) in nonzero {
+            if v == 0 {
+                return Err(ConfigError::Invalid {
+                    key,
+                    reason: "must be greater than zero",
+                });
+            }
+        }
+        if self.quiet_start_min >= 24 * 60 || self.quiet_end_min >= 24 * 60 {
+            return Err(ConfigError::Invalid {
+                key: "nudges.quiet_start_min",
+                reason: "minutes after midnight, below 1440",
+            });
+        }
+        if self.tick_s > 3600 || self.max_held > 256 || self.snooze_h > 24 * 14 {
+            return Err(ConfigError::Invalid {
+                key: "nudges.tick_s",
+                reason: "tick_s <= 3600, max_held <= 256, snooze_h <= 336",
+            });
+        }
+        Ok(())
+    }
+}
+
 impl Config {
     /// Parses and validates config text.
     ///
@@ -656,6 +771,7 @@ impl Config {
         self.monitor.validate()?;
         self.storage.validate()?;
         self.knowledge.validate()?;
+        self.nudges.validate()?;
         let frame = self.ipc.max_frame_bytes;
         if frame == 0 || frame > FRAME_BYTES_CEILING {
             return Err(ConfigError::Invalid {

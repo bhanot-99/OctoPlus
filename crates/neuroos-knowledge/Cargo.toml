@@ -18,8 +18,10 @@ neuroos-ipc = { path = "../neuroos-ipc" }
 neuroos-proto = { path = "../neuroos-proto" }
 neuroos-taint = { path = "../neuroos-taint" }
 tokio = { workspace = true, features = ["sync", "time"] }
+jiff.workspace = true
 serde.workspace = true
 thiserror.workspace = true
+toml.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
 

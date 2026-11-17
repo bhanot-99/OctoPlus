@@ -115,6 +115,10 @@ enum NudgeOutcome {
   NUDGE_OUTCOME_ACCEPTED = 5;
   NUDGE_OUTCOME_DISMISSED = 6;
   NUDGE_OUTCOME_IGNORED = 7;
+  NUDGE_OUTCOME_SNOOZED = 8;      // "not now": the rule is quiet for the snooze time (FR-NUD-09)
+  NUDGE_OUTCOME_DISABLED = 9;     // "stop telling me" or `nudges disable`; kept past retention
+  NUDGE_OUTCOME_ENABLED = 10;     // switched back on; kept past retention
+  NUDGE_OUTCOME_ENGINE_IDLE = 11; // the engine could not read C3 and idled
 }
 
 // FR-NUD-11.
@@ -176,4 +180,21 @@ message LifecycleResult {
   LifecycleJob job = 1;
   uint64 duration_ns = 2;
   uint64 items = 3;
+}
+
+// C5 -> C3 at start: rebuild cooldowns, snoozes and switches from the log (ADR-0014).
+message QueryNudgeLog {
+  uint64 since_ns = 1;
+}
+
+message NudgeLogEntry {
+  string rule_id = 1;
+  NudgeOutcome outcome = 2;
+  uint64 at_ns = 3;
+}
+
+// Newest last. Every ENABLED and DISABLED row is returned whatever `since_ns` says, so a switch
+// outlives log retention.
+message NudgeLogEntries {
+  repeated NudgeLogEntry entries = 1;
 }
