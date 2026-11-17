@@ -1,0 +1,100 @@
+{"text": "yes", "fresh": false, "topic": "none", "accept": true, "yes_no": "yes", "fact": false}
+{"text": "yeah", "fresh": false, "topic": "none", "accept": true, "yes_no": "yes", "fact": false}
+{"text": "yep", "fresh": false, "topic": "none", "accept": true, "yes_no": "yes", "fact": false}
+{"text": "sure", "fresh": false, "topic": "none", "accept": true, "yes_no": "yes", "fact": false}
+{"text": "ok", "fresh": false, "topic": "none", "accept": true, "yes_no": "yes", "fact": false}
+{"text": "okay", "fresh": false, "topic": "none", "accept": true, "yes_no": "yes", "fact": false}
+{"text": "yes please", "fresh": false, "topic": "none", "accept": true, "yes_no": "yes", "fact": false}
+{"text": "go ahead", "fresh": false, "topic": "none", "accept": true, "yes_no": "yes", "fact": false}
+{"text": "please do", "fresh": false, "topic": "none", "accept": true, "yes_no": "yes", "fact": false}
+{"text": "do it", "fresh": false, "topic": "none", "accept": true, "yes_no": "yes", "fact": false}
+{"text": "no", "fresh": false, "topic": "none", "accept": false, "yes_no": "no", "fact": false}
+{"text": "nope", "fresh": false, "topic": "none", "accept": false, "yes_no": "no", "fact": false}
+{"text": "no thanks", "fresh": false, "topic": "none", "accept": false, "yes_no": "no", "fact": false}
+{"text": "not now", "fresh": false, "topic": "none", "accept": false, "yes_no": "no", "fact": false}
+{"text": "dont", "fresh": false, "topic": "none", "accept": false, "yes_no": "no", "fact": false}
+{"text": "never mind", "fresh": false, "topic": "none", "accept": false, "yes_no": "no", "fact": false}
+{"text": "cancel", "fresh": false, "topic": "none", "accept": false, "yes_no": "no", "fact": false}
+{"text": "look it up", "fresh": false, "topic": "none", "accept": true, "yes_no": "none", "fact": false}
+{"text": "yes look it up", "fresh": false, "topic": "none", "accept": true, "yes_no": "none", "fact": false}
+{"text": "sure look it up", "fresh": false, "topic": "none", "accept": true, "yes_no": "none", "fact": false}
+{"text": "search for it", "fresh": false, "topic": "none", "accept": true, "yes_no": "none", "fact": false}
+{"text": "find out", "fresh": false, "topic": "none", "accept": true, "yes_no": "none", "fact": false}
+{"text": "yes I think so because it is raining", "fresh": true, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "yes what is rust", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "no how does a compiler work", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "sure but what about python", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "ok where is Paris", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "maybe later today", "fresh": true, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "i dont think so", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "definitely not right now", "fresh": true, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "what is the latest news today", "fresh": true, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "who won the game last night", "fresh": true, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "what is the weather forecast", "fresh": true, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "how much does an iPhone cost", "fresh": true, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "what is the current temperature outside", "fresh": true, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "what are the top movies this week", "fresh": true, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "best laptops to buy right now", "fresh": true, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "when is the next release date", "fresh": true, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "what is the price of Bitcoin", "fresh": true, "topic": "money", "accept": false, "yes_no": "none", "fact": false}
+{"text": "is the server experiencing an outage", "fresh": true, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "what are the newest features in rust", "fresh": true, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "who won the championship match", "fresh": true, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "how does a hash map work", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "what is the capital of France", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "why is the sky blue", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "who was Albert Einstein", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "please bestow this honor upon them", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "stop the running background task", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "the topic of the discussion was interesting", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "they described a philosophical utopia", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "what is the right dose for this medicine", "fresh": false, "topic": "health", "accept": false, "yes_no": "none", "fact": false}
+{"text": "i have severe chest pain and fever", "fresh": false, "topic": "health", "accept": false, "yes_no": "none", "fact": false}
+{"text": "should I see a doctor for this symptom", "fresh": false, "topic": "health", "accept": false, "yes_no": "none", "fact": false}
+{"text": "what are the diagnosis criteria for diabetes", "fresh": false, "topic": "health", "accept": false, "yes_no": "none", "fact": false}
+{"text": "how long does a prescription medication last", "fresh": false, "topic": "health", "accept": false, "yes_no": "none", "fact": false}
+{"text": "what is the treatment for a bacterial infection", "fresh": false, "topic": "health", "accept": false, "yes_no": "none", "fact": false}
+{"text": "can a tenant sue their landlord for eviction", "fresh": false, "topic": "legal", "accept": false, "yes_no": "none", "fact": false}
+{"text": "how to prepare for a child custody court hearing", "fresh": false, "topic": "legal", "accept": false, "yes_no": "none", "fact": false}
+{"text": "is this breach of contract grounds for a lawsuit", "fresh": false, "topic": "legal", "accept": false, "yes_no": "none", "fact": false}
+{"text": "what visa is required for international travel", "fresh": false, "topic": "legal", "accept": false, "yes_no": "none", "fact": false}
+{"text": "should I hire a lawyer to draft an nda", "fresh": false, "topic": "legal", "accept": false, "yes_no": "none", "fact": false}
+{"text": "what are the legal rights of asylum seekers", "fresh": false, "topic": "legal", "accept": false, "yes_no": "none", "fact": false}
+{"text": "how to invest in index funds for retirement", "fresh": false, "topic": "money", "accept": false, "yes_no": "none", "fact": false}
+{"text": "what is the current mortgage interest rate", "fresh": true, "topic": "money", "accept": false, "yes_no": "none", "fact": false}
+{"text": "how to pay off student loan debt faster", "fresh": false, "topic": "money", "accept": false, "yes_no": "none", "fact": false}
+{"text": "strategies for filing state income tax", "fresh": false, "topic": "money", "accept": false, "yes_no": "none", "fact": false}
+{"text": "should I buy crypto or blue chip stocks", "fresh": false, "topic": "money", "accept": false, "yes_no": "none", "fact": false}
+{"text": "can I declare bankruptcy to clear debt", "fresh": false, "topic": "money", "accept": false, "yes_no": "none", "fact": false}
+{"text": "the doctor sued the hospital for contract breach", "fresh": false, "topic": "health", "accept": false, "yes_no": "none", "fact": false}
+{"text": "can I sue the bank over my loan contract", "fresh": false, "topic": "legal", "accept": false, "yes_no": "none", "fact": false}
+{"text": "my name is Alice", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
+{"text": "my birthday is October 5th", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
+{"text": "my dog is called Rex", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
+{"text": "my cat is named Fluffy", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
+{"text": "my favorite color is blue", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
+{"text": "my kids are Alice and Bob", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
+{"text": "my car is an electric sedan", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
+{"text": "i live in Seattle Washington", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
+{"text": "i am allergic to peanuts", "fresh": false, "topic": "health", "accept": false, "yes_no": "none", "fact": true}
+{"text": "i work as a software engineer", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
+{"text": "i work at Google", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
+{"text": "i prefer dark mode in all apps", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
+{"text": "i like chocolate ice cream", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
+{"text": "i love hiking in the mountains", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
+{"text": "i hate waking up early", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
+{"text": "call me Robert", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
+{"text": "is my dog called Rex?", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "what is my name", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "where do I live", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "remember that my name is Alice", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "remember to buy groceries", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "the dog is called Rex", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "rust is a systems programming language", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "a dog is a loyal pet", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "can you tell me if my name is Alice", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": false}
+{"text": "i was born in Chicago Illinois", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
+{"text": "i dislike loud noises", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
+{"text": "my wife is an architect", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
+{"text": "my best friend is Bob", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
+{"text": "i work for an aerospace company", "fresh": false, "topic": "none", "accept": false, "yes_no": "none", "fact": true}
