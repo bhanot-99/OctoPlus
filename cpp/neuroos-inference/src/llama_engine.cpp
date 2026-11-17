@@ -132,6 +132,50 @@ Result<std::string> LlamaEngine::Detokenize(std::int32_t token) {
 
 bool LlamaEngine::IsEog(std::int32_t token) const { return llama_vocab_is_eog(vocab_, token); }
 
+Status LlamaEngine::SetGrammar(std::string_view gbnf) {
+  if (gbnf.empty() && !grammar_active_) {
+    // Plain greedy decoding keeps no state.
+    return ok_status();
+  }
+  llama_sampler* chain = llama_sampler_chain_init(llama_sampler_chain_default_params());
+  if (chain == nullptr) {
+    return Error{
+        .message = "failed to initialize sampler chain",
+        .retryable = false,
+        .code = static_cast<int>(v1::ERROR_CODE_INTERNAL),
+    };
+  }
+  if (!gbnf.empty()) {
+    const std::string text(gbnf);  // NUL-terminated copy for the C API
+    llama_sampler* grammar = llama_sampler_init_grammar(vocab_, text.c_str(), "root");
+    if (grammar == nullptr) {
+      llama_sampler_free(chain);
+      return Error{
+          .message = "grammar could not be parsed",
+          .retryable = false,
+          .code = static_cast<int>(v1::ERROR_CODE_INVALID_REQUEST),
+      };
+    }
+    llama_sampler_chain_add(chain, grammar);
+  }
+  llama_sampler* greedy = llama_sampler_init_greedy();
+  if (greedy == nullptr) {
+    llama_sampler_free(chain);
+    return Error{
+        .message = "failed to initialize greedy sampler",
+        .retryable = false,
+        .code = static_cast<int>(v1::ERROR_CODE_INTERNAL),
+    };
+  }
+  llama_sampler_chain_add(chain, greedy);
+  if (smpl_ != nullptr) {
+    llama_sampler_free(smpl_);
+  }
+  smpl_ = chain;
+  grammar_active_ = !gbnf.empty();
+  return ok_status();
+}
+
 void LlamaEngine::Reset() {
   if (ctx_ != nullptr) {
     llama_memory_t mem = llama_get_memory(ctx_);

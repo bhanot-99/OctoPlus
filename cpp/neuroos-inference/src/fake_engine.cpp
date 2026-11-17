@@ -10,7 +10,11 @@
 #include <utility>
 #include <vector>
 
+#include "neuroos/v1/common.pb.h"
+
 namespace neuroos::inference {
+
+namespace v1 = ::neuroos::v1;
 
 FakeEngine::FakeEngine(std::uint32_t ctx) : ctx_(ctx) {
   // Default output sequence: 3 tokens ending with EOG
@@ -58,6 +62,20 @@ Result<std::string> FakeEngine::Detokenize(std::int32_t token) {
 }
 
 bool FakeEngine::IsEog(std::int32_t token) const { return token <= 0; }
+
+Status FakeEngine::SetGrammar(std::string_view gbnf) {
+  ++grammar_calls_;
+  if (fail_next_grammar_) {
+    fail_next_grammar_ = false;
+    return Error{
+        .message = "grammar could not be parsed",
+        .retryable = false,
+        .code = static_cast<int>(v1::ERROR_CODE_INVALID_REQUEST),
+    };
+  }
+  last_grammar_ = std::string(gbnf);
+  return ok_status();
+}
 
 void FakeEngine::Reset() {
   previous_tokens_.clear();

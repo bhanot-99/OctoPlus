@@ -43,6 +43,12 @@ class Engine {
   // Clear KV cache and reset engine state.
   virtual void Reset() = 0;
 
+  // Limit the next generation to a GBNF grammar (FR-INF-05, root rule `root`); an empty string
+  // means free text. Call before Prefill for every request: it also resets sampler state, so a
+  // grammar never carries parser state from one request into the next. An unparsable grammar is
+  // an INVALID_REQUEST error and leaves the previous sampler in place.
+  virtual Status SetGrammar(std::string_view gbnf) = 0;
+
   // Prefill prompt tokens, reusing prefix up to stable_prefix_tokens if possible.
   virtual Result<PrefillResult> Prefill(const std::vector<std::int32_t>& tokens,
                                         std::uint32_t stable_prefix_tokens) = 0;

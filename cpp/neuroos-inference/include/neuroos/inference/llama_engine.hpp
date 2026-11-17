@@ -37,6 +37,8 @@ class LlamaEngine : public Engine {
 
   void Reset() override;
 
+  Status SetGrammar(std::string_view gbnf) override;
+
   Result<PrefillResult> Prefill(const std::vector<std::int32_t>& tokens,
                                 std::uint32_t stable_prefix_tokens) override;
 
@@ -56,6 +58,7 @@ class LlamaEngine : public Engine {
   std::uint32_t ctx_size_ = 2048;
   std::uint32_t batch_size_ = 512;
   bool repacking_enabled_ = false;
+  bool grammar_active_ = false;
 
   std::vector<std::int32_t> cached_tokens_;
 };
