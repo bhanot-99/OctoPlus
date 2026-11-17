@@ -64,6 +64,10 @@ pub enum Commands {
         #[arg(long)]
         explain: bool,
 
+        /// Epoch nanoseconds the question counts as asked at (evaluation harness only).
+        #[arg(long, hide = true, default_value_t = 0)]
+        at_ns: u64,
+
         /// Suppress non-essential output.
         #[arg(long, short)]
         quiet: bool,

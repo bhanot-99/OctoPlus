@@ -413,7 +413,7 @@ async fn test_run_ask_streaming_and_errors() {
         "what is 2+2?".to_string(),
         AskOptions {
             json: true,
-            explain: false,
+            ..AskOptions::default()
         },
         styler,
     )

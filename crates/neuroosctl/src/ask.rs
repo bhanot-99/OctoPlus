@@ -34,6 +34,9 @@ pub struct AskOptions {
     pub json: bool,
     /// After the answer, print the route and taint.
     pub explain: bool,
+    /// When the question was asked, in epoch nanoseconds; 0 means now. The evaluation harness
+    /// uses it to keep two questions in separate sessions without waiting for the follow-up window.
+    pub at_ns: u64,
 }
 
 /// Plain name of an answer route (`neuroosctl ask --explain`, P5-S03).
@@ -93,7 +96,11 @@ pub async fn run_ask_internal<F>(
 where
     F: Future<Output = ()> + Unpin,
 {
-    let AskOptions { json, explain } = opts;
+    let AskOptions {
+        json,
+        explain,
+        at_ns,
+    } = opts;
     let sock = paths::socket_path(runtime_root, Part::Knowledge, "knowledge");
     let client = match Client::connect(&sock, 1024 * 1024).await {
         Ok(c) => c,
@@ -110,7 +117,7 @@ where
     let req = AskRequest {
         text: question,
         origin: Origin::Cli as i32,
-        at_ns: 0,
+        at_ns,
     };
 
     let deadline = Duration::from_secs(60);

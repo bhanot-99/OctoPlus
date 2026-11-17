@@ -523,9 +523,14 @@ impl StorageConfig {
 pub struct KnowledgeConfig {
     /// Evidence items asked of C3 (FR-KNO-04).
     pub evidence_top_k: u32,
-    /// Evidence below this score (thousandths) is dropped (FR-KNO-04).
+    /// Evidence below this score (thousandths) is dropped (FR-KNO-04). Provisional: measured on
+    /// the reference machine's live C3 (ADR-0013 §measurements) and to be re-measured on real
+    /// recordings at integration (D-26).
     pub min_score_milli: u32,
-    /// A retrieval score (thousandths) at or above which a turn counts as a desktop answer (Architecture §11 step 3).
+    /// A retrieval score (thousandths) at or above which a turn counts as a desktop answer
+    /// (Architecture §11 step 3). Set above the highest score any of 40 general questions reached
+    /// (0.70): a general question sent down the desktop route would be answered "I don't have
+    /// anything on that". Activity questions are mostly caught by their time and "I was" cues.
     pub desktop_route_score_milli: u32,
     /// Prompt block budgets in tokens (ADR-0005 decision 3). The persona block is a constant,
     /// cached prefix and is never cut, so it has no budget here.
@@ -557,8 +562,8 @@ impl Default for KnowledgeConfig {
     fn default() -> Self {
         Self {
             evidence_top_k: 5,
-            min_score_milli: 0,
-            desktop_route_score_milli: 0,
+            min_score_milli: 500,
+            desktop_route_score_milli: 720,
             facts_tokens: 48,
             focus_tokens: 32,
             history_tokens: 48,

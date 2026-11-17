@@ -32,12 +32,17 @@ async fn main() {
             question,
             json,
             explain,
+            at_ns,
             ..
         } => {
             run_ask(
                 &runtime_root,
                 question,
-                AskOptions { json, explain },
+                AskOptions {
+                    json,
+                    explain,
+                    at_ns,
+                },
                 styler,
             )
             .await
