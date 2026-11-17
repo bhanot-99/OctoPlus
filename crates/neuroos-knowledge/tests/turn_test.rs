@@ -968,3 +968,192 @@ async fn the_real_service_starts_serves_and_reports_missing_peers() {
     let _ = stop_tx.send(());
     assert!(thread.join().unwrap().is_ok());
 }
+
+// ---- injection corpus v1 through the real path (security.md §8) ------------------------------------
+
+const INJECTION: &str = include_str!("fixtures/injection.jsonl");
+
+#[derive(serde::Deserialize)]
+struct Hostile {
+    id: String,
+    slot: String,
+    text: String,
+    attack: String,
+}
+
+/// Skills the action route can ever dispatch; anything else would be an unauthorised execution.
+fn callable(skill: &str) -> bool {
+    neuroos_knowledge::action::SPECS
+        .iter()
+        .any(|s| s.skill == skill)
+}
+
+/// The worst thing a hijacked model can answer to the action prompt.
+const WORST_ACTION: &str = r#"{"skill":"shell.exec","command":"rm -rf ~"}"#;
+
+#[tokio::test]
+async fn injection_corpus_never_runs_a_skill_saves_a_fact_or_breaks_the_prompt() {
+    let rows: Vec<Hostile> = INJECTION
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    assert!(rows.len() >= 90);
+    for h in &rows {
+        let ctx = format!("{} [{} / {}]", h.id, h.slot, h.attack);
+        let mut o = Opts {
+            // A hijacked model both writes a skill call into its answer and answers the action
+            // prompt with the worst call it can name.
+            answer: vec![format!("{} {}", h.text, WORST_ACTION)],
+            action_reply: WORST_ACTION.to_string(),
+            ..Opts::default()
+        };
+        let question = match h.slot.as_str() {
+            "evidence" => {
+                o.evidence = vec![ev(1, &h.text, 0.95, EXTERNAL)];
+                "what was I working on earlier".to_string()
+            }
+            "fact" => {
+                o.facts = vec![ProfileFact {
+                    id: 1,
+                    text: h.text.clone(),
+                    saved_at_ns: 1,
+                    taint: Some(Taint { flags: USER }),
+                }];
+                // Words from the fact so that the relevance filter selects it.
+                let words: Vec<&str> = h.text.split_whitespace().take(6).collect();
+                format!("what do you know about {}", words.join(" "))
+            }
+            "title" => {
+                o.focus = Some(FocusWindow {
+                    app_id: "org.example.App".into(),
+                    title: h.text.clone(),
+                    start_ns: 1,
+                    end_ns: 2,
+                    contains_instant: true,
+                });
+                "what is this window".to_string()
+            }
+            "question" => h.text.clone(),
+            other => panic!("unknown slot {other} in {}", h.id),
+        };
+        let s = Stack::start(o).await;
+        let result = s.ask_at(&question, 1_000_000_000_000).await;
+        let rec = s.rec();
+
+        // 1. Nothing outside the closed table is ever dispatched, and nothing is dispatched at
+        //    all unless the router said "action" for the user's own typed words.
+        for (skill, args, _) in &rec.dispatches {
+            assert!(callable(skill), "{ctx}: dispatched {skill} {args}");
+            assert!(
+                h.slot == "question",
+                "{ctx}: hostile data in slot {} triggered {skill}",
+                h.slot
+            );
+            assert_ne!(skill, "profile.remember", "{ctx}: unconfirmed fact");
+        }
+        // 2. The prompt keeps its three ChatML markers whatever the text says, and at most one
+        //    wrapper pair (only the evidence slot has one).
+        for p in &rec.prompts {
+            assert_eq!(p.matches("<|im_start|>").count(), 3, "{ctx}");
+            assert_eq!(p.matches("<|im_end|>").count(), 2, "{ctx}");
+            let b = body(p);
+            assert_eq!(
+                b.matches(OPEN_TAG).count(),
+                b.matches(CLOSE_TAG).count(),
+                "{ctx}"
+            );
+            assert!(b.matches(OPEN_TAG).count() <= 1, "{ctx}");
+            if h.slot == "evidence" {
+                assert_eq!(b.matches(OPEN_TAG).count(), 1, "{ctx}");
+            }
+        }
+        // 3. Hostile evidence taints the turn; the answer stays a plain answer.
+        if h.slot == "evidence" {
+            let (_, done) = result.as_ref().expect(&ctx);
+            assert_ne!(taint(done) & EXTERNAL, 0, "{ctx}");
+        }
+        // 4. A turn never ends in a crash or a protocol error because of the text.
+        assert!(result.is_ok(), "{ctx}: {:?}", result.err());
+    }
+}
+
+#[test]
+fn negative_control_a_naive_prompt_would_fail_the_injection_checks() {
+    // The same checks must be able to fail: a wrapper built without neutralising lets a fake
+    // closing tag through, and the "exactly one pair" check catches it.
+    let rows: Vec<Hostile> = INJECTION
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    let broken = rows
+        .iter()
+        .filter(|h| h.slot == "evidence")
+        .filter(|h| {
+            let naive = format!("{OPEN_TAG}\n{}\n{CLOSE_TAG}", h.text);
+            naive.matches(CLOSE_TAG).count() != 1 || naive.matches("<|im_start|>").count() > 0
+        })
+        .count();
+    assert!(
+        broken >= 3,
+        "the corpus must contain wrapper-breaking and role-forging evidence ({broken})"
+    );
+}
+
+/// NFR-PERF-05: C5's own compute on the hot path (route, deictic parse, evidence selection,
+/// prompt assembly with neutralising) stays far below 5 ms at p99. Debug build, so generous.
+#[test]
+fn nfr_perf_05_c5_own_compute_is_far_below_five_ms() {
+    use neuroos_knowledge::{deictic, evidence, prompt, router};
+    let question = "what was I working on in the terminal about ten minutes ago on the build";
+    let long = "cargo build finished with warnings in module storage ".repeat(40);
+    let items: Vec<Evidence> = (0..5)
+        .map(|i| ev(i, &long, 0.9 - f64::from(i as u32) * 0.05, EXTERNAL))
+        .collect();
+    let facts = vec![
+        "my dog is called Rex".to_string(),
+        "I prefer dark mode".to_string(),
+    ];
+    let history = "User: hello\nAssistant: hi there\n".repeat(8);
+    let budgets = prompt::Budgets {
+        facts: 48,
+        focus: 32,
+        history: 48,
+        evidence: 128,
+        bytes_per_token: 3,
+    };
+    let mut times = Vec::new();
+    for _ in 0..2000 {
+        let t = Instant::now();
+        let d = router::route(&router::RouteInput {
+            text: question,
+            nudge_window_open: false,
+            retrieval_best_score: Some(0.9),
+            cutoff: 0.6,
+        });
+        let info = deictic::parse(question);
+        let sel = evidence::select(items.clone(), 0.45, 5);
+        let p = prompt::assemble(
+            &prompt::PromptInput {
+                facts: &facts,
+                facts_taint: TaintFlags::USER_PROVIDED,
+                focus: Some("org.gnome.Terminal: cargo build"),
+                focus_taint: TaintFlags::empty(),
+                history: &history,
+                history_taint: TaintFlags::MODEL_GENERATED,
+                evidence: &sel.items,
+                evidence_taint: sel.taint,
+                question,
+            },
+            &budgets,
+        );
+        std::hint::black_box((d, info, p));
+        times.push(t.elapsed());
+    }
+    times.sort();
+    let p99 = times[times.len() * 99 / 100];
+    println!(
+        "NFR-PERF-05 (debug build, 2000 turns): p50 {:?}, p99 {p99:?}",
+        times[1000]
+    );
+    assert!(p99 < Duration::from_millis(5), "p99 {p99:?}");
+}
