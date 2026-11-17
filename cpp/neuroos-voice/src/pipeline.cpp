@@ -1,5 +1,7 @@
 #include "neuroos/voice/pipeline.hpp"
 
+#include <malloc.h>
+
 #include <algorithm>
 #include <cctype>
 #include <condition_variable>
@@ -391,6 +393,9 @@ void VoicePipeline::ProcessFrame(std::span<const std::int16_t> frame) {
     e.kind = TurnEventKind::kPlaybackIdle;
     e.now_ns = now;
     Run(Post(e));
+    // glibc keeps freed model buffers in the heap otherwise: give them back after each turn
+    // (lessons-from-v1 §3, memory crept up between idle and steady).
+    malloc_trim(0);
   }
 
   TurnEvent tick;
@@ -437,6 +442,7 @@ void VoicePipeline::QueueSpeech(const std::string& text, bool nudge, std::uint64
         if (d_.on_trace) d_.on_trace(pcm.empty() ? "synth_empty" : "synth_ok");
       } else {
         if (d_.on_trace) d_.on_trace("synth_failed");
+        SayVoiceTrouble(epoch);
         const std::lock_guard<std::mutex> lock(mu_);
         ++stats_.synth_failures;
         ok = false;
@@ -456,6 +462,18 @@ void VoicePipeline::QueueSpeech(const std::string& text, bool nudge, std::uint64
       NoteAudioQueued(nudge, epoch);
     }
   });
+}
+
+// The speech engine failed: say so once in the cached voice instead of going quiet, never in
+// another voice (FR-VOI-09). At most once every ten seconds.
+void VoicePipeline::SayVoiceTrouble(std::uint64_t epoch) {
+  const std::uint64_t now = d_.mono_ns();
+  {
+    const std::lock_guard<std::mutex> lock(mu_);
+    if (last_trouble_ns_ != 0 && now - last_trouble_ns_ < 10'000'000'000ULL) return;
+    last_trouble_ns_ = now;
+  }
+  QueueClip(StatusPhrase(3), false, epoch);
 }
 
 void VoicePipeline::QueueClip(const std::string& phrase, bool nudge, std::uint64_t epoch,

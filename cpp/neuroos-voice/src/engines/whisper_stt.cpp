@@ -1,4 +1,5 @@
 // Speech to text with whisper.cpp (tiny.en), greedy decoding, English only (FR-VOI-04).
+#include <algorithm>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -36,6 +37,12 @@ class WhisperStt final : public Stt {
     p.no_context = true;
     p.suppress_blank = true;
     p.suppress_nst = true;
+    // The encoder cost is set by the audio window, 30 s by default: size it to the utterance
+    // (50 positions per second, with margin). The silence after the speech was already trimmed
+    // by the pipeline, which is what keeps a shortened context from repeating itself
+    // (lessons-from-v1 §3).
+    const int secs_x50 = static_cast<int>(pcm.size() / (kCaptureRate / 50));
+    p.audio_ctx = std::min(1500, std::max(128, secs_x50 + 64));
     // No fallback re-decodes at higher temperatures: a slow retry is worse than a short miss.
     p.temperature_inc = 0.0F;
     const std::lock_guard<std::mutex> lock(mu_);

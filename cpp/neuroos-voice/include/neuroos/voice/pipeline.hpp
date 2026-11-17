@@ -208,6 +208,7 @@ class VoicePipeline final : public ReplyReceiver {
   void QueueSpeech(const std::string& text, bool nudge, std::uint64_t epoch);
   void QueueClip(const std::string& phrase, bool nudge, std::uint64_t epoch, bool preamble = false);
   void FinishQueue(std::uint64_t epoch);
+  void SayVoiceTrouble(std::uint64_t epoch);
   void NoteAudioQueued(bool nudge, std::uint64_t epoch);
   std::vector<TurnAction> Post(TurnEvent e);  // takes the lock, steps the machine
 
@@ -230,6 +231,7 @@ class VoicePipeline final : public ReplyReceiver {
   bool reply_audio_started_ = false;
   std::size_t clip_rotation_ = 0;
   std::size_t tts_pending_ = 0;
+  std::uint64_t last_trouble_ns_ = 0;  // the last time the voice-trouble line was queued
   std::uint64_t command_sent_ns_ = 0;  // for command_to_audio; 0 once the first audio played
   std::atomic<bool> running_{false};
   std::unordered_map<std::string, Clip> clips_;

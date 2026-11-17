@@ -26,6 +26,30 @@ std::uint64_t WallNs() {
                                         .count());
 }
 
+// The one voice, rebuilt when the engine fails (FR-VOI-09): the failing call is retried once on a
+// fresh engine; the voice, speed and phonemes are the same, so the voice never changes.
+class RestartingTts final : public Tts {
+ public:
+  RestartingTts(std::unique_ptr<Tts> engine, KokoroPaths paths)
+      : engine_(std::move(engine)), paths_(std::move(paths)) {}
+  [[nodiscard]] int sample_rate() const override { return engine_->sample_rate(); }
+  Result<std::vector<std::int16_t>> Synthesize(std::string_view text) override {
+    auto r = engine_->Synthesize(text);
+    if (r.ok()) return r;
+    auto fresh = MakeKokoroTts(paths_);
+    if (!fresh.ok()) return r;
+    engine_ = std::move(fresh).value();
+    ++restarts_;
+    return engine_->Synthesize(text);
+  }
+  [[nodiscard]] int restarts() const { return restarts_; }
+
+ private:
+  std::unique_ptr<Tts> engine_;
+  KokoroPaths paths_;
+  int restarts_ = 0;
+};
+
 class RealRuntime final : public VoiceRuntime {
  public:
   ~RealRuntime() override { Stop(); }
@@ -98,7 +122,7 @@ Result<std::unique_ptr<VoiceRuntime>> BuildVoiceRuntime(const RuntimeOptions& o)
   auto tts = MakeKokoroTts(k);
   mark("tts", tts.ok(), tts.ok() ? "" : tts.error().message);
   if (!tts.ok()) return Fail("speech model: " + tts.error().message);
-  rt->tts = std::move(tts).value();
+  rt->tts = std::make_unique<RestartingTts>(std::move(tts).value(), k);
 
   PipeWireOptions po;
   po.capture_node_name = o.config.capture_node;

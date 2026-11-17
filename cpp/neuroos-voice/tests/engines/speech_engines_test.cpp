@@ -231,3 +231,66 @@ TEST(LocalMemory, EachEngineAndTheWholeStayInsideTheBudget) {
 
 }  // namespace
 }  // namespace neuroos::voice
+
+// ---- performance (local, release builds): NFR-PERF-09 and the per-frame cost of listening
+// --------
+
+#include <algorithm>
+#include <chrono>
+
+namespace neuroos::voice {
+namespace {
+
+double Ms(std::chrono::steady_clock::duration d) {
+  return std::chrono::duration<double, std::milli>(d).count();
+}
+
+TEST(LocalPerf, TranscribingAThreeSecondUtteranceAndTheCostOfListening) {
+  auto tts = MakeKokoroTts(RealKokoro());
+  ASSERT_TRUE(tts.ok());
+  auto pcm24 = tts.value()->Synthesize(
+      "Hey Jarvis, what is the weather going to be like today? Is it going to rain?");
+  ASSERT_TRUE(pcm24.ok());
+  std::vector<std::int16_t> pcm16;
+  const auto& in = pcm24.value();
+  for (std::size_t i = 0; i * 3 / 2 + 1 < in.size(); ++i) {
+    const double pos = static_cast<double>(i) * 1.5;
+    const auto k = static_cast<std::size_t>(pos);
+    const double f = pos - static_cast<double>(k);
+    pcm16.push_back(static_cast<std::int16_t>(in[k] * (1.0 - f) + in[k + 1] * f));
+  }
+  pcm16.resize(std::min<std::size_t>(pcm16.size(), 16000 * 3));  // exactly the 3 s of the budget
+  for (const int threads : {1, 2, 4, 8}) {
+    auto stt = MakeWhisperStt(kModels + "/ggml-tiny.en.bin", threads);
+    ASSERT_TRUE(stt.ok());
+    ASSERT_TRUE(stt.value()->Transcribe(pcm16).ok());  // warm up
+    std::vector<double> times;
+    for (int i = 0; i < 7; ++i) {
+      const auto t0 = std::chrono::steady_clock::now();
+      ASSERT_TRUE(stt.value()->Transcribe(pcm16).ok());
+      times.push_back(Ms(std::chrono::steady_clock::now() - t0));
+    }
+    std::sort(times.begin(), times.end());
+    std::printf("whisper tiny.en, %d threads, 3 s: median %.0f ms, worst %.0f ms\n", threads,
+                times[times.size() / 2], times.back());
+  }
+  auto vad = MakeSileroVad(kModels + "/silero_vad.onnx");
+  WakeWordPaths w;
+  w.melspectrogram = kModels + "/melspectrogram.onnx";
+  w.embedding = kModels + "/embedding_model.onnx";
+  w.classifier = kModels + "/hey_jarvis_v0.1.onnx";
+  auto wake = MakeOpenWakeWord(w);
+  ASSERT_TRUE(vad.ok() && wake.ok());
+  std::vector<std::int16_t> frame(512, 0);
+  const auto t0 = std::chrono::steady_clock::now();
+  for (int i = 0; i < 1000; ++i) vad.value()->Process(frame);
+  const double vad_ms = Ms(std::chrono::steady_clock::now() - t0) / 1000.0;
+  const auto t1 = std::chrono::steady_clock::now();
+  for (int i = 0; i < 1000; ++i) wake.value()->Process(frame);
+  const double wake_ms = Ms(std::chrono::steady_clock::now() - t1) / 1000.0;
+  std::printf("per 32 ms frame: voice activity %.3f ms (%.2f%% of one core), wake word %.3f ms\n",
+              vad_ms, vad_ms / 32.0 * 100.0, wake_ms);
+}
+
+}  // namespace
+}  // namespace neuroos::voice

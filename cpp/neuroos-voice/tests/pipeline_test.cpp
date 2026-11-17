@@ -399,6 +399,18 @@ TEST(VoicePipeline, ASynthesisFailureDropsThatSentenceAndKeepsTheNext) {
   EXPECT_EQ(r.sink.writes.size(), 1U);
 }
 
+TEST(VoicePipeline, AFailingSpeechEngineSaysSoOnceInTheCachedVoice) {
+  Rig r;
+  r.p->PreloadClips();
+  r.AskByVoice();
+  r.tts.fail = true;
+  r.link.receiver->OnSpeak("First. Second. Third.");
+  r.Settle();
+  EXPECT_EQ(r.p->stats().synth_failures, 3U);
+  ASSERT_EQ(r.sink.writes.size(), 1U) << "one cached 'my voice is restarting' clip, not three";
+  EXPECT_EQ(r.tts.spoken.size(), 12U + 3U) << "the clip came from the cache, not from synthesis";
+}
+
 TEST(VoicePipeline, ARequestThatFailsBeforeAnyWordPlaysTheStatusLine) {
   Rig r;
   r.p->PreloadClips();
