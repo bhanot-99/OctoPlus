@@ -1,7 +1,9 @@
 // The real voice runtime: models loaded, PipeWire connected, pipeline wired to C5.
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <string>
 
@@ -111,6 +113,9 @@ Result<std::unique_ptr<VoiceRuntime>> BuildVoiceRuntime(const RuntimeOptions& o)
   if (probe.ok()) rt->probe = std::move(probe).value();
 
   rt->link = std::make_unique<KnowledgeLink>(o.knowledge);
+  if (std::getenv("NEUROOS_VOICE_TRACE") != nullptr) {
+    rt->link->SetTrace([](std::string_view e) { std::cerr << "voice: " << e << "\n"; });
+  }
   rt->stt_exec = std::make_unique<ThreadExecutor>();
   rt->tts_exec = std::make_unique<ThreadExecutor>();
 
@@ -143,6 +148,9 @@ Result<std::unique_ptr<VoiceRuntime>> BuildVoiceRuntime(const RuntimeOptions& o)
       else if (name == "command_to_audio")
         first->Record(dur);
     };
+  }
+  if (std::getenv("NEUROOS_VOICE_TRACE") != nullptr) {
+    d.on_trace = [](std::string_view e) { std::cerr << "voice: " << e << "\n"; };
   }
   PipelineConfig pc;
   pc.vad.end_silence_ns = static_cast<std::uint64_t>(o.config.end_silence_ms) * 1'000'000ULL;

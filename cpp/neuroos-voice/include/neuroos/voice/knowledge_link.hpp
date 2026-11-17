@@ -5,8 +5,10 @@
 
 #include <atomic>
 #include <chrono>
+#include <functional>
 #include <memory>
 #include <mutex>
+#include <string_view>
 
 #include "neuroos/ipc/client.hpp"
 #include "neuroos/voice/pipeline.hpp"
@@ -25,6 +27,9 @@ class KnowledgeLink final : public ReplyLink {
   void Cancel() override;
   void SendBargeIn(std::uint64_t at_ns) override;
 
+  // Optional trace of the stream (frame kinds and the end, never text).
+  void SetTrace(std::function<void(std::string_view)> trace) { trace_ = std::move(trace); }
+
   // Whether a request is currently being read (tests and health).
   [[nodiscard]] bool active() const { return active_.load(); }
 
@@ -36,6 +41,7 @@ class KnowledgeLink final : public ReplyLink {
   ThreadExecutor exec_;
   std::atomic<std::uint64_t> generation_{0};
   std::atomic<bool> active_{false};
+  std::function<void(std::string_view)> trace_;
   std::mutex mu_;
   ipc::ResponseStream* stream_ = nullptr;  // guarded by mu_; owned by the reading job
 };

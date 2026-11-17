@@ -148,6 +148,16 @@ int main(int argc, char* argv[]) {
         }
         if (runtime) {
           auto* p = runtime->pipeline();
+          // What the pipeline has done so far, for health and for finding out why a spoken
+          // question went nowhere (counts only, never text).
+          const auto st = p->stats();
+          health->Gauge("wake_words", static_cast<double>(st.wake_words));
+          health->Gauge("utterances", static_cast<double>(st.utterances));
+          health->Gauge("empty_transcripts", static_cast<double>(st.empty_transcripts));
+          health->Gauge("barge_ins", static_cast<double>(st.barge_ins));
+          health->Gauge("sentences_spoken", static_cast<double>(st.sentences_spoken));
+          health->Gauge("stt_failures", static_cast<double>(st.stt_failures));
+          health->Gauge("synth_failures", static_cast<double>(st.synth_failures));
           if (!p->status().capture_running) {
             runtime->Stop();
             auto s = runtime->Start();

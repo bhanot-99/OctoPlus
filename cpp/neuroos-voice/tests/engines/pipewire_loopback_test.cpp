@@ -78,6 +78,31 @@ TEST(LocalPipeWire, AudioWrittenToTheSinkComesOutOfTheVirtualMicrophone) {
   src.value()->Stop();
 }
 
+TEST(LocalPipeWire, TheSinkPlaysAgainAfterItWentIdle) {
+  VirtualDevice dev("again");
+  ASSERT_TRUE(dev.WaitUntilVisible());
+  PipeWireOptions o;
+  o.capture_node_name = dev.mic_name;
+  o.playback_node_name = dev.sink_name;
+  auto src = MakePipeWireSource(o);
+  auto sink = MakePipeWireSink(o);
+  ASSERT_TRUE(src.ok() && sink.ok());
+  Capture cap;
+  ASSERT_TRUE(src.value()->Start([&](std::span<const std::int16_t> s) { cap.Add(s); }).ok());
+  ASSERT_TRUE(sink.value()->Start(24000).ok());
+  std::this_thread::sleep_for(300ms);
+  // Three separate utterances with silence between them, as in a conversation.
+  for (int round = 0; round < 3; ++round) {
+    const std::size_t before = cap.size();
+    sink.value()->Write(Tone(24000, 0.6, 440.0, 8000.0));
+    for (int i = 0; i < 40 && !sink.value()->Idle(); ++i) std::this_thread::sleep_for(50ms);
+    std::this_thread::sleep_for(300ms);
+    EXPECT_GT(cap.Rms(before), 1500.0) << "round " << round << ": the tone was heard";
+    std::this_thread::sleep_for(2500ms);  // long enough for the node to go idle
+  }
+  src.value()->Stop();
+}
+
 TEST(LocalPipeWire, FlushStopsPlaybackAtOnce) {
   VirtualDevice dev("flush");
   ASSERT_TRUE(dev.WaitUntilVisible());

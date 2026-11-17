@@ -157,6 +157,9 @@ class VoicePipeline final : public ReplyReceiver {
     // its first sample at the speaker, NFR-PERF-01), flush (NFR-PERF-08), transcribe
     // (NFR-PERF-09), command_to_audio (command sent to the first audio of the reply).
     std::function<void(std::string_view name, std::uint64_t ns)> on_metric;
+    // Optional trace of what the pipeline is doing (event names only, never text or audio): wake,
+    // speech_started, speech_ended, transcribed, empty_transcript, command_sent, reply_audio.
+    std::function<void(std::string_view event)> on_trace;
   };
 
   VoicePipeline(Deps deps, PipelineConfig cfg);
