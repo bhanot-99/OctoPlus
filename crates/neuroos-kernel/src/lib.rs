@@ -547,6 +547,8 @@ fn build_dispatcher(
         skill_bin,
         home,
         build_folders: ctx.config.kernel.cleanup_build_folders.clone(),
+        notes_folders: folders_of(ctx, neuroos_common::config::FolderKind::Notes),
+        calendar_folders: folders_of(ctx, neuroos_common::config::FolderKind::Calendar),
         dialog_env,
         approval_window: dispatch::APPROVAL_WINDOW,
         review_per_minute: ctx.config.kernel.review_per_minute,
@@ -559,6 +561,20 @@ fn build_dispatcher(
         audit,
         control,
     ))
+}
+
+/// The watched folders of one kind (`[monitor] folders`).
+fn folders_of(
+    ctx: &neuroos_health::ServiceContext,
+    kind: neuroos_common::config::FolderKind,
+) -> Vec<std::path::PathBuf> {
+    ctx.config
+        .monitor
+        .folders
+        .iter()
+        .filter(|f| f.kind == kind)
+        .map(|f| f.path.clone())
+        .collect()
 }
 
 /// Records `RESULT EXPIRED` for actions left without a result by a previous run

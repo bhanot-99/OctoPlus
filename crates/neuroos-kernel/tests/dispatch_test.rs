@@ -116,6 +116,8 @@ fn world_with(answer: &str, window: Duration, fail_attempts: bool) -> World {
         skill_bin: skill_bin(),
         home: home.clone(),
         build_folders: vec![],
+        notes_folders: Vec::new(),
+        calendar_folders: Vec::new(),
         dialog_env: vec![],
         approval_window: window,
         review_per_minute: 6,

@@ -4,7 +4,8 @@
 //! (ADR-0010 decision 3); each child then narrows itself further:
 //! - read-only: system files for the GTK dialog (`/usr`, `/etc`), its own
 //!   binaries folder (the dialog and skill programs), `hmac.key`;
-//! - read-write: `audit/`, the cleanup roots and the trash (skill children).
+//! - read-write: `audit/`, the cleanup roots, the trash and the notes folders (skill children);
+//!   calendar folders are read-only.
 
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -31,6 +32,30 @@ fn build_folders() -> Vec<PathBuf> {
         .unwrap_or_default()
 }
 
+/// Watched notes and calendar folders from the same config file (children read them; the notes
+/// folders are also written by `notes.append`, a REVIEW skill, ADR-0013 decision 7).
+fn watched_folders() -> (Vec<PathBuf>, Vec<PathBuf>) {
+    use neuroos_common::config::FolderKind;
+    let file = paths::config_file(
+        std::env::var_os("NEUROOS_CONFIG").as_deref(),
+        std::env::var_os("XDG_CONFIG_HOME").as_deref(),
+        std::env::var_os("HOME").as_deref(),
+    );
+    let folders = file
+        .ok()
+        .and_then(|f| Config::load_from(&f).ok())
+        .map(|c| c.monitor.folders)
+        .unwrap_or_default();
+    let pick = |kind: FolderKind| {
+        folders
+            .iter()
+            .filter(|f| f.kind == kind)
+            .map(|f| f.path.clone())
+            .collect::<Vec<_>>()
+    };
+    (pick(FolderKind::Notes), pick(FolderKind::Calendar))
+}
+
 fn main() -> Result<(), ServiceError> {
     let fail = |what: String| ServiceError::Custom(what);
     let home = std::env::var_os("HOME")
@@ -55,6 +80,7 @@ fn main() -> Result<(), ServiceError> {
     let (dialog_bin, _) = neuroos_kernel::sibling_binaries()?;
     let bin_dir = dialog_bin.parent().map(Path::to_path_buf);
 
+    let (notes, calendars) = watched_folders();
     let read_only = existing(
         [
             PathBuf::from("/usr"),
@@ -63,13 +89,15 @@ fn main() -> Result<(), ServiceError> {
             config_dir.join("hmac.key"),
         ]
         .into_iter()
-        .chain(bin_dir),
+        .chain(bin_dir)
+        .chain(calendars),
     );
     let mut read_write = vec![audit_dir];
     read_write.extend(existing(
         [home.join(".cache"), home.join(".local/share/Trash")]
             .into_iter()
-            .chain(build_folders()),
+            .chain(build_folders())
+            .chain(notes),
     ));
 
     ServiceBuilder::new(Part::Kernel, "neuroos-kernel", env!("CARGO_PKG_VERSION"))

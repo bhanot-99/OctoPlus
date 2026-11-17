@@ -205,6 +205,8 @@ async fn test_injection_corpus_dispatch() {
         skill_bin: skill_bin(),
         home: home.clone(),
         build_folders: vec![],
+        notes_folders: Vec::new(),
+        calendar_folders: Vec::new(),
         dialog_env: vec![],
         approval_window: Duration::from_secs(120),
         review_per_minute: 10_000,

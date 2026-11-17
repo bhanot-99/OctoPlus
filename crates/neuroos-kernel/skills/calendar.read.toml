@@ -11,7 +11,7 @@ max = 31
 required = true
 
 [sandbox]
-read_only = []
+read_only = ["calendar_folders"]
 read_write = []
 timeout_ms = 1000
 memory_mib = 16

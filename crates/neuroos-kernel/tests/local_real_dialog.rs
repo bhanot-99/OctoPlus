@@ -83,6 +83,8 @@ async fn cleanup_with_real_dialog(scenario: &str) -> (i32, bool, Vec<&'static st
             skill_bin: sibling("neuroos-skill"),
             home: home.clone(),
             build_folders: vec![],
+            notes_folders: Vec::new(),
+            calendar_folders: Vec::new(),
             dialog_env: env,
             approval_window: Duration::from_secs(20),
             review_per_minute: 6,

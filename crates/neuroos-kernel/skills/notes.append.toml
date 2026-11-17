@@ -16,7 +16,8 @@ required = true
 
 [sandbox]
 read_only = []
-read_write = []
+read_write = ["notes_folders"]
 timeout_ms = 1000
 memory_mib = 16
 cpu_s = 1
+fsize_kib = 64
