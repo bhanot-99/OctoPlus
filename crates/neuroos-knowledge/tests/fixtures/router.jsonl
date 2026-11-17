@@ -137,3 +137,4 @@
 {"text": "summarise what I just looked at", "expected": "desktop", "nudge_window_open": false, "best_score": null}
 {"text": "what did I just read", "expected": "desktop", "nudge_window_open": false, "best_score": null}
 {"text": "it did rain a lot last year", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "what am I looking at right now", "expected": "desktop", "nudge_window_open": false, "best_score": null}

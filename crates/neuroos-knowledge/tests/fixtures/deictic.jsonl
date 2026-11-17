@@ -1,0 +1,80 @@
+{"text": "what is this", "deictic": true, "anchor": "now"}
+{"text": "what was that", "deictic": true, "anchor": "now"}
+{"text": "what are these", "deictic": true, "anchor": "now"}
+{"text": "what were those", "deictic": true, "anchor": "now"}
+{"text": "what is it", "deictic": true, "anchor": "now"}
+{"text": "what was it", "deictic": true, "anchor": "now"}
+{"text": "what is on this screen", "deictic": true, "anchor": "now"}
+{"text": "what was that window I had open", "deictic": true, "anchor": "now"}
+{"text": "explain what I am looking at right here", "deictic": true, "anchor": "now"}
+{"text": "summarize this screen", "deictic": true, "anchor": "now"}
+{"text": "what document is open on this screen", "deictic": true, "anchor": "now"}
+{"text": "what app is running here", "deictic": true, "anchor": "now"}
+{"text": "what is running now", "deictic": false, "anchor": "now"}
+{"text": "what app is open right now", "deictic": false, "anchor": "now"}
+{"text": "what am I doing currently", "deictic": true, "anchor": "now"}
+{"text": "show me my activity at the moment", "deictic": false, "anchor": "now"}
+{"text": "tell me what is happening right now", "deictic": false, "anchor": "now"}
+{"text": "check system status currently", "deictic": false, "anchor": "now"}
+{"text": "what happened a minute ago", "deictic": false, "anchor": "seconds_ago:60"}
+{"text": "what was I reading one minute ago", "deictic": true, "anchor": "seconds_ago:60"}
+{"text": "what was on screen two minutes ago", "deictic": false, "anchor": "seconds_ago:120"}
+{"text": "what did I close 5 minutes ago", "deictic": false, "anchor": "seconds_ago:300"}
+{"text": "what happened ten minutes ago", "deictic": false, "anchor": "seconds_ago:600"}
+{"text": "what was that notification 15 minutes ago", "deictic": false, "anchor": "seconds_ago:900"}
+{"text": "what was I writing twenty minutes ago", "deictic": false, "anchor": "seconds_ago:1200"}
+{"text": "what was open 30 minutes ago", "deictic": false, "anchor": "seconds_ago:1800"}
+{"text": "what was on this screen an hour ago", "deictic": true, "anchor": "seconds_ago:3600"}
+{"text": "what happened one hour ago", "deictic": false, "anchor": "seconds_ago:3600"}
+{"text": "what was I working on two hours ago", "deictic": true, "anchor": "seconds_ago:7200"}
+{"text": "what did I do three hours ago", "deictic": false, "anchor": "seconds_ago:10800"}
+{"text": "what did I receive 5 hours ago", "deictic": false, "anchor": "seconds_ago:18000"}
+{"text": "what happened ten hours ago", "deictic": false, "anchor": "seconds_ago:36000"}
+{"text": "what was open just now", "deictic": false, "anchor": "seconds_ago:30"}
+{"text": "what did I click just now", "deictic": false, "anchor": "seconds_ago:30"}
+{"text": "what was that sound just now", "deictic": false, "anchor": "seconds_ago:30"}
+{"text": "what changed 45 seconds ago", "deictic": false, "anchor": "seconds_ago:45"}
+{"text": "what was I reading earlier", "deictic": true, "anchor": "range:3600"}
+{"text": "what happened earlier", "deictic": false, "anchor": "range:3600"}
+{"text": "what was I working on recently", "deictic": true, "anchor": "range:3600"}
+{"text": "what errors occurred recently", "deictic": false, "anchor": "range:3600"}
+{"text": "what was open in the last hour", "deictic": false, "anchor": "range:3600"}
+{"text": "what did I browse past hour", "deictic": false, "anchor": "range:3600"}
+{"text": "what did I do today", "deictic": false, "anchor": "range:86400"}
+{"text": "what was I doing today", "deictic": true, "anchor": "range:86400"}
+{"text": "summarize my activity this morning", "deictic": false, "anchor": "range:86400"}
+{"text": "what document did I read this morning", "deictic": false, "anchor": "range:86400"}
+{"text": "what tabs were open this afternoon", "deictic": true, "anchor": "range:86400"}
+{"text": "what meetings happened this afternoon", "deictic": false, "anchor": "range:86400"}
+{"text": "what did I edit this evening", "deictic": false, "anchor": "range:86400"}
+{"text": "what was playing this evening", "deictic": false, "anchor": "range:86400"}
+{"text": "what did I do yesterday", "deictic": false, "anchor": "range:172800"}
+{"text": "which files did I change yesterday", "deictic": false, "anchor": "range:172800"}
+{"text": "what happened last night", "deictic": false, "anchor": "range:172800"}
+{"text": "what was I watching last night", "deictic": false, "anchor": "range:172800"}
+{"text": "what tasks did I complete this week", "deictic": false, "anchor": "range:604800"}
+{"text": "what was I researching last week", "deictic": false, "anchor": "range:604800"}
+{"text": "what is rust", "deictic": false, "anchor": "none"}
+{"text": "who was Alan Turing", "deictic": false, "anchor": "none"}
+{"text": "how far is the moon", "deictic": false, "anchor": "none"}
+{"text": "what is the capital of France", "deictic": false, "anchor": "none"}
+{"text": "explain quantum computing", "deictic": false, "anchor": "none"}
+{"text": "write a poem about winter", "deictic": false, "anchor": "none"}
+{"text": "I know how to code", "deictic": false, "anchor": "none"}
+{"text": "there is nowhere to run", "deictic": false, "anchor": "none"}
+{"text": "it is snowing outside", "deictic": false, "anchor": "none"}
+{"text": "knowledge is power", "deictic": false, "anchor": "none"}
+{"text": "wait a minute", "deictic": false, "anchor": "none"}
+{"text": "give me a minute please", "deictic": false, "anchor": "none"}
+{"text": "a minute detail in the painting", "deictic": false, "anchor": "none"}
+{"text": "rush hour traffic is bad", "deictic": false, "anchor": "none"}
+{"text": "happy hour starts at five", "deictic": false, "anchor": "none"}
+{"text": "yesterdays are gone forever", "deictic": false, "anchor": "none"}
+{"text": "the earliest bird catches the worm", "deictic": false, "anchor": "none"}
+{"text": "ten years ago I lived in Rome", "deictic": false, "anchor": "none"}
+{"text": "three months ago we moved", "deictic": false, "anchor": "none"}
+{"text": "tell me a funny story", "deictic": false, "anchor": "none"}
+{"text": "can you solve this math puzzle", "deictic": false, "anchor": "none"}
+{"text": "is it going to rain", "deictic": false, "anchor": "none"}
+{"text": "that is a wonderful idea", "deictic": false, "anchor": "none"}
+{"text": "how do airplanes fly", "deictic": false, "anchor": "none"}
