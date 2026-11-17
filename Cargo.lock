@@ -1274,6 +1274,7 @@ name = "neuroos-skill"
 version = "0.1.0"
 dependencies = [
  "neuroos-sandbox",
+ "proptest",
  "rustix",
  "serde_json",
  "tempfile",

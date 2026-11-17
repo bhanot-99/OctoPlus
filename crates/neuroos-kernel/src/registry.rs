@@ -281,8 +281,8 @@ mod tests {
                 true,
                 SkillKind::Child,
             ),
-            ("calendar.read", Tier::Safe, false, false, SkillKind::Child),
-            ("notes.search", Tier::Safe, false, false, SkillKind::Child),
+            ("calendar.read", Tier::Safe, false, true, SkillKind::Child),
+            ("notes.search", Tier::Safe, false, true, SkillKind::Child),
             ("privacy.pause", Tier::Safe, false, true, SkillKind::Kernel),
             (
                 "profile.remember",
@@ -305,7 +305,7 @@ mod tests {
                 true,
                 SkillKind::Kernel,
             ),
-            ("notes.append", Tier::Review, false, false, SkillKind::Child),
+            ("notes.append", Tier::Review, false, true, SkillKind::Child),
             (
                 "system.cleanup",
                 Tier::Review,

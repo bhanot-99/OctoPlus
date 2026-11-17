@@ -11,10 +11,12 @@
 //! Output: one JSON object on stdout, `{"ok":true,"result":…}` or
 //! `{"ok":false,"error":"<code>"}`. Error codes never contain user content.
 
+pub mod calendar;
 pub mod cleanup;
 pub mod disk;
 pub mod invocation;
 pub mod metadata;
+pub mod notes;
 pub mod walk;
 
 use serde_json::Value;
@@ -69,8 +71,18 @@ pub fn run(inv: &Invocation, args: &Value) -> Result<Value, SkillError> {
         "system.read_metadata" => metadata::run(args),
         "system.disk_report" => disk::run(inv, args),
         "system.cleanup" => cleanup::run(inv, args),
+        "notes.search" => notes::search(inv, args),
+        "notes.append" => notes::append(inv, args),
+        "calendar.read" => calendar::read(inv, args, unix_now()),
         _ => Err(SkillError::UnknownCapability),
     }
+}
+
+/// Seconds since the Unix epoch (0 if the clock is before it).
+fn unix_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs())
 }
 
 /// Applies, in order, the resource limits, Landlock on exactly the invocation's

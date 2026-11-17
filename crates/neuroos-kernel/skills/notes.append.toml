@@ -1,7 +1,7 @@
 capability = "notes.append"
 tier = "REVIEW"
 disabled = false
-implemented = false
+implemented = true
 kind = "child"
 
 [args.note]
@@ -17,7 +17,7 @@ required = true
 [sandbox]
 read_only = []
 read_write = ["notes_folders"]
-timeout_ms = 1000
-memory_mib = 16
-cpu_s = 1
+timeout_ms = 2000
+memory_mib = 32
+cpu_s = 2
 fsize_kib = 64

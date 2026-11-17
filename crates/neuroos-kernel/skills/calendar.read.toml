@@ -1,7 +1,7 @@
 capability = "calendar.read"
 tier = "SAFE"
 disabled = false
-implemented = false
+implemented = true
 kind = "child"
 
 [args.days]
@@ -13,6 +13,6 @@ required = true
 [sandbox]
 read_only = ["calendar_folders"]
 read_write = []
-timeout_ms = 1000
-memory_mib = 16
-cpu_s = 1
+timeout_ms = 3000
+memory_mib = 64
+cpu_s = 2
