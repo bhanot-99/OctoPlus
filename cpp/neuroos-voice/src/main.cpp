@@ -26,6 +26,8 @@
 
 namespace {}  // namespace
 
+// Branchy by nature (cognitive complexity): start-up in one place.
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 int main(int argc, char* argv[]) {
   neuroos::voice::CliConfig cfg;
   if (!neuroos::voice::ParseCliArgs(argc, argv, &cfg) || !neuroos::voice::ResolveSockets(&cfg)) {
@@ -77,6 +79,7 @@ int main(int argc, char* argv[]) {
     add_ro("/usr/share/pipewire");
     add_ro("/usr/share/espeak-ng-data");
     add_ro("/etc/pipewire");
+    // NOLINTNEXTLINE(concurrency-mt-unsafe) - read once, before any thread
     if (const char* rt = std::getenv("XDG_RUNTIME_DIR")) {
       const std::filesystem::path pw = std::filesystem::path(rt) / "pipewire-0";
       if (std::filesystem::exists(pw)) {

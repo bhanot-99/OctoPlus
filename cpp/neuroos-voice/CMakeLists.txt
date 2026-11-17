@@ -82,10 +82,10 @@ if(NEUROOS_WITH_VOICE_ENGINES)
   target_link_libraries(neuroos_voice_speech_tests PRIVATE neuroos_voice_engines neuroos_voice_speech GTest::gtest_main neuroos_warnings)
   gtest_discover_tests(neuroos_voice_speech_tests PROPERTIES LABELS "local")
 
-  add_executable(neuroos-voice-eval tools_eval.cpp)
+  add_executable(neuroos-voice-eval tools/eval.cpp)
   target_link_libraries(neuroos-voice-eval PRIVATE neuroos_voice_engines neuroos_voice_speech neuroos_warnings)
 
-  add_executable(neuroos-voice-say tools_say.cpp)
+  add_executable(neuroos-voice-say tools/say.cpp)
   target_link_libraries(neuroos-voice-say PRIVATE neuroos_voice_speech neuroos_warnings)
 
   add_executable(neuroos_voice_e2e_tests

@@ -22,15 +22,15 @@ using namespace std::chrono_literals;
 struct Heard final : public ReplyReceiver {
   void OnPreamble(int k) override {
     const std::lock_guard<std::mutex> l(mu);
-    events.push_back("preamble:" + std::to_string(k));
+    events.emplace_back("preamble:" + std::to_string(k));
   }
   void OnSpeak(std::string_view t) override {
     const std::lock_guard<std::mutex> l(mu);
-    events.push_back("speak:" + std::string(t));
+    events.emplace_back("speak:" + std::string(t));
   }
   void OnFinished(bool ok) override {
     const std::lock_guard<std::mutex> l(mu);
-    events.push_back(ok ? "done" : "failed");
+    events.emplace_back(ok ? "done" : "failed");
   }
   std::vector<std::string> Events() {
     const std::lock_guard<std::mutex> l(mu);
@@ -54,7 +54,7 @@ struct Heard final : public ReplyReceiver {
 };
 
 struct FakeC5 {
-  explicit FakeC5(std::filesystem::path dir) : path(dir / "knowledge.sock") {
+  explicit FakeC5(const std::filesystem::path& dir) : path(dir / "knowledge.sock") {
     ipc::ServerConfig cfg;
     cfg.deadline = 5000ms;
     server =

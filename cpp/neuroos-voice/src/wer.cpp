@@ -1,6 +1,7 @@
 #include "neuroos/voice/wer.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cstddef>
 #include <iterator>
@@ -43,13 +44,13 @@ std::vector<std::string> NormaliseWords(std::string_view text) {
 
   // Speech to text writes small numbers as digits or as words, whichever it likes: both count as
   // the same word, so "two plus two" and "2 plus 2" are not an error.
-  static const char* const kNumbers[] = {
+  static const std::array<std::string_view, 21> kNumbers = {
       "zero",     "one",     "two",     "three",     "four",     "five",     "six",
       "seven",    "eight",   "nine",    "ten",       "eleven",   "twelve",   "thirteen",
       "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty"};
   for (auto& w : words) {
-    for (std::size_t n = 0; n < std::size(kNumbers); ++n) {
-      if (w == kNumbers[n]) {
+    for (std::size_t n = 0; n < kNumbers.size(); ++n) {
+      if (w == kNumbers.at(n)) {
         w = std::to_string(n);
         break;
       }
@@ -58,6 +59,8 @@ std::vector<std::string> NormaliseWords(std::string_view text) {
   return words;
 }
 
+// Branchy by nature (cognitive complexity): edit-distance table and backtrace.
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 WerResult WordErrorRate(std::string_view reference, std::string_view hypothesis) {
   const std::vector<std::string> ref_words = NormaliseWords(reference);
   const std::vector<std::string> hyp_words = NormaliseWords(hypothesis);

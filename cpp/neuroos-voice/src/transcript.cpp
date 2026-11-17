@@ -63,13 +63,9 @@ bool LooksLikeName(const std::string& bare) {
 
 bool LooksLikeHey(const std::string& bare) {
   // How "hey" tends to be heard when it is cut at the start of a capture.
-  for (const char* h : {"hey", "hay", "hi", "a", "ay", "okay", "ok", "and", "he", "uh", "oh", "ah",
-                        "hate", "hello"}) {
-    if (bare == h) {
-      return true;
-    }
-  }
-  return false;
+  static const std::vector<std::string_view> kHeys = {
+      "hey", "hay", "hi", "a", "ay", "okay", "ok", "and", "he", "uh", "oh", "ah", "hate", "hello"};
+  return std::ranges::any_of(kHeys, [&bare](std::string_view h) { return bare == h; });
 }
 
 std::string Join(const std::vector<Word>& w, std::size_t from, std::size_t to) {

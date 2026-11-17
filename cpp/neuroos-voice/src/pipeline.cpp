@@ -277,6 +277,8 @@ void VoicePipeline::Run(const std::vector<TurnAction>& actions) {
   }
 }
 
+// Branchy by nature (cognitive complexity): copy the audio, run, clean up.
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void VoicePipeline::Transcribe() {
   std::vector<std::int16_t> audio;
   bool after_wake = false;
@@ -357,7 +359,7 @@ void VoicePipeline::ProcessFrame(std::span<const std::int16_t> frame) {
   const VadEvent main = gate_.Update(prob, now);
   const VadEvent barge = barge_gate_.Update(prob, now);
 
-  TurnState state;
+  TurnState state = TurnState::kIdle;
   {
     const std::lock_guard<std::mutex> lock(mu_);
     state = machine_.state();
@@ -475,6 +477,8 @@ void VoicePipeline::NoteAudioQueued(bool nudge, std::uint64_t epoch) {
   Run(Post(e));
 }
 
+// Branchy by nature (cognitive complexity): synthesise, check the epoch, play.
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void VoicePipeline::QueueSpeech(const std::string& text, bool nudge, std::uint64_t epoch) {
   {
     const std::lock_guard<std::mutex> lock(mu_);

@@ -35,6 +35,10 @@
 // -O3 once inlined here; the calls are on objects this file has just checked or created.
 #pragma GCC diagnostic ignored "-Wnull-dereference"
 
+// PipeWire is a C API of callbacks, spa_hook tables and property varargs: this file is the one
+// place that talks to it.
+// NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast,cppcoreguidelines-pro-type-const-cast,cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays,cppcoreguidelines-pro-bounds-array-to-pointer-decay,cppcoreguidelines-pro-type-vararg,bugprone-implicit-widening-of-multiplication-result,cppcoreguidelines-pro-bounds-constant-array-index,bugprone-use-after-move,bugprone-empty-catch,concurrency-mt-unsafe,clang-analyzer-optin.core.EnumCastOutOfRange,readability-container-contains)
+
 namespace neuroos::voice {
 namespace {
 
@@ -91,6 +95,8 @@ class PwCore {
     pw_thread_loop_destroy(loop_);
   }
   PwCore(const PwCore&) = delete;
+  PwCore(PwCore&&) = delete;
+  PwCore& operator=(PwCore&&) = delete;
   PwCore& operator=(const PwCore&) = delete;
 
   [[nodiscard]] pw_thread_loop* loop() const { return loop_; }
@@ -357,6 +363,10 @@ class PipeWireSource final : public AudioSource {
  public:
   PipeWireSource(std::shared_ptr<PwCore> core, PipeWireOptions opts)
       : core_(std::move(core)), opts_(std::move(opts)) {}
+  PipeWireSource(const PipeWireSource&) = delete;
+  PipeWireSource& operator=(const PipeWireSource&) = delete;
+  PipeWireSource(PipeWireSource&&) = delete;
+  PipeWireSource& operator=(PipeWireSource&&) = delete;
   ~PipeWireSource() override { Stop(); }
 
   Status Start(FrameCallback on_audio) override {
@@ -554,6 +564,10 @@ class PipeWireSink final : public AudioSink {
  public:
   PipeWireSink(std::shared_ptr<PwCore> core, PipeWireOptions opts)
       : core_(std::move(core)), opts_(std::move(opts)) {}
+  PipeWireSink(const PipeWireSink&) = delete;
+  PipeWireSink& operator=(const PipeWireSink&) = delete;
+  PipeWireSink(PipeWireSink&&) = delete;
+  PipeWireSink& operator=(PipeWireSink&&) = delete;
   ~PipeWireSink() override {
     if (stream_ != nullptr) {
       auto* loop = core_->loop();
@@ -726,3 +740,4 @@ Result<std::unique_ptr<MicBusyProbe>> MakePipeWireMicProbe() {
 }
 
 }  // namespace neuroos::voice
+// NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast,cppcoreguidelines-pro-type-const-cast,cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays,cppcoreguidelines-pro-bounds-array-to-pointer-decay,cppcoreguidelines-pro-type-vararg,bugprone-implicit-widening-of-multiplication-result,cppcoreguidelines-pro-bounds-constant-array-index,bugprone-use-after-move,bugprone-empty-catch,concurrency-mt-unsafe,clang-analyzer-optin.core.EnumCastOutOfRange,readability-container-contains)

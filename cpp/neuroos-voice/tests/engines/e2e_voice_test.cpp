@@ -18,7 +18,7 @@ namespace {
 using namespace std::chrono_literals;
 using testing::VirtualDevice;
 
-const std::string kModels = NEUROOS_VOICE_MODELS_DIR;
+std::string Models() { return NEUROOS_VOICE_MODELS_DIR; }
 
 class RecordingLink final : public ReplyLink {
  public:
@@ -108,20 +108,20 @@ struct Rig {
       real_buddy_sink = std::move(bs).value();
     }
     KokoroPaths user;
-    user.model = kModels + "/kokoro-v1.0-fp32.onnx";
-    user.tokenizer = kModels + "/kokoro-tokenizer.json";
-    user.voice = kModels + "/voices/am_michael.bin";
+    user.model = Models() + "/kokoro-v1.0-fp32.onnx";
+    user.tokenizer = Models() + "/kokoro-tokenizer.json";
+    user.voice = Models() + "/voices/am_michael.bin";
     KokoroPaths buddy = user;
-    buddy.voice = kModels + "/voices/af_heart.bin";
+    buddy.voice = Models() + "/voices/af_heart.bin";
     auto uv = MakeKokoroTts(user);
     auto bv = MakeKokoroTts(buddy);
-    auto v = MakeSileroVad(kModels + "/silero_vad.onnx");
+    auto v = MakeSileroVad(Models() + "/silero_vad.onnx");
     WakeWordPaths w;
-    w.melspectrogram = kModels + "/melspectrogram.onnx";
-    w.embedding = kModels + "/embedding_model.onnx";
-    w.classifier = kModels + "/hey_jarvis_v0.1.onnx";
+    w.melspectrogram = Models() + "/melspectrogram.onnx";
+    w.embedding = Models() + "/embedding_model.onnx";
+    w.classifier = Models() + "/hey_jarvis_v0.1.onnx";
     auto ww = MakeOpenWakeWord(w);
-    auto st = MakeWhisperStt(kModels + "/ggml-tiny.en.bin", 4);
+    auto st = MakeWhisperStt(Models() + "/ggml-tiny.en.bin", 4);
     if (!m.ok() || !sp.ok() || !uv.ok() || !bv.ok() || !v.ok() || !ww.ok() || !st.ok()) {
       return false;
     }
@@ -161,7 +161,7 @@ struct Rig {
   }
 
   // The user says `phrase` (synthesised) into the virtual microphone, then stays quiet.
-  void UserSays(const std::string& phrase) {
+  void UserSays(const std::string& phrase) const {
     auto pcm = user_voice->Synthesize(phrase);
     ASSERT_TRUE(pcm.ok());
     user_speaker->Write(pcm.value());

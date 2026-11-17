@@ -132,9 +132,7 @@ const std::string& StatusPhrase(int line) {
       return kPartUnavailable;
     case 2:
       return kNotSure;
-    case 3:
-      return kError;
-    default:
+    default:  // 3, and anything unknown
       return kError;
   }
 }
@@ -154,6 +152,8 @@ std::vector<std::string> AllCachedPhrases() {
   return phrases;
 }
 
+// Branchy by nature (cognitive complexity): one branch per template.
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 std::optional<SpokenNudge> RenderNudgeLine(std::string_view template_id,
                                            std::span<const NudgeArg> args) {
   if (template_id == "disk.nearly_full") {

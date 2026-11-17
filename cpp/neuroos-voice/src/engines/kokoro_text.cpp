@@ -77,6 +77,8 @@ int Hex(char c) {
 
 // Reads a JSON string starting at the opening quote; returns its code points. `*at` ends after
 // the closing quote. False on malformed input.
+// Branchy by nature (cognitive complexity): a JSON string reader is one escape switch.
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 bool ReadJsonString(std::string_view s, std::size_t* at, std::u32string* out) {
   if (*at >= s.size() || s[*at] != '"') {
     return false;

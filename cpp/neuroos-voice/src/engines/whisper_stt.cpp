@@ -16,6 +16,8 @@ class WhisperStt final : public Stt {
   WhisperStt(whisper_context* ctx, int threads) : ctx_(ctx), threads_(threads) {}
   ~WhisperStt() override { whisper_free(ctx_); }
   WhisperStt(const WhisperStt&) = delete;
+  WhisperStt(WhisperStt&&) = delete;
+  WhisperStt& operator=(WhisperStt&&) = delete;
   WhisperStt& operator=(const WhisperStt&) = delete;
 
   Result<std::string> Transcribe(std::span<const std::int16_t> pcm) override {

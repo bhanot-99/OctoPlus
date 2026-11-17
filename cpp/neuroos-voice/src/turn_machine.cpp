@@ -7,6 +7,8 @@ namespace neuroos::voice {
 
 TurnMachine::TurnMachine(TurnConfig cfg) : cfg_(cfg) {}
 
+// Branchy by nature (cognitive complexity): the conversation state machine: state by event.
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
   switch (state_) {
     case TurnState::kIdle: {

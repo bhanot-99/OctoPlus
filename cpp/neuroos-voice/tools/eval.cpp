@@ -77,7 +77,7 @@ struct Run {
 
 class Engines {
  public:
-  explicit Engines(const std::string& models) : models_(models) {}
+  explicit Engines(std::string models) : models_(std::move(models)) {}
   bool Load() {
     auto v = MakeSileroVad(models_ + "/silero_vad.onnx");
     WakeWordPaths w;
@@ -96,7 +96,7 @@ class Engines {
     return true;
   }
 
-  Run Process(const std::vector<std::int16_t>& pcm) {
+  [[nodiscard]] Run Process(const std::vector<std::int16_t>& pcm) const {
     OfflineSource source;
     NullSink sink;
     NullTts tts;

@@ -15,6 +15,11 @@
 #include "neuroos/voice/real_engines.hpp"
 #include "ort_session.hpp"
 
+// ONNX Runtime, whisper.cpp, espeak-ng and PipeWire are C APIs: they take char* arrays and mutable
+// data pointers for read-only tensors, property lists as varargs, and hand back opaque pointers;
+// this file is the one place that talks to them, and every call is checked.
+// NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast,cppcoreguidelines-pro-type-const-cast,cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays,cppcoreguidelines-pro-bounds-array-to-pointer-decay,cppcoreguidelines-pro-type-vararg,bugprone-implicit-widening-of-multiplication-result,cppcoreguidelines-pro-bounds-constant-array-index,bugprone-use-after-move,bugprone-empty-catch,concurrency-mt-unsafe)
+
 namespace neuroos::voice {
 namespace engines {
 
@@ -153,3 +158,4 @@ Result<std::unique_ptr<Vad>> MakeSileroVad(const std::string& model_path) {
 }
 
 }  // namespace neuroos::voice
+// NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast,cppcoreguidelines-pro-type-const-cast,cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays,cppcoreguidelines-pro-bounds-array-to-pointer-decay,cppcoreguidelines-pro-type-vararg,bugprone-implicit-widening-of-multiplication-result,cppcoreguidelines-pro-bounds-constant-array-index,bugprone-use-after-move,bugprone-empty-catch,concurrency-mt-unsafe)

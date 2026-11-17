@@ -29,6 +29,8 @@ inline std::uint32_t ReadU32(std::span<const std::uint8_t> b, std::size_t offset
 
 }  // namespace
 
+// Branchy by nature (cognitive complexity): chunk walk with format checks.
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 Result<WavAudio> ParseWav(std::span<const std::uint8_t> bytes) {
   if (bytes.size() < 12) {
     return Error{.message = "File too short for RIFF/WAVE header", .retryable = false, .code = 1};
@@ -180,7 +182,7 @@ std::vector<std::int16_t> Resample(std::span<const std::int16_t> in, int from_ra
     return {};
   }
   if (from_rate == to_rate) {
-    return std::vector<std::int16_t>(in.begin(), in.end());
+    return {in.begin(), in.end()};
   }
 
   const double target_len = static_cast<double>(in.size()) * static_cast<double>(to_rate) /
@@ -221,6 +223,7 @@ Result<std::vector<std::int16_t>> LoadWav16k(const std::string& path) {
   file.seekg(0, std::ios::beg);
   std::vector<std::uint8_t> buffer(static_cast<std::size_t>(file_size));
   if (file_size > 0) {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast) - istream::read takes char*
     if (!file.read(reinterpret_cast<char*>(buffer.data()), file_size)) {
       return Error{.message = "Failed to read WAV file: " + path, .retryable = false, .code = 1};
     }

@@ -1,6 +1,7 @@
 // Kokoro text handling (pure) and the real speech engines (local: they need the models).
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <fstream>
@@ -13,7 +14,7 @@
 namespace neuroos::voice {
 namespace {
 
-const std::string kModels = NEUROOS_VOICE_MODELS_DIR;
+std::string Models() { return NEUROOS_VOICE_MODELS_DIR; }
 
 std::string Slurp(const std::string& path) {
   std::ifstream const f(path, std::ios::binary);
@@ -23,7 +24,7 @@ std::string Slurp(const std::string& path) {
 }
 
 TEST(KokoroText, VocabularyParsesFromTheRealTokenizerFile) {
-  const auto v = ParseKokoroVocab(Slurp(kModels + "/kokoro-tokenizer.json"));
+  const auto v = ParseKokoroVocab(Slurp(Models() + "/kokoro-tokenizer.json"));
   ASSERT_TRUE(v.ok());
   EXPECT_EQ(v.value().size(), 115U);
   EXPECT_EQ(v.value().at(U'$'), 0);
@@ -85,19 +86,19 @@ TEST(LocalSpeech, MissingModelsAreErrorsNotCrashes) {
   EXPECT_FALSE(MakeWhisperStt("/nonexistent/model.bin", 1).ok());
   KokoroPaths k;
   k.model = "/nonexistent.onnx";
-  k.tokenizer = kModels + "/kokoro-tokenizer.json";
-  k.voice = kModels + "/voices/af_heart.bin";
+  k.tokenizer = Models() + "/kokoro-tokenizer.json";
+  k.voice = Models() + "/voices/af_heart.bin";
   EXPECT_FALSE(MakeKokoroTts(k).ok());
-  k.model = kModels + "/kokoro-v1.0-fp32.onnx";
+  k.model = Models() + "/kokoro-v1.0-fp32.onnx";
   k.voice = "/nonexistent.bin";
   EXPECT_FALSE(MakeKokoroTts(k).ok());
 }
 
 KokoroPaths RealKokoro() {
   KokoroPaths k;
-  k.model = kModels + "/kokoro-v1.0-fp32.onnx";
-  k.tokenizer = kModels + "/kokoro-tokenizer.json";
-  k.voice = kModels + "/voices/af_heart.bin";
+  k.model = Models() + "/kokoro-v1.0-fp32.onnx";
+  k.tokenizer = Models() + "/kokoro-tokenizer.json";
+  k.voice = Models() + "/voices/af_heart.bin";
   return k;
 }
 
@@ -135,7 +136,7 @@ TEST(LocalSpeech, KokoroSayingNothingSpeakableGivesNoAudio) {
 TEST(LocalSpeech, WhisperHearsWhatKokoroSays) {
   auto tts = MakeKokoroTts(RealKokoro());
   ASSERT_TRUE(tts.ok());
-  auto stt = MakeWhisperStt(kModels + "/ggml-tiny.en.bin", 4);
+  auto stt = MakeWhisperStt(Models() + "/ggml-tiny.en.bin", 4);
   ASSERT_TRUE(stt.ok());
   const char* phrases[] = {"What time is it", "What is the weather today", "Pause for one hour"};
   for (const char* phrase : phrases) {
@@ -174,7 +175,7 @@ TEST(LocalSpeech, WhisperHearsWhatKokoroSays) {
 }
 
 TEST(LocalSpeech, WhisperOnSilenceSaysNothingUseful) {
-  auto stt = MakeWhisperStt(kModels + "/ggml-tiny.en.bin", 4);
+  auto stt = MakeWhisperStt(Models() + "/ggml-tiny.en.bin", 4);
   ASSERT_TRUE(stt.ok());
   std::vector<std::int16_t> silence(16000 * 2, 0);
   auto text = stt.value()->Transcribe(silence);
@@ -202,15 +203,15 @@ double RssMiB() {
 
 TEST(LocalMemory, EachEngineAndTheWholeStayInsideTheBudget) {
   const double base = RssMiB();
-  auto vad = MakeSileroVad(kModels + "/silero_vad.onnx");
+  auto vad = MakeSileroVad(Models() + "/silero_vad.onnx");
   const double after_vad = RssMiB();
   WakeWordPaths w;
-  w.melspectrogram = kModels + "/melspectrogram.onnx";
-  w.embedding = kModels + "/embedding_model.onnx";
-  w.classifier = kModels + "/hey_jarvis_v0.1.onnx";
+  w.melspectrogram = Models() + "/melspectrogram.onnx";
+  w.embedding = Models() + "/embedding_model.onnx";
+  w.classifier = Models() + "/hey_jarvis_v0.1.onnx";
   auto wake = MakeOpenWakeWord(w);
   const double after_wake = RssMiB();
-  auto stt = MakeWhisperStt(kModels + "/ggml-tiny.en.bin", 4);
+  auto stt = MakeWhisperStt(Models() + "/ggml-tiny.en.bin", 4);
   const double after_stt = RssMiB();
   auto tts = MakeKokoroTts(RealKokoro());
   const double after_tts = RssMiB();
@@ -239,9 +240,6 @@ TEST(LocalMemory, EachEngineAndTheWholeStayInsideTheBudget) {
 // ---- performance (local, release builds): NFR-PERF-09 and the per-frame cost of listening
 // --------
 
-#include <algorithm>
-#include <chrono>
-
 namespace neuroos::voice {
 namespace {
 
@@ -265,7 +263,7 @@ TEST(LocalPerf, TranscribingAThreeSecondUtteranceAndTheCostOfListening) {
   }
   pcm16.resize(std::min<std::size_t>(pcm16.size(), 16000 * 3));  // exactly the 3 s of the budget
   for (const int threads : {1, 2, 4, 8}) {
-    auto stt = MakeWhisperStt(kModels + "/ggml-tiny.en.bin", threads);
+    auto stt = MakeWhisperStt(Models() + "/ggml-tiny.en.bin", threads);
     ASSERT_TRUE(stt.ok());
     ASSERT_TRUE(stt.value()->Transcribe(pcm16).ok());  // warm up
     std::vector<double> times;
@@ -278,11 +276,11 @@ TEST(LocalPerf, TranscribingAThreeSecondUtteranceAndTheCostOfListening) {
     std::printf("whisper tiny.en, %d threads, 3 s: median %.0f ms, worst %.0f ms\n", threads,
                 times[times.size() / 2], times.back());
   }
-  auto vad = MakeSileroVad(kModels + "/silero_vad.onnx");
+  auto vad = MakeSileroVad(Models() + "/silero_vad.onnx");
   WakeWordPaths w;
-  w.melspectrogram = kModels + "/melspectrogram.onnx";
-  w.embedding = kModels + "/embedding_model.onnx";
-  w.classifier = kModels + "/hey_jarvis_v0.1.onnx";
+  w.melspectrogram = Models() + "/melspectrogram.onnx";
+  w.embedding = Models() + "/embedding_model.onnx";
+  w.classifier = Models() + "/hey_jarvis_v0.1.onnx";
   auto wake = MakeOpenWakeWord(w);
   ASSERT_TRUE(vad.ok() && wake.ok());
   std::vector<std::int16_t> frame(512, 0);

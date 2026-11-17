@@ -129,6 +129,8 @@ bool IsAbbreviation(std::string_view text, std::size_t run_start, std::size_t ru
   return false;
 }
 
+// Branchy by nature (cognitive complexity): cuts at the best break under a length.
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void SplitLongPiece(std::string_view piece, std::size_t max_chars, std::vector<std::string>* out) {
   if (max_chars == 0) {
     max_chars = 1;
@@ -204,6 +206,8 @@ void SplitLongPiece(std::string_view piece, std::size_t max_chars, std::vector<s
 
 }  // namespace
 
+// Branchy by nature (cognitive complexity): one pass over markdown, fences and URLs.
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 std::string CleanForSpeech(std::string_view text) {
   std::string out;
   out.reserve(text.size());
@@ -267,6 +271,8 @@ std::string CleanForSpeech(std::string_view text) {
   return out;
 }
 
+// Branchy by nature (cognitive complexity): abbreviation and number rules.
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 std::vector<std::string> SplitForSpeech(std::string_view text, std::size_t max_chars) {
   if (max_chars == 0) {
     max_chars = 1;
@@ -341,7 +347,7 @@ std::vector<std::string> SplitForSpeech(std::string_view text, std::size_t max_c
 }
 
 SentenceStream::SentenceStream(std::size_t max_chars)
-    : max_chars_(max_chars == 0 ? 1 : max_chars), buffer_{} {}
+    : max_chars_(max_chars == 0 ? 1 : max_chars) {}
 
 std::vector<std::string> SentenceStream::Feed(std::string_view piece) {
   buffer_.append(piece);

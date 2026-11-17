@@ -174,6 +174,7 @@ TEST(SpeechSplitTest, LongUnpunctuatedStreamFlushedAtEnd) {
   SentenceStream stream(220);
   std::vector<std::string> collected;
   auto fed = stream.Feed(unpunctuated);
+  collected.reserve(fed.size() + 1);
   for (auto& s : fed) {
     collected.push_back(std::move(s));
   }

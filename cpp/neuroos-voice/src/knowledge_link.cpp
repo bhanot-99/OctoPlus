@@ -40,6 +40,8 @@ void KnowledgeLink::SendBargeIn(std::uint64_t at_ns) {
   });
 }
 
+// Branchy by nature (cognitive complexity): one request: open, read frames, end.
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void KnowledgeLink::Read(std::uint64_t gen, CommandMsg cmd, ReplyReceiver* receiver) {
   auto fresh = [&] { return generation_.load() == gen; };
   auto client = client_->Get();
@@ -86,10 +88,11 @@ void KnowledgeLink::Read(std::uint64_t gen, CommandMsg cmd, ReplyReceiver* recei
       ok = false;
       break;
     }
-    if (!next.value().has_value()) {
+    const auto& frame = next.value();
+    if (!frame.has_value()) {
       break;  // the end frame
     }
-    const v1::Envelope& e = *next.value();
+    const v1::Envelope& e = *frame;
     if (!fresh()) {
       if (trace_) {
         trace_("link: frame dropped (cancelled)");
@@ -97,9 +100,13 @@ void KnowledgeLink::Read(std::uint64_t gen, CommandMsg cmd, ReplyReceiver* recei
       continue;  // drain a cancelled stream without speaking it
     }
     if (trace_) {
-      trace_(e.has_preamble_request() ? "link: preamble"
-             : e.has_speak_chunk()    ? "link: speak chunk"
-                                      : "link: other frame");
+      std::string_view kind = "link: other frame";
+      if (e.has_preamble_request()) {
+        kind = "link: preamble";
+      } else if (e.has_speak_chunk()) {
+        kind = "link: speak chunk";
+      }
+      trace_(kind);
     }
     if (e.has_preamble_request()) {
       receiver->OnPreamble(static_cast<int>(e.preamble_request().kind()));

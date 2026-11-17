@@ -62,6 +62,11 @@ class RestartingTts final : public Tts {
 
 class RealRuntime final : public VoiceRuntime {
  public:
+  RealRuntime() = default;
+  RealRuntime(const RealRuntime&) = delete;
+  RealRuntime& operator=(const RealRuntime&) = delete;
+  RealRuntime(RealRuntime&&) = delete;
+  RealRuntime& operator=(RealRuntime&&) = delete;
   ~RealRuntime() override { Stop(); }
   VoicePipeline* pipeline() override { return pipeline_.get(); }
   Status Start() override {
@@ -168,6 +173,7 @@ Result<std::unique_ptr<VoiceRuntime>> BuildVoiceRuntime(const RuntimeOptions& o)
   }
 
   rt->link = std::make_unique<KnowledgeLink>(o.knowledge);
+  // NOLINTNEXTLINE(concurrency-mt-unsafe) - read once while the service builds its runtime
   if (std::getenv("NEUROOS_VOICE_TRACE") != nullptr) {
     rt->link->SetTrace([](std::string_view e) { std::cerr << "voice: " << e << "\n"; });
   }
@@ -205,6 +211,7 @@ Result<std::unique_ptr<VoiceRuntime>> BuildVoiceRuntime(const RuntimeOptions& o)
       }
     };
   }
+  // NOLINTNEXTLINE(concurrency-mt-unsafe) - read once while the service builds its runtime
   if (std::getenv("NEUROOS_VOICE_TRACE") != nullptr) {
     d.on_trace = [](std::string_view e) { std::cerr << "voice: " << e << "\n"; };
   }

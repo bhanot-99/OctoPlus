@@ -2,13 +2,13 @@
 // creates a virtual sink and the matching virtual source, so audio written by the sink adapter
 // comes back out of the source adapter: the "virtual microphone and sink" of Phase 7 IT.
 #include <gtest/gtest.h>
-#include <signal.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <csignal>
 #include <cstdlib>
 #include <mutex>
 #include <string>
@@ -165,6 +165,7 @@ TEST(LocalPipeWire, TheMicrophoneProbeSeesAnotherAppCapturing) {
   EXPECT_FALSE(probe.value()->OtherAppCapturing()) << "our own stream does not count";
   // Another application capturing from the virtual microphone.
   const std::string cmd = "timeout 4 pw-record --target " + dev.mic_name + " /dev/null &";
+  // NOLINTNEXTLINE(cert-env33-c) - a test starts pw-record in the background on purpose
   ASSERT_EQ(std::system(cmd.c_str()), 0);
   bool seen = false;
   for (int i = 0; i < 30 && !seen; ++i) {

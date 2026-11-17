@@ -52,6 +52,8 @@ bool ValidVoiceName(std::string_view name) {
   });
 }
 
+// Branchy by nature (cognitive complexity): one branch per key.
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 Result<VoiceConfig> ParseVoiceConfig(std::string_view text) {
   VoiceConfig cfg;
   std::size_t line_no = 0;
