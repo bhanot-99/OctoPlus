@@ -42,12 +42,20 @@ TEST(SandboxTest, ASingleFileCanBeGrantedAndItsNeighbourStaysClosed) {
   if (pid == 0) {
     Policy policy;
     policy.read_write.push_back(granted);
-    if (!Restrict(policy).ok()) _exit(10);
+    if (!Restrict(policy).ok()) {
+      _exit(10);
+    }
     const int w = open(granted.c_str(), O_WRONLY);
-    if (w < 0) _exit(11);
+    if (w < 0) {
+      _exit(11);
+    }
     close(w);
-    if (open(neighbour.c_str(), O_RDONLY) >= 0) _exit(12);
-    if (errno != EACCES) _exit(13);
+    if (open(neighbour.c_str(), O_RDONLY) >= 0) {
+      _exit(12);
+    }
+    if (errno != EACCES) {
+      _exit(13);
+    }
     _exit(0);
   }
   int status = 0;

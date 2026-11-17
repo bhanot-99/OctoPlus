@@ -64,6 +64,18 @@ Status CheckPaths(const std::vector<std::filesystem::path>& paths) {
   return ok_status();
 }
 
+// A rule on a single file (a socket, say) may only carry file rights: directory rights make the
+// kernel refuse the rule (EINVAL).
+std::uint64_t RightsForFd(int fd, std::uint64_t allowed) {
+  struct stat st {};
+  if (fstat(fd, &st) == 0 && !S_ISDIR(st.st_mode)) {
+    return allowed & (LANDLOCK_ACCESS_FS_EXECUTE | LANDLOCK_ACCESS_FS_WRITE_FILE |
+                      LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_TRUNCATE |
+                      LANDLOCK_ACCESS_FS_IOCTL_DEV);
+  }
+  return allowed;
+}
+
 }  // namespace
 
 Result<Report> Restrict(const Policy& policy) {
@@ -150,15 +162,7 @@ Result<Report> Restrict(const Policy& policy) {
         };
       }
 
-      // A rule on a single file (a socket, say) may only carry file rights: directory rights
-      // make the kernel refuse the rule (EINVAL).
-      std::uint64_t access = allowed_access;
-      struct stat st {};
-      if (fstat(path_fd, &st) == 0 && !S_ISDIR(st.st_mode)) {
-        access &= LANDLOCK_ACCESS_FS_EXECUTE | LANDLOCK_ACCESS_FS_WRITE_FILE |
-                  LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_TRUNCATE |
-                  LANDLOCK_ACCESS_FS_IOCTL_DEV;
-      }
+      const std::uint64_t access = RightsForFd(path_fd, allowed_access);
 
       landlock_path_beneath_attr path_attr{};
       path_attr.allowed_access = access;
