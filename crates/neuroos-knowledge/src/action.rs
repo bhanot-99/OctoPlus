@@ -246,7 +246,8 @@ pub fn grammar_for(allowed: &[&str]) -> String {
     g.push_str("root ::= call\n");
     let mut alts = vec![format!("\"{{\\\"skill\\\":\\\"{NONE_SKILL}\\\"}}\"")];
     for spec in SPECS.iter().filter(|s| allowed.contains(&s.skill)) {
-        let mut rule = format!("\"{{\\\"skill\\\":\\\"{}\\\"", spec.skill);
+        // `"{\"skill\":\"NAME\""` : one closed literal, then one literal per parameter.
+        let mut rule = format!("\"{{\\\"skill\\\":\\\"{}\\\"\"", spec.skill);
         for p in spec.params {
             // Optional parameters are emitted too (possibly empty); the validator drops empties.
             let _ = write!(rule, " \",\\\"{}\\\":\" ", p.name());
@@ -710,6 +711,49 @@ mod tests {
         for (hint, want) in table {
             assert_eq!(allowed_for(hint), want.as_slice(), "{hint:?}");
         }
+    }
+
+    /// A crude GBNF well-formedness check: every double quote outside a character class is
+    /// closed before the line ends, and brackets balance. The real parser is llama.cpp's; an
+    /// unparsable grammar made C4 refuse the request (found on the real stack).
+    fn well_formed(grammar: &str) {
+        for line in grammar.lines() {
+            let (mut in_str, mut in_class, mut esc) = (false, false, false);
+            for c in line.chars() {
+                if esc {
+                    esc = false;
+                } else if c == '\\' {
+                    esc = true;
+                } else if in_str {
+                    in_str = c != '"';
+                } else if in_class {
+                    in_class = c != ']';
+                } else if c == '"' {
+                    in_str = true;
+                } else if c == '[' {
+                    in_class = true;
+                }
+            }
+            assert!(!in_str && !in_class && !esc, "unbalanced line: {line}");
+        }
+    }
+
+    #[test]
+    fn every_grammar_is_well_formed_and_each_alternative_is_a_closed_literal_chain() {
+        for allowed in [
+            all(),
+            vec!["privacy.pause"],
+            vec!["memory.forget"],
+            vec!["notes.append"],
+            vec![],
+        ] {
+            let g = grammar_for(&allowed);
+            well_formed(&g);
+        }
+        assert!(
+            grammar_for(&["privacy.pause"])
+                .contains(r#""{\"skill\":\"privacy.pause\"" ",\"minutes\":" int "}""#)
+        );
     }
 
     #[test]
