@@ -10,6 +10,8 @@ add_library(neuroos_voice_core STATIC
   src/spoken_lines.cpp
   src/turn_machine.cpp
   src/vad_gate.cpp
+  src/wav.cpp
+  src/wer.cpp
 )
 target_include_directories(neuroos_voice_core PUBLIC include)
 target_link_libraries(neuroos_voice_core PUBLIC neuroos neuroos_proto PRIVATE neuroos_warnings)
@@ -34,6 +36,8 @@ add_executable(neuroos_voice_tests
   tests/vad_gate_test.cpp
   tests/voice_config_test.cpp
   tests/voice_test.cpp
+  tests/wav_test.cpp
+  tests/wer_test.cpp
 )
 target_link_libraries(neuroos_voice_tests PRIVATE neuroos_voice_core neuroos GTest::gtest_main neuroos_warnings)
 gtest_discover_tests(neuroos_voice_tests)

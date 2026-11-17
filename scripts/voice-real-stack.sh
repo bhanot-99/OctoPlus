@@ -42,34 +42,43 @@ sleep 2
 
 printf 'capture_node = %s\nplayback_node = %s\n' "$mic" "$out_sink" > "$conf"
 systemctl --user restart neuroos-voice
-for _ in $(seq 1 60); do
-  "$ctl" voice status >/dev/null 2>&1 && break; sleep 1
+for _ in $(seq 1 90); do
+  rc=0; "$ctl" voice status >/dev/null 2>&1 || rc=$?
+  [[ "$rc" == 0 ]] && break   # 0: listening on the virtual microphone
+  sleep 1
 done
 "$ctl" voice status
 
 "$say" "$HOME/.local/opt/neuroos/models/voice" am_michael "$work/q.wav" "$question"
+rec_start=$(date +%s.%N)
 pw-record --target "$out_mic" --rate 24000 --channels 1 --format s16 "$work/answer.wav" & rec=$!; pids+=($rec)
 sleep 1
-start=$(date +%s.%N)
 pw-play --target "$sink" "$work/q.wav"
+play_end=$(date +%s.%N)
 echo "question played: $question"
-# Wait for the answer to be spoken: the recording grows beyond a second of non-silence.
-for _ in $(seq 1 90); do
-  sleep 1
-  size=$(stat -c %s "$work/answer.wav" 2>/dev/null || echo 0)
-  if python3 - "$work/answer.wav" <<'PY'
-import sys, wave, array
-try:
-    w = wave.open(sys.argv[1]); n = w.getnframes(); a = array.array('h', w.readframes(n))
-except Exception:
-    sys.exit(1)
-loud = sum(1 for s in a if abs(s) > 800)
-sys.exit(0 if loud > 24000 else 1)
+# The reply is a preamble and a few sentences: 25 s is plenty. Stop the recorder so the file closes.
+sleep 25
+kill -INT "$rec" 2>/dev/null || true
+wait "$rec" 2>/dev/null || true
+python3 - "$work/answer.wav" "$rec_start" "$play_end" <<'PY'
+import sys, wave, array, math
+w = wave.open(sys.argv[1]); n = w.getnframes(); r = w.getframerate(); a = array.array('h', w.readframes(n))
+rec_start, play_end = float(sys.argv[2]), float(sys.argv[3])
+step = r // 10
+bursts, inside = [], False
+for i in range(0, n, step):
+    seg = a[i:i + step]
+    rms = math.sqrt(sum(x * x for x in seg) / max(1, len(seg)))
+    if rms > 400 and not inside:
+        bursts.append(i / r); inside = True
+    elif rms <= 400 and inside:
+        inside = False
+if not bursts:
+    print("FAIL: nothing was spoken"); sys.exit(1)
+first = rec_start + bursts[0]
+print(f"spoken: {len(bursts)} sound groups; first sound {first - play_end:.2f} s after the question ended")
 PY
-  then echo "the answer was spoken (loud samples seen)"; break; fi
-done
-kill "$rec" 2>/dev/null || true
-end=$(date +%s.%N)
-echo "elapsed: $(python3 -c "print(round($end-$start,1))") s"
+status=$?
 "$ctl" voice status || true
-"$ctl" storage search "${question#*, }" --top-k 3 2>&1 | head -5
+"$ctl" storage search "${question#*, }" --top-k 3 2>&1 | head -4
+exit $status
