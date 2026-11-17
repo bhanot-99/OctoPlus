@@ -110,13 +110,62 @@ pub fn init(ctx: &mut neuroos_health::ServiceContext) -> Result<(), neuroos_heal
         route_general: h.counter("route_general"),
         evidence_no_taint: h.counter("evidence_dropped_no_taint"),
     };
+    let nudge = start_nudges(ctx, &peers)?;
     let handler = Arc::new(KnowledgeHandler::new(
         peers,
         ctx.config.knowledge.clone(),
         timing,
         metrics,
+        nudge,
     ));
     ctx.spawn_server("knowledge", handler)?;
     ctx.health.set_ready();
     Ok(())
+}
+
+/// Loads the rules, builds the nudge engine and starts its task (Phase 6, FR-NUD-01).
+fn start_nudges(
+    ctx: &mut neuroos_health::ServiceContext,
+    peers: &turn::Peers,
+) -> Result<nudge::engine::NudgeHandle, neuroos_health::ServiceError> {
+    use nudge::engine::{Counters, NudgeHandle, NudgePeers};
+    // An invalid rules file stops C5 from starting (unknown keys are fatal, rules §5).
+    let rules = nudge::rules::load(nudge::boot::user_rules())
+        .map_err(|e| neuroos_health::ServiceError::Custom(format!("nudges.toml: {e}")))?;
+    let h = &ctx.health;
+    let handle = NudgeHandle::new(
+        rules,
+        ctx.config.nudges.clone(),
+        NudgePeers {
+            storage: Arc::clone(&peers.storage),
+            kernel: Arc::clone(&peers.kernel),
+            inference: Arc::clone(&peers.inference),
+        },
+    )
+    .with_counters(Counters {
+        notified: h.counter("nudges_notified"),
+        held: h.counter("nudges_held"),
+        dropped: h.counter("nudges_dropped"),
+        failed: h.counter("nudges_failed"),
+    });
+    let probe = handle.clone();
+    ctx.health.probe(
+        "nudge_engine",
+        Box::new(move || {
+            if probe.is_idle() {
+                (
+                    HealthStatus::Degraded,
+                    "idle: C3 is unreachable, no nudges are being evaluated",
+                )
+            } else {
+                (HealthStatus::Ok, "")
+            }
+        }),
+    );
+    if ctx.config.nudges.enabled {
+        let engine = handle.clone();
+        let stop = ctx.stop_rx.clone();
+        ctx.spawn_task(async move { engine.run(nudge::boot::time_zone(), stop).await });
+    }
+    Ok(handle)
 }

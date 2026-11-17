@@ -96,7 +96,7 @@ const YES: &[&str] = &[
 ];
 
 fn matches_any(norm: &str, phrases: &[&str]) -> bool {
-    phrases.iter().any(|p| norm == *p)
+    phrases.contains(&norm)
 }
 
 /// Classifies `text`, or `None` when it is something else (a new question).

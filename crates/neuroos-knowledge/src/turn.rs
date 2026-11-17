@@ -23,9 +23,9 @@ use neuroos_health::LatencyHistogram;
 use neuroos_ipc::{Handler, HandlerError, ReconnectingClient, Request, StreamSink};
 use neuroos_proto::v1::envelope::Body;
 use neuroos_proto::v1::{
-    AnswerChunk, AnswerDone, AskRequest, DispatchRequest, DispatchStatus, ErrorCode,
-    EvaluateRequest, Evidence, GenerateRequest, Origin, ProfileListRequest, QueryFocusHistory,
-    QueryHybrid, Route, StoreInteraction, Taint,
+    Ack, AnswerChunk, AnswerDone, AskRequest, DispatchRequest, DispatchStatus, ErrorCode,
+    EvaluateRequest, Evidence, GenerateRequest, NudgeList, Origin, ProfileListRequest,
+    QueryFocusHistory, QueryHybrid, Route, StoreInteraction, Taint,
 };
 use neuroos_taint::TaintFlags;
 use tracing::warn;
@@ -35,6 +35,8 @@ use crate::chat;
 use crate::deictic::{self, Anchor};
 use crate::evidence;
 use crate::facts::{self, Fact};
+use crate::nudge::engine::{Applied, NudgeHandle};
+use crate::nudge::reply;
 use crate::prompt::{self, Budgets, PromptInput};
 use crate::router::{self, ActionHint, RouteInput, RouteKind};
 use crate::sanitize::neutralise;
@@ -165,6 +167,7 @@ pub struct KnowledgeHandler {
     cfg: KnowledgeConfig,
     timing: Timing,
     metrics: Metrics,
+    nudge: NudgeHandle,
     state: Mutex<State>,
 }
 
@@ -183,7 +186,13 @@ fn taint_msg(t: TaintFlags) -> Taint {
 impl KnowledgeHandler {
     /// Creates the handler.
     #[must_use]
-    pub fn new(peers: Peers, cfg: KnowledgeConfig, timing: Timing, metrics: Metrics) -> Self {
+    pub fn new(
+        peers: Peers,
+        cfg: KnowledgeConfig,
+        timing: Timing,
+        metrics: Metrics,
+        nudge: NudgeHandle,
+    ) -> Self {
         let session = Session::new(SessionConfig {
             max_turns: cfg.history_turns as usize,
             window_ns: cfg.followup_window_s.saturating_mul(1_000_000_000),
@@ -194,6 +203,7 @@ impl KnowledgeHandler {
             cfg,
             timing,
             metrics,
+            nudge,
             state: Mutex::new(State {
                 session,
                 pending: Pending::None,
@@ -278,6 +288,31 @@ impl KnowledgeHandler {
                 s.pending = Pending::None;
             }
         });
+
+        // A turn in progress holds nudges back (FR-NUD-05); dropped when this function returns.
+        let _turn = self.nudge.turn_started();
+
+        // A reply to a nudge: yes, no, not now, stop (FR-NUD-09). Anything else is a new question
+        // and closes the window as "ignored" (KPI-9).
+        if self.nudge.reply_window_open(now) {
+            match reply::classify(&text) {
+                Some(r) => {
+                    if let Some(applied) = self.nudge.apply_reply(now, r) {
+                        let turn = Turn {
+                            text: &text,
+                            origin,
+                            now,
+                        };
+                        return self.nudge_reply_turn(applied, turn, sink).await;
+                    }
+                }
+                None => {
+                    if let Some(row) = self.nudge.close_window_ignored(now) {
+                        self.nudge.record(vec![row]).await;
+                    }
+                }
+            }
+        }
 
         if let Some(done) = self.answer_pending(&text, origin, now, sink).await? {
             return Ok(done);
@@ -364,6 +399,86 @@ impl KnowledgeHandler {
                 }
                 None => Ok(None),
             },
+        }
+    }
+
+    /// The effect of a reply to a nudge. The offered skill, if the user said yes, goes to C6 as
+    /// one ordinary dispatch under the normal tier rules (FR-NUD-10): the nudge itself never did.
+    async fn nudge_reply_turn(
+        &self,
+        applied: Applied,
+        turn: Turn<'_>,
+        sink: &StreamSink,
+    ) -> Result<Body, HandlerError> {
+        let Turn { text, origin, now } = turn;
+        let Applied {
+            say,
+            offered_skill,
+            log,
+        } = applied;
+        self.nudge.record(log).await;
+        Self::say(sink, say).await?;
+        let taint = self.base_taint();
+        // Only skills the rule file may offer, and none of them takes arguments.
+        let offered =
+            offered_skill.filter(|s| crate::nudge::rules::OFFERABLE_SKILLS.contains(&s.as_str()));
+        if let Some(skill) = offered {
+            Self::say(sink, " ").await?;
+            return self
+                .dispatch(
+                    Call {
+                        skill: &skill,
+                        args_json: "{}",
+                        taint,
+                        origin,
+                        question: text,
+                        at_ns: now,
+                    },
+                    sink,
+                )
+                .await;
+        }
+        self.with_state(|s| s.session.push(text, say, taint, now));
+        Ok(Self::done(Route::NudgeReply, taint))
+    }
+
+    /// `neuroosctl nudges list | enable | disable | test` (FR-NUD-02, FR-NUD-09, P6-S05).
+    async fn nudge_admin(&self, body: Body) -> Result<Body, HandlerError> {
+        let now = now_ns().unwrap_or(0);
+        match body {
+            Body::NudgeListRequest(_) => Ok(Body::NudgeList(NudgeList {
+                rules: self.nudge.list(),
+            })),
+            Body::NudgeSetEnabled(set) => {
+                let Some(row) = self.nudge.set_enabled(&set.rule_id, set.enabled, now) else {
+                    return Err(HandlerError::new(
+                        ErrorCode::NotFound,
+                        "no such nudge rule",
+                        false,
+                    ));
+                };
+                self.nudge.record(vec![row]).await;
+                Ok(Body::Ack(Ack {}))
+            }
+            Body::NudgeTest(t) => {
+                let Some((template, args)) = self.nudge.test_line(&t.rule_id) else {
+                    return Err(HandlerError::new(
+                        ErrorCode::NotFound,
+                        "no such nudge rule",
+                        false,
+                    ));
+                };
+                if self.nudge.notify(&template, &args, false).await {
+                    Ok(Body::Ack(Ack {}))
+                } else {
+                    Err(HandlerError::new(
+                        ErrorCode::Unavailable,
+                        "notifications are not available",
+                        true,
+                    ))
+                }
+            }
+            _ => Err(invalid("not a nudge request")),
         }
     }
 
@@ -521,6 +636,18 @@ impl KnowledgeHandler {
             _ => action::speak_not_done(DispatchOutcome::Failed).into(),
         };
         Self::say(sink, &line).await?;
+        if skill == "privacy.pause"
+            && matches!(
+                DispatchStatus::try_from(result.status),
+                Ok(DispatchStatus::Executed)
+            )
+            && let Some(minutes) = serde_json::from_str::<serde_json::Value>(args_json)
+                .ok()
+                .and_then(|v| v.get("minutes").and_then(serde_json::Value::as_u64))
+        {
+            // C5 cannot ask C1 whether it is paused, so the engine remembers its own pauses.
+            self.nudge.note_pause(at_ns, minutes);
+        }
         // The turn joins the session so a follow-up ("did you pause?") has context.
         self.with_state(|s| {
             s.session.push(
@@ -923,6 +1050,9 @@ impl Handler for KnowledgeHandler {
     async fn handle(&self, req: Request, sink: StreamSink) -> Result<Body, HandlerError> {
         match req.body {
             Body::AskRequest(ask) => self.ask(ask, &sink).await,
+            b @ (Body::NudgeListRequest(_) | Body::NudgeSetEnabled(_) | Body::NudgeTest(_)) => {
+                self.nudge_admin(b).await
+            }
             _ => Err(invalid("expected AskRequest on knowledge socket")),
         }
     }

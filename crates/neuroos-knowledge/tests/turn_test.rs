@@ -330,12 +330,22 @@ impl Stack {
             desktop_route_score_milli: 600,
             ..KnowledgeConfig::default()
         };
-        let handler = KnowledgeHandler::new(
-            Peers {
-                kernel: c(&c6),
-                storage: c(&c3),
-                inference: c(&c4),
+        let peers = Peers {
+            kernel: c(&c6),
+            storage: c(&c3),
+            inference: c(&c4),
+        };
+        let nudge = neuroos_knowledge::nudge::engine::NudgeHandle::new(
+            neuroos_knowledge::nudge::rules::defaults().unwrap(),
+            neuroos_common::config::NudgesConfig::default(),
+            neuroos_knowledge::nudge::engine::NudgePeers {
+                storage: peers.storage.clone(),
+                kernel: peers.kernel.clone(),
+                inference: peers.inference.clone(),
             },
+        );
+        let handler = KnowledgeHandler::new(
+            peers,
             cfg,
             Timing {
                 kernel_check: Duration::from_millis(500),
@@ -345,6 +355,7 @@ impl Stack {
                 dispatch: Duration::from_secs(5),
             },
             metrics,
+            nudge,
         );
         serve(&c5, handler, &stop).await;
         Self {
