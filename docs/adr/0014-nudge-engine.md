@@ -1,6 +1,6 @@
 # ADR-0014 — Nudge engine: rules, policy gate, state and delivery (Phase 6)
 
-**Status:** Proposed 2026-11-17 (built; awaiting owner sign-off) (decisions taken under the owner's Phase 6 go-ahead, D-32; open to overturn at sign-off)
+**Status:** Accepted 2026-11-17 (owner approved all, D-33) (decisions taken under the owner's Phase 6 go-ahead, D-32; open to overturn at sign-off)
 **Date:** 2026-11-17
 **Changes:** `neuroos-knowledge` (`nudge/`), `proto/neuroos/v1/storage.proto` (`QueryNudgeLog`, four outcomes, additive), C3 (`QueryNudgeLog`), C6 notification templates, `[nudges]` config, `nudges.toml`, `neuroosctl nudges`
 **Evidence:** to be filled from `reports/phase-06-nudges.md`.
