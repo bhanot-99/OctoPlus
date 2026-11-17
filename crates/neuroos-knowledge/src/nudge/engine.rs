@@ -21,8 +21,8 @@ use neuroos_proto::v1::{
 };
 use tracing::{debug, warn};
 
-use super::eval::{EvalConfig, Evaluator};
-use super::policy::Policy;
+use super::core::Core as PureCore;
+use super::eval::EvalConfig;
 use super::reply::Reply;
 use super::signals::{self, ContextInputs};
 use super::types::{Action, ArgSource, Decision, PolicyConfig, Rule, RuleStatus};
@@ -57,8 +57,7 @@ struct Window {
 }
 
 struct Core {
-    evaluator: Evaluator,
-    policy: Policy,
+    pure: PureCore,
     window: Option<Window>,
     restored: bool,
     quiet_start: u32,
@@ -188,13 +187,13 @@ impl NudgeHandle {
     #[must_use]
     pub fn new(rules: Vec<Rule>, cfg: NudgesConfig, peers: NudgePeers) -> Self {
         let core = Core {
-            evaluator: Evaluator::new(
+            pure: PureCore::new(
                 rules,
                 EvalConfig {
                     max_gap_s: cfg.max_gap_s,
                 },
+                policy_config(&cfg),
             ),
-            policy: Policy::new(policy_config(&cfg)),
             window: None,
             restored: false,
             quiet_start: cfg.quiet_start_min,
@@ -270,7 +269,7 @@ impl NudgeHandle {
             },
             Reply::NotNow => {
                 let until = now_ns.saturating_add(self.cfg.snooze_h * 3600 * NS_PER_S);
-                core.evaluator.snooze(&w.rule_id, until);
+                core.pure.evaluator.snooze(&w.rule_id, until);
                 Applied {
                     say: "Okay.",
                     offered_skill: None,
@@ -278,7 +277,7 @@ impl NudgeHandle {
                 }
             }
             Reply::Stop => {
-                core.evaluator.set_enabled(&w.rule_id, false);
+                core.pure.evaluator.set_enabled(&w.rule_id, false);
                 Applied {
                     say: "Okay, I won't mention that again. You can turn it back on any time.",
                     offered_skill: None,
@@ -302,6 +301,7 @@ impl NudgeHandle {
     #[must_use]
     pub fn list(&self) -> Vec<NudgeRuleState> {
         lock(&self.core)
+            .pure
             .evaluator
             .status()
             .into_iter()
@@ -323,7 +323,7 @@ impl NudgeHandle {
 
     /// `neuroosctl nudges enable|disable`. `None` for an unknown rule.
     pub fn set_enabled(&self, rule_id: &str, on: bool, now_ns: u64) -> Option<LogRow> {
-        if !lock(&self.core).evaluator.set_enabled(rule_id, on) {
+        if !lock(&self.core).pure.evaluator.set_enabled(rule_id, on) {
             return None;
         }
         Some(LogRow {
@@ -342,7 +342,12 @@ impl NudgeHandle {
     #[must_use]
     pub fn test_line(&self, rule_id: &str) -> Option<(String, Vec<(String, f64)>)> {
         let core = lock(&self.core);
-        let r = core.evaluator.rules().iter().find(|r| r.id == rule_id)?;
+        let r = core
+            .pure
+            .evaluator
+            .rules()
+            .iter()
+            .find(|r| r.id == rule_id)?;
         let args = r
             .args
             .iter()
@@ -412,7 +417,7 @@ impl NudgeHandle {
         let snooze_ns = self.cfg.snooze_h * 3600 * NS_PER_S;
         let mut core = lock(&self.core);
         for (rule, fired, snoozed, enabled) in fold_log(&log.entries, snooze_ns) {
-            core.evaluator.restore(&rule, fired, snoozed, enabled);
+            core.pure.evaluator.restore(&rule, fired, snoozed, enabled);
         }
         core.restored = true;
         true
@@ -484,13 +489,8 @@ impl NudgeHandle {
                 quiet_hours: signals::in_quiet_hours(minute, core.quiet_start, core.quiet_end),
                 voice_available,
             });
-            let candidates = core.evaluator.tick(now_ns, &built.readings);
-            let mut decisions: Vec<Decision> = candidates
-                .into_iter()
-                .map(|c| core.policy.decide(c, &ctx, now_ns))
-                .collect();
-            decisions.extend(core.policy.release(&ctx, now_ns));
-            let dropped = core.policy.take_dropped();
+            let out = core.pure.step(now_ns, &built.readings, &ctx);
+            let (decisions, dropped) = (out.decisions, out.dropped);
             // A reply window nobody used is "ignored" (KPI-9).
             let expired = match &core.window {
                 Some(w)

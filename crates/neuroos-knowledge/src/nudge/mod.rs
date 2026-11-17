@@ -5,6 +5,7 @@
 //! never acts (R0-6, FR-NUD-10). `tests/nudge_isolation_test.rs` checks the sources.
 
 pub mod boot;
+pub mod core;
 pub mod engine;
 pub mod eval;
 pub mod policy;
