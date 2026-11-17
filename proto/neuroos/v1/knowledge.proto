@@ -8,6 +8,7 @@ import "neuroos/v1/common.proto";
 message AskRequest {
   string text = 1;
   Origin origin = 2;
+  uint64 at_ns = 3;   // when the user spoke or typed; 0 means now (FR-KNO-01, ADR-0013)
 }
 
 message AnswerChunk {
@@ -26,6 +27,8 @@ message AnswerDone {
   Route route = 1;
   Taint taint = 2;
   bool used_web = 3;
+  bool status_only = 4;   // the text was a status sentence for a part that is down, not an answer (FR-KNO-10)
+  bool degraded = 5;      // some part's data was missing for this turn (a slow C3, say); the answer is flagged
 }
 
 message NudgeRuleState {

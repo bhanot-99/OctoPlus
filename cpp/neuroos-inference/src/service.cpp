@@ -253,6 +253,12 @@ Status InferenceService::HandleGenerate(const ipc::Request& req, ipc::StreamSink
     return ok_status();
   }
 
+  // 3a. Grammar-limited output for skill calls (FR-INF-05); also resets sampler state.
+  if (auto grammar = engine_->SetGrammar(gen_req.grammar()); !grammar.ok()) {
+    counters_.errors->fetch_add(1, std::memory_order_relaxed);
+    return grammar.error();
+  }
+
   // 3. Compute stable prefix tokens if stable_prefix_chars is set
   const std::uint32_t stable_prefix_tokens =
       ComputeStablePrefix(gen_req.prompt(), gen_req.stable_prefix_chars());

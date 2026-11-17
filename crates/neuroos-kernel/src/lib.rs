@@ -419,6 +419,12 @@ pub fn init_with(
         &monitor_sock,
         ctx.config.ipc.max_frame_bytes,
     ));
+    // C3 for `profile.*` and `memory.forget` (kernel-kind skills, Phase 5).
+    let storage_sock = paths::socket_path(&ctx.runtime_dir, Part::Storage, "storage");
+    let storage_client = Arc::new(ReconnectingClient::new(
+        &storage_sock,
+        ctx.config.ipc.max_frame_bytes,
+    ));
 
     // Register health probe (DEGRADED when either peer is disconnected)
     let f_probe = fetcher_client.clone();
@@ -471,7 +477,10 @@ pub fn init_with(
         kpaths,
         Arc::clone(&registry),
         audit_actor.clone(),
-        ControlSkills::new(monitor_client, ctx.config.deadlines.control()),
+        ControlSkills::new(monitor_client, ctx.config.deadlines.control()).with_storage(
+            storage_client,
+            Duration::from_millis(ctx.config.deadlines.storage_job_ms),
+        ),
     )?);
     let handler = Arc::new(
         KernelHandler::with_counters(
@@ -538,6 +547,8 @@ fn build_dispatcher(
         skill_bin,
         home,
         build_folders: ctx.config.kernel.cleanup_build_folders.clone(),
+        notes_folders: folders_of(ctx, neuroos_common::config::FolderKind::Notes),
+        calendar_folders: folders_of(ctx, neuroos_common::config::FolderKind::Calendar),
         dialog_env,
         approval_window: dispatch::APPROVAL_WINDOW,
         review_per_minute: ctx.config.kernel.review_per_minute,
@@ -550,6 +561,20 @@ fn build_dispatcher(
         audit,
         control,
     ))
+}
+
+/// The watched folders of one kind (`[monitor] folders`).
+fn folders_of(
+    ctx: &neuroos_health::ServiceContext,
+    kind: neuroos_common::config::FolderKind,
+) -> Vec<std::path::PathBuf> {
+    ctx.config
+        .monitor
+        .folders
+        .iter()
+        .filter(|f| f.kind == kind)
+        .map(|f| f.path.clone())
+        .collect()
 }
 
 /// Records `RESULT EXPIRED` for actions left without a result by a previous run

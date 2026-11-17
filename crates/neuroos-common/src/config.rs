@@ -64,6 +64,9 @@ pub struct Config {
     /// Storage engine options (C3, FR-STO-01..13).
     #[serde(default)]
     pub storage: StorageConfig,
+    /// Knowledge and conversation options (C5, FR-KNO-01..10, FR-CHT, FR-PRO).
+    #[serde(default)]
+    pub knowledge: KnowledgeConfig,
     /// Verification hooks (SC proof 3). Read-only probes; they never widen anything.
     #[serde(default)]
     pub debug: DebugConfig,
@@ -513,6 +516,115 @@ impl StorageConfig {
     }
 }
 
+/// `[knowledge]` section (PRD §5.4-5.7, ADR-0005 layout, ADR-0013). Scores are in
+/// thousandths so the config stays comparable (`Eq`).
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields, default)]
+pub struct KnowledgeConfig {
+    /// Evidence items asked of C3 (FR-KNO-04).
+    pub evidence_top_k: u32,
+    /// Evidence below this score (thousandths) is dropped (FR-KNO-04). Provisional: measured on
+    /// the reference machine's live C3 (ADR-0013 §measurements) and to be re-measured on real
+    /// recordings at integration (D-26).
+    pub min_score_milli: u32,
+    /// A retrieval score (thousandths) at or above which a turn counts as a desktop answer
+    /// (Architecture §11 step 3). Set above the highest score any of 40 general questions reached
+    /// (0.70): a general question sent down the desktop route would be answered "I don't have
+    /// anything on that". Activity questions are mostly caught by their time and "I was" cues.
+    pub desktop_route_score_milli: u32,
+    /// Prompt block budgets in tokens (ADR-0005 decision 3). The persona block is a constant,
+    /// cached prefix and is never cut, so it has no budget here.
+    /// Personal-facts block.
+    pub facts_tokens: u32,
+    /// Focus-context block: ADR-0005's 32 tokens plus the untrusted-wrapper's own cost (ADR-0013).
+    pub focus_tokens: u32,
+    /// Session-history block (the question counts against it on the first turn).
+    pub history_tokens: u32,
+    /// Evidence block.
+    pub evidence_tokens: u32,
+    /// Bytes per estimated token; the estimate rounds up (ADR-0013 decision 3).
+    pub bytes_per_token: u32,
+    /// Turns the session history keeps (FR-KNO-09).
+    pub history_turns: u32,
+    /// The follow-up window in seconds; history ends when it closes (FR-VOI-08, FR-KNO-09).
+    pub followup_window_s: u64,
+    /// The same window for typed turns, which have no spoken answer to wait for (ADR-0013).
+    pub typed_followup_window_s: u64,
+    /// Focus-history window, in seconds, either side of the asked-about instant (FR-STO-07).
+    pub focus_window_s: u64,
+    /// Longest answer asked of C4, in tokens.
+    pub max_answer_tokens: u32,
+    /// Longest personal fact `neuroosctl profile add` accepts, in bytes.
+    pub max_fact_bytes: u32,
+}
+
+impl Default for KnowledgeConfig {
+    fn default() -> Self {
+        Self {
+            evidence_top_k: 5,
+            min_score_milli: 500,
+            desktop_route_score_milli: 720,
+            facts_tokens: 48,
+            focus_tokens: 48,
+            history_tokens: 48,
+            evidence_tokens: 128,
+            bytes_per_token: 3,
+            history_turns: 4,
+            followup_window_s: 8,
+            typed_followup_window_s: 120,
+            focus_window_s: 30,
+            max_answer_tokens: 512,
+            max_fact_bytes: 512,
+        }
+    }
+}
+
+impl KnowledgeConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        let nonzero = [
+            ("knowledge.evidence_top_k", u64::from(self.evidence_top_k)),
+            ("knowledge.facts_tokens", u64::from(self.facts_tokens)),
+            ("knowledge.focus_tokens", u64::from(self.focus_tokens)),
+            ("knowledge.history_tokens", u64::from(self.history_tokens)),
+            ("knowledge.evidence_tokens", u64::from(self.evidence_tokens)),
+            ("knowledge.bytes_per_token", u64::from(self.bytes_per_token)),
+            ("knowledge.history_turns", u64::from(self.history_turns)),
+            ("knowledge.followup_window_s", self.followup_window_s),
+            (
+                "knowledge.typed_followup_window_s",
+                self.typed_followup_window_s,
+            ),
+            ("knowledge.focus_window_s", self.focus_window_s),
+            (
+                "knowledge.max_answer_tokens",
+                u64::from(self.max_answer_tokens),
+            ),
+            ("knowledge.max_fact_bytes", u64::from(self.max_fact_bytes)),
+        ];
+        for (key, v) in nonzero {
+            if v == 0 {
+                return Err(ConfigError::Invalid {
+                    key,
+                    reason: "must be greater than zero",
+                });
+            }
+        }
+        if self.min_score_milli > 1000 || self.desktop_route_score_milli > 1000 {
+            return Err(ConfigError::Invalid {
+                key: "knowledge.min_score_milli",
+                reason: "scores are thousandths, at most 1000",
+            });
+        }
+        if self.evidence_top_k > 20 || self.history_turns > 16 || self.bytes_per_token > 8 {
+            return Err(ConfigError::Invalid {
+                key: "knowledge.evidence_top_k",
+                reason: "evidence_top_k <= 20, history_turns <= 16, bytes_per_token <= 8",
+            });
+        }
+        Ok(())
+    }
+}
+
 impl Config {
     /// Parses and validates config text.
     ///
@@ -543,6 +655,7 @@ impl Config {
     fn validate(&self) -> Result<(), ConfigError> {
         self.monitor.validate()?;
         self.storage.validate()?;
+        self.knowledge.validate()?;
         let frame = self.ipc.max_frame_bytes;
         if frame == 0 || frame > FRAME_BYTES_CEILING {
             return Err(ConfigError::Invalid {

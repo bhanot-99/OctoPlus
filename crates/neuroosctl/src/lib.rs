@@ -5,6 +5,7 @@
 pub mod ask;
 pub mod audit;
 pub mod egress;
+pub mod profile;
 pub mod replay;
 pub mod run;
 pub mod status;
@@ -59,6 +60,14 @@ pub enum Commands {
         #[arg(long)]
         json: bool,
 
+        /// After the answer, print which route it took and its taint.
+        #[arg(long)]
+        explain: bool,
+
+        /// Epoch nanoseconds the question counts as asked at (evaluation harness only).
+        #[arg(long, hide = true, default_value_t = 0)]
+        at_ns: u64,
+
         /// Suppress non-essential output.
         #[arg(long, short)]
         quiet: bool,
@@ -68,6 +77,12 @@ pub enum Commands {
     Storage {
         #[command(subcommand)]
         command: StorageCommands,
+    },
+
+    /// Personal facts the buddy remembers (list, add, remove).
+    Profile {
+        #[command(subcommand)]
+        command: ProfileCommands,
     },
 
     /// Inspect and verify the safety kernel action audit log.
@@ -130,6 +145,30 @@ pub enum StorageCommands {
         /// Most results.
         #[arg(long, default_value_t = 5)]
         top_k: u32,
+    },
+}
+
+/// Subcommands under `neuroosctl profile` (FR-PRO-04).
+#[derive(Debug, Subcommand)]
+pub enum ProfileCommands {
+    /// List saved facts (prints personal text to the terminal).
+    List {
+        /// Only facts relevant to this text.
+        #[arg(long)]
+        relevant_to: Option<String>,
+        /// Emit one JSON object per line.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Save a fact (goes through the safety kernel as `profile.remember`).
+    Add {
+        /// The fact, in your own words.
+        text: String,
+    },
+    /// Remove a fact by id (goes through the safety kernel; a dialog asks you to confirm).
+    Remove {
+        /// Id shown by `profile list`.
+        id: u64,
     },
 }
 

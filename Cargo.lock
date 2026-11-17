@@ -1213,7 +1213,11 @@ dependencies = [
  "neuroos-proto",
  "neuroos-taint",
  "neuroos-testkit",
+ "proptest",
+ "serde",
+ "serde_json",
  "tempfile",
+ "thiserror",
  "tokio",
  "tracing",
 ]
@@ -1270,6 +1274,7 @@ name = "neuroos-skill"
 version = "0.1.0"
 dependencies = [
  "neuroos-sandbox",
+ "proptest",
  "rustix",
  "serde_json",
  "tempfile",

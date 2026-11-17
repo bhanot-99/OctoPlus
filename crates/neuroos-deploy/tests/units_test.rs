@@ -739,3 +739,28 @@ fn storage_unit_sees_backups_and_the_spool_and_the_jobs_are_small_one_shots() {
         assert!(timer.contains("Persistent=true"));
     }
 }
+
+#[test]
+fn kernel_dropin_binds_notes_writable_and_calendars_read_only() {
+    use neuroos_deploy::generate_kernel_folders_dropin;
+    let text = generate_kernel_folders_dropin(
+        &[PathBuf::from("/home/u/build")],
+        &[PathBuf::from("/home/u/notes")],
+        &[PathBuf::from("/home/u/calendars")],
+    )
+    .unwrap();
+    assert!(text.contains("BindPaths=-/home/u/build\n"));
+    assert!(text.contains("BindPaths=-/home/u/notes\n"));
+    assert!(text.contains("BindReadOnlyPaths=-/home/u/calendars\n"));
+    assert!(!text.contains("BindPaths=-/home/u/calendars"));
+    for bad in ["relative/notes", "/home/u/../etc", "/home/u/no tes"] {
+        assert!(
+            generate_kernel_folders_dropin(&[], &[PathBuf::from(bad)], &[]).is_err(),
+            "{bad}"
+        );
+        assert!(
+            generate_kernel_folders_dropin(&[], &[], &[PathBuf::from(bad)]).is_err(),
+            "{bad}"
+        );
+    }
+}

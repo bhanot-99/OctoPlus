@@ -382,11 +382,11 @@ flowchart LR
 
 ### 8.4 Exit criteria
 
-- [ ] KPI-2 and KPI-13 met.
-- [ ] KPI-1 and KPI-12 graded by the owner on held-out sets at real deadlines; transcripts saved.
-- [ ] Injection and control-token corpora pass.
-- [ ] Performance targets measured.
-- [ ] Phase report; owner sign-off.
+- [~] KPI-2 and KPI-13 met — on the fixtures (the PRD's definition) yes; on four fresh held-out sets, first run each, KPI-13 was 75.0–81.2 % and KPI-2 87.5–97.5 % (BUG-070, owner decision).
+- [ ] KPI-1 and KPI-12 graded by the owner on held-out sets at real deadlines; transcripts saved — KPI-12 transcript saved (`reports/p5-kpi12-transcript.md`), grading is the owner's; KPI-1 needs real recordings (D-26).
+- [x] Injection and control-token corpora pass.
+- [x] Performance targets measured (NFR-PERF-05 p99 0.84 ms; NFR-PERF-03 first byte p50 0.44 s / 1.49 s).
+- [ ] Phase report; owner sign-off — report written (`reports/phase-05-knowledge.md`).
 
 ---
 

@@ -10,7 +10,13 @@ use serde::{Deserialize, Serialize};
 use crate::schema::ArgSchema;
 
 /// Allowed symbolic root names for sandboxed child skills (Architecture §8.3).
-const ALLOWED_ROOTS: &[&str] = &["metadata", "cleanup_roots", "trash"];
+const ALLOWED_ROOTS: &[&str] = &[
+    "metadata",
+    "cleanup_roots",
+    "trash",
+    "notes_folders",
+    "calendar_folders",
+];
 
 /// Total expected count of v1.0 skills (PRD §5.9).
 pub const EXPECTED_SKILL_COUNT: usize = 13;
@@ -73,6 +79,9 @@ pub struct SandboxConfig {
     pub memory_mib: u64,
     /// Maximum CPU time limit in seconds.
     pub cpu_s: u64,
+    /// Largest file the child may write, in KiB (0 = it writes nothing but its output pipe).
+    #[serde(default)]
+    pub fsize_kib: u64,
 }
 
 /// Manifest specification for a single skill.
@@ -272,31 +281,31 @@ mod tests {
                 true,
                 SkillKind::Child,
             ),
-            ("calendar.read", Tier::Safe, false, false, SkillKind::Child),
-            ("notes.search", Tier::Safe, false, false, SkillKind::Child),
+            ("calendar.read", Tier::Safe, false, true, SkillKind::Child),
+            ("notes.search", Tier::Safe, false, true, SkillKind::Child),
             ("privacy.pause", Tier::Safe, false, true, SkillKind::Kernel),
             (
                 "profile.remember",
                 Tier::Safe,
                 false,
-                false,
-                SkillKind::Child,
+                true,
+                SkillKind::Kernel,
             ),
             (
                 "profile.forget",
                 Tier::Review,
                 false,
-                false,
-                SkillKind::Child,
+                true,
+                SkillKind::Kernel,
             ),
             (
                 "memory.forget",
                 Tier::Review,
                 false,
-                false,
-                SkillKind::Child,
+                true,
+                SkillKind::Kernel,
             ),
-            ("notes.append", Tier::Review, false, false, SkillKind::Child),
+            ("notes.append", Tier::Review, false, true, SkillKind::Child),
             (
                 "system.cleanup",
                 Tier::Review,

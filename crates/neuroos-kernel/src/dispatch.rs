@@ -144,6 +144,10 @@ pub struct DispatchConfig {
     pub home: PathBuf,
     /// Extra cleanup roots from `[kernel] cleanup_build_folders`.
     pub build_folders: Vec<PathBuf>,
+    /// Notes folders (`[monitor] folders` of kind `notes`) for `notes.search` and `notes.append`.
+    pub notes_folders: Vec<PathBuf>,
+    /// Calendar folders (kind `calendar`) for `calendar.read`.
+    pub calendar_folders: Vec<PathBuf>,
     /// Environment passed to the dialog (display, runtime dir); nothing else is inherited.
     pub dialog_env: Vec<(String, String)>,
     /// How long an approval may take ([`APPROVAL_WINDOW`] in production; shorter in tests).
@@ -169,6 +173,11 @@ impl DispatchConfig {
             .chain(self.build_folders.iter().cloned())
             .filter(|p| p.is_dir())
             .collect()
+    }
+
+    /// Existing folders only (Landlock needs existing paths).
+    fn existing(list: &[PathBuf]) -> Vec<PathBuf> {
+        list.iter().filter(|p| p.is_dir()).cloned().collect()
     }
 
     /// `~`-relative display path; the trash root reads "Trash".
@@ -620,6 +629,8 @@ impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
         let roots = self.cfg.cleanup_roots();
         let trash = self.cfg.trash_root();
         let trash = trash.is_dir().then_some(trash);
+        let notes = DispatchConfig::existing(&self.cfg.notes_folders);
+        let calendars = DispatchConfig::existing(&self.cfg.calendar_folders);
         let resolve = |names: &[String]| -> Vec<PathBuf> {
             let mut out = Vec::new();
             for n in names {
@@ -630,6 +641,8 @@ impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
                     }
                     "cleanup_roots" => out.extend(roots.iter().cloned()),
                     "trash" => out.extend(trash.iter().cloned()),
+                    "notes_folders" => out.extend(notes.iter().cloned()),
+                    "calendar_folders" => out.extend(calendars.iter().cloned()),
                     _ => {}
                 }
             }
@@ -651,6 +664,10 @@ impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
             read_write: rw,
             roots: if uses("cleanup_roots") {
                 roots
+            } else if uses("notes_folders") {
+                notes
+            } else if uses("calendar_folders") {
+                calendars
             } else {
                 Vec::new()
             },
@@ -659,8 +676,9 @@ impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
                 address_space_bytes: sb.memory_mib.saturating_mul(1024 * 1024),
                 cpu_seconds: sb.cpu_s,
                 open_files: CHILD_NOFILE,
-                // Skills write nothing but their stdout pipe.
-                file_size_bytes: 0,
+                // Skills write nothing but their stdout pipe, except the one that declares a
+                // write limit (`notes.append`).
+                file_size_bytes: sb.fsize_kib.saturating_mul(1024),
             },
             profile,
         })

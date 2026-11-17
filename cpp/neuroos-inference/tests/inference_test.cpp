@@ -137,6 +137,52 @@ TEST_F(InferenceTest, FullStreamEndsWithGenerateDone) {
   EXPECT_EQ(res.chunks, (std::vector<std::string>{"Hello ", "world", "!"}));
 }
 
+StreamResult AskWithGrammar(ipc::Client* client, const std::string& grammar) {
+  v1::Envelope req;
+  auto* g = req.mutable_generate_request();
+  g->set_prompt("call a skill");
+  g->set_max_tokens(10);
+  g->set_grammar(grammar);
+  auto stream = client->Open(std::move(req), std::chrono::milliseconds(2000));
+  if (!stream.ok()) {
+    return StreamResult{};
+  }
+  return DrainStream(stream.value().get());
+}
+
+TEST_F(InferenceTest, GrammarReachesTheEngineAndDoesNotLeakIntoTheNextRequest) {
+  engine_->SetOutputPieces({"{}"});
+  auto client_res = ipc::Client::Connect(sock_path_, 1024 * 1024);
+  ASSERT_TRUE(client_res.ok());
+  auto client = std::move(client_res.value());
+
+  const std::string grammar = "root ::= \"{}\"";
+  EXPECT_TRUE(AskWithGrammar(client.get(), grammar).got_done);
+  EXPECT_EQ(engine_->last_grammar(), grammar);
+  // The next request without a grammar is free text again: the engine is told so explicitly.
+  EXPECT_TRUE(AskWithGrammar(client.get(), "").got_done);
+  EXPECT_EQ(engine_->last_grammar(), "");
+  EXPECT_EQ(engine_->grammar_calls(), 2U);
+}
+
+TEST_F(InferenceTest, UnparsableGrammarIsAnInvalidRequestWithoutGenerating) {
+  engine_->FailNextGrammar();
+  auto client_res = ipc::Client::Connect(sock_path_, 1024 * 1024);
+  ASSERT_TRUE(client_res.ok());
+  auto client = std::move(client_res.value());
+
+  v1::Envelope req;
+  auto* g = req.mutable_generate_request();
+  g->set_prompt("call a skill");
+  g->set_max_tokens(10);
+  g->set_grammar("this is not gbnf");
+  auto stream = client->Open(std::move(req), std::chrono::milliseconds(2000));
+  ASSERT_TRUE(stream.ok());
+  const StreamResult res = DrainStream(stream.value().get());
+  EXPECT_FALSE(res.got_done && !res.chunks.empty());
+  EXPECT_EQ(engine_->prefill_calls(), 0U);
+}
+
 TEST_F(InferenceTest, OverlongPromptRejectedBeforeAnyEngineCall) {
   engine_->SetContextSize(100);
 

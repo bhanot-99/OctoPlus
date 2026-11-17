@@ -92,12 +92,9 @@ fn spawn(bin: &str, pre: &[&str], inv: &Invocation, stdin: &str) -> Output {
         .stderr(Stdio::piped())
         .spawn()
         .unwrap();
-    child
-        .stdin
-        .take()
-        .unwrap()
-        .write_all(stdin.as_bytes())
-        .unwrap();
+    // A child that fails closed exits before reading its input, so the write may meet a closed
+    // pipe: that is the expected outcome there, not an error (it made this test flaky).
+    let _ = child.stdin.take().unwrap().write_all(stdin.as_bytes());
     child.wait_with_output().unwrap()
 }
 

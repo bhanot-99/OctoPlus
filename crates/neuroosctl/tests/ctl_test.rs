@@ -14,7 +14,7 @@ use neuroos_proto::v1::{
     AnswerChunk, AnswerDone, ErrorCode, HealthResponse, HealthStatus, Histogram, PartStatus, Route,
     StatusReport,
 };
-use neuroosctl::ask::{run_ask, run_ask_internal};
+use neuroosctl::ask::{AskOptions, run_ask, run_ask_internal};
 use neuroosctl::status::{extract_p99_ns, format_p99, format_uptime, run_status};
 use neuroosctl::style::{ColorChoice, Styler};
 use tempfile::tempdir;
@@ -301,6 +301,8 @@ enum MockKnowledgeBehavior {
     PermissionDenied,
     InternalError,
     Slow,
+    /// The answer is only a status sentence for a part that is down (FR-KNO-10).
+    StatusOnly,
 }
 
 #[derive(Debug, Clone)]
@@ -333,6 +335,20 @@ impl Handler for MockKnowledgeHandler {
                     route: Route::GeneralChat as i32,
                     taint: None,
                     used_web: false,
+                    ..AnswerDone::default()
+                }))
+            }
+            MockKnowledgeBehavior::StatusOnly => {
+                let _ = sink
+                    .send(Body::AnswerChunk(AnswerChunk {
+                        text: "My thinking part isn't running right now.".into(),
+                    }))
+                    .await;
+                Ok(Body::AnswerDone(AnswerDone {
+                    route: Route::GeneralChat as i32,
+                    status_only: true,
+                    degraded: true,
+                    ..AnswerDone::default()
                 }))
             }
             MockKnowledgeBehavior::Normal => match req.body {
@@ -346,6 +362,7 @@ impl Handler for MockKnowledgeHandler {
                         route: Route::GeneralChat as i32,
                         taint: None,
                         used_web: false,
+                        ..AnswerDone::default()
                     }))
                 }
                 _ => Err(HandlerError::unsupported()),
@@ -385,18 +402,39 @@ async fn test_run_ask_streaming_and_errors() {
 
     // Unreachable knowledge service returns exit code 1
     let runtime_root_down = tmp.path().join("down");
-    let exit_down = run_ask(&runtime_root_down, "hello".to_string(), false, styler).await;
+    let exit_down = run_ask(
+        &runtime_root_down,
+        "hello".to_string(),
+        AskOptions::default(),
+        styler,
+    )
+    .await;
     assert_eq!(exit_down, 1);
 
     // Successful ask streaming
     let runtime_root_ok = tmp.path().join("ok");
     let stop_tx =
         start_mock_knowledge(runtime_root_ok.clone(), MockKnowledgeBehavior::Normal).await;
-    let exit_ok = run_ask(&runtime_root_ok, "what is 2+2?".to_string(), false, styler).await;
+    let exit_ok = run_ask(
+        &runtime_root_ok,
+        "what is 2+2?".to_string(),
+        AskOptions::default(),
+        styler,
+    )
+    .await;
     assert_eq!(exit_ok, 0);
 
     // With JSON output
-    let exit_json = run_ask(&runtime_root_ok, "what is 2+2?".to_string(), true, styler).await;
+    let exit_json = run_ask(
+        &runtime_root_ok,
+        "what is 2+2?".to_string(),
+        AskOptions {
+            json: true,
+            ..AskOptions::default()
+        },
+        styler,
+    )
+    .await;
     assert_eq!(exit_json, 0);
     let _ = stop_tx.send(());
 
@@ -410,7 +448,7 @@ async fn test_run_ask_streaming_and_errors() {
     let exit_denied = run_ask(
         &runtime_root_denied,
         "delete data".to_string(),
-        false,
+        AskOptions::default(),
         styler,
     )
     .await;
@@ -427,12 +465,29 @@ async fn test_run_ask_streaming_and_errors() {
     let exit_err = run_ask(
         &runtime_root_err,
         "trigger crash".to_string(),
-        false,
+        AskOptions::default(),
         styler,
     )
     .await;
     assert_eq!(exit_err, 1);
     let _ = stop_err.send(());
+
+    // A status sentence for a down part is not an answer: exit 1, so scripts retry.
+    let runtime_root_status = tmp.path().join("status");
+    let stop_status = start_mock_knowledge(
+        runtime_root_status.clone(),
+        MockKnowledgeBehavior::StatusOnly,
+    )
+    .await;
+    let exit_status = run_ask(
+        &runtime_root_status,
+        "hello".to_string(),
+        AskOptions::default(),
+        styler,
+    )
+    .await;
+    assert_eq!(exit_status, 1);
+    let _ = stop_status.send(());
 
     // Cancellation test with immediate cancel signal
     let runtime_root_cancel = tmp.path().join("cancel");
@@ -445,7 +500,7 @@ async fn test_run_ask_streaming_and_errors() {
     let exit_cancel = run_ask_internal(
         &runtime_root_cancel,
         "slow question".to_string(),
-        false,
+        AskOptions::default(),
         styler,
         cancel_sig,
     )

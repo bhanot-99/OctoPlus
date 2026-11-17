@@ -32,6 +32,14 @@ class FakeEngine : public Engine {
 
   void Reset() override;
 
+  Status SetGrammar(std::string_view gbnf) override;
+
+  // Test inspection: the grammar of the latest request, how many times one was set, and a switch
+  // that makes the next grammar fail like an unparsable one.
+  [[nodiscard]] const std::string& last_grammar() const noexcept { return last_grammar_; }
+  [[nodiscard]] std::uint32_t grammar_calls() const noexcept { return grammar_calls_; }
+  void FailNextGrammar() noexcept { fail_next_grammar_ = true; }
+
   Result<PrefillResult> Prefill(const std::vector<std::int32_t>& tokens,
                                 std::uint32_t stable_prefix_tokens) override;
 
@@ -53,6 +61,9 @@ class FakeEngine : public Engine {
   std::uint32_t prefill_calls_ = 0;
   std::uint32_t decode_calls_ = 0;
   std::uint32_t last_cached_prompt_tokens_ = 0;
+  std::string last_grammar_;
+  std::uint32_t grammar_calls_ = 0;
+  bool fail_next_grammar_ = false;
 };
 
 }  // namespace neuroos::inference
