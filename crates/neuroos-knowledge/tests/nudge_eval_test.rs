@@ -1092,6 +1092,10 @@ proptest! {
             if let Some(on) = toggle_en {
                 eval.set_enabled("r1", on);
                 enabled_state = on;
+                if on {
+                    // Switching a rule on ends an earlier snooze (review F3).
+                    snoozed_until_state = 0;
+                }
             }
 
             if let Some(snooze_s) = snooze_s_opt {

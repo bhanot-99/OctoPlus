@@ -73,6 +73,11 @@ impl Evaluator {
     pub fn set_enabled(&mut self, rule_id: &str, on: bool) -> bool {
         if let Some(pos) = self.rules.iter().position(|r| r.id == rule_id) {
             self.rule_states[pos].enabled = on;
+            if on {
+                // Switching a rule on is an explicit decision: an earlier "not now" no longer
+                // holds it back.
+                self.rule_states[pos].snoozed_until_ns = 0;
+            }
             true
         } else {
             false

@@ -468,7 +468,9 @@ impl KnowledgeHandler {
                         false,
                     ));
                 };
-                if self.nudge.notify(&template, &args, false).await {
+                // A test line is a visual check the owner asked for: never with a sound, so it
+                // cannot be heard at a bad moment (review F1).
+                if self.nudge.notify(&template, &args, true).await {
                     Ok(Body::Ack(Ack {}))
                 } else {
                     Err(HandlerError::new(

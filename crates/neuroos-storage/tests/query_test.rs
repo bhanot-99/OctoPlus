@@ -454,3 +454,37 @@ async fn the_nudge_log_fold_keeps_switches_past_retention_and_forget() {
             .any(|e| e.outcome == NudgeOutcome::Snoozed as i32)
     );
 }
+
+/// A log full of held and dropped rows cannot push a cooldown out of the restore answer.
+#[tokio::test]
+async fn a_flood_of_held_rows_never_hides_a_cooldown_or_a_snooze() {
+    use neuroos_proto::v1::NudgeOutcome;
+    let (s, _d) = store().await;
+    let log = |rule: &str, outcome: NudgeOutcome, at: u64| {
+        let s = s.clone();
+        let rule = rule.to_string();
+        async move {
+            s.store_nudge(StoreNudgeLog {
+                rule_id: rule,
+                outcome: outcome as i32,
+                at_ns: at,
+            })
+            .await
+            .unwrap();
+        }
+    };
+    log("disk_nearly_full", NudgeOutcome::Notified, 100 * S).await;
+    log("battery_low", NudgeOutcome::Snoozed, 110 * S).await;
+    for i in 0..6_000_u64 {
+        let o = if i % 2 == 0 {
+            NudgeOutcome::Held
+        } else {
+            NudgeOutcome::Dropped
+        };
+        log("running_hot", o, 200 * S + i).await;
+    }
+    let got = s.nudge_log_since(0).await.unwrap();
+    assert_eq!(got.len(), 2, "only the rows that are state: {}", got.len());
+    assert_eq!(got[0].rule_id, "disk_nearly_full");
+    assert_eq!(got[1].outcome, NudgeOutcome::Snoozed as i32);
+}

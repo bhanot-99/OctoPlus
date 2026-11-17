@@ -175,7 +175,11 @@ pub fn fold_log(
             Ok(NudgeOutcome::Spoken | NudgeOutcome::Notified) => row.1 = row.1.max(e.at_ns),
             Ok(NudgeOutcome::Snoozed) => row.2 = e.at_ns.saturating_add(snooze_ns),
             Ok(NudgeOutcome::Disabled) => row.3 = Some(false),
-            Ok(NudgeOutcome::Enabled) => row.3 = Some(true),
+            Ok(NudgeOutcome::Enabled) => {
+                // Switching a rule on is an explicit "yes": an older snooze no longer holds it back.
+                row.3 = Some(true);
+                row.2 = 0;
+            }
             _ => {}
         }
     }

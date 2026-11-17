@@ -786,7 +786,7 @@ async fn nudges_list_enable_disable_and_test() {
         let (t, a, silent) = rec.notifies.last().unwrap();
         assert_eq!(
             (t.as_str(), a.as_slice(), *silent),
-            ("disk.critical", &[("free_gib".to_string(), 5.0)][..], false)
+            ("disk.critical", &[("free_gib".to_string(), 5.0)][..], true)
         );
     }
     assert!(
@@ -816,4 +816,63 @@ async fn a_part_that_is_down_is_reported_after_its_hold_time() {
     let rec = s.rec();
     assert_eq!(rec.notifies.len(), 1, "{:?}", rec.notifies);
     assert_eq!(rec.notifies[0].0, "part.degraded");
+}
+
+#[tokio::test]
+async fn switching_a_rule_on_clears_an_earlier_snooze() {
+    let s = with_open_window().await;
+    s.ask("not now", NOON + 160 * S).await;
+    let snoozed = |s: &Stack| {
+        s.nudge
+            .list()
+            .iter()
+            .find(|r| r.rule_id == "disk_nearly_full")
+            .unwrap()
+            .snoozed_until_ns
+    };
+    assert!(snoozed(&s) > 0);
+    s.admin(Body::NudgeSetEnabled(NudgeSetEnabled {
+        rule_id: "disk_nearly_full".into(),
+        enabled: true,
+    }))
+    .await
+    .unwrap();
+    assert_eq!(snoozed(&s), 0, "an explicit enable ends the snooze");
+}
+
+#[test]
+fn the_log_fold_ends_a_snooze_at_a_later_enable_and_keeps_a_later_snooze() {
+    use neuroos_knowledge::nudge::engine::fold_log;
+    let e = |outcome, at| entry("r", outcome, at);
+    let hour = 3600 * S;
+    let enabled_after = fold_log(
+        &[
+            e(NudgeOutcome::Snoozed, 10 * S),
+            e(NudgeOutcome::Enabled, 20 * S),
+        ],
+        4 * hour,
+    );
+    assert_eq!(enabled_after, vec![("r".to_string(), 0, 0, Some(true))]);
+    let snoozed_after = fold_log(
+        &[
+            e(NudgeOutcome::Enabled, 10 * S),
+            e(NudgeOutcome::Snoozed, 20 * S),
+        ],
+        4 * hour,
+    );
+    assert_eq!(
+        snoozed_after,
+        vec![("r".to_string(), 0, 20 * S + 4 * hour, Some(true))]
+    );
+    // Only Spoken and Notified start a cooldown.
+    let fired = fold_log(
+        &[
+            e(NudgeOutcome::Held, 5 * S),
+            e(NudgeOutcome::Dropped, 6 * S),
+            e(NudgeOutcome::Notified, 7 * S),
+            e(NudgeOutcome::Accepted, 8 * S),
+        ],
+        hour,
+    );
+    assert_eq!(fired, vec![("r".to_string(), 7 * S, 0, None)]);
 }
