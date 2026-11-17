@@ -69,6 +69,7 @@ std::string Lower(const std::string& s) {
 
 struct Rig {
   VirtualDevice dev{"e2e"};
+  VirtualDevice dev2{"e2eout"};  // where the buddy's own voice goes in the barge-in test
   std::unique_ptr<AudioSource> mic;
   std::unique_ptr<AudioSink> user_speaker;  // plays the "user" into the virtual sink
   std::unique_ptr<Tts> user_voice;
@@ -77,18 +78,29 @@ struct Rig {
   std::unique_ptr<WakeWord> wake;
   std::unique_ptr<Stt> stt;
   NullSink buddy_sink;
+  std::unique_ptr<AudioSink> real_buddy_sink;  // set by tests that need real playback
+  std::mutex metrics_mu;
+  std::vector<std::pair<std::string, std::uint64_t>> metrics;
   RecordingLink link;
   ThreadExecutor stt_exec;
   ThreadExecutor tts_exec;
   std::unique_ptr<VoicePipeline> pipeline;
 
-  bool Build() {
+  bool Build(bool real_playback = false) {
     if (!dev.WaitUntilVisible()) return false;
+    if (real_playback && !dev2.WaitUntilVisible()) return false;
     PipeWireOptions o;
     o.capture_node_name = dev.mic_name;
     o.playback_node_name = dev.sink_name;
     auto m = MakePipeWireSource(o);
     auto sp = MakePipeWireSink(o);
+    if (real_playback) {
+      PipeWireOptions out;
+      out.playback_node_name = dev2.sink_name;
+      auto bs = MakePipeWireSink(out);
+      if (!bs.ok()) return false;
+      real_buddy_sink = std::move(bs).value();
+    }
     KokoroPaths user;
     user.model = kModels + "/kokoro-v1.0-fp32.onnx";
     user.tokenizer = kModels + "/kokoro-tokenizer.json";
@@ -115,7 +127,11 @@ struct Rig {
     stt = std::move(st).value();
     VoicePipeline::Deps d;
     d.source = mic.get();
-    d.sink = &buddy_sink;
+    d.sink = real_buddy_sink ? real_buddy_sink.get() : static_cast<AudioSink*>(&buddy_sink);
+    d.on_metric = [this](std::string_view name, std::uint64_t ns) {
+      const std::lock_guard<std::mutex> lock(metrics_mu);
+      metrics.emplace_back(std::string(name), ns);
+    };
     d.vad = vad.get();
     d.wake = wake.get();
     d.stt = stt.get();
@@ -210,6 +226,45 @@ TEST(LocalEndToEnd, AnswerIsSpokenAndAFollowUpNeedsNoWakeWord) {
   EXPECT_TRUE(r.link.at(1).in_follow_up);
   EXPECT_NE(Lower(r.link.at(1).text).find("weather"), std::string::npos) << r.link.at(1).text;
   EXPECT_EQ(r.pipeline->stats().wake_words, 1U);
+  r.pipeline->Stop();
+}
+
+TEST(LocalEndToEnd, SpeakingOverALongAnswerStopsItAndCancelsTheRequest) {
+  Rig r;
+  ASSERT_TRUE(r.Build(/*real_playback=*/true));
+  ASSERT_TRUE(r.pipeline->Start().ok());
+  std::this_thread::sleep_for(500ms);
+  r.UserSays("Hey Jarvis, tell me something long.");
+  ASSERT_TRUE(r.WaitForCommands(1, 25s));
+  // A long answer, in many sentences, played through the real (virtual) speaker.
+  for (int i = 0; i < 12; ++i) {
+    r.link.receiver->OnSpeak("This is sentence number " + std::to_string(i + 1) +
+                             " of a rather long answer that keeps going.");
+  }
+  for (int i = 0; i < 100 && !r.pipeline->status().speaking; ++i)
+    std::this_thread::sleep_for(100ms);
+  ASSERT_TRUE(r.pipeline->status().speaking);
+  std::this_thread::sleep_for(1500ms);
+  // The user talks over it.
+  r.UserSays("Stop, never mind that, what time is it?");
+  for (int i = 0; i < 100 && r.link.barge_ins.load() == 0; ++i) std::this_thread::sleep_for(50ms);
+  EXPECT_EQ(r.link.barge_ins.load(), 1);
+  EXPECT_GE(r.link.cancels.load(), 1) << "the request to C5 was cancelled";
+  EXPECT_FALSE(r.pipeline->status().speaking) << "the answer stopped";
+  std::uint64_t flush_ns = 0;
+  {
+    const std::lock_guard<std::mutex> lock(r.metrics_mu);
+    for (const auto& [name, ns] : r.metrics) {
+      if (name == "flush") flush_ns = ns;
+    }
+  }
+  std::printf("barge-in flush call took %.3f ms\n", static_cast<double>(flush_ns) / 1e6);
+#ifdef NDEBUG
+  EXPECT_LT(flush_ns, 1'000'000U) << "NFR-PERF-08: under 1 ms";
+#endif
+  // The interruption is itself the next command.
+  ASSERT_TRUE(r.WaitForCommands(2, 25s));
+  EXPECT_NE(Lower(r.link.at(1).text).find("time"), std::string::npos) << r.link.at(1).text;
   r.pipeline->Stop();
 }
 
