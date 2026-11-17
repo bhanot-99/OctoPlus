@@ -182,3 +182,52 @@ TEST(LocalSpeech, WhisperOnSilenceSaysNothingUseful) {
 
 }  // namespace
 }  // namespace neuroos::voice
+
+// ---- memory (local, release builds): where the voice service's RSS goes ------------------------
+
+#include <unistd.h>
+
+namespace neuroos::voice {
+namespace {
+
+double RssMiB() {
+  std::ifstream f("/proc/self/statm");
+  long total = 0;
+  long resident = 0;
+  f >> total >> resident;
+  return static_cast<double>(resident) * static_cast<double>(sysconf(_SC_PAGESIZE)) / 1048576.0;
+}
+
+TEST(LocalMemory, EachEngineAndTheWholeStayInsideTheBudget) {
+  const double base = RssMiB();
+  auto vad = MakeSileroVad(kModels + "/silero_vad.onnx");
+  const double after_vad = RssMiB();
+  WakeWordPaths w;
+  w.melspectrogram = kModels + "/melspectrogram.onnx";
+  w.embedding = kModels + "/embedding_model.onnx";
+  w.classifier = kModels + "/hey_jarvis_v0.1.onnx";
+  auto wake = MakeOpenWakeWord(w);
+  const double after_wake = RssMiB();
+  auto stt = MakeWhisperStt(kModels + "/ggml-tiny.en.bin", 4);
+  const double after_stt = RssMiB();
+  auto tts = MakeKokoroTts(RealKokoro());
+  const double after_tts = RssMiB();
+  ASSERT_TRUE(vad.ok() && wake.ok() && stt.ok() && tts.ok());
+  // One turn of each, the steady state.
+  auto pcm = tts.value()->Synthesize(
+      "Heads up, your disk is 92 percent full. Want me to show what is using the space?");
+  ASSERT_TRUE(pcm.ok());
+  std::vector<std::int16_t> pcm16(pcm.value().size() * 2 / 3);
+  for (std::size_t i = 0; i < pcm16.size(); ++i) pcm16[i] = pcm.value()[i * 3 / 2];
+  ASSERT_TRUE(stt.value()->Transcribe(pcm16).ok());
+  const double steady = RssMiB();
+  std::printf(
+      "RSS MiB: base %.0f, +vad %.0f, +wake %.0f, +stt %.0f, +tts %.0f, after a turn %.0f\n", base,
+      after_vad, after_wake, after_stt, after_tts, steady);
+#ifdef NDEBUG
+  EXPECT_LT(steady, 600.0) << "PRD §6.2: C2 steady state must stay under its 620 MiB budget";
+#endif
+}
+
+}  // namespace
+}  // namespace neuroos::voice

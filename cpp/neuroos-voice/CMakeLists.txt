@@ -73,8 +73,11 @@ if(NEUROOS_WITH_VOICE_ENGINES)
   target_compile_definitions(neuroos_voice_speech_tests PRIVATE
     NEUROOS_VOICE_MODELS_DIR="${CMAKE_SOURCE_DIR}/../models/voice")
   target_include_directories(neuroos_voice_speech_tests PRIVATE tests/engines)
-  target_link_libraries(neuroos_voice_speech_tests PRIVATE neuroos_voice_speech GTest::gtest_main neuroos_warnings)
+  target_link_libraries(neuroos_voice_speech_tests PRIVATE neuroos_voice_engines neuroos_voice_speech GTest::gtest_main neuroos_warnings)
   gtest_discover_tests(neuroos_voice_speech_tests PROPERTIES LABELS "local")
+
+  add_executable(neuroos-voice-say tools_say.cpp)
+  target_link_libraries(neuroos-voice-say PRIVATE neuroos_voice_speech neuroos_warnings)
 
   add_executable(neuroos_voice_e2e_tests
     tests/engines/e2e_voice_test.cpp

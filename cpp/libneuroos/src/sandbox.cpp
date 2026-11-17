@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <linux/landlock.h>
 #include <sys/prctl.h>
+#include <sys/stat.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
@@ -149,8 +150,18 @@ Result<Report> Restrict(const Policy& policy) {
         };
       }
 
+      // A rule on a single file (a socket, say) may only carry file rights: directory rights
+      // make the kernel refuse the rule (EINVAL).
+      std::uint64_t access = allowed_access;
+      struct stat st {};
+      if (fstat(path_fd, &st) == 0 && !S_ISDIR(st.st_mode)) {
+        access &= LANDLOCK_ACCESS_FS_EXECUTE | LANDLOCK_ACCESS_FS_WRITE_FILE |
+                  LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_TRUNCATE |
+                  LANDLOCK_ACCESS_FS_IOCTL_DEV;
+      }
+
       landlock_path_beneath_attr path_attr{};
-      path_attr.allowed_access = allowed_access;
+      path_attr.allowed_access = access;
       path_attr.parent_fd = path_fd;
 
       // Syscall 4: Add path-beneath rule allowing specified access rights to this path tree.

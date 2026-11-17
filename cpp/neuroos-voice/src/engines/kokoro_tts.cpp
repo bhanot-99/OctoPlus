@@ -147,7 +147,12 @@ Result<std::unique_ptr<Tts>> MakeKokoroTts(const KokoroPaths& paths) {
     return Error{.message = "cannot start the phonemizer", .retryable = false, .code = 7};
   }
   try {
-    Ort::Session session(engines::OrtEnv(), paths.model.c_str(), engines::SessionOptions(2));
+    // Memory first (PRD §6.2: C2 has 620 MiB): no pre-packed weight copies and no arena that
+    // keeps what a sentence needed after the sentence.
+    auto so = engines::SessionOptions(2);
+    so.DisableCpuMemArena();
+    so.AddConfigEntry("session.disable_prepacking", "1");
+    Ort::Session session(engines::OrtEnv(), paths.model.c_str(), so);
     return std::unique_ptr<Tts>(
         new KokoroTts(std::move(session), std::move(vocab).value(), std::move(voice), paths.speed));
   } catch (const Ort::Exception&) {

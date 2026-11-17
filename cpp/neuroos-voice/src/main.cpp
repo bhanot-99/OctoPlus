@@ -44,7 +44,9 @@ int main(int argc, char* argv[]) {
   if (!cfg.voice_config.empty()) {
     std::ifstream f(cfg.voice_config);
     if (f) {
-      std::string text((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+      std::ostringstream buf;
+      buf << f.rdbuf();
+      const std::string text = buf.str();
       auto parsed = neuroos::voice::ParseVoiceConfig(text);
       if (!parsed.ok()) {
         std::cerr << "neuroos-voice: " << parsed.error().message << "\n";

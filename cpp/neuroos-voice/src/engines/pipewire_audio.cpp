@@ -31,6 +31,10 @@
 
 #include "neuroos/voice/real_engines.hpp"
 
+// PipeWire's inline interface-call helpers (system headers) look like null dereferences to GCC at
+// -O3 once inlined here; the calls are on objects this file has just checked or created.
+#pragma GCC diagnostic ignored "-Wnull-dereference"
+
 namespace neuroos::voice {
 namespace {
 
