@@ -17,6 +17,7 @@ pub mod prompt;
 pub mod router;
 pub mod sanitize;
 pub mod session;
+pub mod speech;
 pub mod status;
 pub mod tokens;
 pub mod turn;
@@ -109,6 +110,7 @@ pub fn init(ctx: &mut neuroos_health::ServiceContext) -> Result<(), neuroos_heal
         route_desktop: h.counter("route_desktop"),
         route_general: h.counter("route_general"),
         evidence_no_taint: h.counter("evidence_dropped_no_taint"),
+        barge_ins: h.counter("voice_barge_ins"),
     };
     let nudge = start_nudges(ctx, &peers)?;
     let handler = Arc::new(KnowledgeHandler::new(

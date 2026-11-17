@@ -20,9 +20,9 @@ use neuroos_knowledge::status::NO_LOOKUP_YET;
 use neuroos_knowledge::turn::{KnowledgeHandler, Metrics, Peers, Timing};
 use neuroos_proto::v1::envelope::Body;
 use neuroos_proto::v1::{
-    Ack, AnswerDone, AskRequest, DispatchResult, DispatchStatus, Domain, ErrorCode, EvaluateResult,
-    Evidence, FocusHistoryResult, FocusWindow, GenerateDone, HybridResult, Origin, ProfileFact,
-    ProfileFacts, Route, StopReason, Taint, Tier, TokenChunk,
+    Ack, AnswerDone, AskRequest, BargeIn, DispatchResult, DispatchStatus, Domain, ErrorCode,
+    EvaluateResult, Evidence, FocusHistoryResult, FocusWindow, GenerateDone, HybridResult, Origin,
+    ProfileFact, ProfileFacts, Route, StopReason, Taint, Tier, TokenChunk,
 };
 use neuroos_taint::TaintFlags;
 
@@ -232,6 +232,7 @@ struct Stack {
     c3_degraded: Arc<AtomicU64>,
     c4_unavailable: Arc<AtomicU64>,
     no_taint: Arc<AtomicU64>,
+    barge_ins: Arc<AtomicU64>,
     c4_cancelled: Arc<AtomicBool>,
     c4_cancel_notify: Arc<tokio::sync::Notify>,
 }
@@ -317,6 +318,7 @@ impl Stack {
             route_desktop: counter(),
             route_general: counter(),
             evidence_no_taint: counter(),
+            barge_ins: counter(),
         };
         let stack_counters = (
             metrics.requests.clone(),
@@ -324,6 +326,7 @@ impl Stack {
             metrics.c3_degraded.clone(),
             metrics.c4_unavailable.clone(),
             metrics.evidence_no_taint.clone(),
+            metrics.barge_ins.clone(),
         );
         let cfg = KnowledgeConfig {
             min_score_milli: 450,
@@ -368,6 +371,7 @@ impl Stack {
             c3_degraded: stack_counters.2,
             c4_unavailable: stack_counters.3,
             no_taint: stack_counters.4,
+            barge_ins: stack_counters.5,
             c4_cancelled,
             c4_cancel_notify,
         }
@@ -399,6 +403,31 @@ impl Stack {
             }
         }
         Ok((said, done.expect("AnswerDone")))
+    }
+
+    /// A spoken turn: every frame of the stream, in order, then the closing frame.
+    async fn voice_ask(&self, text: &str) -> (Vec<Body>, AnswerDone) {
+        let client = Client::connect(&self.c5, 1 << 20).await.unwrap();
+        let mut stream = client
+            .stream(
+                Body::VoiceCommand(neuroos_proto::v1::VoiceCommand {
+                    text: text.to_string(),
+                    t_speech_start_ns: 1_000_000_000_000,
+                    t_speech_end_ns: 1_000_500_000_000,
+                    ..Default::default()
+                }),
+                Duration::from_secs(5),
+            )
+            .await
+            .unwrap();
+        let mut frames = Vec::new();
+        while let Some(item) = stream.next().await {
+            match item.unwrap() {
+                Body::AnswerDone(d) => return (frames, d),
+                other => frames.push(other),
+            }
+        }
+        panic!("no AnswerDone");
     }
 
     async fn ask(&self, text: &str) -> (String, AnswerDone) {
@@ -1407,4 +1436,54 @@ fn nfr_perf_05_c5_own_compute_is_far_below_five_ms() {
         times[1000]
     );
     assert!(p99 < Duration::from_millis(5), "p99 {p99:?}");
+}
+
+#[tokio::test]
+async fn a_spoken_question_gets_a_preamble_then_speakable_sentences() {
+    let s = Stack::start(Opts::default()).await;
+    let (frames, done) = s.voice_ask("what is the capital of France").await;
+    assert_eq!(route(&done), Route::GeneralChat);
+    assert!(
+        matches!(
+            frames.first(),
+            Some(Body::PreambleRequest(p)) if p.kind == neuroos_proto::v1::PreambleKind::Thinking as i32
+        ),
+        "{frames:?}"
+    );
+    let spoken: Vec<_> = frames
+        .iter()
+        .filter_map(|f| match f {
+            Body::SpeakChunk(c) => Some((c.sequence, c.text.as_str())),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(spoken, vec![(1, "Fine.")], "{frames:?}");
+    assert!(
+        frames
+            .iter()
+            .all(|f| matches!(f, Body::PreambleRequest(_) | Body::SpeakChunk(_))),
+        "no typed answer frames on a voice stream: {frames:?}"
+    );
+}
+
+#[tokio::test]
+async fn a_spoken_question_about_the_screen_gets_a_looking_preamble() {
+    let s = Stack::start(Opts::default()).await;
+    let (frames, _) = s.voice_ask("what is this window").await;
+    assert!(matches!(
+        frames.first(),
+        Some(Body::PreambleRequest(p)) if p.kind == neuroos_proto::v1::PreambleKind::Looking as i32
+    ));
+}
+
+#[tokio::test]
+async fn a_barge_in_message_is_acknowledged_and_counted() {
+    let s = Stack::start(Opts::default()).await;
+    let client = Client::connect(&s.c5, 1 << 20).await.unwrap();
+    let reply = client
+        .call(Body::BargeIn(BargeIn { at_ns: 5 }), Duration::from_secs(2))
+        .await
+        .unwrap();
+    assert!(matches!(reply, Body::Ack(_)));
+    assert_eq!(s.barge_ins.load(Ordering::Relaxed), 1);
 }

@@ -254,6 +254,7 @@ impl Stack {
             route_desktop: counter(),
             route_general: counter(),
             evidence_no_taint: counter(),
+            barge_ins: counter(),
         };
         let handler = KnowledgeHandler::new(
             peers,
