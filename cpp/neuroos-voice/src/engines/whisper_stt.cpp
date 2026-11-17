@@ -19,7 +19,9 @@ class WhisperStt final : public Stt {
   WhisperStt& operator=(const WhisperStt&) = delete;
 
   Result<std::string> Transcribe(std::span<const std::int16_t> pcm) override {
-    if (pcm.empty()) return std::string();
+    if (pcm.empty()) {
+      return std::string();
+    }
     pcm_f_.resize(pcm.size());
     for (std::size_t i = 0; i < pcm.size(); ++i) {
       pcm_f_[i] = static_cast<float>(pcm[i]) / 32768.0F;
@@ -57,10 +59,14 @@ class WhisperStt final : public Stt {
     const int n = whisper_full_n_segments(ctx_);
     for (int i = 0; i < n; ++i) {
       const char* seg = whisper_full_get_segment_text(ctx_, i);
-      if (seg != nullptr) text += seg;
+      if (seg != nullptr) {
+        text += seg;
+      }
     }
     const auto first = text.find_first_not_of(" \t\n\r");
-    if (first == std::string::npos) return std::string();
+    if (first == std::string::npos) {
+      return std::string();
+    }
     const auto last = text.find_last_not_of(" \t\n\r");
     return text.substr(first, last - first + 1);
   }

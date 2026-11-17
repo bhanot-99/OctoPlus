@@ -41,7 +41,9 @@ struct Heard final : public ReplyReceiver {
     while (std::chrono::steady_clock::now() < end) {
       {
         const std::lock_guard<std::mutex> l(mu);
-        if (!events.empty() && events.back() == last) return true;
+        if (!events.empty() && events.back() == last) {
+          return true;
+        }
       }
       std::this_thread::sleep_for(10ms);
     }
@@ -187,7 +189,9 @@ TEST(KnowledgeLink, BargeInIsSentToC5) {
   FakeC5 c5(dir);
   KnowledgeLink link(std::make_shared<ipc::ReconnectingClient>(c5.path, 1 << 20));
   link.SendBargeIn(42);
-  for (int i = 0; i < 100 && c5.barge_ins.load() == 0; ++i) std::this_thread::sleep_for(20ms);
+  for (int i = 0; i < 100 && c5.barge_ins.load() == 0; ++i) {
+    std::this_thread::sleep_for(20ms);
+  }
   EXPECT_EQ(c5.barge_ins.load(), 1);
   c5.server->Stop();
   std::filesystem::remove_all(dir);

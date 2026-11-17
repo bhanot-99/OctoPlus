@@ -24,7 +24,7 @@ WakeWordPaths DefaultPaths(float threshold = 0.5F) {
 }
 
 TEST(OpenWakeWordTest, MissingPathReturnsError) {
-  WakeWordPaths bad_paths{
+  WakeWordPaths const bad_paths{
       .melspectrogram = "non_existent_mel.onnx",
       .embedding = "non_existent_emb.onnx",
       .classifier = "non_existent_cls.onnx",
@@ -55,7 +55,7 @@ TEST(OpenWakeWordTest, ThirtySecondsOfNoiseNeverDetects) {
   std::mt19937 rng(42);
   std::uniform_int_distribution<int> dist(-3000, 3000);
 
-  std::array<std::int16_t, 512> frame;
+  std::array<std::int16_t, 512> frame{};
   for (int i = 0; i < 938; ++i) {
     for (auto& s : frame) {
       s = static_cast<std::int16_t>(dist(rng));

@@ -20,7 +20,9 @@ VoiceService::VoiceService(std::shared_ptr<Health> health,
     : health_(std::move(health)), knowledge_client_(std::move(knowledge_client)) {
   health_->AddProbe("audio", [this]() {
     const std::lock_guard<std::mutex> lock(mu_);
-    if (pipeline_ == nullptr) return std::make_pair(v1::HEALTH_STATUS_DEGRADED, detail_);
+    if (pipeline_ == nullptr) {
+      return std::make_pair(v1::HEALTH_STATUS_DEGRADED, detail_);
+    }
     if (!pipeline_->status().capture_running) {
       return std::make_pair(v1::HEALTH_STATUS_DEGRADED,
                             std::string("no microphone is being captured"));
@@ -65,23 +67,33 @@ ipc::Handler VoiceService::GetVoiceHandler() {
           .message = why, .retryable = true, .code = static_cast<int>(v1::ERROR_CODE_UNAVAILABLE)};
     };
     if (req.envelope.has_speak_nudge()) {
-      if (pipeline == nullptr) return unavailable("voice is not running");
+      if (pipeline == nullptr) {
+        return unavailable("voice is not running");
+      }
       const auto& n = req.envelope.speak_nudge();
       std::vector<NudgeArg> args;
-      for (const auto& a : n.args()) args.push_back(NudgeArg{a.name(), a.value()});
+      for (const auto& a : n.args()) {
+        args.push_back(NudgeArg{a.name(), a.value()});
+      }
       auto s = pipeline->SpeakNudge(n.template_id(), args);
-      if (!s.ok()) return s.error();
+      if (!s.ok()) {
+        return s.error();
+      }
       reply->mutable_ack();
       return ok_status();
     }
     if (req.envelope.has_preamble_request()) {
-      if (pipeline == nullptr) return unavailable("voice is not running");
+      if (pipeline == nullptr) {
+        return unavailable("voice is not running");
+      }
       pipeline->PlayPreamble(static_cast<int>(req.envelope.preamble_request().kind()));
       reply->mutable_ack();
       return ok_status();
     }
     if (req.envelope.has_speak_status()) {
-      if (pipeline == nullptr) return unavailable("voice is not running");
+      if (pipeline == nullptr) {
+        return unavailable("voice is not running");
+      }
       pipeline->PlayStatus(static_cast<int>(req.envelope.speak_status().line()));
       reply->mutable_ack();
       return ok_status();
@@ -112,7 +124,9 @@ Status VoiceService::HandleStatus(const ipc::Request& /*req*/, v1::Envelope* rep
   PipelineStatus st;
   {
     const std::lock_guard<std::mutex> lock(mu_);
-    if (pipeline_ != nullptr) st = pipeline_->status();
+    if (pipeline_ != nullptr) {
+      st = pipeline_->status();
+    }
   }
   auto* status = reply->mutable_voice_status();
   status->set_turn_in_progress(st.turn_in_progress);

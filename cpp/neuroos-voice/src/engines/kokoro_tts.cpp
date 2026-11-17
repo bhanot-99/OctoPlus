@@ -23,8 +23,10 @@ constexpr std::size_t kStyleDim = 256;
 constexpr std::size_t kMaxTokens = 512;
 
 bool ReadFile(const std::string& path, std::string* out) {
-  std::ifstream f(path, std::ios::binary);
-  if (!f) return false;
+  std::ifstream const f(path, std::ios::binary);
+  if (!f) {
+    return false;
+  }
   std::ostringstream ss;
   ss << f.rdbuf();
   *out = ss.str();
@@ -55,8 +57,12 @@ std::string Phonemize(const std::string& words) {
   while (ptr != nullptr && *ptr != '\0') {
     const char* ph = espeak_TextToPhonemes(reinterpret_cast<const void**>(&ptr), espeakCHARS_UTF8,
                                            0x02 /* IPA */);
-    if (ph == nullptr) break;
-    if (!out.empty()) out += ' ';
+    if (ph == nullptr) {
+      break;
+    }
+    if (!out.empty()) {
+      out += ' ';
+    }
     out += ph;
   }
   return out;
@@ -79,11 +85,15 @@ class KokoroTts final : public Tts {
         phonemes += piece.text;
       } else {
         const auto p = Phonemize(piece.text);
-        if (!p.empty()) phonemes += NormaliseKokoroPhonemes(p) + " ";
+        if (!p.empty()) {
+          phonemes += NormaliseKokoroPhonemes(p) + " ";
+        }
       }
     }
     const auto tokens = EncodeKokoroTokens(phonemes, vocab_, kMaxTokens);
-    if (tokens.size() <= 2) return std::vector<std::int16_t>();  // nothing speakable
+    if (tokens.size() <= 2) {
+      return std::vector<std::int16_t>();  // nothing speakable
+    }
     // The style vector is chosen by the number of tokens (as in the reference implementation).
     const std::size_t rows = voice_.size() / kStyleDim;
     const std::size_t row = std::min(tokens.size() - 2, rows - 1);
@@ -107,7 +117,7 @@ class KokoroTts final : public Tts {
                               out_names, 1);
       const auto info = out[0].GetTensorTypeAndShapeInfo();
       const std::size_t n = info.GetElementCount();
-      const float* w = out[0].GetTensorData<float>();
+      const auto* w = out[0].GetTensorData<float>();
       std::vector<std::int16_t> pcm(n);
       for (std::size_t i = 0; i < n; ++i) {
         const float v = std::clamp(w[i], -1.0F, 1.0F);
@@ -135,7 +145,9 @@ Result<std::unique_ptr<Tts>> MakeKokoroTts(const KokoroPaths& paths) {
     return Error{.message = "cannot read the speech tokenizer", .retryable = false, .code = 7};
   }
   auto vocab = ParseKokoroVocab(tok);
-  if (!vocab.ok()) return vocab.error();
+  if (!vocab.ok()) {
+    return vocab.error();
+  }
   std::string raw;
   if (!ReadFile(paths.voice, &raw) || raw.size() % (kStyleDim * sizeof(float)) != 0 ||
       raw.empty()) {

@@ -203,7 +203,7 @@ TEST(AudioRingTest, TwoThreadsProducerConsumer) {
       const std::size_t n = ring.ReadLast(512, &read_buf);
       if (n > 1) {
         for (std::size_t i = 1; i < n; ++i) {
-          const std::int16_t expected = static_cast<std::int16_t>((read_buf[i - 1] + 1) & 0x7FFF);
+          const auto expected = static_cast<std::int16_t>((read_buf[i - 1] + 1) & 0x7FFF);
           if (read_buf[i] != expected) {
             failed.store(true, std::memory_order_relaxed);
             break;

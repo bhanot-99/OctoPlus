@@ -28,7 +28,7 @@ class RecordingLink final : public ReplyLink {
     receiver = r;
   }
   void Cancel() override { ++cancels; }
-  void SendBargeIn(std::uint64_t) override { ++barge_ins; }
+  void SendBargeIn(std::uint64_t /*at_ns*/) override { ++barge_ins; }
   std::size_t count() {
     const std::lock_guard<std::mutex> lock(mu);
     return commands.size();
@@ -46,7 +46,7 @@ class RecordingLink final : public ReplyLink {
 
 class NullSink final : public AudioSink {
  public:
-  Status Start(int) override { return ok_status(); }
+  Status Start(int /*sample_rate*/) override { return ok_status(); }
   void Write(std::span<const std::int16_t> s) override {
     written += s.size();
     playing = true;
@@ -87,8 +87,12 @@ struct Rig {
   std::unique_ptr<VoicePipeline> pipeline;
 
   bool Build(bool real_playback = false) {
-    if (!dev.WaitUntilVisible()) return false;
-    if (real_playback && !dev2.WaitUntilVisible()) return false;
+    if (!dev.WaitUntilVisible()) {
+      return false;
+    }
+    if (real_playback && !dev2.WaitUntilVisible()) {
+      return false;
+    }
     PipeWireOptions o;
     o.capture_node_name = dev.mic_name;
     o.playback_node_name = dev.sink_name;
@@ -98,7 +102,9 @@ struct Rig {
       PipeWireOptions out;
       out.playback_node_name = dev2.sink_name;
       auto bs = MakePipeWireSink(out);
-      if (!bs.ok()) return false;
+      if (!bs.ok()) {
+        return false;
+      }
       real_buddy_sink = std::move(bs).value();
     }
     KokoroPaths user;
@@ -116,8 +122,9 @@ struct Rig {
     w.classifier = kModels + "/hey_jarvis_v0.1.onnx";
     auto ww = MakeOpenWakeWord(w);
     auto st = MakeWhisperStt(kModels + "/ggml-tiny.en.bin", 4);
-    if (!m.ok() || !sp.ok() || !uv.ok() || !bv.ok() || !v.ok() || !ww.ok() || !st.ok())
+    if (!m.ok() || !sp.ok() || !uv.ok() || !bv.ok() || !v.ok() || !ww.ok() || !st.ok()) {
       return false;
+    }
     mic = std::move(m).value();
     user_speaker = std::move(sp).value();
     user_voice = std::move(uv).value();
@@ -163,7 +170,9 @@ struct Rig {
   bool WaitForCommands(std::size_t n, std::chrono::seconds limit) {
     const auto deadline = std::chrono::steady_clock::now() + limit;
     while (std::chrono::steady_clock::now() < deadline) {
-      if (link.count() >= n) return true;
+      if (link.count() >= n) {
+        return true;
+      }
       std::this_thread::sleep_for(50ms);
     }
     return false;
@@ -241,13 +250,16 @@ TEST(LocalEndToEnd, SpeakingOverALongAnswerStopsItAndCancelsTheRequest) {
     r.link.receiver->OnSpeak("This is sentence number " + std::to_string(i + 1) +
                              " of a rather long answer that keeps going.");
   }
-  for (int i = 0; i < 100 && !r.pipeline->status().speaking; ++i)
+  for (int i = 0; i < 100 && !r.pipeline->status().speaking; ++i) {
     std::this_thread::sleep_for(100ms);
+  }
   ASSERT_TRUE(r.pipeline->status().speaking);
   std::this_thread::sleep_for(1500ms);
   // The user talks over it.
   r.UserSays("Stop, never mind that, what time is it?");
-  for (int i = 0; i < 100 && r.link.barge_ins.load() == 0; ++i) std::this_thread::sleep_for(50ms);
+  for (int i = 0; i < 100 && r.link.barge_ins.load() == 0; ++i) {
+    std::this_thread::sleep_for(50ms);
+  }
   EXPECT_EQ(r.link.barge_ins.load(), 1);
   EXPECT_GE(r.link.cancels.load(), 1) << "the request to C5 was cancelled";
   EXPECT_FALSE(r.pipeline->status().speaking) << "the answer stopped";
@@ -255,7 +267,9 @@ TEST(LocalEndToEnd, SpeakingOverALongAnswerStopsItAndCancelsTheRequest) {
   {
     const std::lock_guard<std::mutex> lock(r.metrics_mu);
     for (const auto& [name, ns] : r.metrics) {
-      if (name == "flush") flush_ns = ns;
+      if (name == "flush") {
+        flush_ns = ns;
+      }
     }
   }
   std::printf("barge-in flush call took %.3f ms\n", static_cast<double>(flush_ns) / 1e6);
@@ -274,8 +288,9 @@ TEST(LocalEndToEnd, AMicrophoneThatDisappearsStopsTheCapture) {
   ASSERT_TRUE(r.pipeline->Start().ok());
   EXPECT_TRUE(r.pipeline->status().capture_running);
   r.dev.Remove();
-  for (int i = 0; i < 50 && r.pipeline->status().capture_running; ++i)
+  for (int i = 0; i < 50 && r.pipeline->status().capture_running; ++i) {
     std::this_thread::sleep_for(100ms);
+  }
   EXPECT_FALSE(r.pipeline->status().capture_running);
   r.pipeline->Stop();
 }

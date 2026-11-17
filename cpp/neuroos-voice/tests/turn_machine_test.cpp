@@ -229,7 +229,7 @@ TEST(TurnMachineTest, NudgeSpokenFromIdleThenFollowUpReply) {
 
 TEST(TurnMachineTest, EmptyTranscriptDropsToIdle) {
   TurnMachine tm;
-  std::uint64_t t = 1'000'000'000;
+  std::uint64_t const t = 1'000'000'000;
 
   tm.OnEvent(TurnEvent{.kind = TurnEventKind::kWakeWord, .now_ns = t});
   tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = t + 100});
@@ -243,7 +243,7 @@ TEST(TurnMachineTest, EmptyTranscriptDropsToIdle) {
 
 TEST(TurnMachineTest, NoSpeechTimeoutInCapturing) {
   TurnMachine tm;
-  std::uint64_t t = 1'000'000'000;
+  std::uint64_t const t = 1'000'000'000;
 
   tm.OnEvent(TurnEvent{.kind = TurnEventKind::kWakeWord, .now_ns = t});
   ASSERT_EQ(tm.state(), TurnState::kCapturing);
@@ -262,7 +262,7 @@ TEST(TurnMachineTest, NoSpeechTimeoutInCapturing) {
 
 TEST(TurnMachineTest, MaxUtteranceTimeoutInCapturing) {
   TurnMachine tm;
-  std::uint64_t t = 1'000'000'000;
+  std::uint64_t const t = 1'000'000'000;
 
   tm.OnEvent(TurnEvent{.kind = TurnEventKind::kWakeWord, .now_ns = t});
   // Speech started, so no-speech timeout won't fire
@@ -278,7 +278,7 @@ TEST(TurnMachineTest, MaxUtteranceTimeoutInCapturing) {
 
 TEST(TurnMachineTest, AnswerTimeoutInAwaitingAnswer) {
   TurnMachine tm;
-  std::uint64_t t = 1'000'000'000;
+  std::uint64_t const t = 1'000'000'000;
 
   tm.OnEvent(TurnEvent{.kind = TurnEventKind::kWakeWord, .now_ns = t});
   tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = t + 100});
@@ -296,7 +296,7 @@ TEST(TurnMachineTest, AnswerTimeoutInAwaitingAnswer) {
 
 TEST(TurnMachineTest, ReplyFinishedWithNothingSpoken) {
   TurnMachine tm;
-  std::uint64_t t = 1'000'000'000;
+  std::uint64_t const t = 1'000'000'000;
 
   tm.OnEvent(TurnEvent{.kind = TurnEventKind::kWakeWord, .now_ns = t});
   tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = t + 100});
@@ -312,7 +312,7 @@ TEST(TurnMachineTest, ReplyFinishedWithNothingSpoken) {
 
 TEST(TurnMachineTest, PlaybackIdleBeforeReplyFinished) {
   TurnMachine tm;
-  std::uint64_t t = 1'000'000'000;
+  std::uint64_t const t = 1'000'000'000;
 
   tm.OnEvent(TurnEvent{.kind = TurnEventKind::kWakeWord, .now_ns = t});
   tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = t + 100});

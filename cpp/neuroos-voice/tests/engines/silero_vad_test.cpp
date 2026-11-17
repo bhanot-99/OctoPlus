@@ -58,7 +58,7 @@ TEST(SileroVadTest, LoudSyntheticNoiseProbabilityRange) {
   std::mt19937 rng(12345);
   std::uniform_int_distribution<int> dist(-8000, 8000);
 
-  std::array<std::int16_t, 512> frame;
+  std::array<std::int16_t, 512> frame{};
   for (int i = 0; i < 200; ++i) {
     for (auto& s : frame) {
       s = static_cast<std::int16_t>(dist(rng));

@@ -45,8 +45,8 @@ class OfflineSource final : public AudioSource {
 
 class NullSink final : public AudioSink {
  public:
-  neuroos::Status Start(int) override { return neuroos::ok_status(); }
-  void Write(std::span<const std::int16_t>) override {}
+  neuroos::Status Start(int /*sample_rate*/) override { return neuroos::ok_status(); }
+  void Write(std::span<const std::int16_t> /*samples*/) override {}
   void Flush() override {}
   [[nodiscard]] bool Idle() const override { return true; }
 };
@@ -54,16 +54,18 @@ class NullSink final : public AudioSink {
 class NullTts final : public Tts {
  public:
   [[nodiscard]] int sample_rate() const override { return 24000; }
-  neuroos::Result<std::vector<std::int16_t>> Synthesize(std::string_view) override {
+  neuroos::Result<std::vector<std::int16_t>> Synthesize(std::string_view /*text*/) override {
     return std::vector<std::int16_t>();
   }
 };
 
 class RecordingLink final : public ReplyLink {
  public:
-  void SendCommand(const CommandMsg& c, ReplyReceiver*) override { commands.push_back(c.text); }
+  void SendCommand(const CommandMsg& c, ReplyReceiver* /*receiver*/) override {
+    commands.push_back(c.text);
+  }
   void Cancel() override {}
-  void SendBargeIn(std::uint64_t) override {}
+  void SendBargeIn(std::uint64_t /*at_ns*/) override {}
   std::vector<std::string> commands;
 };
 
@@ -125,7 +127,7 @@ class Engines {
     VoicePipeline p(d, PipelineConfig{});
     (void)p.Start();
     constexpr std::size_t kChunk = 512;
-    std::vector<std::int16_t> silence(16000 * 2, 0);
+    std::vector<std::int16_t> const silence(16000 * 2, 0);
     auto feed = [&](const std::vector<std::int16_t>& a) {
       for (std::size_t at = 0; at < a.size(); at += kChunk) {
         const std::size_t n = std::min(kChunk, a.size() - at);
@@ -191,7 +193,9 @@ int Commands(Engines& e, const std::string& manifest) {
   std::size_t woke = 0;
   std::vector<WerResult> parts;
   while (std::getline(in, line)) {
-    if (line.empty() || line[0] == '#') continue;
+    if (line.empty() || line[0] == '#') {
+      continue;
+    }
     const auto tab = line.find('\t');
     if (tab == std::string::npos) {
       std::cerr << "bad manifest line (need path<TAB>text): " << line << "\n";
@@ -238,12 +242,16 @@ int main(int argc, char** argv) {
     return 2;
   }
   Engines engines(argv[1]);
-  if (!engines.Load()) return 1;
+  if (!engines.Load()) {
+    return 1;
+  }
   const std::string mode = argv[2];
   if (mode == "ambient") {
     return Ambient(engines, std::vector<std::string>(argv + 3, argv + argc));
   }
-  if (mode == "commands") return Commands(engines, argv[3]);
+  if (mode == "commands") {
+    return Commands(engines, argv[3]);
+  }
   std::cerr << "unknown mode " << mode << "\n";
   return 2;
 }

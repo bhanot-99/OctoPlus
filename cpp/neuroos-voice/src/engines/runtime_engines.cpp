@@ -35,9 +35,13 @@ class RestartingTts final : public Tts {
   [[nodiscard]] int sample_rate() const override { return engine_->sample_rate(); }
   Result<std::vector<std::int16_t>> Synthesize(std::string_view text) override {
     auto r = engine_->Synthesize(text);
-    if (r.ok()) return r;
+    if (r.ok()) {
+      return r;
+    }
     auto fresh = MakeKokoroTts(paths_);
-    if (!fresh.ok()) return r;
+    if (!fresh.ok()) {
+      return r;
+    }
     engine_ = std::move(fresh).value();
     ++restarts_;
     return engine_->Synthesize(text);
@@ -55,11 +59,15 @@ class RealRuntime final : public VoiceRuntime {
   ~RealRuntime() override { Stop(); }
   VoicePipeline* pipeline() override { return pipeline_.get(); }
   Status Start() override {
-    if (!pipeline_) return Error{.message = "not built", .code = 7};
+    if (!pipeline_) {
+      return Error{.message = "not built", .code = 7};
+    }
     return pipeline_->Start();
   }
   void Stop() override {
-    if (pipeline_) pipeline_->Stop();
+    if (pipeline_) {
+      pipeline_->Stop();
+    }
   }
 
   // Owned in this order so the pipeline is destroyed before what it points at.
@@ -95,7 +103,9 @@ Result<std::unique_ptr<VoiceRuntime>> BuildVoiceRuntime(const RuntimeOptions& o)
 
   auto vad = MakeSileroVad((m / "silero_vad.onnx").string());
   mark("vad", vad.ok(), vad.ok() ? "" : vad.error().message);
-  if (!vad.ok()) return Fail("voice activity model: " + vad.error().message);
+  if (!vad.ok()) {
+    return Fail("voice activity model: " + vad.error().message);
+  }
   rt->vad = std::move(vad).value();
 
   WakeWordPaths w;
@@ -105,13 +115,17 @@ Result<std::unique_ptr<VoiceRuntime>> BuildVoiceRuntime(const RuntimeOptions& o)
   w.threshold = o.config.wake_threshold;
   auto wake = MakeOpenWakeWord(w);
   mark("wake", wake.ok(), wake.ok() ? "" : wake.error().message);
-  if (!wake.ok()) return Fail("wake word model: " + wake.error().message);
+  if (!wake.ok()) {
+    return Fail("wake word model: " + wake.error().message);
+  }
   rt->wake = std::move(wake).value();
 
   auto stt =
       MakeWhisperStt((m / "ggml-tiny.en.bin").string(), static_cast<int>(o.config.stt_threads));
   mark("stt", stt.ok(), stt.ok() ? "" : stt.error().message);
-  if (!stt.ok()) return Fail("speech-to-text model: " + stt.error().message);
+  if (!stt.ok()) {
+    return Fail("speech-to-text model: " + stt.error().message);
+  }
   rt->stt = std::move(stt).value();
 
   KokoroPaths k;
@@ -121,7 +135,9 @@ Result<std::unique_ptr<VoiceRuntime>> BuildVoiceRuntime(const RuntimeOptions& o)
   k.speed = static_cast<float>(o.config.speed_milli) / 1000.0F;
   auto tts = MakeKokoroTts(k);
   mark("tts", tts.ok(), tts.ok() ? "" : tts.error().message);
-  if (!tts.ok()) return Fail("speech model: " + tts.error().message);
+  if (!tts.ok()) {
+    return Fail("speech model: " + tts.error().message);
+  }
   rt->tts = std::make_unique<RestartingTts>(std::move(tts).value(), k);
 
   PipeWireOptions po;
@@ -130,11 +146,17 @@ Result<std::unique_ptr<VoiceRuntime>> BuildVoiceRuntime(const RuntimeOptions& o)
   auto src = MakePipeWireSource(po);
   auto snk = MakePipeWireSink(po);
   auto probe = MakePipeWireMicProbe();
-  if (!src.ok()) return Fail("audio server: " + src.error().message);
-  if (!snk.ok()) return Fail("audio server: " + snk.error().message);
+  if (!src.ok()) {
+    return Fail("audio server: " + src.error().message);
+  }
+  if (!snk.ok()) {
+    return Fail("audio server: " + snk.error().message);
+  }
   rt->source = std::move(src).value();
   rt->sink = std::move(snk).value();
-  if (probe.ok()) rt->probe = std::move(probe).value();
+  if (probe.ok()) {
+    rt->probe = std::move(probe).value();
+  }
 
   rt->link = std::make_unique<KnowledgeLink>(o.knowledge);
   if (std::getenv("NEUROOS_VOICE_TRACE") != nullptr) {
@@ -163,14 +185,15 @@ Result<std::unique_ptr<VoiceRuntime>> BuildVoiceRuntime(const RuntimeOptions& o)
     auto first = health->Histogram("command_to_audio");
     d.on_metric = [preamble, flush, transcribe, first](std::string_view name, std::uint64_t ns) {
       const auto dur = std::chrono::nanoseconds(static_cast<std::int64_t>(ns));
-      if (name == "preamble_to_audio")
+      if (name == "preamble_to_audio") {
         preamble->Record(dur);
-      else if (name == "flush")
+      } else if (name == "flush") {
         flush->Record(dur);
-      else if (name == "transcribe")
+      } else if (name == "transcribe") {
         transcribe->Record(dur);
-      else if (name == "command_to_audio")
+      } else if (name == "command_to_audio") {
         first->Record(dur);
+      }
     };
   }
   if (std::getenv("NEUROOS_VOICE_TRACE") != nullptr) {

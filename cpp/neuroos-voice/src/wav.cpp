@@ -185,7 +185,7 @@ std::vector<std::int16_t> Resample(std::span<const std::int16_t> in, int from_ra
 
   const double target_len = static_cast<double>(in.size()) * static_cast<double>(to_rate) /
                             static_cast<double>(from_rate);
-  std::size_t out_len = static_cast<std::size_t>(std::round(target_len));
+  auto out_len = static_cast<std::size_t>(std::round(target_len));
   if (out_len == 0 && !in.empty()) {
     out_len = 1;
   }

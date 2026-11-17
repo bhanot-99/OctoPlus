@@ -238,7 +238,7 @@ TEST(SpokenLinesTest, PreamblesAndStatusPhrases) {
   // AllCachedPhrases has 12 distinct entries
   const auto cached = AllCachedPhrases();
   ASSERT_EQ(cached.size(), 12U);
-  std::set<std::string> unique(cached.begin(), cached.end());
+  std::set<std::string> const unique(cached.begin(), cached.end());
   EXPECT_EQ(unique.size(), 12U);
 }
 

@@ -71,7 +71,9 @@ TEST(LocalPipeWire, AudioWrittenToTheSinkComesOutOfTheVirtualMicrophone) {
   sink.value()->Write(Tone(24000, 1.0, 440.0, 8000.0));
   EXPECT_FALSE(sink.value()->Idle());
   // The tone arrives (resampled by the server) and the sink drains.
-  for (int i = 0; i < 40 && !sink.value()->Idle(); ++i) std::this_thread::sleep_for(100ms);
+  for (int i = 0; i < 40 && !sink.value()->Idle(); ++i) {
+    std::this_thread::sleep_for(100ms);
+  }
   EXPECT_TRUE(sink.value()->Idle());
   std::this_thread::sleep_for(300ms);
   EXPECT_GT(cap.Rms(before), 1500.0) << "the tone was heard on the virtual microphone";
@@ -95,7 +97,9 @@ TEST(LocalPipeWire, TheSinkPlaysAgainAfterItWentIdle) {
   for (int round = 0; round < 3; ++round) {
     const std::size_t before = cap.size();
     sink.value()->Write(Tone(24000, 0.6, 440.0, 8000.0));
-    for (int i = 0; i < 40 && !sink.value()->Idle(); ++i) std::this_thread::sleep_for(50ms);
+    for (int i = 0; i < 40 && !sink.value()->Idle(); ++i) {
+      std::this_thread::sleep_for(50ms);
+    }
     std::this_thread::sleep_for(300ms);
     EXPECT_GT(cap.Rms(before), 1500.0) << "round " << round << ": the tone was heard";
     std::this_thread::sleep_for(2500ms);  // long enough for the node to go idle
@@ -145,7 +149,9 @@ TEST(LocalPipeWire, AnUnpluggedMicrophoneIsReported) {
   std::this_thread::sleep_for(300ms);
   EXPECT_FALSE(lost.load());
   dev.Remove();
-  for (int i = 0; i < 50 && !lost.load(); ++i) std::this_thread::sleep_for(100ms);
+  for (int i = 0; i < 50 && !lost.load(); ++i) {
+    std::this_thread::sleep_for(100ms);
+  }
   EXPECT_TRUE(lost.load()) << "a removed device does not look removed by sample flow (lesson)";
   EXPECT_FALSE(src.value()->running());
   src.value()->Stop();

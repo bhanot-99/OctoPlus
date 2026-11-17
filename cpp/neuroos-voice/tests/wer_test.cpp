@@ -36,37 +36,37 @@ std::size_t PlainEditDistance(const std::vector<std::string>& s1,
 
 TEST(WerTest, IdenticalReturnsZero) {
   const auto res = WordErrorRate("hello world today", "hello world today");
-  EXPECT_EQ(res.substitutions, 0u);
-  EXPECT_EQ(res.deletions, 0u);
-  EXPECT_EQ(res.insertions, 0u);
-  EXPECT_EQ(res.reference_words, 3u);
+  EXPECT_EQ(res.substitutions, 0U);
+  EXPECT_EQ(res.deletions, 0U);
+  EXPECT_EQ(res.insertions, 0U);
+  EXPECT_EQ(res.reference_words, 3U);
   EXPECT_DOUBLE_EQ(res.wer, 0.0);
 }
 
 TEST(WerTest, OneSubstitution) {
   const auto res = WordErrorRate("the cat sat", "the dog sat");
-  EXPECT_EQ(res.substitutions, 1u);
-  EXPECT_EQ(res.deletions, 0u);
-  EXPECT_EQ(res.insertions, 0u);
-  EXPECT_EQ(res.reference_words, 3u);
+  EXPECT_EQ(res.substitutions, 1U);
+  EXPECT_EQ(res.deletions, 0U);
+  EXPECT_EQ(res.insertions, 0U);
+  EXPECT_EQ(res.reference_words, 3U);
   EXPECT_DOUBLE_EQ(res.wer, 1.0 / 3.0);
 }
 
 TEST(WerTest, OneDeletion) {
   const auto res = WordErrorRate("the big cat sat", "the cat sat");
-  EXPECT_EQ(res.substitutions, 0u);
-  EXPECT_EQ(res.deletions, 1u);
-  EXPECT_EQ(res.insertions, 0u);
-  EXPECT_EQ(res.reference_words, 4u);
+  EXPECT_EQ(res.substitutions, 0U);
+  EXPECT_EQ(res.deletions, 1U);
+  EXPECT_EQ(res.insertions, 0U);
+  EXPECT_EQ(res.reference_words, 4U);
   EXPECT_DOUBLE_EQ(res.wer, 0.25);
 }
 
 TEST(WerTest, OneInsertion) {
   const auto res = WordErrorRate("the cat sat", "the black cat sat");
-  EXPECT_EQ(res.substitutions, 0u);
-  EXPECT_EQ(res.deletions, 0u);
-  EXPECT_EQ(res.insertions, 1u);
-  EXPECT_EQ(res.reference_words, 3u);
+  EXPECT_EQ(res.substitutions, 0U);
+  EXPECT_EQ(res.deletions, 0U);
+  EXPECT_EQ(res.insertions, 1U);
+  EXPECT_EQ(res.reference_words, 3U);
   EXPECT_DOUBLE_EQ(res.wer, 1.0 / 3.0);
 }
 
@@ -75,55 +75,55 @@ TEST(WerTest, WhatTimeIsItVsWhatIsTheTime) {
   // Hypothesis: "what is the time" (4 words)
   // Edit distance is 3 (with tie preference sub, then del, then ins: S=3, D=0, I=0)
   const auto res = WordErrorRate("what time is it", "what is the time");
-  EXPECT_EQ(res.reference_words, 4u);
-  EXPECT_EQ(res.substitutions, 3u);
-  EXPECT_EQ(res.deletions, 0u);
-  EXPECT_EQ(res.insertions, 0u);
+  EXPECT_EQ(res.reference_words, 4U);
+  EXPECT_EQ(res.substitutions, 3U);
+  EXPECT_EQ(res.deletions, 0U);
+  EXPECT_EQ(res.insertions, 0U);
   EXPECT_DOUBLE_EQ(res.wer, 0.75);
 }
 
 TEST(WerTest, CaseAndPunctuationIgnored) {
   const auto res = WordErrorRate("What time is it?", "what time is it");
-  EXPECT_EQ(res.substitutions, 0u);
-  EXPECT_EQ(res.deletions, 0u);
-  EXPECT_EQ(res.insertions, 0u);
-  EXPECT_EQ(res.reference_words, 4u);
+  EXPECT_EQ(res.substitutions, 0U);
+  EXPECT_EQ(res.deletions, 0U);
+  EXPECT_EQ(res.insertions, 0U);
+  EXPECT_EQ(res.reference_words, 4U);
   EXPECT_DOUBLE_EQ(res.wer, 0.0);
 }
 
 TEST(WerTest, ApostrophesDropped) {
   const auto res = WordErrorRate("It's", "its");
-  EXPECT_EQ(res.substitutions, 0u);
-  EXPECT_EQ(res.deletions, 0u);
-  EXPECT_EQ(res.insertions, 0u);
-  EXPECT_EQ(res.reference_words, 1u);
+  EXPECT_EQ(res.substitutions, 0U);
+  EXPECT_EQ(res.deletions, 0U);
+  EXPECT_EQ(res.insertions, 0U);
+  EXPECT_EQ(res.reference_words, 1U);
   EXPECT_DOUBLE_EQ(res.wer, 0.0);
 }
 
 TEST(WerTest, EmptyReferenceAndEmptyHypothesis) {
   const auto res = WordErrorRate("", "");
-  EXPECT_EQ(res.substitutions, 0u);
-  EXPECT_EQ(res.deletions, 0u);
-  EXPECT_EQ(res.insertions, 0u);
-  EXPECT_EQ(res.reference_words, 0u);
+  EXPECT_EQ(res.substitutions, 0U);
+  EXPECT_EQ(res.deletions, 0U);
+  EXPECT_EQ(res.insertions, 0U);
+  EXPECT_EQ(res.reference_words, 0U);
   EXPECT_DOUBLE_EQ(res.wer, 0.0);
 }
 
 TEST(WerTest, EmptyReferenceWithTwoHypothesisWords) {
   const auto res = WordErrorRate("", "hello world");
-  EXPECT_EQ(res.substitutions, 0u);
-  EXPECT_EQ(res.deletions, 0u);
-  EXPECT_EQ(res.insertions, 2u);
-  EXPECT_EQ(res.reference_words, 0u);
+  EXPECT_EQ(res.substitutions, 0U);
+  EXPECT_EQ(res.deletions, 0U);
+  EXPECT_EQ(res.insertions, 2U);
+  EXPECT_EQ(res.reference_words, 0U);
   EXPECT_DOUBLE_EQ(res.wer, 2.0);
 }
 
 TEST(WerTest, EmptyHypothesisGivesAllDeletions) {
   const auto res = WordErrorRate("one two three", "");
-  EXPECT_EQ(res.substitutions, 0u);
-  EXPECT_EQ(res.deletions, 3u);
-  EXPECT_EQ(res.insertions, 0u);
-  EXPECT_EQ(res.reference_words, 3u);
+  EXPECT_EQ(res.substitutions, 0U);
+  EXPECT_EQ(res.deletions, 3U);
+  EXPECT_EQ(res.insertions, 0U);
+  EXPECT_EQ(res.reference_words, 3U);
   EXPECT_DOUBLE_EQ(res.wer, 1.0);
 }
 
@@ -135,10 +135,10 @@ TEST(WerTest, AccumulateOverThreePairsEqualsHandComputedTotal) {
   };
 
   const auto acc = Accumulate(parts);
-  EXPECT_EQ(acc.substitutions, 1u);
-  EXPECT_EQ(acc.deletions, 1u);
-  EXPECT_EQ(acc.insertions, 1u);
-  EXPECT_EQ(acc.reference_words, 11u);
+  EXPECT_EQ(acc.substitutions, 1U);
+  EXPECT_EQ(acc.deletions, 1U);
+  EXPECT_EQ(acc.insertions, 1U);
+  EXPECT_EQ(acc.reference_words, 11U);
   EXPECT_DOUBLE_EQ(acc.wer, 3.0 / 11.0);
 }
 

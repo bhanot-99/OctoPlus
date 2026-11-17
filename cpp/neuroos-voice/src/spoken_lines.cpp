@@ -46,7 +46,7 @@ std::string SpokenPercent(double v) {
   } else if (v > 100.0) {
     v = 100.0;
   }
-  const long long rounded = static_cast<long long>(std::floor(v + 0.5));
+  const auto rounded = static_cast<long long>(std::floor(v + 0.5));
   return std::to_string(rounded);
 }
 
@@ -62,7 +62,7 @@ std::string SpokenSize(double gib) {
   }
   if (gib < 10.0) {
     const double rounded = std::floor(gib * 10.0 + 0.5) / 10.0;
-    const long long tenths = static_cast<long long>(std::floor(rounded * 10.0 + 0.5));
+    const auto tenths = static_cast<long long>(std::floor(rounded * 10.0 + 0.5));
     const long long whole = tenths / 10;
     const long long frac = tenths % 10;
     if (frac == 0) {
@@ -70,7 +70,7 @@ std::string SpokenSize(double gib) {
     }
     return std::to_string(whole) + "." + std::to_string(frac) + " gigabytes";
   }
-  const long long rounded = static_cast<long long>(std::floor(gib + 0.5));
+  const auto rounded = static_cast<long long>(std::floor(gib + 0.5));
   return std::to_string(rounded) + " gigabytes";
 }
 
@@ -81,7 +81,7 @@ std::string SpokenHours(double h) {
   if (h <= 1.5) {
     return "an hour";
   }
-  const long long rounded = static_cast<long long>(std::floor(h + 0.5));
+  const auto rounded = static_cast<long long>(std::floor(h + 0.5));
   return std::to_string(rounded) + " hours";
 }
 
@@ -99,7 +99,7 @@ std::string SpokenMinutes(double m) {
   if (m < 90.0) {
     return "an hour";
   }
-  const long long hours = static_cast<long long>(std::floor(m / 60.0 + 0.5));
+  const auto hours = static_cast<long long>(std::floor(m / 60.0 + 0.5));
   return "about " + std::to_string(hours) + " hours";
 }
 
@@ -272,7 +272,7 @@ std::optional<SpokenNudge> RenderNudgeLine(std::string_view template_id,
     if (p == nullptr) {
       return std::nullopt;
     }
-    long long n = static_cast<long long>(std::floor(p->value + 0.5));
+    auto n = static_cast<long long>(std::floor(p->value + 0.5));
     if (n < 1) {
       n = 1;
     }

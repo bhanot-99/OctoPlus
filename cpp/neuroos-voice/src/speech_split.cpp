@@ -55,9 +55,9 @@ bool TrySkipListMarker(std::string_view text, std::size_t* i) {
     *i = probe + 2;
     return true;
   }
-  if (probe < n && std::isdigit(static_cast<unsigned char>(text[probe]))) {
+  if (probe < n && (std::isdigit(static_cast<unsigned char>(text[probe])) != 0)) {
     std::size_t num_end = probe;
-    while (num_end < n && std::isdigit(static_cast<unsigned char>(text[num_end]))) {
+    while (num_end < n && (std::isdigit(static_cast<unsigned char>(text[num_end])) != 0)) {
       ++num_end;
     }
     if (num_end + 1 < n && text[num_end] == '.' && text[num_end + 1] == ' ') {
@@ -85,16 +85,16 @@ bool TryHandleDash(std::string_view text, std::size_t* i, std::string* out) {
 }
 
 bool IsInitial(std::string_view text, std::size_t run_start) {
-  if (run_start >= 1 && std::isupper(static_cast<unsigned char>(text[run_start - 1]))) {
-    return run_start == 1 || !std::isalpha(static_cast<unsigned char>(text[run_start - 2]));
+  if (run_start >= 1 && (std::isupper(static_cast<unsigned char>(text[run_start - 1])) != 0)) {
+    return run_start == 1 || (std::isalpha(static_cast<unsigned char>(text[run_start - 2])) == 0);
   }
   return false;
 }
 
 bool IsAbbreviation(std::string_view text, std::size_t run_start, std::size_t run_end) {
-  std::size_t w_end = run_start;
+  std::size_t const w_end = run_start;
   std::size_t w_start = w_end;
-  while (w_start > 0 && (std::isalpha(static_cast<unsigned char>(text[w_start - 1])) ||
+  while (w_start > 0 && ((std::isalpha(static_cast<unsigned char>(text[w_start - 1])) != 0) ||
                          text[w_start - 1] == '.')) {
     --w_start;
   }
@@ -119,8 +119,8 @@ bool IsAbbreviation(std::string_view text, std::size_t run_start, std::size_t ru
     }
     if (next_char_pos < len) {
       const char nc = text[next_char_pos];
-      if (std::islower(static_cast<unsigned char>(nc)) ||
-          std::isdigit(static_cast<unsigned char>(nc))) {
+      if ((std::islower(static_cast<unsigned char>(nc)) != 0) ||
+          (std::isdigit(static_cast<unsigned char>(nc)) != 0)) {
         return true;
       }
     }
@@ -188,7 +188,7 @@ void SplitLongPiece(std::string_view piece, std::size_t max_chars, std::vector<s
       next_start = boundary;
     }
 
-    std::string_view left = Trim(piece.substr(0, split_pos));
+    std::string_view const left = Trim(piece.substr(0, split_pos));
     if (!left.empty()) {
       out->emplace_back(left);
     }
@@ -309,7 +309,7 @@ std::vector<std::string> SplitForSpeech(std::string_view text, std::size_t max_c
         }
       }
 
-      std::string_view piece =
+      std::string_view const piece =
           Trim(std::string_view(cleaned).substr(sentence_start, run_end - sentence_start));
       if (!piece.empty()) {
         sentences.emplace_back(piece);
@@ -327,7 +327,7 @@ std::vector<std::string> SplitForSpeech(std::string_view text, std::size_t max_c
   }
 
   if (sentence_start < len) {
-    std::string_view piece = Trim(std::string_view(cleaned).substr(sentence_start));
+    std::string_view const piece = Trim(std::string_view(cleaned).substr(sentence_start));
     if (!piece.empty()) {
       sentences.emplace_back(piece);
     }
@@ -341,7 +341,7 @@ std::vector<std::string> SplitForSpeech(std::string_view text, std::size_t max_c
 }
 
 SentenceStream::SentenceStream(std::size_t max_chars)
-    : max_chars_(max_chars == 0 ? 1 : max_chars), buffer_{}, emitted_count_(0) {}
+    : max_chars_(max_chars == 0 ? 1 : max_chars), buffer_{} {}
 
 std::vector<std::string> SentenceStream::Feed(std::string_view piece) {
   buffer_.append(piece);

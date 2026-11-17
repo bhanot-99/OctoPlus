@@ -23,7 +23,7 @@ class SileroVad final : public Vad {
   explicit SileroVad(std::unique_ptr<Ort::Session> session)
       : session_(std::move(session)),
         memory_info_(Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault)) {
-    Ort::AllocatorWithDefaultOptions allocator;
+    Ort::AllocatorWithDefaultOptions const allocator;
 
     const std::size_t input_count = session_->GetInputCount();
     input_names_storage_.reserve(input_count);
@@ -97,7 +97,7 @@ class SileroVad final : public Vad {
                         input_tensors.size(), output_names_.data(), output_names_.size());
 
       const float prob = outputs[output_prob_idx_].GetTensorData<float>()[0];
-      const float* new_state = outputs[output_state_idx_].GetTensorData<float>();
+      const auto* new_state = outputs[output_state_idx_].GetTensorData<float>();
       std::copy_n(new_state, 256, state_data_.data());
 
       for (std::size_t i = 0; i < 64; ++i) {

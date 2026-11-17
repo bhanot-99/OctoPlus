@@ -27,7 +27,7 @@ class OpenWakeWord final : public WakeWord {
         cls_session_(std::move(cls_session)),
         threshold_(threshold),
         memory_info_(Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault)) {
-    Ort::AllocatorWithDefaultOptions allocator;
+    Ort::AllocatorWithDefaultOptions const allocator;
 
     mel_in_name_ = mel_session_->GetInputNameAllocated(0, allocator).get();
     mel_out_name_ = mel_session_->GetOutputNameAllocated(0, allocator).get();
@@ -71,7 +71,7 @@ class OpenWakeWord final : public WakeWord {
         const float* m_data = raw_ring_.data() + (raw_ring_.size() - m_samples);
 
         std::array<int64_t, 2> mel_shape = {1, static_cast<int64_t>(m_samples)};
-        Ort::Value mel_in_tensor =
+        Ort::Value const mel_in_tensor =
             Ort::Value::CreateTensor<float>(memory_info_, const_cast<float*>(m_data), m_samples,
                                             mel_shape.data(), mel_shape.size());
 
@@ -83,9 +83,9 @@ class OpenWakeWord final : public WakeWord {
         auto mel_out_info = mel_outputs[0].GetTensorTypeAndShapeInfo();
         auto mel_out_shape = mel_out_info.GetShape();
         // Shape is [1, 1, F, 32]
-        const std::size_t frames = static_cast<std::size_t>(mel_out_shape[2]);
+        const auto frames = static_cast<std::size_t>(mel_out_shape[2]);
         const std::size_t mel_count = frames * 32;
-        const float* mel_out_data = mel_outputs[0].GetTensorData<float>();
+        const auto* mel_out_data = mel_outputs[0].GetTensorData<float>();
 
         for (std::size_t i = 0; i < mel_count; ++i) {
           mel_buffer_.push_back(mel_out_data[i] / 10.0F + 2.0F);
@@ -100,7 +100,7 @@ class OpenWakeWord final : public WakeWord {
         constexpr std::size_t kEmbInputFloats = 76 * 32;
         const float* emb_in_data = mel_buffer_.data() + (mel_buffer_.size() - kEmbInputFloats);
         std::array<int64_t, 4> emb_shape = {1, 76, 32, 1};
-        Ort::Value emb_in_tensor =
+        Ort::Value const emb_in_tensor =
             Ort::Value::CreateTensor<float>(memory_info_, const_cast<float*>(emb_in_data),
                                             kEmbInputFloats, emb_shape.data(), emb_shape.size());
 
@@ -109,7 +109,7 @@ class OpenWakeWord final : public WakeWord {
         auto emb_outputs = emb_session_->Run(Ort::RunOptions{nullptr}, emb_in_names, &emb_in_tensor,
                                              1, emb_out_names, 1);
 
-        const float* emb_out_data = emb_outputs[0].GetTensorData<float>();
+        const auto* emb_out_data = emb_outputs[0].GetTensorData<float>();
         for (std::size_t i = 0; i < 96; ++i) {
           feature_buffer_.push_back(emb_out_data[i]);
         }
@@ -124,7 +124,7 @@ class OpenWakeWord final : public WakeWord {
         const float* cls_in_data =
             feature_buffer_.data() + (feature_buffer_.size() - kClsInputFloats);
         std::array<int64_t, 3> cls_shape = {1, 16, 96};
-        Ort::Value cls_in_tensor =
+        Ort::Value const cls_in_tensor =
             Ort::Value::CreateTensor<float>(memory_info_, const_cast<float*>(cls_in_data),
                                             kClsInputFloats, cls_shape.data(), cls_shape.size());
 

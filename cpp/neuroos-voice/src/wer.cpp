@@ -22,7 +22,7 @@ std::vector<std::string> NormaliseWords(std::string_view text) {
       continue;
     }
     if (uch < 128) {
-      if (std::isalnum(uch)) {
+      if (std::isalnum(uch) != 0) {
         current.push_back(static_cast<char>(std::tolower(uch)));
       } else {
         // Non-alphanumeric ASCII character turns into space

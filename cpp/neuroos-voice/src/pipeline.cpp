@@ -29,7 +29,9 @@ bool Blank(const std::string& s) {
 bool NoiseTranscript(const std::string& s) {
   std::string t;
   for (const char c : s) {
-    if (c != ' ') t += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    if (c != ' ') {
+      t += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    }
   }
   return t.empty() || t == "[blank_audio]" || t == "(silence)" || t == "[silence]" ||
          t == "[music]" || t == "(music)" || t == "[noise]";
@@ -54,7 +56,9 @@ ThreadExecutor::~ThreadExecutor() {
 void ThreadExecutor::Post(std::function<void()> job) {
   {
     const std::lock_guard<std::mutex> lock(mu_);
-    if (stop_) return;
+    if (stop_) {
+      return;
+    }
     queue_.push_back(std::move(job));
   }
   cv_.notify_one();
@@ -66,7 +70,9 @@ void ThreadExecutor::Run() {
     {
       std::unique_lock<std::mutex> lock(mu_);
       cv_.wait(lock, [this] { return stop_ || !queue_.empty(); });
-      if (stop_) return;
+      if (stop_) {
+        return;
+      }
       job = std::move(queue_.front());
       queue_.erase(queue_.begin());
     }
@@ -123,16 +129,22 @@ std::size_t VoicePipeline::cached_clips() const {
 
 Status VoicePipeline::Start() {
   auto s = d_.sink->Start(d_.tts->sample_rate());
-  if (!s.ok()) return s;
+  if (!s.ok()) {
+    return s;
+  }
   d_.source->SetOnLost([this] { NotifyDeviceLost(); });
   auto m = d_.source->Start([this](std::span<const std::int16_t> a) { OnAudio(a); });
-  if (!m.ok()) return m;
+  if (!m.ok()) {
+    return m;
+  }
   running_ = true;
   return ok_status();
 }
 
 void VoicePipeline::Stop() {
-  if (!running_.exchange(false)) return;
+  if (!running_.exchange(false)) {
+    return;
+  }
   d_.source->Stop();
   d_.sink->Flush();
 }
@@ -247,7 +259,9 @@ void VoicePipeline::Run(const std::vector<TurnAction>& actions) {
       case TurnActionKind::kFlushOutput: {
         const std::uint64_t t0 = d_.mono_ns();
         d_.sink->Flush();
-        if (d_.on_metric) d_.on_metric("flush", d_.mono_ns() - t0);
+        if (d_.on_metric) {
+          d_.on_metric("flush", d_.mono_ns() - t0);
+        }
         break;
       }
       case TurnActionKind::kSendBargeIn:
@@ -283,7 +297,9 @@ void VoicePipeline::Transcribe() {
     if (audio.size() >= cfg_.min_utterance_samples) {
       const std::uint64_t t0 = d_.mono_ns();
       auto r = d_.stt->Transcribe(audio);
-      if (d_.on_metric) d_.on_metric("transcribe", d_.mono_ns() - t0);
+      if (d_.on_metric) {
+        d_.on_metric("transcribe", d_.mono_ns() - t0);
+      }
       if (r.ok()) {
         text = std::move(r).value();
       } else {
@@ -300,18 +316,26 @@ void VoicePipeline::Transcribe() {
       }
     }
     const bool empty = failed || Blank(text) || NoiseTranscript(text);
-    if (d_.on_trace) d_.on_trace(empty ? "empty_transcript" : "transcribed");
+    if (d_.on_trace) {
+      d_.on_trace(empty ? "empty_transcript" : "transcribed");
+    }
     {
       const std::lock_guard<std::mutex> lock(mu_);
       pending_text_ = empty ? std::string() : text;
-      if (failed) ++stats_.stt_failures;
-      if (empty) ++stats_.empty_transcripts;
+      if (failed) {
+        ++stats_.stt_failures;
+      }
+      if (empty) {
+        ++stats_.empty_transcripts;
+      }
     }
     TurnEvent e;
     e.kind = wake_only ? TurnEventKind::kWakeOnly : TurnEventKind::kTranscribed;
     e.now_ns = d_.mono_ns();
     e.text_empty = empty;
-    if (wake_only && d_.on_trace) d_.on_trace("wake_only");
+    if (wake_only && d_.on_trace) {
+      d_.on_trace("wake_only");
+    }
     Run(Post(e));
   });
 }
@@ -359,7 +383,9 @@ void VoicePipeline::ProcessFrame(std::span<const std::int16_t> frame) {
   }
 
   if (woke) {
-    if (d_.on_trace) d_.on_trace("wake");
+    if (d_.on_trace) {
+      d_.on_trace("wake");
+    }
     {
       const std::lock_guard<std::mutex> lock(mu_);
       ++stats_.wake_words;
@@ -379,14 +405,18 @@ void VoicePipeline::ProcessFrame(std::span<const std::int16_t> frame) {
 
   const bool started = state == TurnState::kSpeaking ? barge.started : main.started;
   if (started) {
-    if (d_.on_trace) d_.on_trace("speech_started");
+    if (d_.on_trace) {
+      d_.on_trace("speech_started");
+    }
     TurnEvent e;
     e.kind = TurnEventKind::kSpeechStarted;
     e.now_ns = now;
     Run(Post(e));
   }
   if (main.ended) {
-    if (d_.on_trace) d_.on_trace("speech_ended");
+    if (d_.on_trace) {
+      d_.on_trace("speech_ended");
+    }
     {
       const std::lock_guard<std::mutex> lock(mu_);
       const std::uint64_t total = ring_.total_pushed();
@@ -428,12 +458,16 @@ void VoicePipeline::NoteAudioQueued(bool nudge, std::uint64_t epoch) {
   std::uint64_t since = 0;
   {
     const std::lock_guard<std::mutex> lock(mu_);
-    if (epoch != epoch_ || reply_audio_started_) return;
+    if (epoch != epoch_ || reply_audio_started_) {
+      return;
+    }
     reply_audio_started_ = true;
     since = command_sent_ns_;
     command_sent_ns_ = 0;
   }
-  if (since != 0 && d_.on_metric) d_.on_metric("command_to_audio", d_.mono_ns() - since);
+  if (since != 0 && d_.on_metric) {
+    d_.on_metric("command_to_audio", d_.mono_ns() - since);
+  }
   TurnEvent e;
   e.kind = TurnEventKind::kReplyStarted;
   e.now_ns = d_.mono_ns();
@@ -457,9 +491,13 @@ void VoicePipeline::QueueSpeech(const std::string& text, bool nudge, std::uint64
       auto r = d_.tts->Synthesize(text);
       if (r.ok()) {
         pcm = std::move(r).value();
-        if (d_.on_trace) d_.on_trace(pcm.empty() ? "synth_empty" : "synth_ok");
+        if (d_.on_trace) {
+          d_.on_trace(pcm.empty() ? "synth_empty" : "synth_ok");
+        }
       } else {
-        if (d_.on_trace) d_.on_trace("synth_failed");
+        if (d_.on_trace) {
+          d_.on_trace("synth_failed");
+        }
         SayVoiceTrouble(epoch);
         const std::lock_guard<std::mutex> lock(mu_);
         ++stats_.synth_failures;
@@ -470,13 +508,21 @@ void VoicePipeline::QueueSpeech(const std::string& text, bool nudge, std::uint64
     {
       const std::lock_guard<std::mutex> lock(mu_);
       still = ok && epoch == epoch_;
-      if (epoch == epoch_ && tts_pending_ > 0) --tts_pending_;
-      if (still) ++stats_.sentences_spoken;
+      if (epoch == epoch_ && tts_pending_ > 0) {
+        --tts_pending_;
+      }
+      if (still) {
+        ++stats_.sentences_spoken;
+      }
     }
-    if (d_.on_trace && ok && !still) d_.on_trace("synth_dropped_stale");
+    if (d_.on_trace && ok && !still) {
+      d_.on_trace("synth_dropped_stale");
+    }
     if (still && !pcm.empty()) {
       d_.sink->Write(pcm);
-      if (d_.on_trace) d_.on_trace("audio_written");
+      if (d_.on_trace) {
+        d_.on_trace("audio_written");
+      }
       NoteAudioQueued(nudge, epoch);
     }
   });
@@ -488,7 +534,9 @@ void VoicePipeline::SayVoiceTrouble(std::uint64_t epoch) {
   const std::uint64_t now = d_.mono_ns();
   {
     const std::lock_guard<std::mutex> lock(mu_);
-    if (last_trouble_ns_ != 0 && now - last_trouble_ns_ < 10'000'000'000ULL) return;
+    if (last_trouble_ns_ != 0 && now - last_trouble_ns_ < 10'000'000'000ULL) {
+      return;
+    }
     last_trouble_ns_ = now;
   }
   QueueClip(StatusPhrase(3), false, epoch);
@@ -509,13 +557,19 @@ void VoicePipeline::QueueClip(const std::string& phrase, bool nudge, std::uint64
       still = epoch == epoch_;
       if (still) {
         const auto it = clips_.find(phrase);
-        if (it != clips_.end()) pcm = it->second.samples;
-        if (tts_pending_ > 0) --tts_pending_;
+        if (it != clips_.end()) {
+          pcm = it->second.samples;
+        }
+        if (tts_pending_ > 0) {
+          --tts_pending_;
+        }
       }
     }
     if (still && !pcm.empty()) {
       d_.sink->Write(pcm);
-      if (preamble && d_.on_metric) d_.on_metric("preamble_to_audio", d_.mono_ns() - requested);
+      if (preamble && d_.on_metric) {
+        d_.on_metric("preamble_to_audio", d_.mono_ns() - requested);
+      }
       NoteAudioQueued(nudge, epoch);
     }
   });
@@ -525,7 +579,9 @@ void VoicePipeline::FinishQueue(std::uint64_t epoch) {
   d_.tts_exec->Post([this, epoch] {
     {
       const std::lock_guard<std::mutex> lock(mu_);
-      if (epoch != epoch_) return;
+      if (epoch != epoch_) {
+        return;
+      }
     }
     TurnEvent e;
     e.kind = TurnEventKind::kReplyFinished;
@@ -536,7 +592,9 @@ void VoicePipeline::FinishQueue(std::uint64_t epoch) {
 
 void VoicePipeline::OnPreamble(int kind) {
   const auto& phrases = PreamblePhrases(kind);
-  if (phrases.empty()) return;
+  if (phrases.empty()) {
+    return;
+  }
   std::uint64_t epoch = 0;
   std::string phrase;
   {
@@ -602,7 +660,9 @@ Status VoicePipeline::SpeakNudge(std::string_view template_id, std::span<const N
     reply_audio_started_ = false;
   }
   QueueSpeech(spoken->line, true, epoch);
-  if (!spoken->offer.empty()) QueueSpeech(spoken->offer, true, epoch);
+  if (!spoken->offer.empty()) {
+    QueueSpeech(spoken->offer, true, epoch);
+  }
   FinishQueue(epoch);
   return ok_status();
 }

@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
   // The owner's optional settings, read before the sandbox (an unknown key stops the start).
   neuroos::voice::VoiceConfig voice_cfg_values;
   if (!cfg.voice_config.empty()) {
-    std::ifstream f(cfg.voice_config);
+    std::ifstream const f(cfg.voice_config);
     if (f) {
       std::ostringstream buf;
       buf << f.rdbuf();
@@ -65,7 +65,9 @@ int main(int argc, char* argv[]) {
   // system libraries PipeWire and espeak-ng load plugins and data from, and the audio server's
   // own socket. Nothing else, and nothing writable apart from sockets (no audio file, FR-VOI-01).
   const auto add_ro = [&](const std::filesystem::path& p) {
-    if (!p.empty() && std::filesystem::exists(p)) sandbox_policy.read_only.push_back(p);
+    if (!p.empty() && std::filesystem::exists(p)) {
+      sandbox_policy.read_only.push_back(p);
+    }
   };
   if (!cfg.models_dir.empty()) {
     add_ro(cfg.models_dir);
@@ -77,7 +79,9 @@ int main(int argc, char* argv[]) {
     add_ro("/etc/pipewire");
     if (const char* rt = std::getenv("XDG_RUNTIME_DIR")) {
       const std::filesystem::path pw = std::filesystem::path(rt) / "pipewire-0";
-      if (std::filesystem::exists(pw)) sandbox_policy.read_write.push_back(pw);
+      if (std::filesystem::exists(pw)) {
+        sandbox_policy.read_write.push_back(pw);
+      }
     }
   }
 
@@ -161,11 +165,15 @@ int main(int argc, char* argv[]) {
           if (!p->status().capture_running) {
             runtime->Stop();
             auto s = runtime->Start();
-            if (!s.ok()) service->SetDetail(s.error().message);
+            if (!s.ok()) {
+              service->SetDetail(s.error().message);
+            }
           }
         }
         std::unique_lock<std::mutex> lock(sup_mu);
-        if (sup_cv.wait_for(lock, runtime ? 3s : 30s, [&] { return sup_stop; })) return;
+        if (sup_cv.wait_for(lock, runtime ? 3s : 30s, [&] { return sup_stop; })) {
+          return;
+        }
       }
     });
   }
@@ -217,9 +225,13 @@ int main(int argc, char* argv[]) {
     sup_stop = true;
   }
   sup_cv.notify_all();
-  if (supervisor.joinable()) supervisor.join();
+  if (supervisor.joinable()) {
+    supervisor.join();
+  }
   service->SetPipeline(nullptr);
-  if (runtime) runtime->Stop();
+  if (runtime) {
+    runtime->Stop();
+  }
 
   return 0;
 }

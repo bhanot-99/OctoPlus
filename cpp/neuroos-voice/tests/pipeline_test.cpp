@@ -22,7 +22,9 @@ constexpr std::uint64_t kFrameNs = 32'000'000;
 class FakeSource final : public AudioSource {
  public:
   Status Start(FrameCallback cb) override {
-    if (fail) return Error{.message = "no such device", .retryable = false, .code = 9};
+    if (fail) {
+      return Error{.message = "no such device", .retryable = false, .code = 9};
+    }
     cb_ = std::move(cb);
     running_ = true;
     return ok_status();
@@ -65,7 +67,9 @@ class FakeSink final : public AudioSink {
 class FakeVad final : public Vad {
  public:
   float Process(std::span<const std::int16_t> f) override {
-    if (f[0] == 500) return 0.7F;
+    if (f[0] == 500) {
+      return 0.7F;
+    }
     return f[0] != 0 ? 0.95F : 0.0F;
   }
   void Reset() override {}
@@ -86,7 +90,9 @@ class FakeStt final : public Stt {
   Result<std::string> Transcribe(std::span<const std::int16_t> pcm) override {
     ++calls;
     last_samples = pcm.size();
-    if (fail) return Error{.message = "stt", .retryable = true, .code = 7};
+    if (fail) {
+      return Error{.message = "stt", .retryable = true, .code = 7};
+    }
     return text;
   }
   std::string text = "what time is it";
@@ -100,7 +106,9 @@ class FakeTts final : public Tts {
   [[nodiscard]] int sample_rate() const override { return 24000; }
   Result<std::vector<std::int16_t>> Synthesize(std::string_view t) override {
     spoken.emplace_back(t);
-    if (fail) return Error{.message = "tts", .retryable = true, .code = 7};
+    if (fail) {
+      return Error{.message = "tts", .retryable = true, .code = 7};
+    }
     return std::vector<std::int16_t>(2400, 7);
   }
   std::vector<std::string> spoken;
@@ -115,7 +123,7 @@ class FakeLink final : public ReplyLink {
     receiver = r;
   }
   void Cancel() override { ++cancels; }
-  void SendBargeIn(std::uint64_t) override { ++barge_ins; }
+  void SendBargeIn(std::uint64_t /*at_ns*/) override { ++barge_ins; }
   // The receiver of the latest command (threads: read under the lock).
   ReplyReceiver* Receiver() {
     const std::lock_guard<std::mutex> lock(mu);

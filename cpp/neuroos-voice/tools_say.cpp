@@ -35,7 +35,9 @@ int main(int argc, char** argv) {
   }
   std::string text;
   for (int i = 4; i < argc; ++i) {
-    if (!text.empty()) text += ' ';
+    if (!text.empty()) {
+      text += ' ';
+    }
     text += argv[i];
   }
   auto pcm = tts.value()->Synthesize(text);

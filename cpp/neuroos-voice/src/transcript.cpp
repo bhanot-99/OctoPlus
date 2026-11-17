@@ -16,7 +16,9 @@ std::vector<Word> Split(std::string_view text) {
   std::vector<Word> out;
   std::string cur;
   auto flush = [&] {
-    if (cur.empty()) return;
+    if (cur.empty()) {
+      return;
+    }
     Word w;
     w.text = cur;
     for (const char c : cur) {
@@ -41,7 +43,9 @@ std::vector<Word> Split(std::string_view text) {
 std::size_t EditDistance(const std::string& a, const std::string& b) {
   std::vector<std::size_t> prev(b.size() + 1);
   std::vector<std::size_t> cur(b.size() + 1);
-  for (std::size_t j = 0; j <= b.size(); ++j) prev[j] = j;
+  for (std::size_t j = 0; j <= b.size(); ++j) {
+    prev[j] = j;
+  }
   for (std::size_t i = 1; i <= a.size(); ++i) {
     cur[0] = i;
     for (std::size_t j = 1; j <= b.size(); ++j) {
@@ -61,7 +65,9 @@ bool LooksLikeHey(const std::string& bare) {
   // How "hey" tends to be heard when it is cut at the start of a capture.
   for (const char* h : {"hey", "hay", "hi", "a", "ay", "okay", "ok", "and", "he", "uh", "oh", "ah",
                         "hate", "hello"}) {
-    if (bare == h) return true;
+    if (bare == h) {
+      return true;
+    }
   }
   return false;
 }
@@ -69,7 +75,9 @@ bool LooksLikeHey(const std::string& bare) {
 std::string Join(const std::vector<Word>& w, std::size_t from, std::size_t to) {
   std::string out;
   for (std::size_t i = from; i < to; ++i) {
-    if (!out.empty()) out += ' ';
+    if (!out.empty()) {
+      out += ' ';
+    }
     out += w[i].text;
   }
   return out;
@@ -100,12 +108,16 @@ std::string CollapseRepeats(std::string_view text) {
   // with the last block possibly cut short (a decoder stopped mid-loop). Needs two full blocks
   // and half of a third, so a real "very very good" or "go go" is never touched.
   for (std::size_t period = 1; period <= n / 2; ++period) {
-    if (n < 2 * period + std::max<std::size_t>(1, period / 2)) continue;
+    if (n < 2 * period + std::max<std::size_t>(1, period / 2)) {
+      continue;
+    }
     bool same = true;
     for (std::size_t i = period; i < n && same; ++i) {
       same = words[i].bare == words[i - period].bare;
     }
-    if (same) return Join(words, 0, period);
+    if (same) {
+      return Join(words, 0, period);
+    }
   }
   return std::string(text);
 }

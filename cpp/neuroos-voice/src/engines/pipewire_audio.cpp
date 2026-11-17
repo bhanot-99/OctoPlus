@@ -55,25 +55,39 @@ class PwCore {
     static std::mutex mu;
     static std::weak_ptr<PwCore> cached;
     const std::lock_guard<std::mutex> lock(mu);
-    if (auto c = cached.lock()) return c;
+    if (auto c = cached.lock()) {
+      return c;
+    }
     auto c = std::shared_ptr<PwCore>(new PwCore());
     auto s = c->Connect();
-    if (!s.ok()) return s.error();
+    if (!s.ok()) {
+      return s.error();
+    }
     cached = c;
     return c;
   }
 
   ~PwCore() {
-    if (loop_ == nullptr) return;
+    if (loop_ == nullptr) {
+      return;
+    }
     pw_thread_loop_stop(loop_);
-    if (metadata_ != nullptr) pw_proxy_destroy(reinterpret_cast<pw_proxy*>(metadata_));
+    if (metadata_ != nullptr) {
+      pw_proxy_destroy(reinterpret_cast<pw_proxy*>(metadata_));
+    }
     for (auto& [id, n] : watched_) {
       spa_hook_remove(&n.listener);
       pw_proxy_destroy(reinterpret_cast<pw_proxy*>(n.proxy));
     }
-    if (registry_ != nullptr) pw_proxy_destroy(reinterpret_cast<pw_proxy*>(registry_));
-    if (core_ != nullptr) pw_core_disconnect(core_);
-    if (context_ != nullptr) pw_context_destroy(context_);
+    if (registry_ != nullptr) {
+      pw_proxy_destroy(reinterpret_cast<pw_proxy*>(registry_));
+    }
+    if (core_ != nullptr) {
+      pw_core_disconnect(core_);
+    }
+    if (context_ != nullptr) {
+      pw_context_destroy(context_);
+    }
     pw_thread_loop_destroy(loop_);
   }
   PwCore(const PwCore&) = delete;
@@ -87,7 +101,9 @@ class PwCore {
                                   const std::vector<std::string>& classes) {
     pw_thread_loop_lock(loop_);
     std::string want = name;
-    if (want.empty()) want = defaults_[default_key];
+    if (want.empty()) {
+      want = defaults_[default_key];
+    }
     std::optional<NodeInfo> found;
     if (!want.empty()) {
       for (const auto& [id, n] : nodes_) {
@@ -128,7 +144,9 @@ class PwCore {
     pw_thread_loop_lock(loop_);
     bool busy = false;
     for (const auto& [id, n] : watched_) {
-      if (n.running && nodes_.count(id) != 0 && nodes_[id].name != kCaptureName) busy = true;
+      if (n.running && nodes_.count(id) != 0 && nodes_[id].name != kCaptureName) {
+        busy = true;
+      }
     }
     pw_thread_loop_unlock(loop_);
     return busy;
@@ -148,10 +166,16 @@ class PwCore {
   Status Connect() {
     pw_init(nullptr, nullptr);
     loop_ = pw_thread_loop_new("neuroos-pw", nullptr);
-    if (loop_ == nullptr) return Fail("cannot create the audio thread loop");
+    if (loop_ == nullptr) {
+      return Fail("cannot create the audio thread loop");
+    }
     context_ = pw_context_new(pw_thread_loop_get_loop(loop_), nullptr, 0);
-    if (context_ == nullptr) return Fail("cannot create the audio context");
-    if (pw_thread_loop_start(loop_) < 0) return Fail("cannot start the audio thread loop");
+    if (context_ == nullptr) {
+      return Fail("cannot create the audio context");
+    }
+    if (pw_thread_loop_start(loop_) < 0) {
+      return Fail("cannot start the audio thread loop");
+    }
     pw_thread_loop_lock(loop_);
     core_ = pw_context_connect(context_, nullptr, 0);
     if (core_ == nullptr) {
@@ -208,15 +232,25 @@ class PwCore {
   static void OnGlobal(void* data, std::uint32_t id, std::uint32_t /*perms*/, const char* type,
                        std::uint32_t /*version*/, const spa_dict* props) {
     auto* self = static_cast<PwCore*>(data);
-    if (props == nullptr) return;
+    if (props == nullptr) {
+      return;
+    }
     if (std::strcmp(type, PW_TYPE_INTERFACE_Node) == 0) {
       NodeInfo n;
       n.id = id;
-      if (const char* v = spa_dict_lookup(props, PW_KEY_OBJECT_SERIAL)) n.serial = v;
-      if (const char* v = spa_dict_lookup(props, PW_KEY_NODE_NAME)) n.name = v;
-      if (const char* v = spa_dict_lookup(props, PW_KEY_MEDIA_CLASS)) n.media_class = v;
+      if (const char* v = spa_dict_lookup(props, PW_KEY_OBJECT_SERIAL)) {
+        n.serial = v;
+      }
+      if (const char* v = spa_dict_lookup(props, PW_KEY_NODE_NAME)) {
+        n.name = v;
+      }
+      if (const char* v = spa_dict_lookup(props, PW_KEY_MEDIA_CLASS)) {
+        n.media_class = v;
+      }
       self->nodes_[id] = n;
-      if (n.media_class == "Stream/Input/Audio") self->Watch(id);
+      if (n.media_class == "Stream/Input/Audio") {
+        self->Watch(id);
+      }
     } else if (std::strcmp(type, PW_TYPE_INTERFACE_Metadata) == 0) {
       const char* name = spa_dict_lookup(props, PW_KEY_METADATA_NAME);
       if (name != nullptr && std::strcmp(name, "default") == 0 && self->metadata_ == nullptr) {
@@ -242,13 +276,17 @@ class PwCore {
       pw_proxy_destroy(reinterpret_cast<pw_proxy*>(w->second.proxy));
       self->watched_.erase(w);
     }
-    for (auto& [token, cb] : self->removal_) cb(id);
+    for (auto& [token, cb] : self->removal_) {
+      cb(id);
+    }
   }
 
   static int OnMetadata(void* data, std::uint32_t /*subject*/, const char* key,
                         const char* /*type*/, const char* value) {
     auto* self = static_cast<PwCore*>(data);
-    if (key == nullptr) return 0;
+    if (key == nullptr) {
+      return 0;
+    }
     if (value == nullptr) {
       self->defaults_[key].clear();
       return 0;
@@ -256,17 +294,25 @@ class PwCore {
     // {"name":"alsa_input.pci-..."}
     const std::string v(value);
     const auto at = v.find("\"name\"");
-    if (at == std::string::npos) return 0;
+    if (at == std::string::npos) {
+      return 0;
+    }
     const auto q1 = v.find('"', v.find(':', at) + 1);
-    if (q1 == std::string::npos) return 0;
+    if (q1 == std::string::npos) {
+      return 0;
+    }
     const auto q2 = v.find('"', q1 + 1);
-    if (q2 == std::string::npos) return 0;
+    if (q2 == std::string::npos) {
+      return 0;
+    }
     self->defaults_[key] = v.substr(q1 + 1, q2 - q1 - 1);
     return 0;
   }
 
   void Watch(std::uint32_t id) {
-    if (watched_.count(id) != 0) return;
+    if (watched_.count(id) != 0) {
+      return;
+    }
     auto& w = watched_[id];
     w.owner = this;
     w.id = id;
@@ -314,7 +360,9 @@ class PipeWireSource final : public AudioSource {
   ~PipeWireSource() override { Stop(); }
 
   Status Start(FrameCallback on_audio) override {
-    if (running_) return ok_status();
+    if (running_) {
+      return ok_status();
+    }
     // FR-VOI-03: resolve the device to an exact node first; no node, no stream.
     const auto node = core_->Resolve(opts_.capture_node_name, "default.audio.source",
                                      {"Audio/Source", "Audio/Source/Virtual"});
@@ -376,13 +424,17 @@ class PipeWireSource final : public AudioSource {
   }
 
   void Stop() override {
-    if (!running_.exchange(false)) return;
+    if (!running_.exchange(false)) {
+      return;
+    }
     {
       const std::lock_guard<std::mutex> lock(mu_);
       stop_ = true;
     }
     cv_.notify_all();
-    if (worker_.joinable()) worker_.join();
+    if (worker_.joinable()) {
+      worker_.join();
+    }
     Teardown();
   }
 
@@ -396,7 +448,9 @@ class PipeWireSource final : public AudioSource {
  private:
   void Teardown() {
     auto* loop = core_->loop();
-    if (removal_token_ != 0) core_->RemoveRemovalListener(removal_token_);
+    if (removal_token_ != 0) {
+      core_->RemoveRemovalListener(removal_token_);
+    }
     removal_token_ = 0;
     if (stream_ != nullptr) {
       pw_thread_loop_lock(loop);
@@ -406,7 +460,8 @@ class PipeWireSource final : public AudioSource {
     }
   }
 
-  static void OnState(void* data, pw_stream_state /*old*/, pw_stream_state state, const char*) {
+  static void OnState(void* data, pw_stream_state /*old*/, pw_stream_state state,
+                      const char* /*unused*/) {
     auto* self = static_cast<PipeWireSource*>(data);
     if (state == PW_STREAM_STATE_ERROR || state == PW_STREAM_STATE_UNCONNECTED) {
       if (self->running_) {
@@ -420,7 +475,9 @@ class PipeWireSource final : public AudioSource {
   static void OnProcess(void* data) {
     auto* self = static_cast<PipeWireSource*>(data);
     pw_buffer* b = pw_stream_dequeue_buffer(self->stream_);
-    if (b == nullptr) return;
+    if (b == nullptr) {
+      return;
+    }
     const spa_data& d = b->buffer->datas[0];
     if (d.data != nullptr && d.chunk != nullptr && d.chunk->size > 0) {
       const auto* p = reinterpret_cast<const std::int16_t*>(
@@ -449,15 +506,21 @@ class PipeWireSource final : public AudioSource {
       {
         std::unique_lock<std::mutex> lock(mu_);
         cv_.wait(lock, [this] { return stop_ || lost_ || !queue_.empty(); });
-        if (stop_) return;
+        if (stop_) {
+          return;
+        }
         chunk.assign(queue_.begin(), queue_.end());
         queue_.clear();
         lost = lost_;
         on_lost = on_lost_;
       }
-      if (!chunk.empty()) callback_(chunk);
+      if (!chunk.empty()) {
+        callback_(chunk);
+      }
       if (lost) {
-        if (on_lost && !lost_reported_.exchange(true)) on_lost();
+        if (on_lost && !lost_reported_.exchange(true)) {
+          on_lost();
+        }
         // Wait for Stop(); there is nothing more to read.
         std::unique_lock<std::mutex> lock(mu_);
         cv_.wait(lock, [this] { return stop_; });
@@ -501,7 +564,9 @@ class PipeWireSink final : public AudioSink {
   }
 
   Status Start(int sample_rate) override {
-    if (stream_ != nullptr) return ok_status();
+    if (stream_ != nullptr) {
+      return ok_status();
+    }
     auto* loop = core_->loop();
     std::string target;
     if (const auto node = core_->Resolve(opts_.playback_node_name, "default.audio.sink",
@@ -514,7 +579,9 @@ class PipeWireSink final : public AudioSink {
     auto* props = pw_properties_new(PW_KEY_MEDIA_TYPE, "Audio", PW_KEY_MEDIA_CATEGORY, "Playback",
                                     PW_KEY_MEDIA_ROLE, "Communication", PW_KEY_NODE_NAME,
                                     kPlaybackName, PW_KEY_APP_NAME, "neuroos-voice", nullptr);
-    if (!target.empty()) pw_properties_set(props, PW_KEY_TARGET_OBJECT, target.c_str());
+    if (!target.empty()) {
+      pw_properties_set(props, PW_KEY_TARGET_OBJECT, target.c_str());
+    }
     // Pause the node when nothing is playing: no graph wake-ups while the assistant is silent.
     pw_properties_set(props, PW_KEY_NODE_PAUSE_ON_IDLE, "true");
     static const pw_stream_events ev = [] {
@@ -585,8 +652,10 @@ class PipeWireSink final : public AudioSink {
   static void OnProcess(void* data) {
     auto* self = static_cast<PipeWireSink*>(data);
     pw_buffer* b = pw_stream_dequeue_buffer(self->stream_);
-    if (b == nullptr) return;
-    spa_data& d = b->buffer->datas[0];
+    if (b == nullptr) {
+      return;
+    }
+    spa_data const& d = b->buffer->datas[0];
     if (d.data == nullptr) {
       pw_stream_queue_buffer(self->stream_, b);
       return;
@@ -634,19 +703,25 @@ class PipeWireMicProbe final : public MicBusyProbe {
 
 Result<std::unique_ptr<AudioSource>> MakePipeWireSource(const PipeWireOptions& opts) {
   auto core = PwCore::Get();
-  if (!core.ok()) return core.error();
+  if (!core.ok()) {
+    return core.error();
+  }
   return std::unique_ptr<AudioSource>(new PipeWireSource(std::move(core).value(), opts));
 }
 
 Result<std::unique_ptr<AudioSink>> MakePipeWireSink(const PipeWireOptions& opts) {
   auto core = PwCore::Get();
-  if (!core.ok()) return core.error();
+  if (!core.ok()) {
+    return core.error();
+  }
   return std::unique_ptr<AudioSink>(new PipeWireSink(std::move(core).value(), opts));
 }
 
 Result<std::unique_ptr<MicBusyProbe>> MakePipeWireMicProbe() {
   auto core = PwCore::Get();
-  if (!core.ok()) return core.error();
+  if (!core.ok()) {
+    return core.error();
+  }
   return std::unique_ptr<MicBusyProbe>(new PipeWireMicProbe(std::move(core).value()));
 }
 

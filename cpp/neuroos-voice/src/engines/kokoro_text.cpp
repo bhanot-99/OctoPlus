@@ -30,7 +30,9 @@ void AppendUtf8(std::string* out, char32_t c) {
 char32_t NextCodePoint(std::string_view s, std::size_t* at) {
   const auto b0 = static_cast<unsigned char>(s[*at]);
   auto cont = [&](std::size_t k) -> int {
-    if (*at + k >= s.size()) return -1;
+    if (*at + k >= s.size()) {
+      return -1;
+    }
     const auto b = static_cast<unsigned char>(s[*at + k]);
     return (b & 0xC0) == 0x80 ? (b & 0x3F) : -1;
   };
@@ -61,16 +63,24 @@ char32_t NextCodePoint(std::string_view s, std::size_t* at) {
 }
 
 int Hex(char c) {
-  if (c >= '0' && c <= '9') return c - '0';
-  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+  if (c >= '0' && c <= '9') {
+    return c - '0';
+  }
+  if (c >= 'a' && c <= 'f') {
+    return c - 'a' + 10;
+  }
+  if (c >= 'A' && c <= 'F') {
+    return c - 'A' + 10;
+  }
   return -1;
 }
 
 // Reads a JSON string starting at the opening quote; returns its code points. `*at` ends after
 // the closing quote. False on malformed input.
 bool ReadJsonString(std::string_view s, std::size_t* at, std::u32string* out) {
-  if (*at >= s.size() || s[*at] != '"') return false;
+  if (*at >= s.size() || s[*at] != '"') {
+    return false;
+  }
   ++*at;
   out->clear();
   while (*at < s.size()) {
@@ -84,7 +94,9 @@ bool ReadJsonString(std::string_view s, std::size_t* at, std::u32string* out) {
       continue;
     }
     ++*at;
-    if (*at >= s.size()) return false;
+    if (*at >= s.size()) {
+      return false;
+    }
     const char e = s[(*at)++];
     switch (e) {
       case '"':
@@ -113,18 +125,24 @@ bool ReadJsonString(std::string_view s, std::size_t* at, std::u32string* out) {
         break;
       case 'u': {
         auto four = [&](std::size_t from, char32_t* v) {
-          if (from + 4 > s.size()) return false;
+          if (from + 4 > s.size()) {
+            return false;
+          }
           char32_t x = 0;
           for (std::size_t k = 0; k < 4; ++k) {
             const int h = Hex(s[from + k]);
-            if (h < 0) return false;
+            if (h < 0) {
+              return false;
+            }
             x = (x << 4) | static_cast<char32_t>(h);
           }
           *v = x;
           return true;
         };
         char32_t hi = 0;
-        if (!four(*at, &hi)) return false;
+        if (!four(*at, &hi)) {
+          return false;
+        }
         *at += 4;
         if (hi >= 0xD800 && hi < 0xDC00 && *at + 6 <= s.size() && s[*at] == '\\' &&
             s[*at + 1] == 'u') {
@@ -193,7 +211,9 @@ Result<KokoroVocab> ParseKokoroVocab(std::string_view json) {
   KokoroVocab vocab;
   for (;;) {
     SkipSpace(json, &at);
-    if (at < json.size() && json[at] == '}') break;
+    if (at < json.size() && json[at] == '}') {
+      break;
+    }
     std::u32string name;
     if (!ReadJsonString(json, &at, &name) || name.size() != 1) {
       return Error{.message = "tokenizer vocabulary is malformed", .retryable = false, .code = 7};
@@ -213,7 +233,9 @@ Result<KokoroVocab> ParseKokoroVocab(std::string_view json) {
     at += static_cast<std::size_t>(end - num.c_str());
     vocab[name[0]] = id;
     SkipSpace(json, &at);
-    if (at < json.size() && json[at] == ',') ++at;
+    if (at < json.size() && json[at] == ',') {
+      ++at;
+    }
   }
   if (vocab.empty()) {
     return Error{.message = "tokenizer vocabulary is empty", .retryable = false, .code = 7};
@@ -252,7 +274,9 @@ std::vector<std::int64_t> EncodeKokoroTokens(std::string_view phonemes, const Ko
   while (at < phonemes.size() && ids.size() + 1 < limit) {
     const char32_t c = NextCodePoint(phonemes, &at);
     const auto it = vocab.find(c);
-    if (it != vocab.end()) ids.push_back(it->second);
+    if (it != vocab.end()) {
+      ids.push_back(it->second);
+    }
   }
   ids.push_back(0);
   return ids;

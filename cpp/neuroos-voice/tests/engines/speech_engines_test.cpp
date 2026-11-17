@@ -16,7 +16,7 @@ namespace {
 const std::string kModels = NEUROOS_VOICE_MODELS_DIR;
 
 std::string Slurp(const std::string& path) {
-  std::ifstream f(path, std::ios::binary);
+  std::ifstream const f(path, std::ios::binary);
   std::ostringstream ss;
   ss << f.rdbuf();
   return ss.str();
@@ -117,7 +117,9 @@ TEST(LocalSpeech, KokoroSpeaksASentenceFasterThanRealTime) {
   (void)took;
   // Not silence: a real waveform.
   double energy = 0;
-  for (const auto s : pcm.value()) energy += static_cast<double>(s) * static_cast<double>(s);
+  for (const auto s : pcm.value()) {
+    energy += static_cast<double>(s) * static_cast<double>(s);
+  }
   EXPECT_GT(std::sqrt(energy / static_cast<double>(pcm.value().size())), 300.0);
   EXPECT_EQ(tts.value()->sample_rate(), 24000);
 }
@@ -218,7 +220,9 @@ TEST(LocalMemory, EachEngineAndTheWholeStayInsideTheBudget) {
       "Heads up, your disk is 92 percent full. Want me to show what is using the space?");
   ASSERT_TRUE(pcm.ok());
   std::vector<std::int16_t> pcm16(pcm.value().size() * 2 / 3);
-  for (std::size_t i = 0; i < pcm16.size(); ++i) pcm16[i] = pcm.value()[i * 3 / 2];
+  for (std::size_t i = 0; i < pcm16.size(); ++i) {
+    pcm16[i] = pcm.value()[i * 3 / 2];
+  }
   ASSERT_TRUE(stt.value()->Transcribe(pcm16).ok());
   const double steady = RssMiB();
   std::printf(
@@ -283,10 +287,14 @@ TEST(LocalPerf, TranscribingAThreeSecondUtteranceAndTheCostOfListening) {
   ASSERT_TRUE(vad.ok() && wake.ok());
   std::vector<std::int16_t> frame(512, 0);
   const auto t0 = std::chrono::steady_clock::now();
-  for (int i = 0; i < 1000; ++i) vad.value()->Process(frame);
+  for (int i = 0; i < 1000; ++i) {
+    vad.value()->Process(frame);
+  }
   const double vad_ms = Ms(std::chrono::steady_clock::now() - t0) / 1000.0;
   const auto t1 = std::chrono::steady_clock::now();
-  for (int i = 0; i < 1000; ++i) wake.value()->Process(frame);
+  for (int i = 0; i < 1000; ++i) {
+    wake.value()->Process(frame);
+  }
   const double wake_ms = Ms(std::chrono::steady_clock::now() - t1) / 1000.0;
   std::printf("per 32 ms frame: voice activity %.3f ms (%.2f%% of one core), wake word %.3f ms\n",
               vad_ms, vad_ms / 32.0 * 100.0, wake_ms);

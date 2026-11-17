@@ -10,24 +10,21 @@
 namespace neuroos::voice {
 
 AudioRing::AudioRing(std::size_t capacity_samples)
-    : capacity_(capacity_samples == 0 ? 1 : capacity_samples),
-      buffer_(capacity_, 0),
-      size_(0),
-      total_pushed_(0) {}
+    : capacity_(capacity_samples == 0 ? 1 : capacity_samples), buffer_(capacity_, 0) {}
 
 void AudioRing::Push(std::span<const std::int16_t> samples) {
   if (samples.empty()) {
     return;
   }
 
-  std::lock_guard<std::mutex> lock(mu_);
+  std::lock_guard<std::mutex> const lock(mu_);
   const std::size_t n = samples.size();
 
   if (n >= capacity_) {
     const auto to_write = samples.subspan(n - capacity_);
     total_pushed_ += n;
     const std::uint64_t start_idx = total_pushed_ - capacity_;
-    const std::size_t start_pos = static_cast<std::size_t>(start_idx % capacity_);
+    const auto start_pos = static_cast<std::size_t>(start_idx % capacity_);
 
     if (start_pos == 0) {
       std::copy_n(to_write.data(), capacity_, buffer_.data());
@@ -38,7 +35,7 @@ void AudioRing::Push(std::span<const std::int16_t> samples) {
     }
     size_ = capacity_;
   } else {
-    const std::size_t start_pos = static_cast<std::size_t>(total_pushed_ % capacity_);
+    const auto start_pos = static_cast<std::size_t>(total_pushed_ % capacity_);
     if (start_pos + n <= capacity_) {
       std::copy_n(samples.data(), n, buffer_.data() + start_pos);
     } else {
@@ -52,14 +49,14 @@ void AudioRing::Push(std::span<const std::int16_t> samples) {
 }
 
 std::size_t AudioRing::size() const {
-  std::lock_guard<std::mutex> lock(mu_);
+  std::lock_guard<std::mutex> const lock(mu_);
   return size_;
 }
 
 std::size_t AudioRing::capacity() const { return capacity_; }
 
 std::uint64_t AudioRing::total_pushed() const {
-  std::lock_guard<std::mutex> lock(mu_);
+  std::lock_guard<std::mutex> const lock(mu_);
   return total_pushed_;
 }
 
@@ -68,7 +65,7 @@ std::size_t AudioRing::ReadLast(std::size_t n, std::vector<std::int16_t>* out) c
     return 0;
   }
 
-  std::lock_guard<std::mutex> lock(mu_);
+  std::lock_guard<std::mutex> const lock(mu_);
   out->clear();
 
   const std::size_t count = std::min(n, size_);
@@ -78,7 +75,7 @@ std::size_t AudioRing::ReadLast(std::size_t n, std::vector<std::int16_t>* out) c
 
   out->resize(count);
   const std::uint64_t start_idx = total_pushed_ - count;
-  const std::size_t start_pos = static_cast<std::size_t>(start_idx % capacity_);
+  const auto start_pos = static_cast<std::size_t>(start_idx % capacity_);
 
   if (start_pos + count <= capacity_) {
     std::copy_n(buffer_.data() + start_pos, count, out->data());
@@ -97,7 +94,7 @@ std::size_t AudioRing::ReadRange(std::uint64_t from, std::uint64_t to,
     return 0;
   }
 
-  std::lock_guard<std::mutex> lock(mu_);
+  std::lock_guard<std::mutex> const lock(mu_);
   out->clear();
   if (first_index != nullptr) {
     *first_index = 0;
@@ -116,13 +113,13 @@ std::size_t AudioRing::ReadRange(std::uint64_t from, std::uint64_t to,
     return 0;
   }
 
-  const std::size_t count = static_cast<std::size_t>(actual_to - actual_from);
+  const auto count = static_cast<std::size_t>(actual_to - actual_from);
   out->resize(count);
   if (first_index != nullptr) {
     *first_index = actual_from;
   }
 
-  const std::size_t start_pos = static_cast<std::size_t>(actual_from % capacity_);
+  const auto start_pos = static_cast<std::size_t>(actual_from % capacity_);
   if (start_pos + count <= capacity_) {
     std::copy_n(buffer_.data() + start_pos, count, out->data());
   } else {
@@ -135,7 +132,7 @@ std::size_t AudioRing::ReadRange(std::uint64_t from, std::uint64_t to,
 }
 
 void AudioRing::Clear() {
-  std::lock_guard<std::mutex> lock(mu_);
+  std::lock_guard<std::mutex> const lock(mu_);
   size_ = 0;
 }
 
