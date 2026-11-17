@@ -619,6 +619,10 @@ impl NudgeHandle {
             Action::Speak | Action::Notify { .. } => {
                 // A spoken decision is only reachable when C2 said it can speak; if it cannot take
                 // the line after all, the user still gets the notification (FR-NUD-05).
+                debug!(
+                    "nudge {} goes out as {:?} ({:?})",
+                    d.candidate.rule_id, d.action, d.reason
+                );
                 let silent = matches!(d.action, Action::Notify { silent: true });
                 let wants_voice = matches!(d.action, Action::Speak) && d.merged_from.is_empty();
                 let spoken = wants_voice

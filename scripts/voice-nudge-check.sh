@@ -14,14 +14,15 @@ say="$root/cpp/build/voice-release/neuroos-voice/neuroos-voice-say"
 ctl="$HOME/.local/opt/neuroos/bin/neuroosctl"
 vconf="$HOME/.config/neuroos/voice.conf"
 nconf="$HOME/.config/neuroos/nudges.toml"
+cconf="$HOME/.config/neuroos/config.toml"
 work="$(mktemp -d)"; tag="nudge$$"
 mic="neuroos-test-mic-$tag"; sink="neuroos-test-sink-$tag"
 out_sink="neuroos-test-out-$tag"; out_mic="neuroos-test-outmic-$tag"
 pids=()
-for f in "$vconf" "$nconf"; do [[ -f "$f" ]] && cp "$f" "$work/$(basename "$f").orig"; done
+for f in "$vconf" "$nconf" "$cconf"; do [[ -f "$f" ]] && cp "$f" "$work/$(basename "$f").orig"; done
 cleanup() {
   for p in "${pids[@]}"; do kill "$p" 2>/dev/null || true; done
-  for f in "$vconf" "$nconf"; do
+  for f in "$vconf" "$nconf" "$cconf"; do
     if [[ -f "$work/$(basename "$f").orig" ]]; then cp "$work/$(basename "$f").orig" "$f"; else rm -f "$f"; fi
   done
   systemctl --user restart neuroos-voice neuroos-knowledge || true
@@ -41,22 +42,30 @@ cat > "$nconf" <<'TOML'
 fire_at = 40
 rearm = 30
 hold_for = "0s"
-cooldown = "1h"
+cooldown = "0s"
 TOML
-systemctl --user restart neuroos-voice neuroos-knowledge
+# The voice first: a nudge that fires while C2 is still loading its models can only be shown.
+# No quiet hours for this check (it is run at any hour); everything else stays as it is.
+if [[ -f "$cconf" ]]; then
+  echo "note: $cconf exists; add 'quiet_start_min = 0' and 'quiet_end_min = 0' under [nudges] yourself"
+else
+  printf '[nudges]\nquiet_start_min = 0\nquiet_end_min = 0\n' > "$cconf"
+fi
+systemctl --user restart neuroos-voice
 for _ in $(seq 1 90); do
   rc=0; "$ctl" voice status >/dev/null 2>&1 || rc=$?
   [[ "$rc" == 0 ]] && break; sleep 1
 done
 "$ctl" voice status | head -1
-
 pw-record --target "$out_mic" --rate 24000 --channels 1 --format s16 "$work/spoken.wav" & rec=$!; pids+=($rec)
+sleep 1
+systemctl --user restart neuroos-knowledge   # its first evaluation now finds a voice that is ready
 before=$("$ctl" audit tail 2>/dev/null | grep -c "system.disk_report" || true)
 echo "waiting up to 100 s for the nudge to be spoken..."
 spoken=0
 for _ in $(seq 1 20); do
   sleep 5
-  if "$ctl" nudges list 2>/dev/null | grep -q "disk_nearly_full.*last: [0-9]"; then spoken=1; break; fi
+  if "$ctl" nudges list 2>/dev/null | grep -qE "disk_nearly_full.*last: [01] min ago"; then spoken=1; break; fi
 done
 if [[ "$spoken" == 0 ]]; then
   echo "HELD: the nudge did not fire (the desktop reports you idle or locked, or the disk is under 40%)."
