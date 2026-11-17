@@ -15,7 +15,7 @@
 | Current phase | Phase 6 — Nudge engine |
 | Current story | P5 work packages W0–W16 in `docs/plans/phase-05-knowledge-plan.md` |
 | Overall progress | 6 / 11 phases done (Phase 5 awaiting merge) |
-| Health | 🟦 Phase 6 started |
+| Health | 🟩 Phase 6 built, gate green (`just ci`), awaiting owner trial and sign-off |
 | Next milestone | M4 — knowledge (C5) |
 
 ---
@@ -58,13 +58,13 @@ Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done �
 
 | Story | Title | Status | Builder | Checker |
 | :--- | :--- | :--- | :--- | :--- |
-| P6-S01 | Told when disk, battery, memory or temperature needs attention | Ready | agy (rules, evaluator), Claude (engine) | Claude |
-| P6-S02 | Not told again and again | Ready | agy (evaluator), Claude | Claude |
-| P6-S03 | Not interrupted at a bad moment | Ready | agy (policy), Claude (context) | Claude |
-| P6-S04 | Nudges reveal nothing private by default | Ready | Claude | agy review |
-| P6-S05 | Say "not now" or switch a nudge off | Ready | Claude | Claude |
-| P6-S06 | A nudge can offer help; nothing happens unless I reply | Ready | Claude | agy review |
-| P6-S07 | Every nudge and its outcome is logged | Ready | Claude | Claude |
+| P6-S01 | Told when disk, battery, memory or temperature needs attention | Done | agy (rules, evaluator), Claude (engine) | Claude |
+| P6-S02 | Not told again and again | Done | agy (evaluator), Claude | Claude |
+| P6-S03 | Not interrupted at a bad moment | Done | agy (policy), Claude (context) | Claude |
+| P6-S04 | Nudges reveal nothing private by default | Done | Claude | agy review |
+| P6-S05 | Say "not now" or switch a nudge off | Done | Claude | Claude |
+| P6-S06 | A nudge can offer help; nothing happens unless I reply | Done | Claude | agy review |
+| P6-S07 | Every nudge and its outcome is logged | Done | Claude | Claude |
 
 Columns: Backlog → Ready → In Progress → In Check → Done.
 

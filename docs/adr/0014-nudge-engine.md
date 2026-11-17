@@ -1,6 +1,6 @@
 # ADR-0014 — Nudge engine: rules, policy gate, state and delivery (Phase 6)
 
-**Status:** Proposed 2026-11-17 (decisions taken under the owner's Phase 6 go-ahead, D-32; open to overturn at sign-off)
+**Status:** Proposed 2026-11-17 (built; awaiting owner sign-off) (decisions taken under the owner's Phase 6 go-ahead, D-32; open to overturn at sign-off)
 **Date:** 2026-11-17
 **Changes:** `neuroos-knowledge` (`nudge/`), `proto/neuroos/v1/storage.proto` (`QueryNudgeLog`, four outcomes, additive), C3 (`QueryNudgeLog`), C6 notification templates, `[nudges]` config, `nudges.toml`, `neuroosctl nudges`
 **Evidence:** to be filled from `reports/phase-06-nudges.md`.
@@ -17,7 +17,12 @@ See the plan §1 (items 1–11); in short: a declarative rule file with compiled
 
 ## Consequences
 
-To be completed with the measurements.
+- The engine is a pure core (`Core::step`: readings, context and time in, decisions out) shared by the live loop and the replay harness, so the KPI-10 proof runs the same code that runs live (AB-13).
+- A nudge cannot act: the engine tree imports no action, dispatch or evidence code (source-scan test), the only text-bearing message it sends is a template id with numbers, and an offered skill runs only when the user replies yes, through the normal tiers.
+- State lives in C3's nudge log and is rebuilt at start; switches survive retention and forget. A C3 outage at start leaves the engine idle (reported as degraded) and it retries each tick.
+- Cost: held, dropped and answered rows are logged on every tick they occur, so the log grows; restore reads only state rows, so growth does not affect correctness (BUG-073).
+- Measured: KPI-10 is zero over 22 scenarios and over the three recorded dumps (178 ticks each, 55 to 81 bad moments, 3 spoken at good ones, none at a bad one). Voice does not exist yet, so speech is proven only in replay with voice available.
+- Not built: upcoming-calendar-event rule, notification buttons, call detection and mic-busy (Phase 7).
 
 ## Alternatives
 
