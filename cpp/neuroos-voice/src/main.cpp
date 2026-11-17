@@ -138,6 +138,9 @@ int main(int argc, char* argv[]) {
     supervisor = std::thread([&] {
       using namespace std::chrono_literals;
       for (;;) {
+        // Keep the link to C5 up (it fails fast and backs off while C5 is away), so health shows
+        // it connected before the first spoken command, not only after it.
+        (void)knowledge_client->Get();
         if (!runtime) {
           neuroos::voice::RuntimeOptions ro;
           ro.config = voice_cfg_values;
