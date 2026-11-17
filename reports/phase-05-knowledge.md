@@ -1,7 +1,7 @@
 # Phase 5 — Knowledge and Conversation (C5, text only): Report
 
 **Date:** 2026-11-17 · **Branch:** `phase-5` · **Builder:** Claude (engine, assembler, action route, kernel and C4 changes, child skills), agy (router, sanitiser, token budget, deictic parse, evidence selection, session, facts, chat rules, injection corpus) · **Checker:** Claude on every agy module (own probe sets, found and fixed gaps in each); agy on Claude's code (read-only review, 10 findings)
-**Status:** Built, gate result in §7, **waiting for the owner**: grade KPI-12, decide BUG-070, sign off (§8)
+**Status:** Built, gate green (§7), owner decisions taken 2026-11-17 (D-31: recommendations accepted, BUG-070 accepted as is, ADR-0013 accepted). **Ready to merge.** Still open for the owner: grade KPI-12; KPI-1 at integration (D-26)
 
 ## 1. Summary
 

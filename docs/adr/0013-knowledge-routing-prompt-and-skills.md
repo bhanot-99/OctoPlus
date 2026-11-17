@@ -1,6 +1,6 @@
 # ADR-0013 — Knowledge and conversation: routing, prompt assembly, skills and facts (Phase 5)
 
-**Status:** Proposed 2026-11-17 (decisions taken under the owner's Phase 5 go-ahead, D-29; open to overturn at sign-off)
+**Status:** Accepted 2026-11-17 (D-31; taken under the owner's Phase 5 go-ahead, D-29)
 **Date:** 2026-11-17
 **Changes:** `proto/neuroos/v1/knowledge.proto` (`AskRequest.at_ns`, additive) · `[knowledge]` config block · `neuroos-knowledge` · kernel skills `profile.remember`, `profile.forget`, `memory.forget` (kernel-kind) and `notes.search`, `notes.append`, `calendar.read` (child) · C4 grammar support (`cpp/neuroos-inference`) · the kernel unit's folder drop-in (`neuroos-deploy`) · `neuroosctl profile` and `ask --explain` · ADR-0005 focus budget 32 → 48 tokens
 **Evidence:** `reports/phase-05-knowledge.md`: held-out sets (`tests/eval/p5/`), injection corpus (100 strings, 600 cases through the turn engine), control-token corpus, NFR-PERF-05 and NFR-PERF-03 measurements, the KPI-12 transcript (ungraded), the real-stack runs, and the independent agy review (`.agy/reports/20261117-123226.md`).
