@@ -60,6 +60,10 @@ pub enum Commands {
         #[arg(long)]
         json: bool,
 
+        /// After the answer, print which route it took and its taint.
+        #[arg(long)]
+        explain: bool,
+
         /// Suppress non-essential output.
         #[arg(long, short)]
         quiet: bool,

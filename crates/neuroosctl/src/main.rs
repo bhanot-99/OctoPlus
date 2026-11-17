@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use neuroos_common::paths;
-use neuroosctl::ask::run_ask;
+use neuroosctl::ask::{AskOptions, run_ask};
 use neuroosctl::audit::run_audit;
 use neuroosctl::egress::run_egress;
 use neuroosctl::profile::run_profile;
@@ -28,8 +28,19 @@ async fn main() {
 
     let exit_code = match cli.command {
         Commands::Status { json, .. } => run_status(&runtime_root, json, styler).await,
-        Commands::Ask { question, json, .. } => {
-            run_ask(&runtime_root, question, json, styler).await
+        Commands::Ask {
+            question,
+            json,
+            explain,
+            ..
+        } => {
+            run_ask(
+                &runtime_root,
+                question,
+                AskOptions { json, explain },
+                styler,
+            )
+            .await
         }
         Commands::Run {
             capability,
