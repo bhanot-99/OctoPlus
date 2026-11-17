@@ -7,4 +7,5 @@
 pub mod eval;
 pub mod policy;
 pub mod rules;
+pub mod signals;
 pub mod types;
