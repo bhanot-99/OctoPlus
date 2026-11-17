@@ -14,6 +14,7 @@ ProtectHome=tmpfs
 BindReadOnlyPaths=%h/.local/opt/neuroos
 BindReadOnlyPaths=-%h/.config/neuroos/config.toml
 BindReadOnlyPaths=-%h/.config/neuroos/voice.conf
+BindPaths=-%t/pipewire-0
 InaccessiblePaths=-/run/neuroos-fetcher
 TemporaryFileSystem=%t/neuroos
 BindPaths=%t/neuroos/voice

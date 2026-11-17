@@ -379,6 +379,9 @@ fn generate_user_service_internal(
         // The owner's voice settings (microphone, voice, wake threshold), read before the
         // sandbox is applied. A missing file is fine: the compiled-in defaults apply.
         out.push_str("BindReadOnlyPaths=-%h/.config/neuroos/voice.conf\n");
+        // ProtectHome=tmpfs also empties /run/user: the audio server's socket is the one thing
+        // C2 needs from there. `-` so a session without PipeWire still starts (DEGRADED).
+        out.push_str("BindPaths=-%t/pipewire-0\n");
     }
 
     // Decision 4: specific persistent data paths.

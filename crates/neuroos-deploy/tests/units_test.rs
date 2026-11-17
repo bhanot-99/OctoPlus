@@ -799,6 +799,10 @@ fn the_voice_unit_binds_its_settings_keeps_the_hardening_except_realtime_and_nam
         .unwrap()
         .content;
     assert!(unit.contains("BindReadOnlyPaths=-%h/.config/neuroos/voice.conf"));
+    assert!(
+        unit.contains("BindPaths=-%t/pipewire-0"),
+        "the audio socket"
+    );
     assert!(unit.contains("--models-dir %h/.local/opt/neuroos/models/voice"));
     assert!(unit.contains("--voice-config %h/.config/neuroos/voice.conf"));
     assert!(
@@ -830,6 +834,10 @@ fn the_voice_unit_binds_its_settings_keeps_the_hardening_except_realtime_and_nam
             .unwrap()
             .content;
         assert!(!other.contains("voice.conf"), "{name}");
+        assert!(
+            !other.contains("pipewire"),
+            "{name}: only C2 sees the audio socket"
+        );
         assert!(other.contains("RestrictRealtime=true"), "{name}");
     }
 }
