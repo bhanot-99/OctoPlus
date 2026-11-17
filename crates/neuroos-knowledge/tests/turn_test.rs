@@ -345,6 +345,7 @@ impl Stack {
                 storage: peers.storage.clone(),
                 kernel: peers.kernel.clone(),
                 inference: peers.inference.clone(),
+                voice: c(&dir.path().join("no-voice.sock")),
             },
         );
         let handler = KnowledgeHandler::new(

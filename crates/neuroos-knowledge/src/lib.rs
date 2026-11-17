@@ -60,6 +60,11 @@ pub fn init(ctx: &mut neuroos_health::ServiceContext) -> Result<(), neuroos_heal
         ("storage", Arc::clone(&peers.storage)),
         ("inference", Arc::clone(&peers.inference)),
     ];
+    // C2 may be absent (Phase 7 voice is optional): it is kept connected when it is there, but
+    // its absence is not a C5 fault, so it is not part of the health probe.
+    let voice = client(Part::Voice, "voice");
+    let mut keep_up = watched.to_vec();
+    keep_up.push(("voice", Arc::clone(&voice)));
     let probes = watched.clone();
     ctx.health.probe(
         "knowledge_peers",
@@ -83,7 +88,7 @@ pub fn init(ctx: &mut neuroos_health::ServiceContext) -> Result<(), neuroos_heal
                     }
                 }
                 _ = tick.tick() => {
-                    for (_, c) in &watched {
+                    for (_, c) in &keep_up {
                         let _ = c.get().await;
                     }
                 }
@@ -112,7 +117,7 @@ pub fn init(ctx: &mut neuroos_health::ServiceContext) -> Result<(), neuroos_heal
         evidence_no_taint: h.counter("evidence_dropped_no_taint"),
         barge_ins: h.counter("voice_barge_ins"),
     };
-    let nudge = start_nudges(ctx, &peers)?;
+    let nudge = start_nudges(ctx, &peers, voice)?;
     let handler = Arc::new(KnowledgeHandler::new(
         peers,
         ctx.config.knowledge.clone(),
@@ -129,6 +134,7 @@ pub fn init(ctx: &mut neuroos_health::ServiceContext) -> Result<(), neuroos_heal
 fn start_nudges(
     ctx: &mut neuroos_health::ServiceContext,
     peers: &turn::Peers,
+    nudge_voice: Arc<ReconnectingClient>,
 ) -> Result<nudge::engine::NudgeHandle, neuroos_health::ServiceError> {
     use nudge::engine::{Counters, NudgeHandle, NudgePeers};
     // An invalid rules file stops C5 from starting (unknown keys are fatal, rules §5).
@@ -142,6 +148,7 @@ fn start_nudges(
             storage: Arc::clone(&peers.storage),
             kernel: Arc::clone(&peers.kernel),
             inference: Arc::clone(&peers.inference),
+            voice: nudge_voice,
         },
     )
     .with_counters(Counters {
