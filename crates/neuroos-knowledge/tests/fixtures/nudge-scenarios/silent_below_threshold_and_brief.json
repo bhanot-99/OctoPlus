@@ -1,0 +1,48 @@
+{
+  "name": "silent_below_threshold_and_brief",
+  "description": "stays silent for readings below threshold and readings that hold only briefly",
+  "voice_available": false,
+  "steps": [
+    {
+      "at_s": 0,
+      "readings": [
+        { "signal": "disk.used_percent", "key": "/", "value": 88.0, "extra": 12.0 },
+        { "signal": "temperature.c", "key": "", "value": 75.0 }
+      ]
+    },
+    {
+      "at_s": 30,
+      "readings": [
+        { "signal": "disk.used_percent", "key": "/", "value": 89.0, "extra": 11.0 },
+        { "signal": "temperature.c", "key": "", "value": 75.0 }
+      ]
+    },
+    {
+      "at_s": 60,
+      "readings": [
+        { "signal": "disk.used_percent", "key": "/", "value": 89.5, "extra": 10.5 },
+        { "signal": "temperature.c", "key": "", "value": 95.0 }
+      ]
+    },
+    {
+      "at_s": 90,
+      "readings": [
+        { "signal": "disk.used_percent", "key": "/", "value": 89.0, "extra": 11.0 },
+        { "signal": "temperature.c", "key": "", "value": 70.0 }
+      ]
+    },
+    {
+      "at_s": 120,
+      "readings": [
+        { "signal": "disk.used_percent", "key": "/", "value": 88.0, "extra": 12.0 },
+        { "signal": "temperature.c", "key": "", "value": 70.0 }
+      ]
+    }
+  ],
+  "expect": {
+    "notified": [],
+    "spoken": 0,
+    "held_at_end": 0,
+    "dropped": 0
+  }
+}

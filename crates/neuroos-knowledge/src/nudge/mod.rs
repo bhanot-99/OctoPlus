@@ -9,6 +9,7 @@ pub mod core;
 pub mod engine;
 pub mod eval;
 pub mod policy;
+pub mod replay;
 pub mod reply;
 pub mod rules;
 pub mod signals;

@@ -1,0 +1,32 @@
+{
+  "name": "rule_disk_critical",
+  "description": "disk_critical fires after holding at or above 95% for 1 minute",
+  "voice_available": false,
+  "steps": [
+    {
+      "at_s": 0,
+      "every_s": 30,
+      "until_s": 90,
+      "readings": [
+        {
+          "signal": "disk.used_percent",
+          "key": "/",
+          "value": 96.0,
+          "extra": 4.0
+        }
+      ]
+    }
+  ],
+  "expect": {
+    "notified": [
+      {
+        "rule": "disk_critical",
+        "at_s": 60,
+        "silent": false
+      }
+    ],
+    "spoken": 0,
+    "held_at_end": 0,
+    "dropped": 0
+  }
+}

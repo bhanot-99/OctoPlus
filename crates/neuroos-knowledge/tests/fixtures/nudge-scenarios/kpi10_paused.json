@@ -1,0 +1,22 @@
+{
+  "name": "kpi10_paused",
+  "description": "KPI-10: zero spoken nudges while sensing is paused; nudges are held instead",
+  "voice_available": true,
+  "steps": [
+    {
+      "at_s": 0,
+      "every_s": 30,
+      "until_s": 150,
+      "context": { "paused": true },
+      "readings": [
+        { "signal": "disk.used_percent", "key": "/", "value": 92.0, "extra": 8.0 }
+      ]
+    }
+  ],
+  "expect": {
+    "notified": [],
+    "spoken": 0,
+    "held_at_end": 1,
+    "dropped": 0
+  }
+}

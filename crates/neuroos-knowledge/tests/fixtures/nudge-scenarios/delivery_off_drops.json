@@ -1,0 +1,24 @@
+{
+  "name": "delivery_off_drops",
+  "description": "when delivery is configured to off, firing candidate is dropped",
+  "voice_available": true,
+  "policy": {
+    "deliver_important": "off"
+  },
+  "steps": [
+    {
+      "at_s": 0,
+      "every_s": 30,
+      "until_s": 120,
+      "readings": [
+        { "signal": "disk.used_percent", "key": "/", "value": 92.0, "extra": 8.0 }
+      ]
+    }
+  ],
+  "expect": {
+    "notified": [],
+    "spoken": 0,
+    "held_at_end": 0,
+    "dropped": 1
+  }
+}

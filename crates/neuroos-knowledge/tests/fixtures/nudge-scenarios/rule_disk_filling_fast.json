@@ -1,0 +1,28 @@
+{
+  "name": "rule_disk_filling_fast",
+  "description": "disk_filling_fast projects fill hours from least-squares history and fires after holding for 5 minutes",
+  "voice_available": false,
+  "steps": [
+    { "at_s": 0, "readings": [{ "signal": "disk.used_percent", "key": "/", "value": 50.0, "extra": 50.0 }] },
+    { "at_s": 120, "readings": [{ "signal": "disk.used_percent", "key": "/", "value": 54.0, "extra": 46.0 }] },
+    { "at_s": 240, "readings": [{ "signal": "disk.used_percent", "key": "/", "value": 58.0, "extra": 42.0 }] },
+    { "at_s": 360, "readings": [{ "signal": "disk.used_percent", "key": "/", "value": 62.0, "extra": 38.0 }] },
+    { "at_s": 480, "readings": [{ "signal": "disk.used_percent", "key": "/", "value": 66.0, "extra": 34.0 }] },
+    { "at_s": 600, "readings": [{ "signal": "disk.used_percent", "key": "/", "value": 70.0, "extra": 30.0 }] },
+    { "at_s": 720, "readings": [{ "signal": "disk.used_percent", "key": "/", "value": 74.0, "extra": 26.0 }] },
+    { "at_s": 840, "readings": [{ "signal": "disk.used_percent", "key": "/", "value": 78.0, "extra": 22.0 }] },
+    { "at_s": 900, "readings": [{ "signal": "disk.used_percent", "key": "/", "value": 80.0, "extra": 20.0 }] }
+  ],
+  "expect": {
+    "notified": [
+      {
+        "rule": "disk_filling_fast",
+        "at_s": 900,
+        "silent": false
+      }
+    ],
+    "spoken": 0,
+    "held_at_end": 0,
+    "dropped": 0
+  }
+}

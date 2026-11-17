@@ -1,0 +1,33 @@
+{
+  "name": "rule_battery_low",
+  "description": "battery_low fires immediately at or below 15% when discharging",
+  "voice_available": false,
+  "steps": [
+    {
+      "at_s": 0,
+      "readings": [
+        {
+          "signal": "battery.percent",
+          "key": "",
+          "value": 12.0
+        }
+      ]
+    },
+    {
+      "at_s": 30,
+      "readings": []
+    }
+  ],
+  "expect": {
+    "notified": [
+      {
+        "rule": "battery_low",
+        "at_s": 0,
+        "silent": false
+      }
+    ],
+    "spoken": 0,
+    "held_at_end": 0,
+    "dropped": 0
+  }
+}

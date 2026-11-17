@@ -1,0 +1,28 @@
+{
+  "name": "kpi10_fullscreen",
+  "description": "KPI-10: zero spoken nudges while a fullscreen app is focused; lowered to notification instead",
+  "voice_available": true,
+  "steps": [
+    {
+      "at_s": 0,
+      "every_s": 30,
+      "until_s": 150,
+      "context": { "fullscreen": true },
+      "readings": [
+        { "signal": "disk.used_percent", "key": "/", "value": 92.0, "extra": 8.0 }
+      ]
+    }
+  ],
+  "expect": {
+    "notified": [
+      {
+        "rule": "disk_nearly_full",
+        "at_s": 120,
+        "silent": false
+      }
+    ],
+    "spoken": 0,
+    "held_at_end": 0,
+    "dropped": 0
+  }
+}
