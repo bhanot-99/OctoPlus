@@ -63,7 +63,7 @@ The estimate for unseen wording is therefore routing ≈ 80 % and "this" ≈ 93 
 
 | Level | What | Result |
 | :--- | :--- | :--- |
-| UT / PT | router, deictic, evidence, tokens, sanitiser, session, facts, chat, action table, grammar well-formedness, prompt budgets, wrapper integrity, taint union, read-only result sentences | TESTS_KNOWLEDGE tests in `neuroos-knowledge`; proptests for no-panic, idempotence, budgets, taint ⊇ union |
+| UT / PT | router, deictic, evidence, tokens, sanitiser, session, facts, chat, action table, grammar well-formedness, prompt budgets, wrapper integrity, taint union, read-only result sentences | 112 tests in `neuroos-knowledge`; proptests for no-panic, idempotence, budgets, taint ⊇ union |
 | IT | the whole engine against fake C3, C4, C6 (every route, offers, follow-ups, cancel, real service start); kernel skills against a fake C3; `neuroosctl profile` against fake C3 and C6; the three child skills in a **real** Landlock and seccomp child | all pass |
 | IT (real stack) | `neuroosctl ask` for every route on real C3, C4, C6 and real skill children; audit log shows `ATTEMPT` and `RESULT` for `privacy.pause` and `system.disk_report` | pass after BUG-063/064; `calendar.read` failed honestly (no calendar folder configured) |
 | PF | NFR-PERF-05 and NFR-PERF-03, §4 | met |
@@ -86,7 +86,18 @@ C4 (C++): 3 new tests (grammar reaches the engine and does not leak to the next 
 
 ## 7. Gate
 
-GATE_RESULT
+`just ci` was run **to the end and is green** (format, lint with clippy `-D warnings`, clang-format and clang-tidy, shellcheck, machete, tests, dependency policy and network-ban probe, coverage, ASan/UBSan and TSan):
+
+| Step | Result |
+| :--- | :--- |
+| Rust tests (`nextest`, whole workspace) | 668 passed, 3 skipped (includes the real-unit proofs and the real-stack e2e ask-and-cancel) |
+| C++ tests (debug) | 65 of 65 |
+| `cargo deny`, network-ban probe | ok |
+| Rust coverage (gate ≥ 80 % lines) | 85.5 % lines overall; this phase's files 83–100 % (`turn.rs` 93.7, `router.rs` 97.2, `prompt.rs` 96.7, `action.rs` 96.8, `deictic.rs` 83.2, `notes.rs` 92.3, `calendar.rs` 93.9, `kernel_skills.rs` 96.2) |
+| C++ coverage (gate ≥ 70 % lines) | 78.8 % |
+| ASan + UBSan, TSan | 61 of 61 each |
+
+The first full run failed at coverage on `local_e2e_ask_and_cancel`: the Phase 1 test retries `neuroosctl ask` until it exits 0, and a down C4 now gives a spoken status line (FR-KNO-10) that exited 0, so the test took the line for an answer. Fixed properly rather than in the test: `AnswerDone` gained `status_only` and `degraded` (additive), and `neuroosctl ask` exits 1 for a status line. A second attempt stopped at the gate's own disk preflight (9.9 GiB free, 10 required); the 11 GB coverage build cache was removed and the whole gate re-run from the start.
 
 ## 8. Review
 
