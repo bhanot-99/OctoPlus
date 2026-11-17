@@ -3,6 +3,7 @@ add_library(neuroos_voice_core STATIC
   src/audio_ring.cpp
   src/service.cpp
   src/speech_split.cpp
+  src/spoken_lines.cpp
   src/turn_machine.cpp
   src/vad_gate.cpp
 )
@@ -18,6 +19,7 @@ target_link_libraries(neuroos-voice PRIVATE neuroos_voice_core neuroos neuroos_w
 add_executable(neuroos_voice_tests
   tests/audio_ring_test.cpp
   tests/speech_split_test.cpp
+  tests/spoken_lines_test.cpp
   tests/turn_machine_test.cpp
   tests/vad_gate_test.cpp
   tests/voice_test.cpp
