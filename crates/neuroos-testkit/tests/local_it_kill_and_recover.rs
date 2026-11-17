@@ -166,6 +166,15 @@ async fn local_it_kill_and_recover() {
     })
     .await
     .expect("parts did not come up within 120 s");
+    // C2 loads its speech models for tens of seconds and reports DEGRADED until it is capturing:
+    // give every part the chance to reach OK (bounded: a machine with no microphone keeps C2
+    // degraded, and that is then the baseline).
+    let _ = wait_for(t0, Duration::from_secs(90), |r| {
+        PARTS
+            .iter()
+            .all(|p| part_state(r, *p).0 == HealthStatus::Ok)
+    })
+    .await;
     // Let peer links settle for two scrapes, then take the baseline.
     tokio::time::sleep(Duration::from_secs(2 * SCRAPE_S + 1)).await;
     let baseline = statuses(&status().await.expect("healthd"));
