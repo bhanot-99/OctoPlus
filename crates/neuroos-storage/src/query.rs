@@ -236,6 +236,52 @@ impl Store {
             .await
     }
 
+    /// The nudge log rows the nudge engine needs to rebuild its state (ADR-0014): since
+    /// `since_ns`, the rows that start a cooldown or a snooze (`SPOKEN`, `NOTIFIED`, `SNOOZED`),
+    /// plus every switch row (`ENABLED`, `DISABLED`) whatever its age, oldest first. Held,
+    /// dropped and answered rows are history for the owner, not state, so a log full of them can
+    /// never push a cooldown out of the answer. Switches are settings, so retention and
+    /// time-range forget keep them.
+    ///
+    /// # Errors
+    /// [`DbError`] on read failure.
+    pub async fn nudge_log_since(
+        self: &Arc<Self>,
+        since_ns: u64,
+    ) -> Result<Vec<neuroos_proto::v1::NudgeLogEntry>, DbError> {
+        use neuroos_proto::v1::NudgeOutcome as O;
+        let timed = [O::Spoken as i64, O::Notified as i64, O::Snoozed as i64];
+        let switches = [O::Enabled as i64, O::Disabled as i64];
+        self.read(move |c| {
+            let mut s = c.prepare(
+                "SELECT rule_id, outcome, at_ns FROM nudge_log \
+                 WHERE (at_ns >= ?1 AND outcome IN (?2, ?3, ?4)) OR outcome IN (?5, ?6) \
+                 ORDER BY at_ns, id",
+            )?;
+            let rows = s
+                .query_map(
+                    params![
+                        signed(since_ns),
+                        timed[0],
+                        timed[1],
+                        timed[2],
+                        switches[0],
+                        switches[1]
+                    ],
+                    |r| {
+                        Ok(neuroos_proto::v1::NudgeLogEntry {
+                            rule_id: r.get(0)?,
+                            outcome: i32::try_from(r.get::<_, i64>(1)?).unwrap_or(0),
+                            at_ns: unsigned(r.get(2)?),
+                        })
+                    },
+                )?
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(rows)
+        })
+        .await
+    }
+
     /// Lists personal facts; a non-empty `relevant_to` keeps those sharing a word with it.
     ///
     /// # Errors

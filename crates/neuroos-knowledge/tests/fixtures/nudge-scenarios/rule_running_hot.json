@@ -1,0 +1,31 @@
+{
+  "name": "rule_running_hot",
+  "description": "running_hot fires after temperature holds at or above 90C for 2 minutes",
+  "voice_available": false,
+  "steps": [
+    {
+      "at_s": 0,
+      "every_s": 30,
+      "until_s": 150,
+      "readings": [
+        {
+          "signal": "temperature.c",
+          "key": "",
+          "value": 92.0
+        }
+      ]
+    }
+  ],
+  "expect": {
+    "notified": [
+      {
+        "rule": "running_hot",
+        "at_s": 120,
+        "silent": false
+      }
+    ],
+    "spoken": 0,
+    "held_at_end": 0,
+    "dropped": 0
+  }
+}

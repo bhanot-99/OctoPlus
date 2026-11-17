@@ -11,6 +11,10 @@ publish.workspace = true
 name = "neuroos-knowledge"
 path = "src/main.rs"
 
+[[bin]]
+name = "nudge-replay"
+path = "src/bin/nudge-replay.rs"
+
 [dependencies]
 neuroos-common = { path = "../neuroos-common" }
 neuroos-health = { path = "../neuroos-health" }
@@ -18,8 +22,10 @@ neuroos-ipc = { path = "../neuroos-ipc" }
 neuroos-proto = { path = "../neuroos-proto" }
 neuroos-taint = { path = "../neuroos-taint" }
 tokio = { workspace = true, features = ["sync", "time"] }
+jiff.workspace = true
 serde.workspace = true
 thiserror.workspace = true
+toml.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
 

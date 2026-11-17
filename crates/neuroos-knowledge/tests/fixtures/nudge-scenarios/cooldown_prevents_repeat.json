@@ -1,0 +1,21 @@
+{
+  "name": "cooldown_prevents_repeat",
+  "description": "battery_low fires, is blocked inside 2h cooldown even when rearmed, and fires again after cooldown",
+  "voice_available": false,
+  "steps": [
+    { "at_s": 0, "readings": [{ "signal": "battery.percent", "key": "", "value": 14.0 }] },
+    { "at_s": 60, "readings": [{ "signal": "battery.percent", "key": "", "value": 25.0 }] },
+    { "at_s": 120, "readings": [{ "signal": "battery.percent", "key": "", "value": 14.0 }] },
+    { "at_s": 7200, "readings": [{ "signal": "battery.percent", "key": "", "value": 25.0 }] },
+    { "at_s": 7260, "readings": [{ "signal": "battery.percent", "key": "", "value": 14.0 }] }
+  ],
+  "expect": {
+    "notified": [
+      { "rule": "battery_low", "at_s": 0, "silent": false },
+      { "rule": "battery_low", "at_s": 7260, "silent": false }
+    ],
+    "spoken": 0,
+    "held_at_end": 0,
+    "dropped": 0
+  }
+}

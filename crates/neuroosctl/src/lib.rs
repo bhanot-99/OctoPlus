@@ -5,6 +5,7 @@
 pub mod ask;
 pub mod audit;
 pub mod egress;
+pub mod nudges;
 pub mod profile;
 pub mod replay;
 pub mod run;
@@ -79,6 +80,12 @@ pub enum Commands {
         command: StorageCommands,
     },
 
+    /// The nudge rules: list, switch on or off, show a test line.
+    Nudges {
+        #[command(subcommand)]
+        command: NudgesCommands,
+    },
+
     /// Personal facts the buddy remembers (list, add, remove).
     Profile {
         #[command(subcommand)]
@@ -145,6 +152,32 @@ pub enum StorageCommands {
         /// Most results.
         #[arg(long, default_value_t = 5)]
         top_k: u32,
+    },
+}
+
+/// Subcommands under `neuroosctl nudges` (FR-NUD-02).
+#[derive(Debug, Subcommand)]
+pub enum NudgesCommands {
+    /// Show every rule: on, off or snoozed, and when it last fired.
+    List {
+        /// One JSON object per line.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Switch a rule on.
+    Enable {
+        /// Rule id, as shown by `list`.
+        rule: String,
+    },
+    /// Switch a rule off until it is enabled again.
+    Disable {
+        /// Rule id, as shown by `list`.
+        rule: String,
+    },
+    /// Show the rule's own notification line now (it does not count as a nudge).
+    Test {
+        /// Rule id, as shown by `list`.
+        rule: String,
     },
 }
 

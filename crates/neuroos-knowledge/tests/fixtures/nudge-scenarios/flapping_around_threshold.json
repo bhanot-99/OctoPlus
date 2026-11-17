@@ -1,0 +1,19 @@
+{
+  "name": "flapping_around_threshold",
+  "description": "flapping above and below threshold resets hold timer so rule never fires",
+  "voice_available": false,
+  "steps": [
+    { "at_s": 0, "readings": [{ "signal": "disk.used_percent", "key": "/", "value": 91.0, "extra": 9.0 }] },
+    { "at_s": 60, "readings": [{ "signal": "disk.used_percent", "key": "/", "value": 88.0, "extra": 12.0 }] },
+    { "at_s": 120, "readings": [{ "signal": "disk.used_percent", "key": "/", "value": 91.0, "extra": 9.0 }] },
+    { "at_s": 180, "readings": [{ "signal": "disk.used_percent", "key": "/", "value": 88.0, "extra": 12.0 }] },
+    { "at_s": 240, "readings": [{ "signal": "disk.used_percent", "key": "/", "value": 91.0, "extra": 9.0 }] },
+    { "at_s": 300, "readings": [{ "signal": "disk.used_percent", "key": "/", "value": 88.0, "extra": 12.0 }] }
+  ],
+  "expect": {
+    "notified": [],
+    "spoken": 0,
+    "held_at_end": 0,
+    "dropped": 0
+  }
+}

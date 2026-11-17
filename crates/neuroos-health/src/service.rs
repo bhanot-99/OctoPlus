@@ -358,7 +358,9 @@ impl ServiceBuilder {
                     PeerPolicy::uids(vec![allowed_uid])
                         .with_units(vec!["neuroos-healthd.service".to_string()])
                 } else if entry.allows_ctl() {
-                    PeerPolicy::uids(vec![allowed_uid])
+                    // Any admitted peer may connect, but its unit is still looked up: per-message
+                    // checks (C3's writes from C5 and C6 only) depend on it.
+                    PeerPolicy::uids(vec![allowed_uid]).resolving_unit()
                 } else {
                     PeerPolicy::uids(vec![allowed_uid]).with_units(entry.allowed_client_units())
                 };

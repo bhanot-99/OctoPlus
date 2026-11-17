@@ -429,9 +429,9 @@ flowchart LR
 
 ### 9.4 Exit criteria
 
-- [ ] All v1.0 rules fire correctly on synthetic signals and stay silent otherwise.
-- [ ] KPI-10 is zero across the replay fixtures.
-- [ ] Nudge isolation proven.
+- [x] All v1.0 rules fire correctly on synthetic signals and stay silent otherwise. (Except the upcoming-event rule, not built.)
+- [x] KPI-10 is zero across the replay fixtures and the recorded dumps.
+- [x] Nudge isolation proven.
 - [ ] Owner trial done; OQ-03 closed.
 - [ ] Phase report; owner sign-off.
 

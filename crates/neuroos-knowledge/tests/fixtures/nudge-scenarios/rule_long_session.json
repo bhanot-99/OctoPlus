@@ -1,0 +1,29 @@
+{
+  "name": "rule_long_session",
+  "description": "long_session fires immediately at or above 90 active minutes",
+  "voice_available": false,
+  "steps": [
+    {
+      "at_s": 0,
+      "readings": [
+        {
+          "signal": "session.active_minutes",
+          "key": "",
+          "value": 95.0
+        }
+      ]
+    }
+  ],
+  "expect": {
+    "notified": [
+      {
+        "rule": "long_session",
+        "at_s": 0,
+        "silent": false
+      }
+    ],
+    "spoken": 0,
+    "held_at_end": 0,
+    "dropped": 0
+  }
+}

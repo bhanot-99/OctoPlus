@@ -764,3 +764,20 @@ fn kernel_dropin_binds_notes_writable_and_calendars_read_only() {
         );
     }
 }
+
+#[test]
+fn only_the_knowledge_unit_binds_the_nudge_rules_file() {
+    use neuroos_deploy::generate_user_service;
+    let generate_unit = |p| generate_user_service(p, "model.gguf");
+    let bind = "BindReadOnlyPaths=-%h/.config/neuroos/nudges.toml";
+    for part in [
+        Part::Storage,
+        Part::Kernel,
+        Part::Monitor,
+        Part::Healthd,
+        Part::Inference,
+    ] {
+        assert!(!generate_unit(part).contains(bind), "{part:?}");
+    }
+    assert!(generate_unit(Part::Knowledge).contains(bind));
+}

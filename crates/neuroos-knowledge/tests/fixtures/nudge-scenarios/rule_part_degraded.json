@@ -1,0 +1,31 @@
+{
+  "name": "rule_part_degraded",
+  "description": "part_degraded fires after 1 or more parts degraded for 2 minutes",
+  "voice_available": false,
+  "steps": [
+    {
+      "at_s": 0,
+      "every_s": 30,
+      "until_s": 150,
+      "readings": [
+        {
+          "signal": "parts.degraded",
+          "key": "",
+          "value": 1.0
+        }
+      ]
+    }
+  ],
+  "expect": {
+    "notified": [
+      {
+        "rule": "part_degraded",
+        "at_s": 120,
+        "silent": false
+      }
+    ],
+    "spoken": 0,
+    "held_at_end": 0,
+    "dropped": 0
+  }
+}

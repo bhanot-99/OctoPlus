@@ -1,0 +1,28 @@
+{
+  "name": "rate_limits_hourly_and_daily",
+  "description": "enforces hourly limit of 3 spoken nudges; 4th candidate in the hour is held",
+  "voice_available": true,
+  "policy": {
+    "max_spoken_per_hour": 3,
+    "max_spoken_per_day": 8
+  },
+  "steps": [
+    {
+      "at_s": 0,
+      "every_s": 30,
+      "until_s": 120,
+      "readings": [
+        { "signal": "disk.used_percent", "key": "/mnt/a", "value": 92.0, "extra": 8.0 },
+        { "signal": "disk.used_percent", "key": "/mnt/b", "value": 92.0, "extra": 8.0 },
+        { "signal": "disk.used_percent", "key": "/mnt/c", "value": 92.0, "extra": 8.0 },
+        { "signal": "disk.used_percent", "key": "/mnt/d", "value": 92.0, "extra": 8.0 }
+      ]
+    }
+  ],
+  "expect": {
+    "notified": [],
+    "spoken": 3,
+    "held_at_end": 1,
+    "dropped": 0
+  }
+}

@@ -570,6 +570,7 @@ async fn test_kernel_notify_request_handling() {
             Body::NotifyRequest(neuroos_proto::v1::NotifyRequest {
                 template_id: "unknown.template".into(),
                 args: vec![],
+                silent: false,
             }),
             Duration::from_millis(500),
         )
@@ -588,6 +589,7 @@ async fn test_kernel_notify_request_handling() {
             Body::NotifyRequest(neuroos_proto::v1::NotifyRequest {
                 template_id: "disk.nearly_full".into(),
                 args: vec![],
+                silent: false,
             }),
             Duration::from_millis(500),
         )
@@ -609,6 +611,7 @@ async fn test_kernel_notify_request_handling() {
                     name: "percent".into(),
                     value: 92.0,
                 }],
+                silent: false,
             }),
             Duration::from_millis(500),
         )

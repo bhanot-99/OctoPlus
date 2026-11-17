@@ -69,6 +69,8 @@ message Envelope {
     ProfileRemove profile_remove = 75;
     RunLifecycleJob run_lifecycle_job = 76;
     LifecycleResult lifecycle_result = 77;
+    QueryNudgeLog query_nudge_log = 78;
+    NudgeLogEntries nudge_log_entries = 79;
 
     // C4 inference 100–119
     GenerateRequest generate_request = 100;
