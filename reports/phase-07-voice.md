@@ -50,7 +50,7 @@ Real-stack testing and the evaluation tool found the most: BUG-076 (a repeated q
 No audio on disk (`voice-sc-checks.sh`: no audio file appears, no writable descriptor), capture strictness (a nonexistent microphone creates no stream), no spoken nudge while another application holds the microphone (probe, C5 policy, C2 backstop), no approval by voice (a transcript is text through the same turn engine). See `security.md` rows and ADR-0015.
 
 ## 7. Gate
-See the end of this file once `just ci` has finished (updated by Claude).
+`just ci` stages all green on the final code: format check, lint (clippy, clang-format, clang-tidy including the voice engines in the `voice` tree, shellcheck, machete), tests (777 Rust, 190 C++ plus the local real-stack tests), deny, coverage, and the ASan/UBSan and TSan runs. The stages were run in pieces after fixes, not as one uninterrupted `just ci`. Three things flaked or failed on the way and were fixed or recorded: SC proof 3 caught C2 reading the install folder (narrowed), the kill-and-recover baseline now waits for C2 to finish loading, a TSan race in a test fake. Known flaky under load: BUG-086 (cancel timing), BUG-087 (an ipc test, once).
 
 ## 8. Owner to do
 1. **Choose the voice** (OQ-04): `scripts/voice-listening-test.sh`, then `voice = <name>` in `~/.config/neuroos/voice.conf`.
