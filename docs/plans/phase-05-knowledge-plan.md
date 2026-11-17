@@ -110,3 +110,22 @@ Read-only agy review of the whole phase diff; Claude verifies every finding in c
 - **KPI-1 and KPI-12 grading** on the held-out sets, transcripts supplied (needs the real model running).
 - **Sign-off** and ADR-0013 acceptance; merge to `main`.
 - Any model run long enough to need approval (the real C4 for latency numbers).
+
+---
+
+## 4. Outcome (2026-11-17)
+
+Built in one day on the owner's go-ahead (D-29). What differed from the plan above:
+
+| Package | Plan | What happened |
+| :--- | :--- | :--- |
+| W1 router | agy | agy; Claude's own probe sets found gaps at once; the router was then generalised three times from four held-out sets (`reports/phase-05-knowledge.md` §4) |
+| W2–W6, W8, W9 | agy | agy (sanitiser + token budget, deictic + evidence, session + facts, chat rules); Claude fixed what each independent probe found |
+| W7 assembler, W10 action, W12 engine, W13 CLI | Claude | Claude; W10 gained "only the request's intent may be called" and "saved text is the user's words" after the review |
+| W11 skills | Claude kernel side, agy child side | **Claude did both** (agy was busy with W6/W8; the child skills were small and needed the real sandbox); agy reviewed them |
+| W14 corpora | Claude harness, agy corpora | agy wrote the injection corpus (100 lines); Claude the harness, four held-out sets and the KPI-12 questions |
+| W15 tests | Claude | as planned, plus the real-stack runs |
+| W16 review | agy read-only | agy, 10 findings, 8 fixed, 2 documented |
+| *not planned* | — | **C4 grammar support** (FR-INF-05 was missing), the kernel unit's folder drop-in, `ask --explain`, `scripts/eval-p5.py` |
+
+Not done: KPI-1 (needs recordings, D-26), grading of KPI-12 (owner), `system.cleanup` and `web.*` from the action route.
