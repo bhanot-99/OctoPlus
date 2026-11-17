@@ -235,6 +235,19 @@ impl Notifier {
     /// # Errors
     /// Returns [`NotifyError::DeliveryFailed`] on bus or RPC error.
     pub async fn deliver(&self, rendered: &Rendered) -> Result<u32, NotifyError> {
+        self.deliver_with(rendered, false).await
+    }
+
+    /// Like [`Notifier::deliver`], optionally without a sound (`silent`: the standard
+    /// `suppress-sound` hint).
+    ///
+    /// # Errors
+    /// Returns [`NotifyError::DeliveryFailed`] on bus or RPC error.
+    pub async fn deliver_with(
+        &self,
+        rendered: &Rendered,
+        silent: bool,
+    ) -> Result<u32, NotifyError> {
         let conn = self.get_connection().await?;
         let proxy = NotificationsProxy::new(&conn)
             .await
@@ -243,6 +256,9 @@ impl Notifier {
         let mut hints: HashMap<&str, Variant<'_>> = HashMap::new();
         hints.insert("urgency", Variant::from(1u8));
         hints.insert("desktop-entry", Variant::from("org.neuroos.Confirm"));
+        if silent {
+            hints.insert("suppress-sound", Variant::from(true));
+        }
 
         let res = proxy
             .notify(

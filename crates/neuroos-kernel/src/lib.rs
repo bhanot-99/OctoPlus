@@ -277,7 +277,7 @@ impl Handler for KernelHandler {
                     }
                 };
 
-                match self.notifier.deliver(&rendered).await {
+                match self.notifier.deliver_with(&rendered, req.silent).await {
                     Ok(_) => {
                         self.notifications_sent.fetch_add(1, Ordering::Relaxed);
                         Ok(Body::Ack(neuroos_proto::v1::Ack {}))

@@ -48,6 +48,7 @@ message DispatchResult {
 message NotifyRequest {
   string template_id = 1;
   repeated TemplateArg args = 2;
+  bool silent = 3;   // show without a sound (nudges held or downgraded, design.md §8.3)
 }
 
 message AuditTailRequest {
