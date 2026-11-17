@@ -75,7 +75,7 @@ struct FakeC5 {
                         v1::Envelope p;
                         p.mutable_preamble_request()->set_kind(v1::PREAMBLE_KIND_LOOKING);
                         sink.Send(std::move(p));
-                        for (int i = 1; i <= chunks; ++i) {
+                        for (int i = 1; i <= chunks.load(); ++i) {
                           if (cancel.cancelled()) {
                             ++cancelled;
                             return Error{.message = "cancelled", .code = 4};
@@ -84,7 +84,7 @@ struct FakeC5 {
                           c.mutable_speak_chunk()->set_text("Sentence " + std::to_string(i) + ".");
                           c.mutable_speak_chunk()->set_sequence(static_cast<std::uint32_t>(i));
                           sink.Send(std::move(c));
-                          std::this_thread::sleep_for(delay);
+                          std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms.load()));
                         }
                         reply->mutable_answer_done();
                         return ok_status();
@@ -93,8 +93,8 @@ struct FakeC5 {
   }
   std::filesystem::path path;
   std::unique_ptr<ipc::Server> server;
-  int chunks = 2;
-  std::chrono::milliseconds delay{0};
+  std::atomic<int> chunks{2};  // changed by the test while the server thread reads it
+  std::atomic<int> delay_ms{0};
   std::string last_text;
   bool last_follow_up = false;
   std::atomic<int> cancelled{0};
@@ -132,7 +132,7 @@ TEST(KnowledgeLink, CancellingStopsTheRequestAndSilencesTheReceiver) {
   const auto dir = TempDir();
   FakeC5 c5(dir);
   c5.chunks = 50;
-  c5.delay = 40ms;
+  c5.delay_ms = 40;
   KnowledgeLink link(std::make_shared<ipc::ReconnectingClient>(c5.path, 1 << 20));
   Heard heard;
   CommandMsg cmd;
@@ -154,7 +154,7 @@ TEST(KnowledgeLink, ASecondCommandReplacesTheFirst) {
   const auto dir = TempDir();
   FakeC5 c5(dir);
   c5.chunks = 30;
-  c5.delay = 30ms;
+  c5.delay_ms = 30;
   KnowledgeLink link(std::make_shared<ipc::ReconnectingClient>(c5.path, 1 << 20));
   Heard first;
   Heard second;
