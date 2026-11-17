@@ -1,0 +1,40 @@
+{"text": "what is this window", "deictic": true, "anchor": "now"}
+{"text": "what was I working on a minute ago", "deictic": true, "anchor": "seconds_ago:60"}
+{"text": "what was I reading five minutes ago", "deictic": true, "anchor": "seconds_ago:300"}
+{"text": "what is that app doing", "deictic": true, "anchor": "now"}
+{"text": "what am I doing right now", "deictic": true, "anchor": "now"}
+{"text": "which file was this two minutes ago", "deictic": true, "anchor": "seconds_ago:120"}
+{"text": "what was I looking at an hour ago", "deictic": true, "anchor": "seconds_ago:3600"}
+{"text": "what is this tab", "deictic": true, "anchor": "now"}
+{"text": "what was I working on earlier", "deictic": true, "anchor": "range:3600"}
+{"text": "what was I doing this morning", "deictic": true, "anchor": "range:86400"}
+{"text": "what is that thing on my screen", "deictic": true, "anchor": "now"}
+{"text": "what was I doing 10 minutes ago", "deictic": true, "anchor": "seconds_ago:600"}
+{"text": "what was this window about three hours ago", "deictic": true, "anchor": "seconds_ago:10800"}
+{"text": "what am I reading", "deictic": true, "anchor": "now"}
+{"text": "which app is this", "deictic": true, "anchor": "now"}
+{"text": "what was I editing just now", "deictic": true, "anchor": "seconds_ago:30"}
+{"text": "what was I doing yesterday", "deictic": true, "anchor": "range:172800"}
+{"text": "what was I doing last night", "deictic": true, "anchor": "range:172800"}
+{"text": "what file is this right now", "deictic": true, "anchor": "now"}
+{"text": "what was that document I had open today", "deictic": true, "anchor": "range:86400"}
+{"text": "what is the capital of Peru", "deictic": false, "anchor": "none"}
+{"text": "tell me a joke", "deictic": false, "anchor": "none"}
+{"text": "what did I do yesterday", "deictic": false, "anchor": "range:172800"}
+{"text": "how long did I code this week", "deictic": false, "anchor": "range:604800"}
+{"text": "is it going to rain today", "deictic": false, "anchor": "range:86400"}
+{"text": "it is a nice day", "deictic": false, "anchor": "none"}
+{"text": "that is a good point", "deictic": false, "anchor": "none"}
+{"text": "what happened earlier in the match", "deictic": false, "anchor": "range:3600"}
+{"text": "I was thinking about that", "deictic": false, "anchor": "none"}
+{"text": "how do I write a loop", "deictic": false, "anchor": "none"}
+{"text": "remind me tomorrow", "deictic": false, "anchor": "none"}
+{"text": "what is the time right now", "deictic": false, "anchor": "now"}
+{"text": "who is the president", "deictic": false, "anchor": "none"}
+{"text": "how are you today", "deictic": false, "anchor": "range:86400"}
+{"text": "what is this word in French", "deictic": false, "anchor": "none"}
+{"text": "explain that idea", "deictic": false, "anchor": "none"}
+{"text": "what did I spend last week", "deictic": false, "anchor": "range:604800"}
+{"text": "it was cold last night", "deictic": false, "anchor": "range:172800"}
+{"text": "here is my question", "deictic": false, "anchor": "none"}
+{"text": "these are good", "deictic": false, "anchor": "none"}

@@ -79,12 +79,20 @@ pub struct RouterPatterns {
     pub activity_cues: &'static [&'static str],
     pub time_refs: &'static [&'static str],
     pub time_app_words: &'static [&'static str],
-    pub action_trigger_words: &'static [&'static str],
 }
 
 /// Master constant table containing all routing word and phrase patterns.
 pub const PATTERNS: RouterPatterns = RouterPatterns {
     nudge_replies: &[
+        "mute that one",
+        "mute this one",
+        "mute it",
+        "silence it",
+        "give me a minute",
+        "give me a moment",
+        "give me a second",
+        "can t right now",
+        "can t now",
         "yes",
         "yeah",
         "yep",
@@ -156,6 +164,10 @@ pub const PATTERNS: RouterPatterns = RouterPatterns {
         "just",
     ],
     deictic_questions: &[
+        "what is on my screen",
+        "what s on my screen",
+        "what is on screen",
+        "what s on screen",
         "what is this",
         "what was this",
         "what s this",
@@ -190,6 +202,7 @@ pub const PATTERNS: RouterPatterns = RouterPatterns {
         "what am i working on",
         "what am i reading",
         "what i just looked at",
+        "what did i just",
         "what i just read",
         "what i just opened",
         "what i just did",
@@ -201,7 +214,9 @@ pub const PATTERNS: RouterPatterns = RouterPatterns {
     ],
     activity_cues: &[
         "doing", "working", "looking", "reading", "open", "window", "app", "screen", "tab", "file",
-        "writing", "watching", "browsing", "running", "editing", "using", "spent", "time",
+        "writing", "watching", "browsing", "running", "editing", "using", "spent", "time", "error",
+        "terminal", "browser", "editor", "document", "page", "video", "message", "build", "code",
+        "email", "mail",
     ],
     time_refs: &[
         "today",
@@ -221,6 +236,11 @@ pub const PATTERNS: RouterPatterns = RouterPatterns {
         "hours ago",
         "past hour",
         "recently",
+        "a while ago",
+        "a moment ago",
+        "half an hour ago",
+        "ago",
+        "last time",
     ],
     time_app_words: &[
         "today",
@@ -253,11 +273,6 @@ pub const PATTERNS: RouterPatterns = RouterPatterns {
         "window",
         "tab",
         "screen",
-    ],
-    action_trigger_words: &[
-        "pause", "stop", "mute", "forget", "delete", "remember", "clean", "cleanup", "free",
-        "empty", "trash", "search", "look", "open", "fetch", "add", "write", "append", "note",
-        "notes", "calendar", "schedule", "disk", "find",
     ],
 };
 
@@ -315,24 +330,178 @@ pub fn strip_prefix_word<'a>(text: &'a str, phrase: &str) -> Option<&'a str> {
     }
 }
 
-/// Checks if `norm` matches any known short nudge reply phrase.
+/// First words that start a short answer to a nudge.
+const REPLY_STARTERS: &[&str] = &[
+    "yes",
+    "yeah",
+    "yep",
+    "yup",
+    "sure",
+    "ok",
+    "okay",
+    "no",
+    "nope",
+    "nah",
+    "later",
+    "stop",
+    "dismiss",
+    "snooze",
+    "cancel",
+    "never",
+    "not now",
+    "not right now",
+    "show me",
+    "go ahead",
+    "remind me",
+    "don t",
+    "dont",
+    "do not",
+    "thanks",
+    "thank you",
+    "got it",
+    "do it",
+    "please",
+    "maybe",
+    "fine",
+    "alright",
+    "not at the moment",
+    "not today",
+    "not yet",
+    "skip",
+    "hold off",
+    "i ll",
+    "i will",
+    "leave it",
+    "leave that",
+    "not interested",
+    "absolutely",
+    "of course",
+    "that s fine",
+    "i m fine",
+    "no need",
+    "ignore",
+];
+
+/// Longest reply, in words, that is still taken as an answer to a nudge and not a new question.
+const MAX_REPLY_WORDS: usize = 6;
+
+/// Words that, right after a reply starter, begin a new question ("no, what is rust").
+const QUESTION_STARTERS: &[&str] = &[
+    "what", "how", "why", "who", "when", "where", "which", "can", "could", "explain", "is", "are",
+    "does", "do you",
+];
+
+/// Openings of a new request, not an answer to a nudge.
+const NEW_REQUEST_STARTERS: &[&str] = &[
+    "tell me a",
+    "tell me about",
+    "give me",
+    "write",
+    "list",
+    "translate",
+    "calculate",
+    "define",
+    "recommend",
+    "suggest",
+    "play",
+    "explain",
+    "describe",
+    "summarise",
+    "summarize",
+    "compare",
+    "find",
+    "search",
+    "look",
+    "open",
+    "add",
+    "remember",
+    "forget",
+    "delete",
+    "pause",
+];
+
+/// Checks if `norm` is a short answer to a nudge: a known phrase, or a short text that starts
+/// with a reply word and does not turn into a new question or a skill request.
 #[must_use]
 pub fn is_nudge_reply(norm: &str) -> bool {
-    PATTERNS.nudge_replies.contains(&norm)
+    if PATTERNS.nudge_replies.contains(&norm) {
+        return true;
+    }
+    if norm.split(' ').count() > MAX_REPLY_WORDS || detect_action(norm).is_some() {
+        return false;
+    }
+    // Inside a nudge window a short statement that is not a question, a request for something
+    // new or a screen question is most likely an answer to the nudge, whatever its wording.
+    let starts_a_new_turn = QUESTION_STARTERS
+        .iter()
+        .chain(NEW_REQUEST_STARTERS)
+        .any(|q| strip_prefix_word(norm, q).is_some());
+    if !starts_a_new_turn && norm.split(' ').count() < MAX_REPLY_WORDS && !detect_deictic(norm) {
+        return true;
+    }
+    REPLY_STARTERS
+        .iter()
+        .find_map(|st| strip_prefix_word(norm, st))
+        .is_some_and(|rest| {
+            // "show me what is using it" asks to be shown; only "no, what is rust" is new.
+            norm.starts_with("show me")
+                || !QUESTION_STARTERS
+                    .iter()
+                    .any(|q| strip_prefix_word(rest, q).is_some())
+        })
+}
+
+/// Verbs that remove stored things, strong ones may mean a single fact ("forget that").
+const FORGET_STRONG: &[&str] = &["forget", "delete", "erase", "wipe"];
+/// Weaker verbs: only a forget request when they name history, a time or a fact.
+const FORGET_WEAK: &[&str] = &["clear", "remove", "get rid of"];
+/// Words that mean "activity over time", so the request is to forget a stretch of history.
+const HISTORY_WORDS: &[&str] = &[
+    "history",
+    "activity",
+    "everything",
+    "what i did",
+    "what i was doing",
+    "browsing",
+    "session",
+    "the last",
+    "from",
+];
+
+/// "forget that", "wipe my history from today", "remove the fact that I live in Pune".
+fn forget_intent(text: &str) -> Option<ActionHint> {
+    let (rest, strong) = FORGET_STRONG
+        .iter()
+        .find_map(|v| strip_prefix_word(text, v))
+        .map(|r| (r, true))
+        .or_else(|| {
+            FORGET_WEAK
+                .iter()
+                .find_map(|v| strip_prefix_word(text, v))
+                .map(|r| (r, false))
+        })?;
+    let timed = PATTERNS
+        .time_app_words
+        .iter()
+        .any(|w| contains_word(rest, w))
+        || HISTORY_WORDS.iter().any(|w| contains_word(rest, w));
+    if contains_word(rest, "fact") {
+        return Some(ActionHint::ForgetFact);
+    }
+    if timed {
+        return Some(ActionHint::Forget);
+    }
+    // No time or history word: only the strong verbs, and only when they point at a thing
+    // of the user's ("forget that", "forget my favourite colour", "forget about my dog").
+    let points_at_a_thing = ["that", "my", "about", "the", "what"]
+        .iter()
+        .any(|w| strip_prefix_word(rest, w).is_some());
+    (strong && points_at_a_thing).then_some(ActionHint::ForgetFact)
 }
 
 /// Detects an imperative skill intent in normalised text.
 #[must_use]
 pub fn detect_action(norm: &str) -> Option<ActionHint> {
-    // Fast-path: must contain at least one action trigger word with word boundaries
-    let has_trigger = PATTERNS
-        .action_trigger_words
-        .iter()
-        .any(|w| contains_word(norm, w));
-    if !has_trigger {
-        return None;
-    }
-
     // Strip up to two request prefixes (e.g. "please can you ...")
     let mut text = norm;
     for prefix in PATTERNS.request_prefixes {
@@ -357,62 +526,9 @@ pub fn detect_action(norm: &str) -> Option<ActionHint> {
         return Some(ActionHint::Pause);
     }
 
-    // 2. Forget vs ForgetFact
-    // "forget that" with no time/app word = ForgetFact
-    if let Some(rest) =
-        strip_prefix_word(text, "forget that").or_else(|| strip_prefix_word(text, "delete that"))
-    {
-        let has_time_app = PATTERNS
-            .time_app_words
-            .iter()
-            .any(|w| contains_word(rest, w));
-        return if has_time_app {
-            Some(ActionHint::Forget)
-        } else {
-            Some(ActionHint::ForgetFact)
-        };
-    }
-
-    // Explicit activity/history forget patterns
-    if strip_prefix_word(text, "forget what i did").is_some()
-        || strip_prefix_word(text, "delete what i did").is_some()
-        || strip_prefix_word(text, "forget everything").is_some()
-        || strip_prefix_word(text, "delete everything").is_some()
-        || strip_prefix_word(text, "forget my history").is_some()
-        || strip_prefix_word(text, "delete my history").is_some()
-        || strip_prefix_word(text, "forget the last").is_some()
-        || strip_prefix_word(text, "delete the last").is_some()
-        || strip_prefix_word(text, "forget my activity").is_some()
-        || strip_prefix_word(text, "delete my activity").is_some()
-        || strip_prefix_word(text, "forget from").is_some()
-        || strip_prefix_word(text, "delete from").is_some()
-    {
-        return Some(ActionHint::Forget);
-    }
-
-    // Explicit fact forget patterns
-    if strip_prefix_word(text, "forget fact").is_some()
-        || strip_prefix_word(text, "forget the fact").is_some()
-        || strip_prefix_word(text, "delete fact").is_some()
-        || strip_prefix_word(text, "delete the fact").is_some()
-    {
-        return Some(ActionHint::ForgetFact);
-    }
-
-    // "forget my ..." / "forget about my ..." -> ForgetFact unless time/app word present
-    if let Some(rest) = strip_prefix_word(text, "forget my")
-        .or_else(|| strip_prefix_word(text, "delete my"))
-        .or_else(|| strip_prefix_word(text, "forget about my"))
-    {
-        let has_time_app = PATTERNS
-            .time_app_words
-            .iter()
-            .any(|w| contains_word(rest, w));
-        return if has_time_app {
-            Some(ActionHint::Forget)
-        } else {
-            Some(ActionHint::ForgetFact)
-        };
+    // 2. Forget: a forgetting verb first, then what follows decides activity or one fact.
+    if let Some(hint) = forget_intent(text) {
+        return Some(hint);
     }
 
     // 3. Remember
@@ -423,144 +539,249 @@ pub fn detect_action(norm: &str) -> Option<ActionHint> {
         return Some(ActionHint::Remember);
     }
 
-    // 4. Cleanup
-    if strip_prefix_word(text, "clean up").is_some()
-        || strip_prefix_word(text, "cleanup").is_some()
-        || strip_prefix_word(text, "free up disk").is_some()
-        || strip_prefix_word(text, "free up space").is_some()
-        || strip_prefix_word(text, "empty trash").is_some()
-        || strip_prefix_word(text, "empty the trash").is_some()
-        || strip_prefix_word(text, "empty recycle bin").is_some()
-        || strip_prefix_word(text, "empty the recycle bin").is_some()
-        || text == "clean up"
-        || text == "empty trash"
-    {
-        return Some(ActionHint::Cleanup);
+    // 4. The remaining intents: a leading verb phrase plus an object word, so "free up some
+    //    space on my laptop" and "find the word budget in my notes" are found without a
+    //    phrase list for every wording. Order matters: notes before the web, the web before fetch.
+    for intent in INTENTS {
+        if let Some(rest) = intent.verbs.iter().find_map(|v| strip_prefix_word(text, v))
+            && (intent.objects.is_empty() || intent.objects.iter().any(|o| contains_word(rest, o)))
+        {
+            return Some(intent.hint);
+        }
     }
 
-    // 5. Search
-    if strip_prefix_word(text, "search the web for").is_some()
-        || strip_prefix_word(text, "search the web").is_some()
-        || strip_prefix_word(text, "look up online").is_some()
-        || strip_prefix_word(text, "look this up online").is_some()
-        || strip_prefix_word(text, "look that up online").is_some()
-        || strip_prefix_word(text, "look it up online").is_some()
-        || strip_prefix_word(text, "search online for").is_some()
-        || strip_prefix_word(text, "search online").is_some()
-        || strip_prefix_word(text, "look online for").is_some()
-        || strip_prefix_word(text, "look online").is_some()
-        || strip_prefix_word(text, "search google for").is_some()
-        || strip_prefix_word(text, "search the internet for").is_some()
-    {
-        return Some(ActionHint::Search);
-    }
-
-    // 6. Fetch
-    if strip_prefix_word(text, "open this link").is_some()
-        || strip_prefix_word(text, "open the link").is_some()
-        || strip_prefix_word(text, "open link").is_some()
-        || strip_prefix_word(text, "open this url").is_some()
-        || strip_prefix_word(text, "open the url").is_some()
-        || strip_prefix_word(text, "open url").is_some()
-        || strip_prefix_word(text, "fetch this link").is_some()
-        || strip_prefix_word(text, "fetch the link").is_some()
-        || strip_prefix_word(text, "fetch link").is_some()
-        || strip_prefix_word(text, "fetch this url").is_some()
-        || strip_prefix_word(text, "fetch the url").is_some()
-        || strip_prefix_word(text, "fetch url").is_some()
-        || strip_prefix_word(text, "fetch https").is_some()
-        || strip_prefix_word(text, "fetch http").is_some()
-        || strip_prefix_word(text, "open https").is_some()
-        || strip_prefix_word(text, "open http").is_some()
-    {
-        return Some(ActionHint::Fetch);
-    }
-
-    // 7. AppendNote
-    if strip_prefix_word(text, "add to my note").is_some()
-        || strip_prefix_word(text, "add to my notes").is_some()
-        || strip_prefix_word(text, "add to note").is_some()
-        || strip_prefix_word(text, "add to notes").is_some()
-        || strip_prefix_word(text, "add this to my note").is_some()
-        || strip_prefix_word(text, "add this to my notes").is_some()
-        || strip_prefix_word(text, "write in my note").is_some()
-        || strip_prefix_word(text, "write in my notes").is_some()
-        || strip_prefix_word(text, "write this in my note").is_some()
-        || strip_prefix_word(text, "write this in my notes").is_some()
-        || strip_prefix_word(text, "write to my note").is_some()
-        || strip_prefix_word(text, "write to my notes").is_some()
-        || strip_prefix_word(text, "append to my note").is_some()
-        || strip_prefix_word(text, "append to my notes").is_some()
-        || strip_prefix_word(text, "append to note").is_some()
-        || strip_prefix_word(text, "append to notes").is_some()
-        || strip_prefix_word(text, "append to").is_some()
-        || strip_prefix_word(text, "take a note").is_some()
-        || strip_prefix_word(text, "make a note").is_some()
-    {
-        return Some(ActionHint::AppendNote);
-    }
-
-    // 8. NotesSearch
-    if strip_prefix_word(text, "search my notes").is_some()
-        || strip_prefix_word(text, "find in my notes").is_some()
-        || strip_prefix_word(text, "search in my notes").is_some()
-        || strip_prefix_word(text, "find in notes").is_some()
-        || strip_prefix_word(text, "look in my notes").is_some()
-    {
-        return Some(ActionHint::NotesSearch);
-    }
-
-    // 9. CalendarRead
-    if strip_prefix_word(text, "what is on my calendar").is_some()
-        || strip_prefix_word(text, "what s on my calendar").is_some()
-        || strip_prefix_word(text, "check my calendar").is_some()
-        || strip_prefix_word(text, "show my calendar").is_some()
-        || strip_prefix_word(text, "read my calendar").is_some()
-        || strip_prefix_word(text, "what is my schedule").is_some()
-        || strip_prefix_word(text, "what s my schedule").is_some()
-        || strip_prefix_word(text, "my schedule").is_some()
-        || strip_prefix_word(text, "show my schedule").is_some()
-        || strip_prefix_word(text, "view my schedule").is_some()
-        || strip_prefix_word(text, "check my schedule").is_some()
-        || strip_prefix_word(text, "what do i have scheduled").is_some()
-        || text == "what is on my calendar"
-        || text == "what s on my calendar"
-        || text == "my schedule"
-    {
+    // 5. A bare "my schedule", and questions that name a calendar or the disk.
+    if ["my calendar", "my schedule", "my agenda"].contains(&text) {
         return Some(ActionHint::CalendarRead);
     }
-
-    // 10. DiskReport
-    if strip_prefix_word(text, "what is using disk space").is_some()
-        || strip_prefix_word(text, "what s using disk space").is_some()
-        || strip_prefix_word(text, "what is taking up disk space").is_some()
-        || strip_prefix_word(text, "what s taking up disk space").is_some()
-        || strip_prefix_word(text, "what is taking up space on my disk").is_some()
-        || strip_prefix_word(text, "what is using my disk space").is_some()
-        || strip_prefix_word(text, "how much disk space is left").is_some()
-        || strip_prefix_word(text, "how much disk space is free").is_some()
-        || strip_prefix_word(text, "how much disk space do i have").is_some()
-        || strip_prefix_word(text, "disk space report").is_some()
-        || strip_prefix_word(text, "disk usage report").is_some()
-        || strip_prefix_word(text, "check disk space").is_some()
-        || strip_prefix_word(text, "show disk space").is_some()
-        || strip_prefix_word(text, "disk usage").is_some()
-        || text == "what is using disk space"
-        || text == "what s using disk space"
-        || text == "disk space report"
-        || text == "disk usage"
-    {
-        return Some(ActionHint::DiskReport);
+    let asks = [
+        "what", "show", "check", "read", "view", "open", "list", "do", "how", "which", "when",
+    ];
+    let leads_with_ask = asks.iter().any(|w| strip_prefix_word(text, w).is_some());
+    if leads_with_ask {
+        if [
+            "calendar",
+            "schedule",
+            "agenda",
+            "appointments",
+            "meetings",
+            "meeting",
+            "events",
+        ]
+        .iter()
+        .any(|w| contains_word(text, w))
+            && (contains_word(text, "my")
+                || contains_word(text, "any")
+                || contains_word(text, "next")
+                || contains_word(text, "upcoming"))
+            || text.contains("what do i have on")
+            || text.contains("do i have scheduled")
+            || text.contains("do i have planned")
+        {
+            return Some(ActionHint::CalendarRead);
+        }
+        let space = contains_word(text, "disk")
+            || contains_word(text, "storage")
+            || contains_word(text, "hard drive")
+            || (contains_word(text, "space")
+                && ["laptop", "drive", "storage", "computer", "machine"]
+                    .iter()
+                    .any(|w| contains_word(text, w)));
+        let about_usage = [
+            "using", "taking", "eating", "filling", "left", "free", "usage", "report", "much",
+            "full",
+        ]
+        .iter()
+        .any(|w| contains_word(text, w));
+        if space && about_usage {
+            return Some(ActionHint::DiskReport);
+        }
     }
 
     None
 }
 
+/// One skill intent recognised by a leading verb phrase and, when given, an object word
+/// anywhere after it (`router_test` fixtures cover each).
+struct Intent {
+    hint: ActionHint,
+    verbs: &'static [&'static str],
+    objects: &'static [&'static str],
+}
+
+const INTENTS: &[Intent] = &[
+    Intent {
+        hint: ActionHint::Pause,
+        verbs: &[
+            "go silent",
+            "go quiet",
+            "be quiet",
+            "be silent",
+            "stay quiet",
+            "stay silent",
+        ],
+        objects: &[],
+    },
+    Intent {
+        hint: ActionHint::Fetch,
+        verbs: &["go to"],
+        objects: &["http", "https", "url", "link", "website"],
+    },
+    Intent {
+        hint: ActionHint::Pause,
+        verbs: &[
+            "switch off",
+            "turn off",
+            "disable",
+            "silence",
+            "stop recording",
+            "stop sensing",
+            "stop",
+        ],
+        objects: &[
+            "listening",
+            "microphone",
+            "mic",
+            "sensing",
+            "monitoring",
+            "recording",
+            "tracking",
+        ],
+    },
+    Intent {
+        hint: ActionHint::Cleanup,
+        verbs: &[
+            "clean up",
+            "cleanup",
+            "clean",
+            "free up",
+            "free",
+            "empty",
+            "tidy up",
+            "tidy",
+            "clear",
+            "get rid of",
+            "throw away",
+            "scrub",
+            "purge",
+        ],
+        objects: &[
+            "disk",
+            "space",
+            "trash",
+            "cache",
+            "caches",
+            "storage",
+            "laptop",
+            "computer",
+            "bin",
+            "downloads",
+            "up",
+        ],
+    },
+    Intent {
+        hint: ActionHint::NotesSearch,
+        verbs: &[
+            "search", "find", "look", "look up", "locate", "show", "show me", "get",
+        ],
+        objects: &["note", "notes"],
+    },
+    Intent {
+        hint: ActionHint::AppendNote,
+        verbs: &[
+            "add",
+            "write",
+            "append",
+            "put",
+            "jot",
+            "save",
+            "note down",
+            "take a note",
+            "make a note",
+            "write this down",
+            "write down",
+            "jot down",
+        ],
+        objects: &["note", "notes"],
+    },
+    Intent {
+        hint: ActionHint::AppendNote,
+        verbs: &[
+            "take a note",
+            "make a note",
+            "write this down in",
+            "note down",
+        ],
+        objects: &[],
+    },
+    Intent {
+        hint: ActionHint::Search,
+        verbs: &[
+            "search", "look up", "lookup", "google", "find", "check", "look",
+        ],
+        objects: &["online", "web", "internet", "google"],
+    },
+    Intent {
+        hint: ActionHint::Fetch,
+        verbs: &["open", "fetch", "get", "read", "load", "visit"],
+        objects: &["link", "url", "website", "webpage", "http", "https"],
+    },
+];
+
+/// Words that point at something on the screen.
+const SCREEN_POINTERS: &[&str] = &["this", "that", "these", "those"];
+
+/// Things that live on a screen: "this window", "that popup".
+const SCREEN_NOUNS: &[&str] = &[
+    "window",
+    "windows",
+    "app",
+    "application",
+    "program",
+    "tab",
+    "tabs",
+    "popup",
+    "dialog",
+    "screen",
+    "page",
+    "file",
+    "document",
+    "error",
+    "folder",
+    "button",
+    "icon",
+    "menu",
+    "process",
+    "site",
+    "website",
+    "notification",
+    "terminal",
+    "extension",
+    "pop up",
+    "spreadsheet",
+    "script",
+    "commit",
+    "sheet",
+    "video",
+];
+
+/// "this" followed by a time word is a time reference, not a pointer at the screen.
+const THIS_TIME: &[&str] = &[
+    "this week",
+    "this morning",
+    "this afternoon",
+    "this evening",
+    "this month",
+    "this year",
+    "this weekend",
+    "this time",
+];
+
 /// Detects deictic reference to the user's screen or activity.
 #[must_use]
 pub fn detect_deictic(norm: &str) -> bool {
     // Check if the whole text is just a deictic question
-    if PATTERNS.deictic_questions.contains(&norm) {
+    if PATTERNS.deictic_questions.contains(&norm) || detect_self_activity(norm) {
         return true;
     }
 
@@ -573,6 +794,55 @@ pub fn detect_deictic(norm: &str) -> bool {
         return true;
     }
 
+    // "what is on screen", "which document is open in front of me", "which app is open".
+    if (norm.starts_with("what ") || norm.starts_with("which "))
+        && (["on screen", "on my screen", "in front of me"]
+            .iter()
+            .any(|p| contains_word(norm, p))
+            || (contains_word(norm, "open") && SCREEN_NOUNS.iter().any(|n| contains_word(norm, n))))
+        && !THIS_TIME.iter().any(|p| contains_word(norm, p))
+    {
+        return true;
+    }
+
+    // "what program is this", "which window is that": a question word, a screen noun and a pointer.
+    if (norm.starts_with("what ") || norm.starts_with("which "))
+        && SCREEN_NOUNS.iter().any(|n| contains_word(norm, n))
+        && SCREEN_POINTERS.iter().any(|p| contains_word(norm, p))
+        && !THIS_TIME.iter().any(|p| contains_word(norm, p))
+    {
+        return true;
+    }
+
+    // "what was this ten minutes ago": a pointer question that only adds a time.
+    if ["what was this", "what was that", "what was it"]
+        .iter()
+        .any(|q| strip_prefix_word(norm, q).is_some_and(|r| contains_word(r, "ago")))
+    {
+        return true;
+    }
+
+    // A pointer word right before a screen noun: "what is this program", "that popup".
+    if SCREEN_POINTERS.iter().any(|p| {
+        SCREEN_NOUNS
+            .iter()
+            .any(|n| contains_word(norm, &format!("{p} {n}")))
+    }) && !THIS_TIME.iter().any(|p| contains_word(norm, p))
+    {
+        return true;
+    }
+
+    // "this week" and "this morning" are time words, not pointers at the screen.
+    let stripped;
+    let norm = if THIS_TIME.iter().any(|p| contains_word(norm, p)) {
+        stripped = THIS_TIME
+            .iter()
+            .fold(norm.to_string(), |acc, p| acc.replace(p, " "));
+        stripped.as_str()
+    } else {
+        norm
+    };
+
     // Conservative deictic check: deictic word together with an activity cue word
     let has_deictic = PATTERNS
         .deictic_words
@@ -584,6 +854,130 @@ pub fn detect_deictic(norm: &str) -> bool {
         .any(|w| contains_word(norm, w));
 
     has_deictic && has_activity
+}
+
+/// First-person phrases that talk about what the user was doing.
+const SELF_ACTIVITY_PHRASES: &[&str] = &[
+    "was i",
+    "am i",
+    "were i",
+    "have i been",
+    "had i been",
+    "i was",
+    "i have been",
+    "i ve been",
+    "i just",
+    "i had open",
+    "i have open",
+    "i opened",
+    "i last",
+    "i closed",
+    "i edited",
+    "i used",
+];
+
+/// Activity words that make a first-person phrase a question about the user's own activity.
+const SELF_ACTIVITY_CUES: &[&str] = &[
+    "doing",
+    "working",
+    "looking",
+    "reading",
+    "watching",
+    "browsing",
+    "running",
+    "editing",
+    "using",
+    "writing",
+    "playing",
+    "listening",
+    "opened",
+    "closed",
+    "edited",
+    "wrote",
+    "watched",
+    "used",
+    "visited",
+    "saved",
+    "installed",
+    "downloaded",
+    "clicked",
+    "typed",
+    "open",
+    "tab",
+    "window",
+    "app",
+    "file",
+    "document",
+    "page",
+    "video",
+    "terminal",
+    "browser",
+    "editor",
+    "build",
+    "project",
+    "spent",
+    "folder",
+    "type",
+    "read",
+    "launch",
+    "launched",
+    "program",
+    "site",
+];
+
+/// Words after "was I / am I" that are not about activity on the screen.
+const NOT_ACTIVITY_ING: &[&str] = &[
+    "going",
+    "being",
+    "getting",
+    "having",
+    "feeling",
+    "thinking",
+    "wondering",
+    "trying",
+    "supposed",
+    "meant",
+    "talking",
+    "saying",
+];
+
+/// "what was I typing": a present participle right after "was I / am I" is the user's activity.
+fn participle_after_self(norm: &str) -> bool {
+    ["was i", "am i", "were i", "have i been", "had i been"]
+        .iter()
+        .any(|p| {
+            norm.find(p).is_some_and(|at| {
+                norm[at + p.len()..]
+                    .split(' ')
+                    .find(|w| !w.is_empty())
+                    .is_some_and(|w| {
+                        w.len() > 4 && w.ends_with("ing") && !NOT_ACTIVITY_ING.contains(&w)
+                    })
+            })
+        })
+}
+
+/// "What was I using before lunch", "what was the last thing I opened": the user asks about
+/// their own recent activity even though no "this" or "that" is spoken.
+#[must_use]
+pub fn detect_self_activity(norm: &str) -> bool {
+    let asks = norm.starts_with("what ")
+        || norm.starts_with("which ")
+        || norm.starts_with("how ")
+        || norm.starts_with("where ")
+        || norm.starts_with("when ")
+        || norm.starts_with("show ");
+    if asks && participle_after_self(norm) {
+        return true;
+    }
+    SELF_ACTIVITY_PHRASES.iter().any(|p| contains_word(norm, p))
+        && SELF_ACTIVITY_CUES.iter().any(|c| contains_word(norm, c))
+        && (norm.starts_with("what ")
+            || norm.starts_with("which ")
+            || norm.starts_with("how ")
+            || norm.starts_with("where ")
+            || norm.starts_with("when ")
+            || norm.starts_with("show "))
 }
 
 /// Detects a time reference in normalised text.

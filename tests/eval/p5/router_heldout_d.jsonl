@@ -1,0 +1,80 @@
+{"text": "nah I'm good", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "give me a minute", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "yes please do", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "not this time", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "it's okay", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "sure why not", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "hmm maybe later", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "stop bugging me about it", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "great thanks", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "I'll check it myself", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "yes go ahead and show me", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "please leave me alone for now", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "oh okay", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "no no that's fine", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "yeah sure", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "mute that one", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "enough with these", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "right, noted", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "okay then", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "sounds fine", "expected": "nudge_reply", "nudge_window_open": true, "best_score": null}
+{"text": "go silent for forty minutes", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "please stop the microphone till I say otherwise", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "wipe everything from the past two days", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "I want you to remember that Dev's number ends in 42", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "make a note that the dentist is on Monday", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "what do I have on this week", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "how much free space does my machine have", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "scrub the cache folders", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "find the tax receipt in my notes", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "what is taking space on my drive", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "go to https://example.com/docs and fetch it", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "look up train times online", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "delete what I did on Tuesday", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "forget what you know about my address", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "append 'done' to my checklist note", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "search the web for noise cancelling headphones", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "empty everything out of the bin", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "remember I'm vegetarian", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "when is my next meeting", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "clear my downloads folder", "expected": "action", "nudge_window_open": false, "best_score": null}
+{"text": "what was I up to this morning", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "which document is open in front of me", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "what's the thing on screen", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "how long have I been staring at this window", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "what was the last tab I closed", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "which application did I launch after lunch", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "what did I just type", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "what was playing a minute ago", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "what was I fixing in the code earlier", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "what is this pop-up", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "how much time did I waste on social media today", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "show me what I was working on yesterday evening", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "what is that window in the corner", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "what script was I running ten minutes ago", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "where was I in the document", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "which video was I watching earlier", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "what was I downloading a moment ago", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "what was this page about", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "what spreadsheet did I have open yesterday", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "which commit was I looking at", "expected": "desktop", "nudge_window_open": false, "best_score": null}
+{"text": "how do you say thank you in Japanese", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "what is the tallest mountain on earth", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "can you help me write a cover letter", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "what is machine learning", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "how many calories are in an apple", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "why do we dream", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "explain compound interest", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "what causes the northern lights", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "recommend a good science fiction novel", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "how do I make my own bread", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "what is a haiku", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "when did the second world war end", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "is it normal to feel tired after lunch", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "how does the stock market work", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "give me ideas for a team name", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "I'd forget my head if it wasn't attached", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "please pause for dramatic effect before the answer", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "what's a synonym for happy", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "stop signs are red because", "expected": "general", "nudge_window_open": false, "best_score": null}
+{"text": "write a limerick about cheese", "expected": "general", "nudge_window_open": false, "best_score": null}

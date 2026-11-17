@@ -1,8 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
-use neuroos_knowledge::router::{
-    ActionHint, PATTERNS, RouteInput, RouteKind, contains_word, normalise, route,
-};
+use neuroos_knowledge::router::{ActionHint, RouteInput, RouteKind, normalise, route};
 use proptest::prelude::*;
 use serde::Deserialize;
 
@@ -283,24 +281,20 @@ proptest! {
     }
 
     #[test]
-    fn proptest_no_action_without_trigger_words(
-        text in "\\PC*",
+    fn proptest_no_action_from_text_without_letters(
+        text in "[0-9 \\p{P}\\p{S}]*",
         nudge_open in any::<bool>(),
         score in proptest::option::of(any::<f64>()),
         cutoff in any::<f64>(),
     ) {
-        let norm = normalise(&text);
-        let has_trigger = PATTERNS.action_trigger_words.iter().any(|w| contains_word(&norm, w));
-        let input = RouteInput {
+        // Digits, spaces and symbols alone never name a skill.
+        let decision = route(&RouteInput {
             text: &text,
             nudge_window_open: nudge_open,
             retrieval_best_score: score,
             cutoff,
-        };
-        let decision = route(&input);
-        if !has_trigger {
-            prop_assert_ne!(decision.route, RouteKind::Action);
-            prop_assert_eq!(decision.action_hint, None);
-        }
+        });
+        prop_assert_ne!(decision.route, RouteKind::Action);
+        prop_assert_eq!(decision.action_hint, None);
     }
 }

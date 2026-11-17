@@ -107,7 +107,7 @@ fn test_deictic_tables() {
         (
             "what app is open right now",
             DeicticInfo {
-                deictic: false,
+                deictic: true,
                 anchor: Anchor::Now,
             },
         ),

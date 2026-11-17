@@ -11,18 +11,18 @@
 {"text": "what document is open on this screen", "deictic": true, "anchor": "now"}
 {"text": "what app is running here", "deictic": true, "anchor": "now"}
 {"text": "what is running now", "deictic": false, "anchor": "now"}
-{"text": "what app is open right now", "deictic": false, "anchor": "now"}
+{"text": "what app is open right now", "deictic": true, "anchor": "now"}
 {"text": "what am I doing currently", "deictic": true, "anchor": "now"}
 {"text": "show me my activity at the moment", "deictic": false, "anchor": "now"}
 {"text": "tell me what is happening right now", "deictic": false, "anchor": "now"}
 {"text": "check system status currently", "deictic": false, "anchor": "now"}
 {"text": "what happened a minute ago", "deictic": false, "anchor": "seconds_ago:60"}
 {"text": "what was I reading one minute ago", "deictic": true, "anchor": "seconds_ago:60"}
-{"text": "what was on screen two minutes ago", "deictic": false, "anchor": "seconds_ago:120"}
+{"text": "what was on screen two minutes ago", "deictic": true, "anchor": "seconds_ago:120"}
 {"text": "what did I close 5 minutes ago", "deictic": false, "anchor": "seconds_ago:300"}
 {"text": "what happened ten minutes ago", "deictic": false, "anchor": "seconds_ago:600"}
-{"text": "what was that notification 15 minutes ago", "deictic": false, "anchor": "seconds_ago:900"}
-{"text": "what was I writing twenty minutes ago", "deictic": false, "anchor": "seconds_ago:1200"}
+{"text": "what was that notification 15 minutes ago", "deictic": true, "anchor": "seconds_ago:900"}
+{"text": "what was I writing twenty minutes ago", "deictic": true, "anchor": "seconds_ago:1200"}
 {"text": "what was open 30 minutes ago", "deictic": false, "anchor": "seconds_ago:1800"}
 {"text": "what was on this screen an hour ago", "deictic": true, "anchor": "seconds_ago:3600"}
 {"text": "what happened one hour ago", "deictic": false, "anchor": "seconds_ago:3600"}
@@ -44,16 +44,16 @@
 {"text": "what was I doing today", "deictic": true, "anchor": "range:86400"}
 {"text": "summarize my activity this morning", "deictic": false, "anchor": "range:86400"}
 {"text": "what document did I read this morning", "deictic": false, "anchor": "range:86400"}
-{"text": "what tabs were open this afternoon", "deictic": true, "anchor": "range:86400"}
+{"text": "what tabs were open this afternoon", "deictic": false, "anchor": "range:86400"}
 {"text": "what meetings happened this afternoon", "deictic": false, "anchor": "range:86400"}
 {"text": "what did I edit this evening", "deictic": false, "anchor": "range:86400"}
 {"text": "what was playing this evening", "deictic": false, "anchor": "range:86400"}
 {"text": "what did I do yesterday", "deictic": false, "anchor": "range:172800"}
 {"text": "which files did I change yesterday", "deictic": false, "anchor": "range:172800"}
 {"text": "what happened last night", "deictic": false, "anchor": "range:172800"}
-{"text": "what was I watching last night", "deictic": false, "anchor": "range:172800"}
+{"text": "what was I watching last night", "deictic": true, "anchor": "range:172800"}
 {"text": "what tasks did I complete this week", "deictic": false, "anchor": "range:604800"}
-{"text": "what was I researching last week", "deictic": false, "anchor": "range:604800"}
+{"text": "what was I researching last week", "deictic": true, "anchor": "range:604800"}
 {"text": "what is rust", "deictic": false, "anchor": "none"}
 {"text": "who was Alan Turing", "deictic": false, "anchor": "none"}
 {"text": "how far is the moon", "deictic": false, "anchor": "none"}

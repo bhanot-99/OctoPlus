@@ -1,0 +1,40 @@
+{"text": "what is this program", "deictic": true, "anchor": "now"}
+{"text": "what was I reading ten minutes ago", "deictic": true, "anchor": "seconds_ago:600"}
+{"text": "what is that window showing", "deictic": true, "anchor": "now"}
+{"text": "what was I working on an hour ago", "deictic": true, "anchor": "seconds_ago:3600"}
+{"text": "what am I looking at", "deictic": true, "anchor": "now"}
+{"text": "what was I doing earlier", "deictic": true, "anchor": "range:3600"}
+{"text": "which tab is this", "deictic": true, "anchor": "now"}
+{"text": "what was I writing a minute ago", "deictic": true, "anchor": "seconds_ago:60"}
+{"text": "what is this document", "deictic": true, "anchor": "now"}
+{"text": "what was I watching this evening", "deictic": true, "anchor": "range:86400"}
+{"text": "what is that popup", "deictic": true, "anchor": "now"}
+{"text": "what was I browsing two hours ago", "deictic": true, "anchor": "seconds_ago:7200"}
+{"text": "what is this error", "deictic": true, "anchor": "now"}
+{"text": "what was I doing last night", "deictic": true, "anchor": "range:172800"}
+{"text": "what file am I editing right now", "deictic": true, "anchor": "now"}
+{"text": "which app was this a moment ago", "deictic": true, "anchor": "seconds_ago:30"}
+{"text": "what was this ten minutes ago", "deictic": true, "anchor": "seconds_ago:600"}
+{"text": "what have I been doing recently", "deictic": true, "anchor": "range:3600"}
+{"text": "what am I working on", "deictic": true, "anchor": "now"}
+{"text": "what was I playing just now", "deictic": true, "anchor": "seconds_ago:30"}
+{"text": "what is the weather like today", "deictic": false, "anchor": "range:86400"}
+{"text": "who invented the telephone", "deictic": false, "anchor": "none"}
+{"text": "what happened last week in the news", "deictic": false, "anchor": "range:604800"}
+{"text": "it was lovely", "deictic": false, "anchor": "none"}
+{"text": "what is the plan for tomorrow", "deictic": false, "anchor": "none"}
+{"text": "this is a test", "deictic": false, "anchor": "none"}
+{"text": "that sounds right", "deictic": false, "anchor": "none"}
+{"text": "how was your day yesterday", "deictic": false, "anchor": "range:172800"}
+{"text": "tell me about quantum physics", "deictic": false, "anchor": "none"}
+{"text": "remind me this evening", "deictic": false, "anchor": "range:86400"}
+{"text": "what is a mortgage", "deictic": false, "anchor": "none"}
+{"text": "it rained all morning", "deictic": false, "anchor": "none"}
+{"text": "here are my thoughts", "deictic": false, "anchor": "none"}
+{"text": "what should I eat tonight", "deictic": false, "anchor": "none"}
+{"text": "how many hours are in a week", "deictic": false, "anchor": "none"}
+{"text": "what was the score last night", "deictic": false, "anchor": "range:172800"}
+{"text": "is it safe to travel right now", "deictic": false, "anchor": "now"}
+{"text": "these things happen", "deictic": false, "anchor": "none"}
+{"text": "what is the time", "deictic": false, "anchor": "none"}
+{"text": "what is it called", "deictic": false, "anchor": "none"}

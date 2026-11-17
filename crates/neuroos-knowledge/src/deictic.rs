@@ -59,8 +59,19 @@ fn parse_number(word: &str) -> Option<u64> {
 
 /// Parses relative offset expressions like `<N> minute(s) ago` or `just now`.
 fn parse_seconds_ago(norm: &str) -> Option<Anchor> {
-    if router::contains_word(norm, "just now") {
+    if router::contains_word(norm, "just now") || router::contains_word(norm, "a moment ago") {
         return Some(Anchor::SecondsAgo(30));
+    }
+    if router::contains_word(norm, "half an hour ago")
+        || router::contains_word(norm, "half hour ago")
+    {
+        return Some(Anchor::SecondsAgo(1800));
+    }
+    if router::contains_word(norm, "a quarter of an hour ago") {
+        return Some(Anchor::SecondsAgo(900));
+    }
+    if router::contains_word(norm, "a while ago") {
+        return Some(Anchor::Range(3600));
     }
 
     let words: Vec<&str> = norm.split_whitespace().collect();

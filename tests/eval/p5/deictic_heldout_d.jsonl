@@ -1,0 +1,40 @@
+{"text": "what is this thing on my screen", "deictic": true, "anchor": "now"}
+{"text": "what was I doing fifteen minutes ago", "deictic": true, "anchor": "seconds_ago:900"}
+{"text": "what is that window", "deictic": true, "anchor": "now"}
+{"text": "what was I reading this afternoon", "deictic": true, "anchor": "range:86400"}
+{"text": "which app is open right now", "deictic": true, "anchor": "now"}
+{"text": "what am I typing", "deictic": true, "anchor": "now"}
+{"text": "what was I working on two hours ago", "deictic": true, "anchor": "seconds_ago:7200"}
+{"text": "what is this page about", "deictic": true, "anchor": "now"}
+{"text": "what was I looking at a minute ago", "deictic": true, "anchor": "seconds_ago:60"}
+{"text": "what was I editing earlier", "deictic": true, "anchor": "range:3600"}
+{"text": "which tab am I on", "deictic": true, "anchor": "now"}
+{"text": "what is that file called", "deictic": true, "anchor": "now"}
+{"text": "what was I doing yesterday evening", "deictic": true, "anchor": "range:172800"}
+{"text": "what is this error saying", "deictic": true, "anchor": "now"}
+{"text": "what program was I running just now", "deictic": true, "anchor": "seconds_ago:30"}
+{"text": "what was this window ten minutes ago", "deictic": true, "anchor": "seconds_ago:600"}
+{"text": "what am I looking at right now", "deictic": true, "anchor": "now"}
+{"text": "what is that popup", "deictic": true, "anchor": "now"}
+{"text": "what was I building last night", "deictic": true, "anchor": "range:172800"}
+{"text": "what was I reading half an hour ago", "deictic": true, "anchor": "seconds_ago:1800"}
+{"text": "what is the weather tomorrow", "deictic": false, "anchor": "none"}
+{"text": "how do I cook rice", "deictic": false, "anchor": "none"}
+{"text": "what did I have for lunch yesterday", "deictic": false, "anchor": "range:172800"}
+{"text": "it was a long day", "deictic": false, "anchor": "none"}
+{"text": "that is correct", "deictic": false, "anchor": "none"}
+{"text": "what is the population of India", "deictic": false, "anchor": "none"}
+{"text": "who is the prime minister", "deictic": false, "anchor": "none"}
+{"text": "how was the match last night", "deictic": false, "anchor": "range:172800"}
+{"text": "here is the answer", "deictic": false, "anchor": "none"}
+{"text": "these are my favourites", "deictic": false, "anchor": "none"}
+{"text": "is this a good idea", "deictic": false, "anchor": "none"}
+{"text": "what is the time now", "deictic": false, "anchor": "now"}
+{"text": "explain it simply", "deictic": false, "anchor": "none"}
+{"text": "what happened today in history", "deictic": false, "anchor": "range:86400"}
+{"text": "how many hours are in a day", "deictic": false, "anchor": "none"}
+{"text": "how late is it", "deictic": false, "anchor": "none"}
+{"text": "what should I wear this evening", "deictic": false, "anchor": "range:86400"}
+{"text": "those were the days", "deictic": false, "anchor": "none"}
+{"text": "how do I spell necessary", "deictic": false, "anchor": "none"}
+{"text": "remind me about this later", "deictic": false, "anchor": "none"}
