@@ -139,3 +139,31 @@ async fn list_enable_disable_test_and_errors() {
         1
     );
 }
+
+#[test]
+fn the_voice_status_reads_as_plain_sentences() {
+    use neuroos_proto::v1::VoiceStatus;
+    use neuroosctl::voice::format_status;
+    let idle = format_status(&VoiceStatus {
+        capture_running: true,
+        ..VoiceStatus::default()
+    });
+    assert!(idle.contains("listening"));
+    assert!(idle.contains("idle (say the wake word"));
+    assert!(idle.contains("no other application"));
+    let busy = format_status(&VoiceStatus {
+        capture_running: false,
+        speaking: true,
+        mic_in_use_by_other: true,
+        ..VoiceStatus::default()
+    });
+    assert!(busy.contains("not listening"));
+    assert!(busy.contains("speaking now"));
+    assert!(busy.contains("another application is using"));
+    let follow = format_status(&VoiceStatus {
+        capture_running: true,
+        follow_up_open: true,
+        ..VoiceStatus::default()
+    });
+    assert!(follow.contains("follow-up"));
+}
