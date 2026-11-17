@@ -370,6 +370,11 @@ fn generate_user_service_internal(
     out.push_str("ProtectHome=tmpfs\n");
     out.push_str("BindReadOnlyPaths=%h/.local/opt/neuroos\n");
     out.push_str("BindReadOnlyPaths=-%h/.config/neuroos/config.toml\n");
+    if part == Part::Knowledge {
+        // The nudge rules file, read before the sandbox is applied (ADR-0014). A missing file
+        // is fine (`-`): the compiled-in defaults apply.
+        out.push_str("BindReadOnlyPaths=-%h/.config/neuroos/nudges.toml\n");
+    }
 
     // Decision 4: specific persistent data paths.
     match part {
