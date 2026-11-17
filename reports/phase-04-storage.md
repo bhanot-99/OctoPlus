@@ -1,7 +1,7 @@
 # Phase 4 — Storage (C3): Report
 
 **Date:** 2026-11-17 · **Commit:** see `git log` on `phase-4-storage` · **Builder:** Claude (most of it), agy (vector scan, fusion, spool parser/chunker) · **Checker:** Claude; agy for the read-only review
-**Status:** Awaiting owner sign-off
+**Status:** Signed off 2026-11-17
 
 ## 1. Summary
 
@@ -73,4 +73,4 @@ Phase 5 (C5): the knowledge side must treat C3 results by taint and handle `STAL
 
 Owner decisions waiting: ADR-0012 (items 11–15 especially, budget change), synthetic-only noise gate, F8 left open.
 
-- [ ] Owner sign-off — name, date
+- [x] Owner sign-off — owner, 2026-11-17 (ADR-0012 accepted; F8 and synthetic-only gate accepted as listed)

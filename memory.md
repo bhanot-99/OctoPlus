@@ -11,11 +11,11 @@
 | Field | Value |
 | :--- | :--- |
 | Last updated | 2026-11-17 |
-| Project stage | **Phase 4 (Storage, C3) built, awaiting owner sign-off** — all gates green on branch `phase-4-storage`; not pushed or merged. |
+| Project stage | **Phase 4 (Storage, C3) done, signed off and merged to local `main` (2026-11-17).** Next: Phase 5. |
 | Current phase | Phase 4 — Storage (C3) |
 | Current story | P4 work packages W0–W12 in `docs/plans/phase-04-storage-plan.md` |
-| Overall progress | 4 / 11 phases done; Phase 4 started |
-| Health | 🟨 Phase 4 in gate review |
+| Overall progress | 5 / 11 phases done |
+| Health | 🟩 Phase 4 signed off |
 | Next milestone | M3 — monitor (C1) |
 
 ---
@@ -28,7 +28,7 @@
 | Builder / Checker | agy builds, Claude checks (D-23); Claude builds pieces itself where faster (D-21 carried over) |
 | Branch | `phase-4-storage` |
 | Files being changed | `crates/neuroos-storage/**`, `neuroos-common` (`[storage]` config), `neuroos-proto` (two additive fields), `models/manifest.toml`, `neuroos-deploy`, `neuroosctl storage` |
-| Next concrete step | Owner: read `reports/phase-04-storage.md` §9 (decisions in ADR-0012, items to sign off), sign off, merge `phase-4-storage` to main. Then Phase 5 (C5). |
+| Next concrete step | Plan Phase 5 (C5 knowledge and conversation): new branch, detailed plan, then build. |
 
 ---
 
@@ -40,7 +40,7 @@
 | 1 | Walking skeleton | ✅ | 2026-11-15 | 2026-11-16 | `reports/phase-01-skeleton.md` |
 | 2 | Safety kernel (C6) | ✅ | 2026-11-16 | 2026-11-16 | `reports/phase-02-kernel.md` |
 | 3 | Monitor (C1) | ✅ | 2026-11-16 | 2026-11-16 | `reports/phase-03-monitor.md` |
-| 4 | Storage (C3) | 🟨 | 2026-11-16 | — | `reports/phase-04-storage.md` |
+| 4 | Storage (C3) | ✅ | 2026-11-16 | 2026-11-17 | `reports/phase-04-storage.md` |
 | 5 | Knowledge and conversation (C5) | ⬜ | — | — | `reports/phase-05-knowledge.md` |
 | 6 | Nudge engine | ⬜ | — | — | `reports/phase-06-nudges.md` |
 | 7 | Voice (C2) | ⬜ | — | — | `reports/phase-07-voice.md` |
@@ -58,15 +58,15 @@ Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done �
 
 | Story | Title | Status | Builder | Checker |
 | :--- | :--- | :--- | :--- | :--- |
-| P4-S01 | Noisy events never become stored entities | In Check | Claude (W4) | agy review |
-| P4-S02 | Events land in the right domain with the right taint | In Check | Claude (W4) | agy review |
-| P4-S03 | Most relevant chunks for a question within budget | In Check | Claude (W5–W7), agy (W2, W3) | agy review / Claude |
-| P4-S04 | Focus at a moment, activity over a range | In Check | Claude (W7) | agy review |
-| P4-S05 | Current and recent health signals | In Check | Claude (W7) | agy review |
-| P4-S06 | Fetched documents stored untrusted, taint survives merges | In Check | agy (W8 pure), Claude (W8 ingest) | cross-check |
-| P4-S07 | Old data expires, cap held, backups | In Check | Claude (W9) | agy review |
-| P4-S08 | Model change re-embeds without downtime | In Check | Claude (W9) | agy review |
-| P4-S09 | Forget and purge remove everything they say | In Check | Claude (W9) | agy review |
+| P4-S01 | Noisy events never become stored entities | Done | Claude (W4) | agy review |
+| P4-S02 | Events land in the right domain with the right taint | Done | Claude (W4) | agy review |
+| P4-S03 | Most relevant chunks for a question within budget | Done | Claude (W5–W7), agy (W2, W3) | agy review / Claude |
+| P4-S04 | Focus at a moment, activity over a range | Done | Claude (W7) | agy review |
+| P4-S05 | Current and recent health signals | Done | Claude (W7) | agy review |
+| P4-S06 | Fetched documents stored untrusted, taint survives merges | Done | agy (W8 pure), Claude (W8 ingest) | cross-check |
+| P4-S07 | Old data expires, cap held, backups | Done | Claude (W9) | agy review |
+| P4-S08 | Model change re-embeds without downtime | Done | Claude (W9) | agy review |
+| P4-S09 | Forget and purge remove everything they say | Done | Claude (W9) | agy review |
 
 Columns: Backlog → Ready → In Progress → In Check → Done.
 

@@ -1,6 +1,6 @@
 # ADR-0012 — Storage: embedding stack and Phase 4 choices
 
-**Status:** Proposed (taken by Claude under the owner's Phase 4 go-ahead, D-28; the owner may overturn at sign-off)
+**Status:** Accepted 2026-11-17 (owner approved all items, including 11–15, at Phase 4 sign-off)
 **Date:** 2026-11-16
 **Changes:** PRD §6.2 (C3 budget restated from measurement), PRD §10 (embedding model pinned), `proto/neuroos/v1/storage.proto` (two additive fields), `models/manifest.toml` (three entries, new role `runtime`), Architecture §7 (spool format v1, per-message peer checks)
 **Evidence:** `reports/phase-04-storage.md` and `reports/bench/p4-*.json` (filled in as measured)
