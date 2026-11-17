@@ -542,6 +542,18 @@ impl KnowledgeHandler {
                         false,
                     ));
                 };
+                // An owner-asked test of the voice: the same template and numbers, said aloud.
+                if t.speak {
+                    return if self.nudge.speak(&t.rule_id, &template, &args).await {
+                        Ok(Body::Ack(Ack {}))
+                    } else {
+                        Err(HandlerError::new(
+                            ErrorCode::Unavailable,
+                            "the voice is not available or is busy",
+                            true,
+                        ))
+                    };
+                }
                 // A test line is a visual check the owner asked for: never with a sound, so it
                 // cannot be heard at a bad moment (review F1).
                 if self.nudge.notify(&template, &args, true).await {

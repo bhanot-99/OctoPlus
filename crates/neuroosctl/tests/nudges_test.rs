@@ -105,7 +105,8 @@ async fn list_enable_disable_test_and_errors() {
         run_nudges(
             &root,
             NudgesCommands::Test {
-                rule: "disk_critical".into()
+                rule: "disk_critical".into(),
+                voice: false
             },
             styler
         )

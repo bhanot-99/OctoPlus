@@ -196,6 +196,9 @@ pub enum NudgesCommands {
     Test {
         /// Rule id, as shown by `list`.
         rule: String,
+        /// Say the line aloud instead (also how to hear the buddy's voice).
+        #[arg(long)]
+        voice: bool,
     },
 }
 

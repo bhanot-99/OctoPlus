@@ -90,9 +90,15 @@ pub async fn run_nudges(runtime_root: &Path, command: NudgesCommands, styler: St
         }
         NudgesCommands::Enable { rule } => set(&client, rule, true, styler).await,
         NudgesCommands::Disable { rule } => set(&client, rule, false, styler).await,
-        NudgesCommands::Test { rule } => {
+        NudgesCommands::Test { rule, voice } => {
             match client
-                .call(Body::NudgeTest(NudgeTest { rule_id: rule }), DEADLINE)
+                .call(
+                    Body::NudgeTest(NudgeTest {
+                        rule_id: rule,
+                        speak: voice,
+                    }),
+                    DEADLINE,
+                )
                 .await
             {
                 Ok(_) => {

@@ -854,6 +854,7 @@ async fn nudges_list_enable_disable_and_test() {
 
     s.admin(Body::NudgeTest(NudgeTest {
         rule_id: "disk_critical".into(),
+        speak: false,
     }))
     .await
     .unwrap();
@@ -867,7 +868,8 @@ async fn nudges_list_enable_disable_and_test() {
     }
     assert!(
         s.admin(Body::NudgeTest(NudgeTest {
-            rule_id: "x".into()
+            rule_id: "x".into(),
+            speak: false,
         }))
         .await
         .is_err()
@@ -1055,4 +1057,35 @@ async fn with_no_voice_part_at_all_the_notification_path_is_unchanged() {
     s.run_disk_voice(NOON, 150, 92).await;
     assert!(s.rec().spoken.is_empty());
     assert_eq!(s.rec().notifies.len(), 1);
+}
+
+#[tokio::test]
+async fn a_spoken_test_line_goes_to_the_voice_and_fails_when_it_cannot() {
+    let s = Stack::start(Opts {
+        voice_up: true,
+        ..Opts::default()
+    })
+    .await;
+    s.admin(Body::NudgeTest(NudgeTest {
+        rule_id: "disk_critical".into(),
+        speak: true,
+    }))
+    .await
+    .unwrap();
+    {
+        let rec = s.rec();
+        assert_eq!(rec.spoken.len(), 1);
+        assert_eq!(rec.spoken[0].0, "disk.critical");
+        assert!(rec.notifies.is_empty(), "said aloud, not shown");
+    }
+    let none = Stack::start(Opts::default()).await;
+    assert!(
+        none.admin(Body::NudgeTest(NudgeTest {
+            rule_id: "disk_critical".into(),
+            speak: true,
+        }))
+        .await
+        .is_err(),
+        "no voice part: an error, never a silent success"
+    );
 }

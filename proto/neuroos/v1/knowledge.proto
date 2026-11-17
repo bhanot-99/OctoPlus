@@ -52,4 +52,7 @@ message NudgeSetEnabled {
 // neuroosctl nudges test: deliver one rule's line now, bypassing conditions.
 message NudgeTest {
   string rule_id = 1;
+  // Say the line aloud instead of showing it (the owner asked for it: `nudges test --voice`).
+  // Still only the rule's own template and numbers; C2 refuses while a turn is in progress.
+  bool speak = 2;
 }

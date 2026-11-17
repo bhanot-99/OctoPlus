@@ -476,7 +476,7 @@ impl NudgeHandle {
 
     /// Speaks a nudge through C2 from a template id and numbers (FR-VOI-11, R0-6); false if C2
     /// cannot take it, in which case the caller shows a notification instead.
-    async fn speak(&self, rule_id: &str, template: &str, args: &[(String, f64)]) -> bool {
+    pub async fn speak(&self, rule_id: &str, template: &str, args: &[(String, f64)]) -> bool {
         if !self.peers.voice.is_connected() {
             return false;
         }
