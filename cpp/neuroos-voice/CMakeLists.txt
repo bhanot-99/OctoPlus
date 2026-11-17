@@ -1,8 +1,11 @@
 # C2 neuroos-voice build
 add_library(neuroos_voice_core STATIC
   src/audio_ring.cpp
+  src/knowledge_link.cpp
   src/pipeline.cpp
   src/service.cpp
+  src/voice_config.cpp
+  $<$<NOT:$<BOOL:${NEUROOS_WITH_VOICE_ENGINES}>>:src/runtime_stub.cpp>
   src/speech_split.cpp
   src/spoken_lines.cpp
   src/turn_machine.cpp
@@ -16,14 +19,20 @@ add_executable(neuroos-voice
 )
 target_include_directories(neuroos-voice PRIVATE include)
 target_link_libraries(neuroos-voice PRIVATE neuroos_voice_core neuroos neuroos_warnings)
+if(NEUROOS_WITH_VOICE_ENGINES)
+  # the real BuildVoiceRuntime lives in the engines library (defined below)
+  set_property(TARGET neuroos-voice APPEND PROPERTY LINK_LIBRARIES neuroos_voice_engines)
+endif()
 
 add_executable(neuroos_voice_tests
   tests/audio_ring_test.cpp
+  tests/knowledge_link_test.cpp
   tests/pipeline_test.cpp
   tests/speech_split_test.cpp
   tests/spoken_lines_test.cpp
   tests/turn_machine_test.cpp
   tests/vad_gate_test.cpp
+  tests/voice_config_test.cpp
   tests/voice_test.cpp
 )
 target_link_libraries(neuroos_voice_tests PRIVATE neuroos_voice_core neuroos GTest::gtest_main neuroos_warnings)
@@ -38,9 +47,10 @@ if(NEUROOS_WITH_VOICE_ENGINES)
   add_library(neuroos_voice_engines STATIC
     src/engines/silero_vad.cpp
     src/engines/open_wake_word.cpp
+    src/engines/runtime_engines.cpp
   )
   target_include_directories(neuroos_voice_engines PUBLIC include)
-  target_link_libraries(neuroos_voice_engines PUBLIC neuroos_voice_core neuroos_voice_ort onnxruntime PRIVATE neuroos_warnings)
+  target_link_libraries(neuroos_voice_engines PUBLIC neuroos_voice_core neuroos_voice_ort neuroos_voice_speech onnxruntime PRIVATE neuroos_warnings)
 
   # Speech to text and speech (whisper.cpp, Kokoro with espeak-ng): a second library so the
   # adapters can be built and tested on their own.

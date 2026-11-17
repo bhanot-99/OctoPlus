@@ -37,6 +37,21 @@ if [[ -f "$root/cpp/CMakeLists.txt" ]]; then
   (cd "$root/cpp" && cmake --preset release && cmake --build --preset release --parallel)
 fi
 
+echo "=== 2b. Building C2 voice with its real engines (voice-release preset) ==="
+# whisper.cpp and llama.cpp each bundle a ggml, so C2 is built in its own tree (ADR-0015).
+# The ONNX Runtime headers come from the pinned archive (models/runtime, hash-checked).
+ort_dir="$root/models/runtime/onnxruntime-linux-x64-1.31.1"
+if [[ ! -d "$ort_dir" && -f "$root/models/runtime/onnxruntime-linux-x64-1.31.1.tgz" ]]; then
+  tar -xzf "$root/models/runtime/onnxruntime-linux-x64-1.31.1.tgz" -C "$root/models/runtime"
+fi
+voice_built=0
+if [[ -d "$ort_dir" && -f "$root/cpp/third_party/whisper.cpp/CMakeLists.txt" ]]; then
+  (cd "$root/cpp" && cmake --preset voice-release && cmake --build --preset voice-release --target neuroos-voice --parallel)
+  voice_built=1
+else
+  echo "note: ONNX Runtime or the whisper.cpp submodule is missing; C2 stays the stub (run just fetch-models and git submodule update --init)"
+fi
+
 # Nothing installed here may be writable by anyone but the owner: the units run
 # these binaries, libraries and the hash list (BUG-031).
 umask 022
@@ -66,7 +81,9 @@ candidates=(
 
 for bin in "${candidates[@]}"; do
   src=""
-  if [[ -f "$root/target/release/$bin" ]]; then
+  if [[ "$bin" == "neuroos-voice" && "$voice_built" == 1 && -f "$root/cpp/build/voice-release/neuroos-voice/neuroos-voice" ]]; then
+    src="$root/cpp/build/voice-release/neuroos-voice/neuroos-voice"
+  elif [[ -f "$root/target/release/$bin" ]]; then
     src="$root/target/release/$bin"
   elif [[ -f "$root/cpp/build/release/bin/$bin" ]]; then
     src="$root/cpp/build/release/bin/$bin"
@@ -89,6 +106,12 @@ if [[ -d "$root/cpp/build/release" ]]; then
   cp -P --remove-destination "$root"/cpp/build/release/libneuroos/*.so* "$dev_lib/" 2>/dev/null || true
   find "$dev_lib" -type f -exec chmod 0755 {} +
   echo "Copied C++ shared libraries into $dev_lib"
+fi
+if [[ "$voice_built" == 1 ]]; then
+  # whisper.cpp's own ggml (soname .so.0) sits next to llama.cpp's (.so.1): different names.
+  cp -P --remove-destination "$root"/cpp/build/voice-release/bin/*.so* "$dev_lib/" 2>/dev/null || true
+  find "$dev_lib" -type f -exec chmod 0755 {} +
+  echo "Copied the voice engine libraries into $dev_lib"
 fi
 
 echo "=== 5. Hard-linking models and generating SHA256SUMS ==="
@@ -146,6 +169,8 @@ if [[ -f "$ort_tgz" ]]; then
   ort_tmp="$(mktemp -d)"
   tar -xzf "$ort_tgz" -C "$ort_tmp" --strip-components=2 onnxruntime-linux-x64-1.31.1/lib/libonnxruntime.so.1.31.1
   install -m 0755 "$ort_tmp/libonnxruntime.so.1.31.1" "$dev_lib/libonnxruntime.so.1.31.1"
+  # C2 links the library by its soname.
+  ln -sf libonnxruntime.so.1.31.1 "$dev_lib/libonnxruntime.so.1"
   rm -rf "$ort_tmp"
   echo "Installed libonnxruntime.so.1.31.1 into $dev_lib"
 else

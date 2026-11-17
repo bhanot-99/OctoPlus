@@ -153,6 +153,10 @@ class VoicePipeline final : public ReplyReceiver {
     Executor* tts_exec = nullptr;
     std::function<std::uint64_t()> mono_ns;  // monotonic clock
     std::function<std::uint64_t()> wall_ns;  // wall clock (what C5 stores)
+    // Optional timing hook for the health histograms: preamble_to_audio (a preamble request to
+    // its first sample at the speaker, NFR-PERF-01), flush (NFR-PERF-08), transcribe
+    // (NFR-PERF-09), command_to_audio (command sent to the first audio of the reply).
+    std::function<void(std::string_view name, std::uint64_t ns)> on_metric;
   };
 
   VoicePipeline(Deps deps, PipelineConfig cfg);
@@ -168,6 +172,8 @@ class VoicePipeline final : public ReplyReceiver {
   // captured and the error is returned (FR-VOI-03).
   Status Start();
   void Stop();
+  // The microphone went away (also called by the source's own loss report).
+  void NotifyDeviceLost();
 
   // Audio from the microphone, any chunk size. Called from the audio thread.
   void OnAudio(std::span<const std::int16_t> samples);
@@ -197,7 +203,7 @@ class VoicePipeline final : public ReplyReceiver {
   void BeginUtterance(bool with_backlog);
   void Transcribe();
   void QueueSpeech(const std::string& text, bool nudge, std::uint64_t epoch);
-  void QueueClip(const std::string& phrase, bool nudge, std::uint64_t epoch);
+  void QueueClip(const std::string& phrase, bool nudge, std::uint64_t epoch, bool preamble = false);
   void FinishQueue(std::uint64_t epoch);
   void NoteAudioQueued(bool nudge, std::uint64_t epoch);
   std::vector<TurnAction> Post(TurnEvent e);  // takes the lock, steps the machine
@@ -221,6 +227,7 @@ class VoicePipeline final : public ReplyReceiver {
   bool reply_audio_started_ = false;
   std::size_t clip_rotation_ = 0;
   std::size_t tts_pending_ = 0;
+  std::uint64_t command_sent_ns_ = 0;  // for command_to_audio; 0 once the first audio played
   std::atomic<bool> running_{false};
   std::unordered_map<std::string, Clip> clips_;
   PipelineStats stats_;
