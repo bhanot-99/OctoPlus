@@ -141,6 +141,29 @@ pub const PATTERNS: RouterPatterns = RouterPatterns {
         "please show me",
     ],
     request_prefixes: &[
+        "i was wondering if you could please",
+        "i was wondering if you could",
+        "i wonder if you could",
+        "i was hoping you could",
+        "would it be possible to",
+        "is it possible to",
+        "go ahead and",
+        "would you mind",
+        "do you mind",
+        "please to",
+        "you can",
+        "you may",
+        "i d like to",
+        "i would like to",
+        "i want to",
+        "i need to",
+        "hey",
+        "ok so",
+        "okay so",
+        "yeah",
+        "so",
+        "now",
+        "also",
         "can you please tell me",
         "could you please tell me",
         "can you tell me",
@@ -213,10 +236,39 @@ pub const PATTERNS: RouterPatterns = RouterPatterns {
         "what did i just look at",
     ],
     activity_cues: &[
-        "doing", "working", "looking", "reading", "open", "window", "app", "screen", "tab", "file",
-        "writing", "watching", "browsing", "running", "editing", "using", "spent", "time", "error",
-        "terminal", "browser", "editor", "document", "page", "video", "message", "build", "code",
-        "email", "mail",
+        "doing",
+        "working",
+        "looking",
+        "reading",
+        "open",
+        "window",
+        "app",
+        "screen",
+        "tab",
+        "file",
+        "writing",
+        "watching",
+        "browsing",
+        "running",
+        "editing",
+        "using",
+        "spent",
+        "time",
+        "error",
+        "terminal",
+        "browser",
+        "editor",
+        "document",
+        "page",
+        "video",
+        "message",
+        "build",
+        "code",
+        "email",
+        "mail",
+        "playing",
+        "listening",
+        "happened",
     ],
     time_refs: &[
         "today",
@@ -380,10 +432,57 @@ const REPLY_STARTERS: &[&str] = &[
     "i m fine",
     "no need",
     "ignore",
+    "sounds good",
+    "sounds great",
+    "ask me",
+    "i don t care",
+    "i do not care",
+    "that would be",
+    "that s helpful",
+    "yes please",
+];
+
+/// Phrases that mean "stop telling me", wherever they sit in a reply.
+const STOP_PHRASES: &[&str] = &[
+    "don t show",
+    "dont show",
+    "stop showing",
+    "stop telling",
+    "stop reminding",
+    "stop notifying",
+    "disable this",
+    "turn this off",
+    "switch this off",
+    "mute this",
+    "never show",
+    "never tell me",
+    "ask me again",
+    "remind me again",
+    "turn off this",
+    "switch off this",
+    "no more of this",
+    "i do not want to see",
+    "i don t want to see",
+    "never showed me",
+    "don t want to receive",
+    "do not want to receive",
+    "do this later",
+    "do it later",
+    "some other time",
+    "another time",
+    "never show me",
+    "not show me",
+    "no longer show",
+    "no more alerts",
+    "do not want this",
+    "don t want this",
 ];
 
 /// Longest reply, in words, that is still taken as an answer to a nudge and not a new question.
 const MAX_REPLY_WORDS: usize = 6;
+
+/// Longest reply that opens with a reply word ("yes please that would be really helpful").
+const MAX_STARTER_REPLY_WORDS: usize = 24;
 
 /// Words that, right after a reply starter, begin a new question ("no, what is rust").
 const QUESTION_STARTERS: &[&str] = &[
@@ -420,6 +519,26 @@ const NEW_REQUEST_STARTERS: &[&str] = &[
     "pause",
 ];
 
+/// "yeah sure go ahead because ... show me what is using space": a clear yes first.
+fn starts_with_strong_yes(norm: &str) -> bool {
+    [
+        "yes",
+        "yeah",
+        "yep",
+        "sure",
+        "ok",
+        "okay",
+        "go ahead",
+        "please do",
+        "no",
+        "nope",
+        "nah",
+        "don t worry",
+    ]
+    .iter()
+    .any(|w| strip_prefix_word(norm, w).is_some())
+}
+
 /// Checks if `norm` is a short answer to a nudge: a known phrase, or a short text that starts
 /// with a reply word and does not turn into a new question or a skill request.
 #[must_use]
@@ -427,8 +546,55 @@ pub fn is_nudge_reply(norm: &str) -> bool {
     if PATTERNS.nudge_replies.contains(&norm) {
         return true;
     }
-    if norm.split(' ').count() > MAX_REPLY_WORDS || detect_action(norm).is_some() {
+    // "can you snooze this until tonight": a polite wrapper around a short reply.
+    for pre in [
+        "can you",
+        "could you",
+        "please",
+        "would you",
+        "would you mind",
+    ] {
+        if let Some(rest) = strip_prefix_word(norm, pre)
+            && [
+                "snooze",
+                "dismiss",
+                "mute",
+                "stop",
+                "ignore",
+                "skip",
+                "remind me",
+                "reminding me",
+            ]
+            .iter()
+            .any(|v| strip_prefix_word(rest, v).is_some())
+        {
+            return true;
+        }
+    }
+    let words = norm.split(' ').count();
+    if words <= MAX_STARTER_REPLY_WORDS
+        && detect_action(norm).is_none()
+        && STOP_PHRASES.iter().any(|p| contains_word(norm, p))
+    {
+        return true;
+    }
+    if words > MAX_STARTER_REPLY_WORDS || detect_action(norm).is_some() {
         return false;
+    }
+    if words > MAX_REPLY_WORDS {
+        // Longer than a short statement: only a text that opens with a reply word and does not
+        // turn into a question or a new request is still an answer.
+        return REPLY_STARTERS
+            .iter()
+            .find_map(|st| strip_prefix_word(norm, st))
+            .is_some_and(|rest| {
+                rest.starts_with("why not")
+                    || !QUESTION_STARTERS
+                        .iter()
+                        .chain(NEW_REQUEST_STARTERS)
+                        .any(|q| strip_prefix_word(rest, q).is_some())
+                        && (!detect_deictic(norm) || starts_with_strong_yes(norm))
+            });
     }
     // Inside a nudge window a short statement that is not a question, a request for something
     // new or a screen question is most likely an answer to the nudge, whatever its wording.
@@ -445,6 +611,7 @@ pub fn is_nudge_reply(norm: &str) -> bool {
         .is_some_and(|rest| {
             // "show me what is using it" asks to be shown; only "no, what is rust" is new.
             norm.starts_with("show me")
+                || rest.starts_with("why not")
                 || !QUESTION_STARTERS
                     .iter()
                     .any(|q| strip_prefix_word(rest, q).is_some())
@@ -522,6 +689,8 @@ pub fn detect_action(norm: &str) -> Option<ActionHint> {
         || strip_prefix_word(text, "pause").is_some()
         || strip_prefix_word(text, "stop listening").is_some()
         || strip_prefix_word(text, "mute").is_some()
+        || strip_prefix_word(text, "unpause").is_some()
+        || strip_prefix_word(text, "unmute").is_some()
     {
         return Some(ActionHint::Pause);
     }
@@ -535,6 +704,16 @@ pub fn detect_action(norm: &str) -> Option<ActionHint> {
     if strip_prefix_word(text, "remember that").is_some()
         || strip_prefix_word(text, "remember my").is_some()
         || strip_prefix_word(text, "remember i").is_some()
+        || strip_prefix_word(text, "keep in mind").is_some()
+        || strip_prefix_word(text, "bear in mind").is_some()
+        || strip_prefix_word(text, "take note that").is_some()
+        || strip_prefix_word(text, "save a fact that").is_some()
+        || strip_prefix_word(text, "store a fact that").is_some()
+        || strip_prefix_word(text, "note a fact that").is_some()
+        || strip_prefix_word(text, "take a note that").is_some()
+        || strip_prefix_word(text, "make a note that").is_some()
+        || strip_prefix_word(text, "note that").is_some()
+        || strip_prefix_word(text, "for the record").is_some()
     {
         return Some(ActionHint::Remember);
     }
@@ -551,13 +730,41 @@ pub fn detect_action(norm: &str) -> Option<ActionHint> {
     }
 
     // 5. A bare "my schedule", and questions that name a calendar or the disk.
-    if ["my calendar", "my schedule", "my agenda"].contains(&text) {
+    if ["my calendar", "my schedule", "my agenda"].contains(&text)
+        || ["my calendar", "my schedule", "my agenda"].iter().any(|c| {
+            strip_prefix_word(text, c).is_some_and(|r| detect_time_ref(r) || r.contains("tomorrow"))
+        })
+    {
         return Some(ActionHint::CalendarRead);
+    }
+    // A bare word about the disk: "disk?", "disk space", "storage".
+    if [
+        "disk",
+        "disk space",
+        "my disk",
+        "storage",
+        "free space",
+        "my storage",
+    ]
+    .contains(&text)
+    {
+        return Some(ActionHint::DiskReport);
     }
     let asks = [
         "what", "show", "check", "read", "view", "open", "list", "do", "how", "which", "when",
+        "give", "run", "generate", "tell", "get", "pull up", "bring up", "any",
     ];
-    let leads_with_ask = asks.iter().any(|w| strip_prefix_word(text, w).is_some());
+    // "how do I free up disk space on Linux" asks how, not for the report.
+    let how_to = [
+        "how do i",
+        "how can i",
+        "how to",
+        "how should i",
+        "how would i",
+    ]
+    .iter()
+    .any(|w| strip_prefix_word(text, w).is_some());
+    let leads_with_ask = !how_to && asks.iter().any(|w| strip_prefix_word(text, w).is_some());
     if leads_with_ask {
         if [
             "calendar",
@@ -567,6 +774,15 @@ pub fn detect_action(norm: &str) -> Option<ActionHint> {
             "meetings",
             "meeting",
             "events",
+            "event",
+            "shift",
+            "class",
+            "lecture",
+            "exam",
+            "flight",
+            "scheduled",
+            "appointment",
+            "reminders",
         ]
         .iter()
         .any(|w| contains_word(text, w))
@@ -610,6 +826,38 @@ struct Intent {
 }
 
 const INTENTS: &[Intent] = &[
+    Intent {
+        hint: ActionHint::Pause,
+        verbs: &[
+            "resume",
+            "resuming",
+            "pausing",
+            "continue",
+            "restart",
+            "start",
+            "stop",
+            "halt",
+            "suspend",
+            "turn on",
+            "switch on",
+        ],
+        objects: &[
+            "watching",
+            "tracking",
+            "capture",
+            "capturing",
+            "monitoring",
+            "sensing",
+            "recording",
+            "observing",
+            "logging",
+        ],
+    },
+    Intent {
+        hint: ActionHint::AppendNote,
+        verbs: &["append", "add", "put", "tack", "attach"],
+        objects: &["list", "journal", "todo", "log", "diary"],
+    },
     Intent {
         hint: ActionHint::Pause,
         verbs: &[
@@ -763,7 +1011,73 @@ const SCREEN_NOUNS: &[&str] = &[
     "commit",
     "sheet",
     "video",
+    "article",
+    "email",
+    "pdf",
+    "ticket",
+    "thread",
+    "chat",
+    "application",
+    "monitor",
+    "badge",
+    "taskbar",
+    "panel",
+    "clock",
+    "banner",
+    "toolbar",
+    "cursor",
 ];
+
+/// Phrases that put the question on the user's own screen, wherever they sit.
+const SCREEN_PHRASES: &[&str] = &[
+    "on my screen",
+    "on the screen",
+    "on screen",
+    "on my monitor",
+    "on my second monitor",
+    "on my other monitor",
+    "on my display",
+    "on my desktop",
+    "in front of me",
+    "visible on",
+];
+
+/// Words that say a window, tab or app is in a state right now ("which window is active").
+const WINDOW_STATE: &[&str] = &[
+    "active",
+    "focused",
+    "currently",
+    "current",
+    "open",
+    "running",
+    "showing",
+    "frontmost",
+    "foremost",
+    "visible",
+    "opened",
+    "focus",
+];
+
+/// First-person words: a time word only points at the user's own activity next to one of these.
+const SELF_WORDS: &[&str] = &["i", "my", "me", "mine", "i ve", "i d", "i m", "we", "our"];
+
+/// Task verbs that act on text the user supplies ("translate ... today"): never about the screen.
+const TEXT_TASK_VERBS: &[&str] = &[
+    "rewrite",
+    "translate",
+    "proofread",
+    "paraphrase",
+    "rephrase",
+    "shorten",
+    "correct",
+    "fix the grammar",
+    "make this sound",
+];
+
+/// True when the text names the user (I, my, me).
+fn mentions_self(norm: &str) -> bool {
+    SELF_WORDS.iter().any(|w| contains_word(norm, w))
+}
 
 /// "this" followed by a time word is a time reference, not a pointer at the screen.
 const THIS_TIME: &[&str] = &[
@@ -794,6 +1108,17 @@ pub fn detect_deictic(norm: &str) -> bool {
         return true;
     }
 
+    // A task on text the user gives ("rewrite this email to ...") is not about the screen.
+    if TEXT_TASK_VERBS
+        .iter()
+        .any(|v| strip_prefix_word(norm, v).is_some())
+    {
+        return false;
+    }
+    // "summarize what is visible on my screen", "what article was open on my second monitor".
+    if SCREEN_PHRASES.iter().any(|p| contains_word(norm, p)) {
+        return true;
+    }
     // "what is on screen", "which document is open in front of me", "which app is open".
     if (norm.starts_with("what ") || norm.starts_with("which "))
         && (["on screen", "on my screen", "in front of me"]
@@ -810,6 +1135,21 @@ pub fn detect_deictic(norm: &str) -> bool {
         && SCREEN_NOUNS.iter().any(|n| contains_word(norm, n))
         && SCREEN_POINTERS.iter().any(|p| contains_word(norm, p))
         && !THIS_TIME.iter().any(|p| contains_word(norm, p))
+    {
+        return true;
+    }
+
+    // "what is that red badge near the clock": a pointer question that names where it is.
+    if ["what is", "what s", "what are", "what was"]
+        .iter()
+        .any(|q| {
+            strip_prefix_word(norm, q).is_some_and(|r| {
+                SCREEN_POINTERS
+                    .iter()
+                    .any(|p| strip_prefix_word(r, p).is_some())
+                    && SCREEN_NOUNS.iter().any(|n| contains_word(r, n))
+            })
+        })
     {
         return true;
     }
@@ -923,6 +1263,8 @@ const SELF_ACTIVITY_CUES: &[&str] = &[
     "launched",
     "program",
     "site",
+    "application",
+    "launch",
 ];
 
 /// Words after "was I / am I" that are not about activity on the screen.
@@ -970,6 +1312,15 @@ pub fn detect_self_activity(norm: &str) -> bool {
     if asks && participle_after_self(norm) {
         return true;
     }
+    // "was I editing main.rs or lib.rs when the power cut out": a question that opens on "was I".
+    if ["was i", "am i", "were i", "did i", "have i been"]
+        .iter()
+        .any(|p| strip_prefix_word(norm, p).is_some())
+        && (participle_after_self(norm)
+            || SELF_ACTIVITY_CUES.iter().any(|c| contains_word(norm, c)))
+    {
+        return true;
+    }
     SELF_ACTIVITY_PHRASES.iter().any(|p| contains_word(norm, p))
         && SELF_ACTIVITY_CUES.iter().any(|c| contains_word(norm, c))
         && (norm.starts_with("what ")
@@ -980,17 +1331,155 @@ pub fn detect_self_activity(norm: &str) -> bool {
             || norm.starts_with("show "))
 }
 
+/// Questions about the user's own windows and documents that have no "this" in them: "what
+/// window is currently active", "what document did I save before lunch". Kept apart from
+/// [`detect_deictic`] because they do not point at one thing on the screen at one moment.
+#[must_use]
+pub fn asks_about_own_screen(norm: &str) -> bool {
+    // "active window?", "open windows", "focused app": a bare fragment about the screen.
+    let fragment: Vec<&str> = norm.split(' ').collect();
+    if fragment.len() <= 3
+        && fragment
+            .iter()
+            .any(|w| ["window", "windows", "tab", "tabs", "app", "application"].contains(w))
+        && fragment.iter().any(|w| WINDOW_STATE.contains(w))
+    {
+        return true;
+    }
+    // "what was the paper I read before lunch", "did I already send that review": a question
+    // about something the user did on the machine.
+    let asks = ["what ", "which ", "did ", "where ", "when ", "how "]
+        .iter()
+        .any(|q| norm.starts_with(q));
+    if asks
+        && [
+            "i read",
+            "i looked at",
+            "i saw",
+            "i visited",
+            "i watched",
+            "i wrote",
+            "i sent",
+            "i typed",
+            "i saved",
+            "i downloaded",
+            "i installed",
+            "i clicked",
+            "i launched",
+            "i searched",
+            "i opened",
+            "i edited",
+            "was i in",
+            "was i on",
+            "i was in",
+            "i was on",
+        ]
+        .iter()
+        .any(|p| contains_word(norm, p))
+    {
+        return true;
+    }
+    if norm.starts_with("did i ") && !norm.contains("forget") {
+        return true;
+    }
+    if !(norm.starts_with("what ") || norm.starts_with("which ")) {
+        return false;
+    }
+    let head: Vec<&str> = norm.split(' ').take(4).collect();
+    let window_noun = head
+        .iter()
+        .any(|w| ["window", "windows", "tab", "tabs", "terminal", "workspace"].contains(w));
+    let screen_noun = head.iter().any(|w| SCREEN_NOUNS.contains(w));
+    let app_noun = head
+        .iter()
+        .any(|w| ["application", "app", "program"].contains(w));
+    if app_noun
+        && ["focus", "focused", "frontmost", "foremost", "currently"]
+            .iter()
+            .any(|w| contains_word(norm, w))
+    {
+        return true;
+    }
+    if window_noun
+        && (WINDOW_STATE.iter().any(|w| contains_word(norm, w))
+            || contains_word(norm, "has")
+            || contains_word(norm, "had")
+            || contains_word(norm, "was")
+            || mentions_self(norm))
+    {
+        return true;
+    }
+    if screen_noun
+        && mentions_self(norm)
+        && ["did", "was", "have", "had", "am"]
+            .iter()
+            .any(|w| contains_word(norm, w))
+    {
+        return true;
+    }
+    false
+}
+
 /// Detects a time reference in normalised text.
 #[must_use]
 pub fn detect_time_ref(norm: &str) -> bool {
     PATTERNS.time_refs.iter().any(|w| contains_word(norm, w))
 }
 
+/// Words that address the assistant and carry no request ("hey buddy ...").
+const ADDRESS_WORDS: &[&str] = &["hey", "hi", "hello", "yo", "buddy", "assistant"];
+
+/// Markers after which the real request starts when the user first explains why
+/// ("my laptop is slow so can you check the disk").
+const REQUEST_MARKERS: &[&str] = &[
+    " so can you ",
+    " so could you ",
+    " so please ",
+    " and can you ",
+    " can you please ",
+    " could you please ",
+];
+
+/// Removes what only frames a request: a greeting or the assistant's name at the start ("hey
+/// buddy"), and a leading explanation before "so can you ...". Never returns empty text.
+#[must_use]
+pub fn strip_framing(norm: &str) -> String {
+    let mut text = norm;
+    loop {
+        let next = ADDRESS_WORDS
+            .iter()
+            .find_map(|w| strip_prefix_word(text, w))
+            .or_else(|| {
+                // "ok buddy" / "okay buddy": the address makes "ok" a greeting, not a reply.
+                ["ok buddy", "okay buddy"]
+                    .iter()
+                    .find_map(|w| strip_prefix_word(text, w))
+            });
+        match next {
+            Some(rest) if !rest.is_empty() => text = rest,
+            _ => break,
+        }
+    }
+    // A long opening that explains itself before the request: keep the request.
+    if text.split(' ').count() > 8
+        && let Some((at, marker)) = REQUEST_MARKERS
+            .iter()
+            .filter_map(|m| text.find(m).map(|at| (at, m.len())))
+            .min()
+    {
+        let rest = text[at + marker..].trim();
+        if !rest.is_empty() {
+            return format!("can you {rest}");
+        }
+    }
+    text.to_string()
+}
+
 /// Deterministically routes a turn based on input text, nudge window state,
 /// and optional retrieval score.
 #[must_use]
 pub fn route(input: &RouteInput<'_>) -> RouteDecision {
-    let norm = normalise(input.text);
+    let norm = strip_framing(&normalise(input.text));
     let deictic = detect_deictic(&norm);
     let time_ref = detect_time_ref(&norm);
 
@@ -1020,7 +1509,35 @@ pub fn route(input: &RouteInput<'_>) -> RouteDecision {
         None => false,
     };
 
-    if deictic || time_ref || score_above_cutoff {
+    // A time word alone ("who won the match yesterday") is not about the user's activity; it
+    // needs the user in the sentence or an activity word.
+    let about_user = mentions_self(&norm)
+        || PATTERNS
+            .activity_cues
+            .iter()
+            .any(|w| contains_word(&norm, w));
+    let text_task = TEXT_TASK_VERBS
+        .iter()
+        .any(|v| strip_prefix_word(&norm, v).is_some());
+    // "ago", "earlier" and "just now" are relative to the moment of asking, so they point at the
+    // user's own recent activity by themselves; a calendar day ("yesterday") does not.
+    let relative_time = [
+        "ago",
+        "earlier",
+        "just now",
+        "last hour",
+        "past hour",
+        "recently",
+        "last time",
+    ]
+    .iter()
+    .any(|w| contains_word(&norm, w));
+    if !text_task
+        && (deictic
+            || asks_about_own_screen(&norm)
+            || (time_ref && (about_user || relative_time))
+            || score_above_cutoff)
+    {
         return RouteDecision {
             route: RouteKind::Desktop,
             deictic,

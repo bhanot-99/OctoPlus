@@ -25,7 +25,17 @@ use serde::Deserialize;
 /// | C | 81.2% (65/80) | 87.5% (35/40) |
 /// | D | 81.2% (65/80) | 97.5% (39/40) |
 ///
-/// So on wording the router has not seen, KPI-13 is about 80% (not met) and KPI-2 about 93%.
+/// After BUG-070 work (router generalised from E, F, G in turn; sets E-G written by agy, blind):
+///
+/// | set | KPI-13 first run | router version |
+/// | :-: | :-: | :- |
+/// | E | 76.2% (80/105) | before the BUG-070 changes |
+/// | F | 79.0% (83/105) | after tuning on E |
+/// | G | 86.7% (91/105) | after tuning on E and F |
+/// | H | 94.3% (99/105) | after tuning on E, F and G (target 90%: met) |
+///
+/// So on wording the router had not seen, KPI-13 was about 80% (not met); after BUG-070 it is
+/// about 94% on a fresh blind set. KPI-2 on unseen wording is still about 93% (not part of BUG-070).
 /// The sets all pass here only because they were used for tuning; they guard against
 /// regressions. See `reports/phase-05-knowledge.md`.
 const ROUTER_SET_A: &str = include_str!("../../../tests/eval/p5/router_heldout.jsonl");
@@ -34,6 +44,10 @@ const ROUTER_SET_C: &str = include_str!("../../../tests/eval/p5/router_heldout_c
 const DEICTIC_SET_C: &str = include_str!("../../../tests/eval/p5/deictic_heldout_c.jsonl");
 const ROUTER_SET_D: &str = include_str!("../../../tests/eval/p5/router_heldout_d.jsonl");
 const DEICTIC_SET_D: &str = include_str!("../../../tests/eval/p5/deictic_heldout_d.jsonl");
+const ROUTER_SET_E: &str = include_str!("../../../tests/eval/p5/router_heldout_e.jsonl");
+const ROUTER_SET_F: &str = include_str!("../../../tests/eval/p5/router_heldout_f.jsonl");
+const ROUTER_SET_G: &str = include_str!("../../../tests/eval/p5/router_heldout_g.jsonl");
+const ROUTER_SET_H: &str = include_str!("../../../tests/eval/p5/router_heldout_h.jsonl");
 const ROUTER_SET_B: &str = include_str!("../../../tests/eval/p5/router_heldout_b.jsonl");
 const DEICTIC_SET_B: &str = include_str!("../../../tests/eval/p5/deictic_heldout_b.jsonl");
 
@@ -113,6 +127,14 @@ fn kpi_13_turn_routing_on_the_held_out_sets() {
         router_accuracy("D", ROUTER_SET_D) >= 90.0,
         "KPI-13 below 90% on set D"
     );
+    // E, F and G were written blind by a different author (agy) and run once before any tuning
+    // on them; they are regression sets now (first runs in the table above).
+    assert!(router_accuracy("E", ROUTER_SET_E) >= 90.0);
+    assert!(router_accuracy("F", ROUTER_SET_F) >= 90.0);
+    assert!(router_accuracy("G", ROUTER_SET_G) >= 90.0);
+    // H is the final exam of the BUG-070 work: first run 94.3% (99/105) before anything was
+    // changed for it, then its six misses were fixed and it became a regression set too.
+    assert!(router_accuracy("H", ROUTER_SET_H) >= 90.0);
 }
 
 fn deictic_accuracy(name: &str, set: &str) -> f64 {

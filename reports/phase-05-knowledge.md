@@ -1,5 +1,7 @@
 # Phase 5 — Knowledge and Conversation (C5, text only): Report
 
+> **Update 2026-11-17 (BUG-070 fixed, D-34):** the router was generalised and re-measured on four blind sets; KPI-13 on unseen wording is now about 94 % (first run on the last set), not 80 %. The numbers below are the Phase 5 sign-off state.
+
 **Date:** 2026-11-17 · **Branch:** `phase-5` · **Builder:** Claude (engine, assembler, action route, kernel and C4 changes, child skills), agy (router, sanitiser, token budget, deictic parse, evidence selection, session, facts, chat rules, injection corpus) · **Checker:** Claude on every agy module (own probe sets, found and fixed gaps in each); agy on Claude's code (read-only review, 10 findings)
 **Status:** Built, gate green (§7), owner decisions taken 2026-11-17 (D-31: recommendations accepted, BUG-070 accepted as is, ADR-0013 accepted). **Ready to merge.** Still open for the owner: grade KPI-12; KPI-1 at integration (D-26)
 
