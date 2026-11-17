@@ -36,7 +36,7 @@ use crate::deictic::{self, Anchor};
 use crate::evidence;
 use crate::facts::{self, Fact};
 use crate::prompt::{self, Budgets, PromptInput};
-use crate::router::{self, RouteInput, RouteKind};
+use crate::router::{self, ActionHint, RouteInput, RouteKind};
 use crate::sanitize::neutralise;
 use crate::session::{Session, SessionConfig};
 use crate::status::{self, NO_LOOKUP_YET, Need};
@@ -127,6 +127,17 @@ struct Call<'a> {
     args_json: &'a str,
     taint: TaintFlags,
     origin: Origin,
+    /// What the user said, kept in the session for follow-ups (not stored in C3: C6 audits actions).
+    question: &'a str,
+    at_ns: u64,
+}
+
+/// What identifies the turn being handled.
+#[derive(Debug, Clone, Copy)]
+struct Turn<'a> {
+    text: &'a str,
+    origin: Origin,
+    now: u64,
 }
 
 /// One finished turn, as stored in C3.
@@ -217,6 +228,13 @@ impl KnowledgeHandler {
         .map_err(|_| cancelled())
     }
 
+    /// The least taint any answer of this turn may carry: the user's own words plus everything
+    /// already in the session (R0-4: nothing here ever lowers it, F3 of the Phase 5 review).
+    fn base_taint(&self) -> TaintFlags {
+        self.with_state(|s| s.session.taint())
+            .merge(TaintFlags::USER_PROVIDED)
+    }
+
     fn done(route: Route, taint: TaintFlags) -> Body {
         Body::AnswerDone(AnswerDone {
             route: route as i32,
@@ -264,9 +282,19 @@ impl KnowledgeHandler {
             retrieval_best_score: None,
             cutoff,
         });
-        if first.route == RouteKind::Action {
+        if let (RouteKind::Action, Some(hint)) = (first.route, first.action_hint) {
             self.metrics.route_action.fetch_add(1, Ordering::Relaxed);
-            return self.action_turn(&text, origin, now, sink).await;
+            return self
+                .action_turn(
+                    Turn {
+                        text: &text,
+                        origin,
+                        now,
+                    },
+                    hint,
+                    sink,
+                )
+                .await;
         }
         self.question_turn(&text, origin, now, sink).await
     }
@@ -294,18 +322,19 @@ impl KnowledgeHandler {
                         taint: TaintFlags::USER_PROVIDED,
                     })
                     .await;
-                    return Ok(Some(Self::done(Route::GeneralChat, TaintFlags::empty())));
+                    return Ok(Some(Self::done(Route::GeneralChat, self.base_taint())));
                 }
                 if chat::yes_no(text) == Some(false) {
                     Self::say(sink, "Okay.").await?;
-                    return Ok(Some(Self::done(Route::GeneralChat, TaintFlags::empty())));
+                    return Ok(Some(Self::done(Route::GeneralChat, self.base_taint())));
                 }
                 Ok(None)
             }
             Pending::Remember(fact) => match chat::yes_no(text) {
                 Some(true) => {
                     let args = serde_json::json!({ "fact": fact }).to_string();
-                    let ctx = self.with_state(|s| s.session.taint());
+                    // The confirming "yes" is the user's own word: it joins the context taint.
+                    let ctx = self.base_taint();
                     let done = self
                         .dispatch(
                             Call {
@@ -313,6 +342,8 @@ impl KnowledgeHandler {
                                 args_json: &args,
                                 taint: ctx,
                                 origin,
+                                question: text,
+                                at_ns: now,
                             },
                             sink,
                         )
@@ -321,7 +352,7 @@ impl KnowledgeHandler {
                 }
                 Some(false) => {
                     Self::say(sink, "Okay, I won't.").await?;
-                    Ok(Some(Self::done(Route::GeneralChat, TaintFlags::empty())))
+                    Ok(Some(Self::done(Route::GeneralChat, self.base_taint())))
                 }
                 None => Ok(None),
             },
@@ -332,13 +363,12 @@ impl KnowledgeHandler {
 
     async fn action_turn(
         &self,
-        text: &str,
-        origin: Origin,
-        now: u64,
+        turn: Turn<'_>,
+        hint: ActionHint,
         sink: &StreamSink,
     ) -> Result<Body, HandlerError> {
-        let ctx = self.with_state(|s| s.session.taint());
-        let taint = ctx.merge(TaintFlags::USER_PROVIDED);
+        let Turn { text, origin, now } = turn;
+        let taint = self.base_taint();
         if !self.kernel_allows(taint).await? {
             return Err(HandlerError::new(
                 ErrorCode::PermissionDenied,
@@ -346,20 +376,45 @@ impl KnowledgeHandler {
                 false,
             ));
         }
-        let system = format!("{ACTION_SYSTEM}{}", action::skill_list());
+        // Only the skills this request's intent allows can ever be called (review F1).
+        let allowed = action::allowed_for(hint);
+        if allowed.is_empty() {
+            let line = if hint == ActionHint::Search || hint == ActionHint::Fetch {
+                NO_LOOKUP_YET
+            } else {
+                "I can't do that one yet."
+            };
+            Self::say(sink, line).await?;
+            return Ok(Self::done(Route::Action, taint));
+        }
+        // "Forget that" picks the saved fact by its words, not by an id the model would invent.
+        if hint == ActionHint::ForgetFact {
+            return self.forget_fact_turn(turn, taint, sink).await;
+        }
+
+        let system = format!("{ACTION_SYSTEM}{}", action::skill_list(allowed));
         let prompt = format!(
             "<|im_start|>system\n{system}<|im_end|>\n<|im_start|>user\n{}<|im_end|>\n<|im_start|>assistant\n",
             neutralise(text)
         );
         let stable = u32::try_from(system.chars().count() + 28).unwrap_or(u32::MAX);
-        let model = match self
-            .generate_all(prompt, action::grammar(), stable, ACTION_MAX_TOKENS)
+        let Some(model) = self
+            .generate_all(
+                prompt,
+                action::grammar_for(allowed),
+                stable,
+                ACTION_MAX_TOKENS,
+            )
             .await
-        {
-            Some(m) => m,
-            None => return self.c4_down(sink).await,
+        else {
+            return self.c4_down(sink).await;
         };
-        match action::parse_call(&model, now) {
+        let request = action::Request {
+            allowed,
+            user_text: text,
+            now_ns: now,
+        };
+        match action::parse_call(&model, request) {
             Ok(call) => {
                 self.dispatch(
                     Call {
@@ -367,6 +422,8 @@ impl KnowledgeHandler {
                         args_json: &call.args_json,
                         taint,
                         origin,
+                        question: text,
+                        at_ns: now,
                     },
                     sink,
                 )
@@ -374,13 +431,50 @@ impl KnowledgeHandler {
             }
             Err(ActionError::NoneFits | ActionError::UnknownSkill) => {
                 Self::say(sink, "I can't do that one yet.").await?;
-                Ok(Self::done(Route::Action, TaintFlags::empty()))
+                Ok(Self::done(Route::Action, taint))
             }
             Err(_) => {
                 Self::say(sink, "I couldn't work out what to do with that.").await?;
-                Ok(Self::done(Route::Action, TaintFlags::empty()))
+                Ok(Self::done(Route::Action, taint))
             }
         }
+    }
+
+    /// `profile.forget` for the saved fact that best matches the user's words. The id comes
+    /// from C3's list, never from the model; the kernel's dialog still asks the user (REVIEW).
+    async fn forget_fact_turn(
+        &self,
+        turn: Turn<'_>,
+        taint: TaintFlags,
+        sink: &StreamSink,
+    ) -> Result<Body, HandlerError> {
+        let Turn { text, origin, now } = turn;
+        let Some(saved) = self.query_facts(text).await else {
+            return self.status_turn(status::Part::Storage, sink).await;
+        };
+        // A very large budget: choose by words only; the best match comes first.
+        let (picked, _) = facts::pick(&saved, text, u32::MAX, self.cfg.bytes_per_token);
+        let Some(&best) = picked.first() else {
+            Self::say(
+                sink,
+                "Which saved fact? Tell me what it was about, for example: forget my favourite colour.",
+            )
+            .await?;
+            return Ok(Self::done(Route::Action, taint));
+        };
+        let args = serde_json::json!({ "fact_id": saved[best].id }).to_string();
+        self.dispatch(
+            Call {
+                skill: "profile.forget",
+                args_json: &args,
+                taint,
+                origin,
+                question: text,
+                at_ns: now,
+            },
+            sink,
+        )
+        .await
     }
 
     /// Sends one skill call to C6 and speaks the outcome.
@@ -390,6 +484,8 @@ impl KnowledgeHandler {
             args_json,
             taint,
             origin,
+            question,
+            at_ns,
         } = call;
         let req = Body::DispatchRequest(DispatchRequest {
             skill: skill.to_string(),
@@ -417,6 +513,15 @@ impl KnowledgeHandler {
             _ => action::speak_not_done(DispatchOutcome::Failed).into(),
         };
         Self::say(sink, &line).await?;
+        // The turn joins the session so a follow-up ("did you pause?") has context.
+        self.with_state(|s| {
+            s.session.push(
+                question,
+                &line,
+                out_taint.merge(TaintFlags::MODEL_GENERATED),
+                at_ns,
+            );
+        });
         self.metrics.completed.fetch_add(1, Ordering::Relaxed);
         Ok(Self::done(Route::Action, out_taint))
     }
@@ -459,7 +564,7 @@ impl KnowledgeHandler {
             && let Some(line) = status::status_line(status::Part::Storage, Need::Evidence)
         {
             Self::say(sink, line).await?;
-            return Ok(Self::done(Route::DesktopAnswer, TaintFlags::empty()));
+            return Ok(Self::done(Route::DesktopAnswer, self.base_taint()));
         }
 
         // Evidence only goes into the prompt on the desktop route (FR-CHT-01); a stale index is
@@ -491,7 +596,11 @@ impl KnowledgeHandler {
                 facts: &fact_texts,
                 facts_taint,
                 focus: retrieved.focus.as_deref(),
-                focus_taint: TaintFlags::empty(),
+                focus_taint: if retrieved.focus.is_some() {
+                    TaintFlags::EXTERNAL_UNTRUSTED
+                } else {
+                    TaintFlags::empty()
+                },
                 history: &history,
                 history_taint,
                 evidence: &ev_items,
@@ -530,7 +639,9 @@ impl KnowledgeHandler {
             shown = with;
             pending = Pending::Lookup;
         } else if !desktop && chat::personal_fact_statement(text) {
-            Self::say(sink, &format!(" {}", chat::REMEMBER_OFFER)).await?;
+            let offer = format!(" {}", chat::REMEMBER_OFFER);
+            Self::say(sink, &offer).await?;
+            shown.push_str(&offer);
             pending = Pending::Remember(text.to_string());
         }
 
@@ -671,7 +782,7 @@ impl KnowledgeHandler {
     ) -> Result<Body, HandlerError> {
         let line = status::status_line(down, Need::Evidence).unwrap_or("Something is not running.");
         Self::say(sink, line).await?;
-        Ok(Self::done(Route::GeneralChat, TaintFlags::empty()))
+        Ok(Self::done(Route::GeneralChat, self.base_taint()))
     }
 
     /// Streams the answer to the client; returns the kept answer text, or `None` when C4 cannot

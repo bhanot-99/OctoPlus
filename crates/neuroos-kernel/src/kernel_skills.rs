@@ -103,7 +103,9 @@ impl ControlSkills {
             }
             Some(_) => return Err("bad_args".into()),
         };
-        if since == 0 && until == 0 && app.is_empty() {
+        // One app, or a closed time range: never an open-ended "everything before/after" (purge
+        // is its own kernel-only job, FR-PRV-06; review F5).
+        if app.is_empty() && (since == 0 || until == 0) {
             return Err("bad_args".into());
         }
         if until != 0 && since > until {

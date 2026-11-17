@@ -187,6 +187,9 @@ async fn profile_and_forget_skills_call_c3_with_validated_arguments() {
         ("profile.forget", json!({"fact_id": "1"})),
         ("memory.forget", json!({})),
         ("memory.forget", json!({"since_ns": 9, "until_ns": 3})),
+        // Open-ended ranges would mean "everything before/after": only purge may do that.
+        ("memory.forget", json!({"until_ns": 5})),
+        ("memory.forget", json!({"since_ns": 5})),
         ("memory.forget", json!({"since_ns": "1"})),
         ("memory.forget", json!({"app": 5})),
     ] {

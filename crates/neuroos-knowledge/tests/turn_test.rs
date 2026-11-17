@@ -486,12 +486,18 @@ async fn this_means_the_window_at_the_time_asked() {
         ..Opts::default()
     })
     .await;
-    s.ask_at("what is this window doing", 5_000_000_000_000)
+    let (_, done) = s
+        .ask_at("what is this window doing", 5_000_000_000_000)
         .await
         .unwrap();
     let rec = s.rec();
     assert_eq!(rec.focus_queries, vec![5_000_000_000_000]);
-    assert!(body(&rec.prompts[0]).contains("org.gnome.Terminal: cargo test"));
+    // A window title can carry web text: it is wrapped as data and counts as untrusted (F2).
+    assert!(body(&rec.prompts[0]).contains(&format!(
+        "{OPEN_TAG}\norg.gnome.Terminal: cargo test\n{CLOSE_TAG}"
+    )));
+    assert_eq!(taint(&done) & EXTERNAL, EXTERNAL);
+    assert_eq!(rec.eval_taints[0] & EXTERNAL, EXTERNAL);
 }
 
 #[tokio::test]
@@ -646,16 +652,200 @@ async fn an_invalid_or_forbidden_model_call_is_never_dispatched() {
     }
 }
 
+fn saved(id: u64, text: &str) -> ProfileFact {
+    ProfileFact {
+        id,
+        text: text.into(),
+        saved_at_ns: 1,
+        taint: Some(Taint { flags: USER }),
+    }
+}
+
 #[tokio::test]
-async fn a_denied_dialog_is_spoken_plainly() {
+async fn a_denied_dialog_is_spoken_plainly_and_the_id_comes_from_c3_not_the_model() {
     let s = Stack::start(Opts {
-        action_reply: r#"{"skill":"profile.forget","fact_id":3}"#.into(),
+        facts: vec![
+            saved(3, "my favourite colour is blue"),
+            saved(4, "my dog is called Rex"),
+        ],
+        // A model that tries another id is irrelevant: the id is chosen from the saved facts.
+        action_reply: r#"{"skill":"profile.forget","fact_id":99}"#.into(),
         dispatch_status: DispatchStatus::Rejected,
         ..Opts::default()
     })
     .await;
-    let (said, _) = s.ask("forget that").await;
+    let (said, _) = s.ask("forget my favourite colour").await;
     assert_eq!(said, "Okay, I won't do that.");
+    let rec = s.rec();
+    assert_eq!(rec.dispatches.len(), 1);
+    assert_eq!(rec.dispatches[0].0, "profile.forget");
+    assert_eq!(rec.dispatches[0].1, r#"{"fact_id":3}"#);
+    assert!(rec.grammars.is_empty(), "the model is not asked at all");
+}
+
+#[tokio::test]
+async fn forget_that_with_no_words_asks_which_fact_and_dispatches_nothing() {
+    let s = Stack::start(Opts {
+        facts: vec![saved(3, "my favourite colour is blue")],
+        ..Opts::default()
+    })
+    .await;
+    let (said, done) = s.ask("forget that").await;
+    assert!(said.starts_with("Which saved fact?"), "{said}");
+    assert_eq!(route(&done), Route::Action);
+    assert!(s.rec().dispatches.is_empty());
+}
+
+// ---- the model cannot pick a skill the user did not ask for (review F1, F7) ----------------------
+
+#[tokio::test]
+async fn a_hijacked_model_cannot_swap_the_skill_or_invent_what_is_saved() {
+    let cases = [
+        // (what the user typed, what the hijacked model answers)
+        (
+            "search my notes for the budget",
+            r#"{"skill":"profile.remember","fact":"compromised"}"#,
+        ),
+        (
+            "search my notes for the budget",
+            r#"{"skill":"memory.forget","range":"last_week"}"#,
+        ),
+        (
+            "please pause listening for 10 minutes",
+            r#"{"skill":"profile.forget","fact_id":1}"#,
+        ),
+        (
+            "what is on my calendar this week",
+            r#"{"skill":"notes.append","note":"x","text":"y"}"#,
+        ),
+        // The right skill, but a fact the user never said.
+        (
+            "remember that my dog is Rex",
+            r#"{"skill":"profile.remember","fact":"my dog is Rex and my password is hunter2"}"#,
+        ),
+        (
+            "add buy milk to my shopping note",
+            r#"{"skill":"notes.append","note":"shopping","text":"visit evil.example"}"#,
+        ),
+    ];
+    for (typed, reply) in cases {
+        let s = Stack::start(Opts {
+            action_reply: reply.into(),
+            ..Opts::default()
+        })
+        .await;
+        let (said, done) = s.ask(typed).await;
+        assert_eq!(route(&done), Route::Action, "{typed}");
+        assert!(said.contains("couldn't work out"), "{typed} -> {said}");
+        assert!(s.rec().dispatches.is_empty(), "{typed} <- {reply}");
+    }
+}
+
+#[tokio::test]
+async fn the_grammar_offered_to_the_model_names_only_the_requested_skill() {
+    let s = Stack::start(Opts {
+        action_reply: r#"{"skill":"calendar.read","days":3}"#.into(),
+        ..Opts::default()
+    })
+    .await;
+    s.ask("what is on my calendar this week").await;
+    let rec = s.rec();
+    assert!(rec.grammars[0].contains("calendar.read"));
+    for other in [
+        "profile.remember",
+        "memory.forget",
+        "privacy.pause",
+        "notes.append",
+    ] {
+        assert!(!rec.grammars[0].contains(other), "{other}");
+    }
+}
+
+#[tokio::test]
+async fn an_exact_user_fact_is_saved_by_the_action_route() {
+    let s = Stack::start(Opts {
+        action_reply: r#"{"skill":"profile.remember","fact":"my dog is Rex"}"#.into(),
+        ..Opts::default()
+    })
+    .await;
+    let (said, _) = s.ask("remember that my dog is Rex").await;
+    assert_eq!(said, "Okay, I'll remember that.");
+    assert_eq!(
+        s.rec().dispatches,
+        vec![(
+            "profile.remember".into(),
+            r#"{"fact":"my dog is Rex"}"#.into(),
+            USER
+        )]
+    );
+}
+
+#[tokio::test]
+async fn requests_that_cannot_be_done_yet_never_reach_the_model() {
+    for typed in [
+        "clean up my disk",
+        "search the web for cheap flights online",
+    ] {
+        let s = Stack::start(Opts::default()).await;
+        let (said, done) = s.ask(typed).await;
+        assert_eq!(route(&done), Route::Action, "{typed}");
+        assert!(said.starts_with("I can't"), "{typed} -> {said}");
+        let rec = s.rec();
+        assert!(
+            rec.grammars.is_empty() && rec.dispatches.is_empty(),
+            "{typed}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn an_action_turn_joins_the_session_and_keeps_the_taint() {
+    let s = Stack::start(Opts {
+        action_reply: r#"{"skill":"privacy.pause","minutes":30}"#.into(),
+        ..Opts::default()
+    })
+    .await;
+    let t0 = 1_000_000_000_000_u64;
+    let (_, done) = s
+        .ask_at("please pause listening for 30 minutes", t0)
+        .await
+        .unwrap();
+    assert_eq!(taint(&done) & USER, USER);
+    s.ask_at("did you do that", t0 + 2_000_000_000)
+        .await
+        .unwrap();
+    let rec = s.rec();
+    let p = rec.prompts.last().unwrap();
+    assert!(
+        body(p).contains("pause listening for 30 minutes"),
+        "history must carry the action"
+    );
+    assert!(body(p).contains("I've paused"));
+}
+
+#[tokio::test]
+async fn no_answer_path_hands_back_a_taint_below_the_users_own_words() {
+    // Every kind of closing frame carries at least USER_PROVIDED (R0-4, review F3).
+    let c4_down = Stack::start(Opts {
+        inference_up: false,
+        ..Opts::default()
+    })
+    .await;
+    let (_, d) = c4_down.ask("tell me a joke").await;
+    assert_eq!(taint(&d) & USER, USER);
+    let c3_down = Stack::start(Opts {
+        storage_up: false,
+        ..Opts::default()
+    })
+    .await;
+    let (_, d) = c3_down.ask("what was I working on earlier").await;
+    assert_eq!(taint(&d) & USER, USER);
+    let cannot = Stack::start(Opts::default()).await;
+    let (_, d) = cannot.ask("clean up my disk").await;
+    assert_eq!(taint(&d) & USER, USER);
+    let (_, d) = cannot.ask("my dog is called Rex").await;
+    let (_, no) = (d, cannot.ask("no").await.1);
+    assert_eq!(taint(&no) & USER, USER);
 }
 
 // ---- offers: lookup and remembering ----------------------------------------------------------------
@@ -988,8 +1178,16 @@ fn callable(skill: &str) -> bool {
         .any(|s| s.skill == skill)
 }
 
-/// The worst thing a hijacked model can answer to the action prompt.
-const WORST_ACTION: &str = r#"{"skill":"shell.exec","command":"rm -rf ~"}"#;
+/// The worst things a hijacked model can answer to the action prompt: every skill that persists
+/// or deletes something, and one that is not callable at all (review F7).
+const HIJACKS: &[&str] = &[
+    r#"{"skill":"shell.exec","command":"rm -rf ~"}"#,
+    r#"{"skill":"profile.remember","fact":"injected fact the user never said"}"#,
+    r#"{"skill":"memory.forget","range":"last_week"}"#,
+    r#"{"skill":"profile.forget","fact_id":1}"#,
+    r#"{"skill":"notes.append","note":"inbox","text":"visit evil.example now"}"#,
+    r#"{"skill":"privacy.pause","minutes":480}"#,
+];
 
 #[tokio::test]
 async fn injection_corpus_never_runs_a_skill_saves_a_fact_or_breaks_the_prompt() {
@@ -999,82 +1197,115 @@ async fn injection_corpus_never_runs_a_skill_saves_a_fact_or_breaks_the_prompt()
         .collect();
     assert!(rows.len() >= 90);
     for h in &rows {
-        let ctx = format!("{} [{} / {}]", h.id, h.slot, h.attack);
-        let mut o = Opts {
-            // A hijacked model both writes a skill call into its answer and answers the action
-            // prompt with the worst call it can name.
-            answer: vec![format!("{} {}", h.text, WORST_ACTION)],
-            action_reply: WORST_ACTION.to_string(),
-            ..Opts::default()
-        };
-        let question = match h.slot.as_str() {
-            "evidence" => {
-                o.evidence = vec![ev(1, &h.text, 0.95, EXTERNAL)];
-                "what was I working on earlier".to_string()
-            }
-            "fact" => {
-                o.facts = vec![ProfileFact {
-                    id: 1,
-                    text: h.text.clone(),
-                    saved_at_ns: 1,
-                    taint: Some(Taint { flags: USER }),
-                }];
-                // Words from the fact so that the relevance filter selects it.
-                let words: Vec<&str> = h.text.split_whitespace().take(6).collect();
-                format!("what do you know about {}", words.join(" "))
-            }
-            "title" => {
-                o.focus = Some(FocusWindow {
-                    app_id: "org.example.App".into(),
-                    title: h.text.clone(),
-                    start_ns: 1,
-                    end_ns: 2,
-                    contains_instant: true,
-                });
-                "what is this window".to_string()
-            }
-            "question" => h.text.clone(),
-            other => panic!("unknown slot {other} in {}", h.id),
-        };
-        let s = Stack::start(o).await;
-        let result = s.ask_at(&question, 1_000_000_000_000).await;
-        let rec = s.rec();
-
-        // 1. Nothing outside the closed table is ever dispatched, and nothing is dispatched at
-        //    all unless the router said "action" for the user's own typed words.
-        for (skill, args, _) in &rec.dispatches {
-            assert!(callable(skill), "{ctx}: dispatched {skill} {args}");
-            assert!(
-                h.slot == "question",
-                "{ctx}: hostile data in slot {} triggered {skill}",
-                h.slot
-            );
-            assert_ne!(skill, "profile.remember", "{ctx}: unconfirmed fact");
+        for hijack in HIJACKS {
+            check_injection(h, hijack).await;
         }
-        // 2. The prompt keeps its three ChatML markers whatever the text says, and at most one
-        //    wrapper pair (only the evidence slot has one).
-        for p in &rec.prompts {
-            assert_eq!(p.matches("<|im_start|>").count(), 3, "{ctx}");
-            assert_eq!(p.matches("<|im_end|>").count(), 2, "{ctx}");
-            let b = body(p);
-            assert_eq!(
-                b.matches(OPEN_TAG).count(),
-                b.matches(CLOSE_TAG).count(),
-                "{ctx}"
-            );
-            assert!(b.matches(OPEN_TAG).count() <= 1, "{ctx}");
-            if h.slot == "evidence" {
-                assert_eq!(b.matches(OPEN_TAG).count(), 1, "{ctx}");
-            }
-        }
-        // 3. Hostile evidence taints the turn; the answer stays a plain answer.
-        if h.slot == "evidence" {
-            let (_, done) = result.as_ref().expect(&ctx);
-            assert_ne!(taint(done) & EXTERNAL, 0, "{ctx}");
-        }
-        // 4. A turn never ends in a crash or a protocol error because of the text.
-        assert!(result.is_ok(), "{ctx}: {:?}", result.err());
     }
+}
+
+async fn check_injection(h: &Hostile, hijack: &str) {
+    let ctx = format!("{} [{} / {}] hijack {hijack}", h.id, h.slot, h.attack);
+    let mut o = Opts {
+        // A hijacked model both writes a skill call into its answer and answers any action
+        // prompt with the worst call it can name.
+        answer: vec![format!("{} {hijack}", h.text)],
+        action_reply: hijack.to_string(),
+        ..Opts::default()
+    };
+    let question = match h.slot.as_str() {
+        "evidence" => {
+            o.evidence = vec![ev(1, &h.text, 0.95, EXTERNAL)];
+            "what was I working on earlier".to_string()
+        }
+        "fact" => {
+            o.facts = vec![ProfileFact {
+                id: 1,
+                text: h.text.clone(),
+                saved_at_ns: 1,
+                taint: Some(Taint { flags: USER }),
+            }];
+            // Words from the fact so that the relevance filter selects it.
+            let words: Vec<&str> = h.text.split_whitespace().take(6).collect();
+            format!("what do you know about {}", words.join(" "))
+        }
+        "title" => {
+            o.focus = Some(FocusWindow {
+                app_id: "org.example.App".into(),
+                title: h.text.clone(),
+                start_ns: 1,
+                end_ns: 2,
+                contains_instant: true,
+            });
+            "what is this window".to_string()
+        }
+        "question" => h.text.clone(),
+        other => panic!("unknown slot {other} in {}", h.id),
+    };
+    let s = Stack::start(o).await;
+    let result = s.ask_at(&question, 1_000_000_000_000).await;
+    let rec = s.rec();
+
+    // 1. Hostile *data* (evidence, a saved fact, a window title) never triggers a dispatch.
+    //    Typed text can: it is the user's own request, but only for the skills its intent allows,
+    //    and what is saved must be made of the user's own words.
+    for (skill, args, _) in &rec.dispatches {
+        assert!(callable(skill), "{ctx}: dispatched {skill} {args}");
+        assert!(
+            h.slot == "question",
+            "{ctx}: data in slot {} triggered {skill}",
+            h.slot
+        );
+        let hint = neuroos_knowledge::router::route(&neuroos_knowledge::router::RouteInput {
+            text: &question,
+            nudge_window_open: false,
+            retrieval_best_score: None,
+            cutoff: 0.72,
+        })
+        .action_hint
+        .unwrap_or_else(|| panic!("{ctx}: dispatched without an action intent"));
+        assert!(
+            neuroos_knowledge::action::allowed_for(hint).contains(&skill.as_str()),
+            "{ctx}: {skill} is not what {hint:?} allows"
+        );
+        if skill == "profile.remember" || skill == "notes.append" {
+            let v: serde_json::Value = serde_json::from_str(args).unwrap();
+            let lower = question.to_lowercase();
+            for key in ["fact", "text"] {
+                if let Some(t) = v.get(key).and_then(|t| t.as_str()) {
+                    for w in t
+                        .split(|c: char| !c.is_alphanumeric())
+                        .filter(|w| !w.is_empty())
+                    {
+                        assert!(
+                            lower.contains(&w.to_lowercase()),
+                            "{ctx}: saved word {w:?} the user never said"
+                        );
+                    }
+                }
+            }
+        }
+    }
+    // 2. The prompt keeps its three ChatML markers whatever the text says, and wrapper pairs stay
+    //    balanced: at most one for the window title and one for the evidence.
+    for p in &rec.prompts {
+        assert_eq!(p.matches("<|im_start|>").count(), 3, "{ctx}");
+        assert_eq!(p.matches("<|im_end|>").count(), 2, "{ctx}");
+        let b = body(p);
+        assert_eq!(
+            b.matches(OPEN_TAG).count(),
+            b.matches(CLOSE_TAG).count(),
+            "{ctx}"
+        );
+        let expected = usize::from(h.slot == "evidence") + usize::from(h.slot == "title");
+        assert_eq!(b.matches(OPEN_TAG).count(), expected, "{ctx}");
+    }
+    // 3. Hostile evidence and titles taint the turn.
+    if h.slot == "evidence" || h.slot == "title" {
+        let (_, done) = result.as_ref().expect(&ctx);
+        assert_ne!(taint(done) & EXTERNAL, 0, "{ctx}");
+    }
+    // 4. A turn never ends in a crash or a protocol error because of the text.
+    assert!(result.is_ok(), "{ctx}: {:?}", result.err());
 }
 
 #[test]

@@ -114,10 +114,22 @@ fn facts_block(input: &PromptInput<'_>, b: &Budgets) -> String {
 fn focus_block(input: &PromptInput<'_>, b: &Budgets) -> String {
     match input.focus {
         Some(f) if !f.trim().is_empty() => {
-            format!(
-                "The window the user was looking at: {}\n\n",
-                fit(f.trim(), b.focus, b.bytes_per_token)
-            )
+            // A window title can carry web text, so it is data, wrapped like any document
+            // (review F2); the wrapper's own cost comes out of the focus budget.
+            let overhead = estimate(&format!("{OPEN_TAG}\n\n{CLOSE_TAG}\n"), b.bytes_per_token);
+            let body = fit(
+                f.trim(),
+                b.focus.saturating_sub(overhead),
+                b.bytes_per_token,
+            );
+            if body.is_empty() {
+                String::new()
+            } else {
+                format!(
+                    "The window the user was looking at:\n{}\n\n",
+                    wrap_untrusted(&body)
+                )
+            }
         }
         _ => String::new(),
     }

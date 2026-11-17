@@ -5,7 +5,7 @@
 
 use std::path::Path;
 
-use neuroos_knowledge::action::{Param, SPECS, parse_call};
+use neuroos_knowledge::action::{Param, Request, SPECS, parse_call};
 use serde_json::Value;
 
 fn manifest(skill: &str) -> toml_like::Manifest {
@@ -127,7 +127,11 @@ fn model_parameters_match_manifest_arguments() {
 fn a_parsed_call_only_carries_manifest_keys() {
     let c = parse_call(
         r#"{"skill":"memory.forget","range":"last_day","app":"org.x"}"#,
-        2_000_000_000_000_000_000,
+        Request {
+            allowed: &["memory.forget"],
+            user_text: "forget org.x from the last day",
+            now_ns: 2_000_000_000_000_000_000,
+        },
     )
     .unwrap();
     let args: Value = serde_json::from_str(&c.args_json).unwrap();

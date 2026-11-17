@@ -536,7 +536,7 @@ pub struct KnowledgeConfig {
     /// cached prefix and is never cut, so it has no budget here.
     /// Personal-facts block.
     pub facts_tokens: u32,
-    /// Focus-context block.
+    /// Focus-context block: ADR-0005's 32 tokens plus the untrusted-wrapper's own cost (ADR-0013).
     pub focus_tokens: u32,
     /// Session-history block (the question counts against it on the first turn).
     pub history_tokens: u32,
@@ -565,7 +565,7 @@ impl Default for KnowledgeConfig {
             min_score_milli: 500,
             desktop_route_score_milli: 720,
             facts_tokens: 48,
-            focus_tokens: 32,
+            focus_tokens: 48,
             history_tokens: 48,
             evidence_tokens: 128,
             bytes_per_token: 3,

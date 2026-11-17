@@ -6,7 +6,7 @@
 //! `.txt` files count, and every walk and read is bounded (rules §9.7). Output never contains
 //! control characters.
 
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 use std::io::{Read, Write};
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
@@ -262,7 +262,12 @@ pub fn append(inv: &Invocation, args: &Value) -> Result<Value, SkillError> {
 }
 
 fn ends_with_newline(path: &Path) -> bool {
-    let Ok(mut f) = File::open(path) else {
+    // Never follows a link, like every other open in this module (review F9).
+    let Ok(mut f) = OpenOptions::new()
+        .read(true)
+        .custom_flags(rustix::fs::OFlags::NOFOLLOW.bits().cast_signed())
+        .open(path)
+    else {
         return true;
     };
     let Ok(len) = f.metadata().map(|m| m.len()) else {

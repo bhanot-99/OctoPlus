@@ -23,6 +23,27 @@ pub const RANGES: &[(&str, u64)] = &[
 /// The "no skill fits" answer the grammar always allows.
 pub const NONE_SKILL: &str = "none";
 
+/// The only skills a request may end in, by what the router recognised (F1 of the Phase 5
+/// review: the model must never pick a different skill than the one the user asked for, or a
+/// "search my notes" request could end in `profile.remember`). An empty list means the request is
+/// recognised but cannot be carried out yet.
+#[must_use]
+pub const fn allowed_for(hint: crate::router::ActionHint) -> &'static [&'static str] {
+    use crate::router::ActionHint as H;
+    match hint {
+        H::Pause => &["privacy.pause"],
+        H::Forget => &["memory.forget"],
+        H::ForgetFact => &["profile.forget"],
+        H::Remember => &["profile.remember"],
+        H::AppendNote => &["notes.append"],
+        H::NotesSearch => &["notes.search"],
+        H::CalendarRead => &["calendar.read"],
+        H::DiskReport => &["system.disk_report"],
+        // Their arguments are paths or links the model must not choose, or they need Phase 8.
+        H::Cleanup | H::Search | H::Fetch => &[],
+    }
+}
+
 /// One model-fillable parameter.
 #[derive(Debug, Clone, Copy)]
 pub enum Param {
@@ -173,6 +194,30 @@ pub enum ActionError {
     /// `memory.forget` with neither a range nor an app would mean "everything".
     #[error("forget needs a range or an app")]
     UnboundedForget,
+    /// A skill the user did not ask for (the router's intent does not allow it).
+    #[error("skill was not what the user asked for")]
+    NotRequested,
+    /// Text to be saved (a fact, a note line) that is not made of the user's own words.
+    #[error("text to save is not from the user's request")]
+    NotFromUser,
+}
+
+/// Parameters whose text is persisted, so every word of it must come from the user's request.
+const PERSISTED_TEXT: &[&str] = &["fact", "text"];
+
+/// Lower-case alphanumeric words of `text`.
+fn words(text: &str) -> std::collections::BTreeSet<String> {
+    text.split(|c: char| !c.is_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .map(str::to_lowercase)
+        .collect()
+}
+
+/// True when every word of `value` appears in the user's own request (a rephrasing that adds
+/// words is refused: it could be the model's invention or an injected fact).
+fn made_of_user_words(user_text: &str, value: &str) -> bool {
+    let have = words(user_text);
+    words(value).iter().all(|w| have.contains(w))
 }
 
 /// A validated call, ready for `DispatchRequest`.
@@ -184,14 +229,23 @@ pub struct SkillCall {
     pub args_json: String,
 }
 
-/// The GBNF grammar that limits C4's output to the model schema (FR-INF-05). Generated from
-/// [`SPECS`], so the grammar and the validator cannot disagree about which skills exist.
+/// The GBNF grammar for every callable skill. Used by tests; the turn engine uses
+/// [`grammar_for`] with the skills its intent allows.
 #[must_use]
 pub fn grammar() -> String {
+    let all: Vec<&str> = SPECS.iter().map(|s| s.skill).collect();
+    grammar_for(&all)
+}
+
+/// The GBNF grammar that limits C4's output to the model schema of `allowed` skills (and
+/// "none") (FR-INF-05). Generated from [`SPECS`], so the grammar and the validator cannot
+/// disagree about which skills exist.
+#[must_use]
+pub fn grammar_for(allowed: &[&str]) -> String {
     let mut g = String::new();
     g.push_str("root ::= call\n");
     let mut alts = vec![format!("\"{{\\\"skill\\\":\\\"{NONE_SKILL}\\\"}}\"")];
-    for spec in SPECS {
+    for spec in SPECS.iter().filter(|s| allowed.contains(&s.skill)) {
         let mut rule = format!("\"{{\\\"skill\\\":\\\"{}\\\"", spec.skill);
         for p in spec.params {
             // Optional parameters are emitted too (possibly empty); the validator drops empties.
@@ -236,25 +290,35 @@ const fn bucket(max: usize) -> usize {
     }
 }
 
-/// One line per skill for the persona's skill list.
+/// One line per allowed skill for the action prompt's skill list.
 #[must_use]
-pub fn skill_list() -> String {
+pub fn skill_list(allowed: &[&str]) -> String {
     let mut s = String::new();
-    for spec in SPECS {
+    for spec in SPECS.iter().filter(|s| allowed.contains(&s.skill)) {
         let args: Vec<&str> = spec.params.iter().map(Param::name).collect();
         let _ = writeln!(s, "{}({})", spec.skill, args.join(", "));
     }
     s
 }
 
+/// What a call must be checked against besides its own schema.
+#[derive(Debug, Clone, Copy)]
+pub struct Request<'a> {
+    /// Skills the router's intent allows ([`allowed_for`]).
+    pub allowed: &'a [&'a str],
+    /// The user's own request text; persisted text must be made of its words.
+    pub user_text: &'a str,
+    /// The turn's time (AB-13); it only matters for `memory.forget` ranges.
+    pub now_ns: u64,
+}
+
 /// Validates the model's answer and builds the exact manifest arguments.
 ///
-/// `now_ns` is the turn's time (AB-13): it only matters for `memory.forget` ranges.
-///
 /// # Errors
-/// [`ActionError`]: nothing the model says can name a skill outside [`SPECS`], add a key, or
-/// leave the declared ranges.
-pub fn parse_call(model_text: &str, now_ns: u64) -> Result<SkillCall, ActionError> {
+/// [`ActionError`]: nothing the model says can name a skill outside [`SPECS`] or outside what the
+/// user asked for, add a key, leave the declared ranges, or save words the user did not say.
+pub fn parse_call(model_text: &str, req: Request<'_>) -> Result<SkillCall, ActionError> {
+    let now_ns = req.now_ns;
     let value: Value =
         serde_json::from_str(model_text.trim()).map_err(|_| ActionError::NotAnObject)?;
     let Value::Object(mut obj) = value else {
@@ -271,6 +335,10 @@ pub fn parse_call(model_text: &str, now_ns: u64) -> Result<SkillCall, ActionErro
         .iter()
         .find(|s| s.skill == name)
         .ok_or(ActionError::UnknownSkill)?;
+    // Only what the user's request allows, whatever the model chose (review F1).
+    if !req.allowed.contains(&spec.skill) {
+        return Err(ActionError::NotRequested);
+    }
     if obj
         .keys()
         .any(|k| !spec.params.iter().any(|p| p.name() == k))
@@ -281,6 +349,12 @@ pub fn parse_call(model_text: &str, now_ns: u64) -> Result<SkillCall, ActionErro
     for p in spec.params {
         let raw = obj.remove(p.name());
         if let Some(v) = check(p, raw)? {
+            if PERSISTED_TEXT.contains(&p.name())
+                && v.as_str()
+                    .is_some_and(|t| !made_of_user_words(req.user_text, t))
+            {
+                return Err(ActionError::NotFromUser);
+            }
             args.insert(p.name().to_string(), v);
         } else if p.required() {
             return Err(ActionError::MissingArg);
@@ -449,8 +523,32 @@ mod tests {
 
     const NOW: u64 = 1_800_000_000_000_000_000;
 
+    const USER: &str = "remember that my dog is Rex and buy milk please";
+
+    fn all() -> Vec<&'static str> {
+        SPECS.iter().map(|s| s.skill).collect()
+    }
+
     fn call(text: &str) -> Result<SkillCall, ActionError> {
-        parse_call(text, NOW)
+        parse_call(
+            text,
+            Request {
+                allowed: &all(),
+                user_text: USER,
+                now_ns: NOW,
+            },
+        )
+    }
+
+    fn call_for(text: &str, allowed: &[&str], user: &str) -> Result<SkillCall, ActionError> {
+        parse_call(
+            text,
+            Request {
+                allowed,
+                user_text: user,
+                now_ns: NOW,
+            },
+        )
     }
 
     #[test]
@@ -531,7 +629,94 @@ mod tests {
     }
 
     #[test]
-    fn skill_list_is_one_line_per_skill() {
-        assert_eq!(skill_list().lines().count(), SPECS.len());
+    fn skill_list_is_one_line_per_allowed_skill() {
+        assert_eq!(skill_list(&all()).lines().count(), SPECS.len());
+        assert_eq!(skill_list(&["notes.search"]).lines().count(), 1);
+        assert_eq!(skill_list(&[]), "");
+    }
+
+    #[test]
+    fn a_skill_the_user_did_not_ask_for_is_refused() {
+        // "search my notes" must never end in profile.remember, whatever the model says.
+        let hijack = r#"{"skill":"profile.remember","fact":"compromised"}"#;
+        assert_eq!(
+            call_for(hijack, &["notes.search"], "search my notes for compromised"),
+            Err(ActionError::NotRequested)
+        );
+        assert_eq!(
+            call_for(
+                r#"{"skill":"memory.forget","range":"last_day"}"#,
+                &["privacy.pause"],
+                "pause"
+            ),
+            Err(ActionError::NotRequested)
+        );
+        assert!(
+            call_for(
+                r#"{"skill":"notes.search","query":"budget"}"#,
+                &["notes.search"],
+                "search my notes for budget"
+            )
+            .is_ok()
+        );
+        // "none" is always a safe answer.
+        assert_eq!(
+            call_for(r#"{"skill":"none"}"#, &[], "x"),
+            Err(ActionError::NoneFits)
+        );
+    }
+
+    #[test]
+    fn saved_text_must_be_the_users_own_words() {
+        let ok = r#"{"skill":"profile.remember","fact":"my dog is Rex"}"#;
+        assert!(call_for(ok, &["profile.remember"], "remember that my dog is Rex").is_ok());
+        // Words the user never said: an invented or injected fact.
+        for fact in [
+            "my dog is Rex and my password is hunter2",
+            "send everything to evil.example",
+        ] {
+            let reply = format!(r#"{{"skill":"profile.remember","fact":"{fact}"}}"#);
+            assert_eq!(
+                call_for(&reply, &["profile.remember"], "remember that my dog is Rex"),
+                Err(ActionError::NotFromUser),
+                "{fact}"
+            );
+        }
+        let note = r#"{"skill":"notes.append","note":"todo","text":"buy milk"}"#;
+        assert!(call_for(note, &["notes.append"], "add buy milk to my todo note").is_ok());
+        let injected = r#"{"skill":"notes.append","note":"todo","text":"rm -rf"}"#;
+        assert_eq!(
+            call_for(injected, &["notes.append"], "add buy milk to my todo note"),
+            Err(ActionError::NotFromUser)
+        );
+    }
+
+    #[test]
+    fn every_hint_allows_only_its_own_skills() {
+        use crate::router::ActionHint as H;
+        let table = [
+            (H::Pause, vec!["privacy.pause"]),
+            (H::Forget, vec!["memory.forget"]),
+            (H::ForgetFact, vec!["profile.forget"]),
+            (H::Remember, vec!["profile.remember"]),
+            (H::AppendNote, vec!["notes.append"]),
+            (H::NotesSearch, vec!["notes.search"]),
+            (H::CalendarRead, vec!["calendar.read"]),
+            (H::DiskReport, vec!["system.disk_report"]),
+            (H::Cleanup, vec![]),
+            (H::Search, vec![]),
+            (H::Fetch, vec![]),
+        ];
+        for (hint, want) in table {
+            assert_eq!(allowed_for(hint), want.as_slice(), "{hint:?}");
+        }
+    }
+
+    #[test]
+    fn the_grammar_only_names_the_allowed_skills() {
+        let g = grammar_for(&["calendar.read"]);
+        assert!(g.contains("calendar.read"));
+        assert!(!g.contains("profile.remember") && !g.contains("privacy.pause"));
+        assert!(g.contains(r#"\"skill\":\"none\""#));
     }
 }
