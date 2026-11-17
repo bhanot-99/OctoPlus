@@ -139,6 +139,7 @@ async fn test_happy_path_ask_streaming_and_cancellation() {
             Body::AskRequest(AskRequest {
                 text: "What was I doing?".into(),
                 origin: 0,
+                at_ns: 0,
             }),
             Duration::from_secs(5),
         )
@@ -260,6 +261,7 @@ async fn test_c3_down_fails_soft() {
             Body::AskRequest(AskRequest {
                 text: "Hello".into(),
                 origin: 0,
+                at_ns: 0,
             }),
             Duration::from_secs(2),
         )
@@ -348,6 +350,7 @@ async fn test_c4_down_returns_unavailable_retryable() {
             Body::AskRequest(AskRequest {
                 text: "Hello".into(),
                 origin: 0,
+                at_ns: 0,
             }),
             Duration::from_secs(1),
         )
@@ -425,6 +428,7 @@ async fn test_c6_rejects_returns_permission_denied() {
             Body::AskRequest(AskRequest {
                 text: "Dangerous question".into(),
                 origin: 0,
+                at_ns: 0,
             }),
             Duration::from_secs(1),
         )
@@ -512,6 +516,7 @@ async fn test_cancellation_propagates_to_c4() {
             Body::AskRequest(AskRequest {
                 text: "Stream me".into(),
                 origin: 0,
+                at_ns: 0,
             }),
             Duration::from_secs(5),
         )
@@ -586,6 +591,7 @@ async fn test_knowledge_service_init_and_run() {
             Body::AskRequest(AskRequest {
                 text: "test".into(),
                 origin: 0,
+                at_ns: 0,
             }),
             Duration::from_millis(500),
         )

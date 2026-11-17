@@ -58,6 +58,7 @@ where
     let req = AskRequest {
         text: question,
         origin: Origin::Cli as i32,
+        at_ns: 0,
     };
 
     let deadline = Duration::from_secs(60);

@@ -12,6 +12,19 @@
 //! 6. C4 down -> fast UNAVAILABLE retryable error. Health latency histogram `ask_first_token`
 //!    and counters.
 
+pub mod action;
+pub mod chat;
+pub mod deictic;
+pub mod evidence;
+pub mod facts;
+pub mod prompt;
+pub mod router;
+pub mod sanitize;
+pub mod session;
+pub mod status;
+pub mod tokens;
+pub mod turn;
+
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;

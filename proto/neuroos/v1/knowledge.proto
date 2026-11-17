@@ -8,6 +8,7 @@ import "neuroos/v1/common.proto";
 message AskRequest {
   string text = 1;
   Origin origin = 2;
+  uint64 at_ns = 3;   // when the user spoke or typed; 0 means now (FR-KNO-01, ADR-0013)
 }
 
 message AnswerChunk {
