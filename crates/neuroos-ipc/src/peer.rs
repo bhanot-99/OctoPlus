@@ -23,6 +23,7 @@ pub struct PeerInfo {
 pub struct PeerPolicy {
     uids: Vec<u32>,
     units: Option<Vec<String>>,
+    resolve_unit: bool,
 }
 
 impl PeerPolicy {
@@ -32,13 +33,18 @@ impl PeerPolicy {
         Self {
             uids: vec![current_uid()],
             units: None,
+            resolve_unit: false,
         }
     }
 
     /// Only these UIDs, from any unit.
     #[must_use]
     pub fn uids(uids: Vec<u32>) -> Self {
-        Self { uids, units: None }
+        Self {
+            uids,
+            units: None,
+            resolve_unit: false,
+        }
     }
 
     /// Additionally require the peer to run in one of these systemd units
@@ -49,10 +55,19 @@ impl PeerPolicy {
         self
     }
 
+    /// Look up the peer's unit for every connection without restricting who may connect, so a
+    /// handler can make per-message decisions on it (a socket that also admits `neuroosctl`
+    /// has no unit list, yet C3 still needs to know whether a write came from C5 or C6).
+    #[must_use]
+    pub fn resolving_unit(mut self) -> Self {
+        self.resolve_unit = true;
+        self
+    }
+
     /// Whether this policy needs the peer's unit.
     #[must_use]
     pub fn needs_unit(&self) -> bool {
-        self.units.is_some()
+        self.units.is_some() || self.resolve_unit
     }
 
     /// Decides whether `peer` may talk to us.
@@ -116,6 +131,21 @@ mod tests {
             pid: Some(42),
             unit: unit.map(str::to_owned),
         }
+    }
+
+    #[test]
+    fn resolving_the_unit_does_not_restrict_anyone() {
+        let p = PeerPolicy::uids(vec![1000]);
+        assert!(!p.needs_unit());
+        let p = p.resolving_unit();
+        assert!(p.needs_unit());
+        // Any unit, or none, still passes the connection check; only the uid matters.
+        assert!(p.check(&peer(1000, None)).is_ok());
+        assert!(p.check(&peer(1000, Some("anything.service"))).is_ok());
+        assert_eq!(
+            p.check(&peer(1001, Some("x.service"))),
+            Err("uid not allowed")
+        );
     }
 
     #[test]
