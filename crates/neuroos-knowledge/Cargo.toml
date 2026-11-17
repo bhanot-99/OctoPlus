@@ -18,9 +18,12 @@ neuroos-ipc = { path = "../neuroos-ipc" }
 neuroos-proto = { path = "../neuroos-proto" }
 neuroos-taint = { path = "../neuroos-taint" }
 tokio = { workspace = true, features = ["sync", "time"] }
+serde.workspace = true
+serde_json.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
+proptest.workspace = true
 neuroos-health = { path = "../neuroos-health", features = ["test-support"] }
 neuroos-testkit = { path = "../neuroos-testkit" }
 tempfile.workspace = true
