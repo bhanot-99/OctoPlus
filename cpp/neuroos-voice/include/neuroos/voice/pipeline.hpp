@@ -115,6 +115,7 @@ struct PipelineConfig {
   std::size_t max_piece_chars = 220;
   std::uint64_t backlog_ns =
       400'000'000;  // audio kept from before a speech start (barge-in, follow-up)
+  std::uint64_t wake_lookback_ns = 600'000'000;  // audio kept from before a wake word was reported
   std::uint64_t tail_ns = 200'000'000;  // silence kept after the last speech; the rest is trimmed
   std::size_t min_utterance_samples = 4800;  // under 300 ms of audio is not sent to speech to text
 };
@@ -228,6 +229,8 @@ class VoicePipeline final : public ReplyReceiver {
   std::string pending_text_;
   bool pending_follow_up_ = false;
   bool began_from_follow_up_ = false;
+  bool capture_after_wake_ = false;  // the utterance began at a wake word
+
   bool reply_audio_started_ = false;
   std::size_t clip_rotation_ = 0;
   std::size_t tts_pending_ = 0;

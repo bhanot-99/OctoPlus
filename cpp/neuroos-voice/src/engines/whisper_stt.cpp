@@ -43,6 +43,10 @@ class WhisperStt final : public Stt {
     // (lessons-from-v1 §3).
     const int secs_x50 = static_cast<int>(pcm.size() / (kCaptureRate / 50));
     p.audio_ctx = std::min(1500, std::max(128, secs_x50 + 64));
+    // Speech is at most about six tokens a second; a decoder that is still going well past that
+    // is looping, so cut it off (the same sentence over and over, seen on short clips).
+    const int seconds = std::max(1, static_cast<int>(pcm.size() / kCaptureRate));
+    p.max_tokens = std::max(24, seconds * 8);
     // No fallback re-decodes at higher temperatures: a slow retry is worse than a short miss.
     p.temperature_inc = 0.0F;
     const std::lock_guard<std::mutex> lock(mu_);

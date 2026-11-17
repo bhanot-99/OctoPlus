@@ -197,7 +197,27 @@ TEST(VoicePipeline, WakeWordThenCommandIsTranscribedAndSentToC5) {
   EXPECT_EQ(r.p->stats().wake_words, 1U);
   // About a second of speech plus a short tail, not the wake phrase and not the 600 ms of silence.
   EXPECT_GT(r.stt.last_samples, 30U * kFrameSamples);
-  EXPECT_LT(r.stt.last_samples, 46U * kFrameSamples) << "the 25 silent frames are trimmed";
+  EXPECT_LT(r.stt.last_samples, 66U * kFrameSamples)
+      << "the wake lookback and the speech, not the 25 silent frames";
+}
+
+// "Hey Jarvis" ... a pause ... the command: the pause must not end the exchange.
+TEST(VoicePipeline, ThePhraseAloneThenTheCommandAfterAPauseIsOneCommand) {
+  Rig r;
+  r.stt.text = "Hey Jarvis";
+  r.Frames(0, 3);
+  r.Frames(2000, 6);
+  r.Frames(0, 25);  // the pause: longer than the end-of-speech silence
+  r.Settle();
+  EXPECT_TRUE(r.link.commands.empty());
+  EXPECT_TRUE(r.p->status().turn_in_progress) << "still listening for the command";
+  r.stt.text = "Jarvis, what time is it";
+  r.Frames(1000, 30);
+  r.Frames(0, 25);
+  r.Settle();
+  ASSERT_EQ(r.link.commands.size(), 1U);
+  EXPECT_EQ(r.link.commands[0].text, "what time is it");
+  EXPECT_EQ(r.p->stats().wake_words, 1U);
 }
 
 TEST(VoicePipeline, SpeechWithoutTheWakeWordIsNeverTranscribed) {

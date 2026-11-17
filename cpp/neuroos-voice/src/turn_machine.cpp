@@ -81,6 +81,18 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
     }
 
     case TurnState::kTranscribing: {
+      // "Hey Jarvis ..." and then a pause before the command: listen again, no new wake word.
+      if (e.kind == TurnEventKind::kWakeOnly) {
+        state_ = TurnState::kCapturing;
+        state_entered_ns_ = e.now_ns;
+        speech_started_in_capture_ = false;
+        utterance_is_follow_up_ = false;
+        TurnAction act;
+        act.kind = TurnActionKind::kBeginUtterance;
+        act.with_backlog = false;
+        act.in_follow_up = false;
+        return {act};
+      }
       if (e.kind == TurnEventKind::kTranscribed) {
         if (!e.text_empty) {
           state_ = TurnState::kAwaitingAnswer;

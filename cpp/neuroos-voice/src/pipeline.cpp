@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "neuroos/voice/speech_split.hpp"
+#include "neuroos/voice/transcript.hpp"
 
 namespace neuroos::voice {
 namespace {
@@ -168,9 +169,14 @@ std::vector<TurnAction> VoicePipeline::Post(TurnEvent e) {
     switch (a.kind) {
       case TurnActionKind::kBeginUtterance: {
         const std::uint64_t total = ring_.total_pushed();
-        const std::uint64_t backlog = NsToSamples(cfg_.backlog_ns);
-        capture_start_ = a.with_backlog ? (total > backlog ? total - backlog : 0) : total;
-        capture_wall_start_ns_ = d_.wall_ns() - (a.with_backlog ? cfg_.backlog_ns : 0);
+        // After a wake word the command can already have started: the detector reports the phrase
+        // a little after it ends. Capture from just before, and drop the phrase from the text.
+        const std::uint64_t lead =
+            NsToSamples(a.with_backlog ? cfg_.backlog_ns : cfg_.wake_lookback_ns);
+        capture_start_ = total > lead ? total - lead : 0;
+        capture_wall_start_ns_ =
+            d_.wall_ns() - (a.with_backlog ? cfg_.backlog_ns : cfg_.wake_lookback_ns);
+        capture_after_wake_ = !a.with_backlog;
         speech_end_idx_ = 0;
         break;
       }
@@ -259,8 +265,10 @@ void VoicePipeline::Run(const std::vector<TurnAction>& actions) {
 
 void VoicePipeline::Transcribe() {
   std::vector<std::int16_t> audio;
+  bool after_wake = false;
   {
     const std::lock_guard<std::mutex> lock(mu_);
+    after_wake = capture_after_wake_;
     const std::uint64_t total = ring_.total_pushed();
     std::uint64_t end = total;
     if (speech_end_idx_ != 0) {
@@ -269,7 +277,7 @@ void VoicePipeline::Transcribe() {
     std::uint64_t first = 0;
     ring_.ReadRange(capture_start_, end, &audio, &first);
   }
-  d_.stt_exec->Post([this, audio = std::move(audio)] {
+  d_.stt_exec->Post([this, after_wake, audio = std::move(audio)] {
     std::string text;
     bool failed = false;
     if (audio.size() >= cfg_.min_utterance_samples) {
@@ -282,6 +290,15 @@ void VoicePipeline::Transcribe() {
         failed = true;
       }
     }
+    bool wake_only = false;
+    if (!failed) {
+      text = CollapseRepeats(text);
+      if (after_wake) {
+        const bool heard_something = !Blank(text) && !NoiseTranscript(text);
+        text = StripWakePhrase(text);
+        wake_only = heard_something && Blank(text);
+      }
+    }
     const bool empty = failed || Blank(text) || NoiseTranscript(text);
     if (d_.on_trace) d_.on_trace(empty ? "empty_transcript" : "transcribed");
     {
@@ -291,9 +308,10 @@ void VoicePipeline::Transcribe() {
       if (empty) ++stats_.empty_transcripts;
     }
     TurnEvent e;
-    e.kind = TurnEventKind::kTranscribed;
+    e.kind = wake_only ? TurnEventKind::kWakeOnly : TurnEventKind::kTranscribed;
     e.now_ns = d_.mono_ns();
     e.text_empty = empty;
+    if (wake_only && d_.on_trace) d_.on_trace("wake_only");
     Run(Post(e));
   });
 }

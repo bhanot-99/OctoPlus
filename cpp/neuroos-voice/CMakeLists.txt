@@ -8,6 +8,7 @@ add_library(neuroos_voice_core STATIC
   $<$<NOT:$<BOOL:${NEUROOS_WITH_VOICE_ENGINES}>>:src/runtime_stub.cpp>
   src/speech_split.cpp
   src/spoken_lines.cpp
+  src/transcript.cpp
   src/turn_machine.cpp
   src/vad_gate.cpp
   src/wav.cpp
@@ -32,6 +33,7 @@ add_executable(neuroos_voice_tests
   tests/pipeline_test.cpp
   tests/speech_split_test.cpp
   tests/spoken_lines_test.cpp
+  tests/transcript_test.cpp
   tests/turn_machine_test.cpp
   tests/vad_gate_test.cpp
   tests/voice_config_test.cpp
@@ -79,6 +81,9 @@ if(NEUROOS_WITH_VOICE_ENGINES)
   target_include_directories(neuroos_voice_speech_tests PRIVATE tests/engines)
   target_link_libraries(neuroos_voice_speech_tests PRIVATE neuroos_voice_engines neuroos_voice_speech GTest::gtest_main neuroos_warnings)
   gtest_discover_tests(neuroos_voice_speech_tests PROPERTIES LABELS "local")
+
+  add_executable(neuroos-voice-eval tools_eval.cpp)
+  target_link_libraries(neuroos-voice-eval PRIVATE neuroos_voice_engines neuroos_voice_speech neuroos_warnings)
 
   add_executable(neuroos-voice-say tools_say.cpp)
   target_link_libraries(neuroos-voice-say PRIVATE neuroos_voice_speech neuroos_warnings)

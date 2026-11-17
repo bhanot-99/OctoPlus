@@ -432,3 +432,36 @@ TEST(TurnMachineTest, PropertyRandomEventsNeverCrashes) {
 
 }  // namespace
 }  // namespace neuroos::voice
+
+namespace neuroos::voice {
+namespace {
+
+TEST(TurnMachineWakeOnly, AWakePhraseAloneKeepsListeningForTheCommand) {
+  TurnMachine m;
+  TurnEvent wake;
+  wake.kind = TurnEventKind::kWakeWord;
+  wake.now_ns = 0;
+  m.OnEvent(wake);
+  TurnEvent end;
+  end.kind = TurnEventKind::kSpeechEnded;
+  end.now_ns = 1'000'000'000;
+  m.OnEvent(end);
+  ASSERT_EQ(m.state(), TurnState::kTranscribing);
+  TurnEvent only;
+  only.kind = TurnEventKind::kWakeOnly;
+  only.now_ns = 1'100'000'000;
+  const auto actions = m.OnEvent(only);
+  EXPECT_EQ(m.state(), TurnState::kCapturing);
+  ASSERT_EQ(actions.size(), 1U);
+  EXPECT_EQ(actions[0].kind, TurnActionKind::kBeginUtterance);
+  EXPECT_FALSE(actions[0].with_backlog);
+  // and the no-speech timeout still returns it to idle if nobody speaks
+  TurnEvent tick;
+  tick.kind = TurnEventKind::kTick;
+  tick.now_ns = 1'100'000'000 + 5'000'000'000;
+  m.OnEvent(tick);
+  EXPECT_EQ(m.state(), TurnState::kIdle);
+}
+
+}  // namespace
+}  // namespace neuroos::voice

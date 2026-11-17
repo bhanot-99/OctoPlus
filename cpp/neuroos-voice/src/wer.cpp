@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <iterator>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -40,6 +41,20 @@ std::vector<std::string> NormaliseWords(std::string_view text) {
     words.push_back(std::move(current));
   }
 
+  // Speech to text writes small numbers as digits or as words, whichever it likes: both count as
+  // the same word, so "two plus two" and "2 plus 2" are not an error.
+  static const char* const kNumbers[] = {
+      "zero",     "one",     "two",     "three",     "four",     "five",     "six",
+      "seven",    "eight",   "nine",    "ten",       "eleven",   "twelve",   "thirteen",
+      "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty"};
+  for (auto& w : words) {
+    for (std::size_t n = 0; n < std::size(kNumbers); ++n) {
+      if (w == kNumbers[n]) {
+        w = std::to_string(n);
+        break;
+      }
+    }
+  }
   return words;
 }
 

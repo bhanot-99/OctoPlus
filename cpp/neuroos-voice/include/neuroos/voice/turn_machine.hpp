@@ -12,6 +12,7 @@ enum class TurnEventKind {
   kSpeechStarted,  // the VadGate reported started (two consecutive speech frames)
   kSpeechEnded,    // the VadGate reported ended (600 ms of silence)
   kTranscribed,    // speech to text finished; `text_empty` says whether it produced nothing
+  kWakeOnly,       // the transcript was only the wake phrase: the command is still to come
   kReplyStarted,   // C5's reply began (the first spoken audio of an answer, preamble or nudge was
                    // queued)
   kReplyFinished,  // C5's stream ended (nothing more will be queued for this reply)

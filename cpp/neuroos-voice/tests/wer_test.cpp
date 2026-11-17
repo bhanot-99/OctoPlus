@@ -187,3 +187,15 @@ TEST(WerTest, PropertyCheck500RandomWordSequences) {
 
 }  // namespace
 }  // namespace neuroos::voice
+
+namespace neuroos::voice {
+namespace {
+
+TEST(WerNumbers, DigitsAndNumberWordsAreTheSameWord) {
+  EXPECT_EQ(WordErrorRate("what is two plus two", "what is 2 plus 2").wer, 0.0);
+  EXPECT_EQ(WordErrorRate("set it to 15", "set it to fifteen").wer, 0.0);
+  EXPECT_GT(WordErrorRate("what is two plus two", "what is 3 plus 2").wer, 0.0);
+}
+
+}  // namespace
+}  // namespace neuroos::voice
