@@ -722,18 +722,45 @@ async fn dropped_clients_release_their_connection() {
             })
         );
     }
-    // A stream whose client was dropped early still finishes (it holds its own handle).
-    let stream = Client::connect(&path, MAX)
-        .await
-        .unwrap()
-        .stream(ping("stream:3"), Duration::from_secs(2))
-        .await;
-    let mut stream = stream.unwrap();
-    let mut n = 0;
-    while let Some(f) = stream.next().await {
-        f.unwrap();
-        n += 1;
-    }
+    // A stream whose client was dropped early still finishes (it holds its own handle). Same
+    // wait for a free slot as above: the server frees the last dropped client's slot a moment
+    // after the close arrives (BUG-087).
+    let mut attempt = 0;
+    let n = loop {
+        let stream = Client::connect(&path, MAX)
+            .await
+            .unwrap()
+            .stream(ping("stream:3"), Duration::from_secs(2))
+            .await;
+        let mut stream = match stream {
+            Ok(s) => s,
+            Err(_) if attempt < 100 => {
+                attempt += 1;
+                tokio::time::sleep(Duration::from_millis(10)).await;
+                continue;
+            }
+            Err(e) => panic!("stream failed after {attempt} retries: {e:?}"),
+        };
+        let mut n = 0;
+        let mut failed = false;
+        while let Some(f) = stream.next().await {
+            if f.is_err() {
+                failed = true;
+                break;
+            }
+            n += 1;
+        }
+        if failed && attempt < 100 {
+            attempt += 1;
+            tokio::time::sleep(Duration::from_millis(10)).await;
+            continue;
+        }
+        assert!(
+            !failed,
+            "stream broke after {attempt} retries (connections leaked)"
+        );
+        break n;
+    };
     assert_eq!(n, 4, "3 frames + end frame");
     srv.stop().await;
 }

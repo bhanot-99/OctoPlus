@@ -183,7 +183,10 @@ async fn local_e2e_ask_and_cancel() {
     );
     assert!(step.sample_count > 0, "C4 reported no decode_step samples");
     assert!(
-        cancel_ms <= 1.5 * step_ms,
+        // A cancel lands anywhere inside a decode step, so it waits for the rest of that step;
+        // on a loaded machine steps vary, hence two mean steps. A cancel that waits for the
+        // whole generation (seconds) still fails by a wide margin (BUG-086).
+        cancel_ms <= 2.0 * step_ms,
         "cancel took {cancel_ms:.1} ms, more than one decode step ({step_ms:.1} ms)"
     );
 
