@@ -9,7 +9,7 @@ You can now talk to it. Say "hey Jarvis" and a question; it hears you (voice act
 
 Honest caveats, in order of weight:
 1. **KPI-3, KPI-4 and KPI-5 are not measured on your voice and your room.** The tool exists (`neuroos-voice-eval`), and on synthetic voices it gives 0 of 8 wake phrases missed and a 2 % word error rate, but that is not your KPI.
-2. **No echo cancellation.** Barge-in uses a higher voice threshold while it speaks so its own voice coming back through the microphone does not stop it. Loud speakers next to the microphone can still defeat that; headphones or the system's echo cancel are the remedy.
+2. **Echo cancellation is available but not switched on** (`scripts/voice-echo-cancel.sh enable`, then two lines in `voice.conf`; plumbing verified, acoustic effect is yours to judge). Barge-in uses a higher voice threshold while it speaks so its own voice coming back through the microphone does not stop it. Loud speakers next to the microphone can still defeat that; headphones or the system's echo cancel are the remedy.
 3. **The 4 h soak is yours to start.** A 25-minute run (13 turns) kept memory bounded (it moves between 284 and 503 MiB as glibc gives memory back) and the service never restarted. Resident memory right after load (about 590 MiB) is close to the 620 MiB budget, and the unit's cgroup touches its 768 MiB limit while loading because model files count as page cache.
 4. **The live nudge reply by voice was proven with a lowered threshold and no quiet hours** (a temporary rule file), because a real disk below 90 % never fires; the journey itself is the one UJ-2 describes.
 5. **Wake-word model licence:** the stock "hey jarvis" model is non-commercial (CC-BY-NC-SA-4.0), fine for your own use, a limit on any distribution (PRD R-06).
