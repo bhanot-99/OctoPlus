@@ -52,9 +52,15 @@ No audio on disk (`voice-sc-checks.sh`: no audio file appears, no writable descr
 ## 7. Gate
 `just ci` stages all green on the final code: format check, lint (clippy, clang-format, clang-tidy including the voice engines in the `voice` tree, shellcheck, machete), tests (777 Rust, 190 C++ plus the local real-stack tests), deny, coverage, and the ASan/UBSan and TSan runs. The stages were run in pieces after fixes, not as one uninterrupted `just ci`. Three things flaked or failed on the way and were fixed or recorded: SC proof 3 caught C2 reading the install folder (narrowed), the kill-and-recover baseline now waits for C2 to finish loading, a TSan race in a test fake. Known flaky under load: BUG-086 (cancel timing), BUG-087 (an ipc test, once).
 
+## 7b. Results after the report was first written (2026-11-18)
+- **4 h soak: passed** (136 turns, memory settled at 430-475 MiB, no restart, CPU 5-8 % of one core while answering every 100 s).
+- **KPI-3, first honest run (2 h of a movie evening with friends, 59 % of it clearly louder than a quiet room): 2 false accepts in 2 h (8 per 8 h) at the default threshold 0.5; 1 at thresholds 0.6-0.9. Target is at most 1 per 8 h, so this is NOT met on this recording; 2 h is too short to be conclusive.** The hit that survives 0.9 is a strong match (possibly the word "Jarvis" in the film): listen to it before judging. A first 9 h recording was digital silence (microphone muted) and is discarded; lesson saved.
+- **A real defect found by that evening:** with the voice service live and the TV on, one false wake started a chain: after any spoken reply the 8 s follow-up window treats every sound as a command, so film dialogue kept the buddy answering (25 turns, speech breaking up as it was interrupted). The voice service was stopped by hand. Fix planned, not done: cap consecutive follow-ups without the wake word, and tighten what counts as a follow-up.
+- Flaky tests BUG-086 and BUG-087 fixed; echo cancellation available (`scripts/voice-echo-cancel.sh`), not enabled.
+
 ## 8. Owner to do
 1. ~~**Choose the voice** (OQ-04)~~ Done 2026-11-18: `af_heart` (D-37). Original step: `scripts/voice-listening-test.sh`, then `voice = <name>` in `~/.config/neuroos/voice.conf`.
 2. ~~**Confirm the wake phrase** (OQ-01)~~ Done 2026-11-18: "hey jarvis", stock model (D-37). Original step: "hey jarvis" with the stock model, or name another stock phrase.
-3. **KPI-3, KPI-4, KPI-5 on your voice:** record your command set (WAV, one file per command, a `manifest.tsv` of `file<TAB>what you said after the wake phrase`) and 8 hours or more of ordinary room audio; run `neuroos-voice-eval MODELS commands manifest.tsv` and `... ambient FILES`.
+3. **KPI-3, KPI-4, KPI-5 on your voice (KPI-3 needs a longer, repeated run after the fixes in 7b):** record your command set (WAV, one file per command, a `manifest.tsv` of `file<TAB>what you said after the wake phrase`) and 8 hours or more of ordinary room audio; run `neuroos-voice-eval MODELS commands manifest.tsv` and `... ambient FILES`.
 4. **The 4 h soak:** `scripts/voice-soak.sh 4` (virtual devices, nothing audible; it samples memory and CPU every 5 minutes).
 5. **A day of use**, then sign-off and merge. The trial also closes the nudge-by-voice question for OQ-03.
