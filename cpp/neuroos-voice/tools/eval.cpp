@@ -84,6 +84,10 @@ class Engines {
     w.melspectrogram = models_ + "/melspectrogram.onnx";
     w.embedding = models_ + "/embedding_model.onnx";
     w.classifier = models_ + "/hey_jarvis_v0.1.onnx";
+    // NOLINTNEXTLINE(concurrency-mt-unsafe) - read once at start
+    if (const char* t = std::getenv("NEUROOS_WAKE_THRESHOLD")) {
+      w.threshold = std::strtof(t, nullptr);  // try other thresholds on the same recordings
+    }
     auto ww = MakeOpenWakeWord(w);
     auto st = MakeWhisperStt(models_ + "/ggml-tiny.en.bin", 4);
     if (!v.ok() || !ww.ok() || !st.ok()) {
