@@ -88,6 +88,7 @@ One line each. Anything architectural also gets an ADR.
 
 | Date | ID | Decision | ADR |
 | :--- | :--- | :--- | :--- |
+| 2026-11-18 | D-37 | Owner chose the voice `af_heart` (voice 1 of the listening test) and confirmed the wake phrase "hey jarvis" with the stock model. OQ-01 and OQ-04 closed; both are the compiled defaults, so no `voice.conf` is needed. | 0015 |
 | 2026-11-17 | D-36 | Owner approved the Phase 7 downloads (whisper.cpp v1.9.5 submodule, whisper tiny.en, Silero VAD, openWakeWord hey_jarvis plus its feature models, Kokoro fp32 with voices af_heart, af_bella, af_nicole, am_michael) with wake phrase "hey jarvis" and voice af_heart as defaults (OQ-01, OQ-04). | 0015 |
 | 2026-11-17 | D-35 | Owner started Phase 7: "start executing phase 7 as planned". Plan: `docs/plans/phase-07-voice-plan.md`. Claude's design calls (build pure logic first, wake phrase "hey jarvis", espeak-ng linked dynamically, Kokoro fp32, spoken nudge only when voice is free) are open to overturn at sign-off. Downloads wait for the owner's approval. | 0015 (Proposed) |
 | 2026-11-17 | D-34 | Owner asked to fix BUG-070. Router generalised (rules, not a model) and measured on four blind sets written by agy: first runs 76.2, 79.0, 86.7, 94.3 %; KPI-13 on unseen wording now about 90-94 %. Branch `bug-070-router`, not yet merged. | BUG-070 |

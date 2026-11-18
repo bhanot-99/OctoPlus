@@ -53,8 +53,8 @@ No audio on disk (`voice-sc-checks.sh`: no audio file appears, no writable descr
 `just ci` stages all green on the final code: format check, lint (clippy, clang-format, clang-tidy including the voice engines in the `voice` tree, shellcheck, machete), tests (777 Rust, 190 C++ plus the local real-stack tests), deny, coverage, and the ASan/UBSan and TSan runs. The stages were run in pieces after fixes, not as one uninterrupted `just ci`. Three things flaked or failed on the way and were fixed or recorded: SC proof 3 caught C2 reading the install folder (narrowed), the kill-and-recover baseline now waits for C2 to finish loading, a TSan race in a test fake. Known flaky under load: BUG-086 (cancel timing), BUG-087 (an ipc test, once).
 
 ## 8. Owner to do
-1. **Choose the voice** (OQ-04): `scripts/voice-listening-test.sh`, then `voice = <name>` in `~/.config/neuroos/voice.conf`.
-2. **Confirm the wake phrase** (OQ-01): "hey jarvis" with the stock model, or name another stock phrase.
+1. ~~**Choose the voice** (OQ-04)~~ Done 2026-11-18: `af_heart` (D-37). Original step: `scripts/voice-listening-test.sh`, then `voice = <name>` in `~/.config/neuroos/voice.conf`.
+2. ~~**Confirm the wake phrase** (OQ-01)~~ Done 2026-11-18: "hey jarvis", stock model (D-37). Original step: "hey jarvis" with the stock model, or name another stock phrase.
 3. **KPI-3, KPI-4, KPI-5 on your voice:** record your command set (WAV, one file per command, a `manifest.tsv` of `file<TAB>what you said after the wake phrase`) and 8 hours or more of ordinary room audio; run `neuroos-voice-eval MODELS commands manifest.tsv` and `... ambient FILES`.
 4. **The 4 h soak:** `scripts/voice-soak.sh 4` (virtual devices, nothing audible; it samples memory and CPU every 5 minutes).
 5. **A day of use**, then sign-off and merge. The trial also closes the nudge-by-voice question for OQ-03.
