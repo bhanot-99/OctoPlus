@@ -26,19 +26,40 @@ fn home() -> PathBuf {
     PathBuf::from(std::env::var_os("HOME").expect("HOME"))
 }
 
+fn check_systemd_user_bus() -> bool {
+    let mut cmd = Command::new("systemctl");
+    cmd.args(["--user", "status"]);
+    if std::env::var_os("XDG_RUNTIME_DIR").is_none() {
+        let uid = rustix::process::getuid().as_raw();
+        cmd.env("XDG_RUNTIME_DIR", format!("/run/user/{uid}"));
+    }
+    match cmd.output() {
+        Ok(o) => {
+            let stderr = String::from_utf8_lossy(&o.stderr);
+            !stderr.contains("Failed to connect to bus")
+        }
+        Err(_) => false,
+    }
+}
+
 fn systemctl(args: &[&str]) -> bool {
-    Command::new("systemctl")
-        .arg("--user")
-        .args(args)
-        .status()
-        .is_ok_and(|s| s.success())
+    let mut cmd = Command::new("systemctl");
+    cmd.arg("--user").args(args);
+    if std::env::var_os("XDG_RUNTIME_DIR").is_none() {
+        let uid = rustix::process::getuid().as_raw();
+        cmd.env("XDG_RUNTIME_DIR", format!("/run/user/{uid}"));
+    }
+    cmd.status().is_ok_and(|s| s.success())
 }
 
 fn show(unit: &str, prop: &str) -> String {
-    let out = Command::new("systemctl")
-        .args(["--user", "show", "-p", prop, "--value", unit])
-        .output()
-        .unwrap();
+    let mut cmd = Command::new("systemctl");
+    cmd.args(["--user", "show", "-p", prop, "--value", unit]);
+    if std::env::var_os("XDG_RUNTIME_DIR").is_none() {
+        let uid = rustix::process::getuid().as_raw();
+        cmd.env("XDG_RUNTIME_DIR", format!("/run/user/{uid}"));
+    }
+    let out = cmd.output().unwrap();
     String::from_utf8_lossy(&out.stdout).trim().to_owned()
 }
 
@@ -70,8 +91,15 @@ fn manifest_sha() -> String {
         .expect("sha256 in manifest")
 }
 
+static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[test]
 fn local_fi_corrupt_model_never_loads() {
+    let _lock = TEST_LOCK.lock().unwrap();
+    if !check_systemd_user_bus() {
+        eprintln!("Skipping test: user systemd session bus not accessible");
+        return;
+    }
     let prefix = home().join(".local/opt/neuroos");
     let models = prefix.join("models");
     assert!(
@@ -157,6 +185,11 @@ fn local_fi_corrupt_model_never_loads() {
 
 #[test]
 fn local_fi_overlong_prompt_is_rejected_and_c4_stays_up() {
+    let _lock = TEST_LOCK.lock().unwrap();
+    if !check_systemd_user_bus() {
+        eprintln!("Skipping test: user systemd session bus not accessible");
+        return;
+    }
     let ctl = home().join(".local/opt/neuroos/bin/neuroosctl");
     assert!(ctl.exists(), "run `just install-dev` first");
     assert!(systemctl(&["start", "neuroos.target"]));

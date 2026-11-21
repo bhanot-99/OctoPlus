@@ -75,6 +75,7 @@ candidates=(
   "neuroos-skill"
   "neuroos-knowledge"
   "neuroos-voice"
+  "neuroos-fetcher"
   "neuroosctl"
   "neuroos-s04-probe"
 )

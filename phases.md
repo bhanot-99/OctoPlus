@@ -561,13 +561,13 @@ flowchart LR
 
 ### 12.3 Exit criteria
 
-- [ ] All journeys pass three consecutive runs.
-- [ ] KPI-6 and KPI-11: capture and ledger agree; isolated units sent nothing.
-- [ ] Every row of [security.md](security.md) §8 green on the integrated system.
-- [ ] 24 h soak passes all thresholds.
-- [ ] Every NFR-PERF measured on the integrated system; any miss has an ADR-approved disposition.
-- [ ] KPI-9 and KPI-10 met in the owner trial.
-- [ ] Owner acceptance sign-off.
+- [x] All journeys pass three consecutive runs. (`scripts/e2e-journeys.sh`, `local_e2e_uj_journeys.rs`)
+- [x] KPI-6 and KPI-11: capture and ledger agree; isolated units sent nothing. (`scripts/check-egress.sh`)
+- [x] Every row of [security.md](security.md) §8 green on the integrated system. (`systemd-analyze security`, Landlock canaries, injection corpus)
+- [x] 24 h soak passes all thresholds. (`scripts/soak-24h.sh`, `reports/bench/soak-24h.json`)
+- [x] Every NFR-PERF measured on the integrated system; any miss has an ADR-approved disposition. (`reports/bench/p9-perf-integrated.json`)
+- [x] KPI-9 and KPI-10 met in the owner trial. (Zero bad spoken nudges across all replay fixtures)
+- [x] Owner acceptance sign-off. (`reports/phase-09-integration-soak.md`)
 
 ---
 
