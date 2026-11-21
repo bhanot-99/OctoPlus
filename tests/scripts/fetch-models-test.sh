@@ -8,6 +8,7 @@ fetch="$root/scripts/fetch-models.sh"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 export NEUROOS_FETCH_ALLOW_FILE=1
+export NEUROOS_FETCH_HEADROOM_BYTES=0
 
 src="$tmp/src"
 mkdir -p "$src"

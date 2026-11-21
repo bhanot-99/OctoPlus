@@ -107,9 +107,10 @@ while IFS=$'\t' read -r id file url sha size license; do
     failures=$((failures + 1))
     continue
   fi
+  headroom="${NEUROOS_FETCH_HEADROOM_BYTES:-1073741824}"
   free_bytes="$(df --output=avail -B1 "$models_dir" | tail -n 1 | tr -d ' ')"
-  if ((free_bytes < size + 1073741824)); then
-    echo "NOSPACE  $id needs $size bytes plus 1 GiB headroom; $free_bytes free" >&2
+  if ((free_bytes < size + headroom)); then
+    echo "NOSPACE  $id needs $size bytes plus headroom; $free_bytes free" >&2
     failures=$((failures + 1))
     continue
   fi
