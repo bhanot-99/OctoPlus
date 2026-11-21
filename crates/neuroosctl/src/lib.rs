@@ -54,10 +54,10 @@ pub enum Commands {
         quiet: bool,
     },
 
-    /// Ask a question to the conversational assistant.
+    /// Ask a question or start an interactive conversation session.
     Ask {
-        /// The query text to submit.
-        #[arg(required = true, num_args = 1..)]
+        /// The query text to submit. If omitted, starts an interactive conversation session.
+        #[arg(num_args = 0..)]
         question: Vec<String>,
 
         /// Emit stream events as JSON lines.
@@ -67,6 +67,10 @@ pub enum Commands {
         /// After the answer, print which route it took and its taint.
         #[arg(long)]
         explain: bool,
+
+        /// Run only a single turn and exit without continuing interactive conversation.
+        #[arg(long)]
+        once: bool,
 
         /// Epoch nanoseconds the question counts as asked at (evaluation harness only).
         #[arg(long, hide = true, default_value_t = 0)]

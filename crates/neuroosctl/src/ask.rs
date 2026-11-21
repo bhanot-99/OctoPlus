@@ -39,6 +39,8 @@ pub struct AskOptions {
     /// When the question was asked, in epoch nanoseconds; 0 means now. The evaluation harness
     /// uses it to keep two questions in separate sessions without waiting for the follow-up window.
     pub at_ns: u64,
+    /// Whether to enter continuous interactive conversation mode after the question.
+    pub interactive: bool,
 }
 
 /// Plain name of an answer route (`neuroosctl ask --explain`, P5-S03).
@@ -74,17 +76,86 @@ pub fn taint_names(flags: u32) -> String {
 }
 
 /// Runs the `ask` command, streaming response chunks to stdout.
+/// If running in an interactive terminal without `--once` or `--json`, continues into
+/// a multi-turn conversation session until the user types 'bye', 'exit', or 'quit'.
 pub async fn run_ask(
     runtime_root: &Path,
     question: String,
     opts: AskOptions,
     styler: Styler,
 ) -> i32 {
-    let cancel = async {
-        let _ = tokio::signal::ctrl_c().await;
-    };
-    tokio::pin!(cancel);
-    run_ask_internal(runtime_root, question, opts, styler, cancel).await
+    if !question.trim().is_empty() {
+        let cancel = async {
+            let _ = tokio::signal::ctrl_c().await;
+        };
+        tokio::pin!(cancel);
+        let code = run_ask_internal(
+            runtime_root,
+            question.trim().to_string(),
+            opts,
+            styler.clone(),
+            cancel,
+        )
+        .await;
+        if code != 0 || !opts.interactive {
+            return code;
+        }
+    } else if !opts.interactive {
+        eprintln!(
+            "{}",
+            styler.error("question text required in non-interactive mode")
+        );
+        return 1;
+    } else {
+        println!("{}", styler.bold("=== Semantic-NeuroOS Conversation Session ==="));
+        println!(
+            "{}",
+            styler.dim("Type your message and press Enter. Say 'bye' to finish.\n")
+        );
+    }
+
+    // Interactive conversation session
+    loop {
+        print!("{}", styler.bold("> "));
+        let _ = std::io::stdout().flush();
+        let mut line = String::new();
+        match std::io::stdin().read_line(&mut line) {
+            Ok(0) => {
+                // EOF (Ctrl+D)
+                println!();
+                break;
+            }
+            Ok(_) => {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                if trimmed.eq_ignore_ascii_case("bye")
+                    || trimmed.eq_ignore_ascii_case("quit")
+                    || trimmed.eq_ignore_ascii_case("exit")
+                    || trimmed.eq_ignore_ascii_case("/bye")
+                    || trimmed.eq_ignore_ascii_case("/exit")
+                {
+                    println!("Goodbye!");
+                    break;
+                }
+                let cancel = async {
+                    let _ = tokio::signal::ctrl_c().await;
+                };
+                tokio::pin!(cancel);
+                run_ask_internal(
+                    runtime_root,
+                    trimmed.to_string(),
+                    opts,
+                    styler.clone(),
+                    cancel,
+                )
+                .await;
+            }
+            Err(_) => break,
+        }
+    }
+    0
 }
 
 /// Internal implementation of `ask` with generic cancellation signal.
@@ -102,6 +173,7 @@ where
         json,
         explain,
         at_ns,
+        ..
     } = opts;
     let sock = paths::socket_path(runtime_root, Part::Knowledge, "knowledge");
     let client = match Client::connect(&sock, 1024 * 1024).await {
