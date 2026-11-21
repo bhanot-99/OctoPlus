@@ -44,7 +44,7 @@
 | 5 | Knowledge and conversation (C5) | ✅ | 2026-11-17 | 2026-11-17 | `reports/phase-05-knowledge.md` |
 | 6 | Nudge engine | ✅ | 2026-11-17 | 2026-11-17 | `reports/phase-06-nudges.md` |
 | 7 | Voice (C2) | ✅ | 2026-11-17 | 2026-11-18 | `reports/phase-07-voice.md` |
-| 8 | Fetcher and search (C7) | 🟨 | 2026-11-21 | 2026-11-21 | `reports/phase-08-fetcher.md` |
+| 8 | Fetcher and search (C7) | ✅ | 2026-11-21 | 2026-11-21 | `reports/phase-08-fetcher.md` |
 | 9 | Integration, security verification, soak | ⬜ | — | — | `reports/phase-09-integration-soak.md` |
 | 10 | Packaging and release | ⬜ | — | — | `reports/phase-10-release.md` |
 
