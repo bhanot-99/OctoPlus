@@ -1126,7 +1126,6 @@ dependencies = [
  "neuroos-ipc",
  "neuroos-proto",
  "proptest",
- "rustix",
  "serde",
  "serde_json",
  "sha2",
@@ -1346,6 +1345,7 @@ name = "neuroosctl"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "getrandom",
  "jiff",
  "neuroos-common",
  "neuroos-ipc",

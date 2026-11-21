@@ -118,6 +118,21 @@ units:
 install-dev:
     scripts/install-dev.sh
 
+# Build Debian package (.deb) (Phase 10, P10-S01).
+deb *args:
+    scripts/package-deb.sh {{args}}
+
+# Production installer and uninstaller (Phase 10, P10-S02).
+install *args:
+    scripts/install.sh {{args}}
+
+uninstall *args:
+    scripts/uninstall.sh {{args}}
+
+# Check reproducible build and threat-model verification (Phase 10, P10-S06).
+check-reproducible:
+    scripts/check-reproducible.sh
+
 # Run the three security proofs and check egress isolation (P1-S01..S04).
 sc:
     cargo nextest run -p neuroos-testkit --test local_sc_proof_1_net --test local_sc_proof_2_socket_map --test local_sc_proof_3_landlock

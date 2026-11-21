@@ -662,9 +662,9 @@ Development is delivered across 11 structured phases:
 | **5** | **Knowledge & Chat (C5)** | ✅ Done | Turn routing, deictic resolution, 384-token prompt assembler, control-token neutralizer, session history. |
 | **6** | **Nudge Engine** | ✅ Done | Background rule evaluator (disk, battery, thermal, memory), cooldowns, quiet hours, context policy gate. |
 | **7** | **Voice Pipeline (C2)** | ✅ Done | PipeWire 16 kHz capture, Silero VAD, openWakeWord, whisper.cpp ASR, Kokoro fp32 TTS (`af_heart`), barge-in. |
-| **8** | **Controlled Fetcher (C7)** | 🟦 In Progress | Zone 1 egress daemon, SSRF protection, token verification, web search provider integration. |
-| **9** | **Integration & Soak** | ⬜ Planned | Full 8-hour desktop soak, multi-component resilience tests, live Wayland compositor recovery tests. |
-| **10** | **Packaging & Release** | ⬜ Planned | Signed `.deb` distribution, production installer, headless setup, user documentation. |
+| **8** | **Controlled Fetcher (C7)** | ✅ Done | Zone 1 egress daemon, SSRF protection, token verification, web search provider integration. |
+| **9** | **Integration & Soak** | ✅ Done | Full 24-hour multi-modal soak, fault injection & chaos resilience, live Wayland compositor recovery tests. |
+| **10** | **Packaging & Release** | ✅ Done | Signed `.deb` distribution, production installer/uninstaller, `neuroosctl init`, operator runbooks, v1.0.0. |
 
 ---
 

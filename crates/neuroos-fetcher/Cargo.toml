@@ -17,7 +17,6 @@ neuroos-health = { path = "../neuroos-health" }
 neuroos-ipc = { path = "../neuroos-ipc" }
 neuroos-proto = { path = "../neuroos-proto" }
 hmac = { workspace = true }
-rustix = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }

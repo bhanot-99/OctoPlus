@@ -5,6 +5,7 @@
 pub mod ask;
 pub mod audit;
 pub mod egress;
+pub mod init;
 pub mod nudges;
 pub mod profile;
 pub mod replay;
@@ -97,6 +98,25 @@ pub enum Commands {
     Profile {
         #[command(subcommand)]
         command: ProfileCommands,
+    },
+
+    /// First-run setup: generate keys, verify models, seed configuration, and check encryption.
+    Init {
+        /// Force regeneration of keys and configuration files.
+        #[arg(long)]
+        force: bool,
+
+        /// Skip model download/verification.
+        #[arg(long)]
+        skip_models: bool,
+
+        /// Non-interactive mode (accept defaults and start target without prompting).
+        #[arg(long, short = 'y')]
+        yes: bool,
+
+        /// Target configuration directory (defaults to ~/.config/neuroos).
+        #[arg(long)]
+        config_dir: Option<PathBuf>,
     },
 
     /// Inspect and verify the safety kernel action audit log.

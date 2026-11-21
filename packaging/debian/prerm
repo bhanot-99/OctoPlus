@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+case "$1" in
+  remove|upgrade|deconfigure)
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl stop neuroos-fetcher.service 2>/dev/null || true
+      systemctl disable neuroos-fetcher.service 2>/dev/null || true
+    fi
+    ;;
+  failed-upgrade)
+    ;;
+  *)
+    echo "prerm called with unknown argument \`$1'" >&2
+    exit 1
+    ;;
+esac
+
+exit 0
