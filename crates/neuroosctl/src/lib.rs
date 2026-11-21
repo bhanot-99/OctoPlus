@@ -57,7 +57,8 @@ pub enum Commands {
     /// Ask a question to the conversational assistant.
     Ask {
         /// The query text to submit.
-        question: String,
+        #[arg(required = true, num_args = 1..)]
+        question: Vec<String>,
 
         /// Emit stream events as JSON lines.
         #[arg(long)]

@@ -37,9 +37,10 @@ async fn main() {
             at_ns,
             ..
         } => {
+            let question_text = question.join(" ");
             run_ask(
                 &runtime_root,
-                question,
+                question_text,
                 AskOptions {
                     json,
                     explain,
