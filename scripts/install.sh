@@ -12,6 +12,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 prefix="/opt/neuroos"
 mode="auto"
 destdir=""
+skip_build=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -22,6 +23,10 @@ while [[ $# -gt 0 ]]; do
     --destdir)
       destdir="$2"
       shift 2
+      ;;
+    --skip-build)
+      skip_build=1
+      shift
       ;;
     --user)
       if [[ "$mode" == "system" ]]; then
@@ -55,6 +60,7 @@ Options:
   --system            Install system-scope services (fetcher, sysusers, tmpfiles; requires sudo)
   --prefix <PATH>     Base installation path (default: /opt/neuroos)
   --destdir <PATH>    Staging root directory for testing or packaging
+  --skip-build        Skip automatic cargo release build if binaries already exist
   -h, --help          Show this help message
 EOF
       exit 0
@@ -72,6 +78,11 @@ if [[ "$mode" == "auto" ]]; then
   else
     mode="user"
   fi
+fi
+
+if [[ "$skip_build" -eq 0 && ! -f "$root/target/release/neuroosctl" ]]; then
+  echo "=== 0. Building Rust release binaries ==="
+  cargo build --release --workspace --locked
 fi
 
 echo "================================================="
@@ -215,45 +226,36 @@ if [[ "$mode" == "all" || "$mode" == "user" ]]; then
   install -d -m 0700 "$u_share" "$u_share/storage" "$u_share/backups" "$u_share/soak" "$u_cfg"
   install -d -m 0755 "$u_units"
 
-  # Link or copy binaries to ~/.local/opt/neuroos/bin
-  if [[ -d "$destdir$prefix/bin" && "$(ls -A "$destdir$prefix/bin" 2>/dev/null)" ]]; then
-    for f in "$destdir$prefix/bin/"*; do
-      b="$(basename "$f")"
-      ln -sf "$prefix/bin/$b" "$u_opt/bin/$b"
-    done
-  else
-    # Fallback to repository binaries if prefix not yet populated
-    candidates=(
-      "neuroos-healthd"
-      "neuroos-storage"
-      "neuroos-inference"
-      "neuroos-monitor"
-      "neuroos-kernel"
-      "neuroos-confirm"
-      "neuroos-knowledge"
-      "neuroos-voice"
-      "neuroos-fetcher"
-      "neuroosctl"
-      "neuroos-gen-units"
-    )
-    for bin in "${candidates[@]}"; do
-      src=""
-      if [[ "$bin" == "neuroos-voice" && -f "$root/cpp/build/voice-release/neuroos-voice/neuroos-voice" ]]; then
-        src="$root/cpp/build/voice-release/neuroos-voice/neuroos-voice"
-      elif [[ "$bin" == "neuroos-inference" && -f "$root/cpp/build/voice-release/neuroos-inference/neuroos-inference" ]]; then
-        src="$root/cpp/build/voice-release/neuroos-inference/neuroos-inference"
-      elif [[ "$bin" == "neuroos-inference" && -f "$root/cpp/build/release/neuroos-inference/neuroos-inference" ]]; then
-        src="$root/cpp/build/release/neuroos-inference/neuroos-inference"
-      elif [[ -f "$root/target/release/$bin" ]]; then
-        src="$root/target/release/$bin"
-      elif [[ -f "$root/cpp/build/release/bin/$bin" ]]; then
-        src="$root/cpp/build/release/bin/$bin"
-      fi
-      if [[ -n "$src" ]]; then
-        install -m 0755 "$src" "$u_opt/bin/$bin"
-      fi
-    done
-  fi
+  # Install binaries into ~/.local/opt/neuroos/bin
+  candidates=(
+    "neuroos-healthd"
+    "neuroos-storage"
+    "neuroos-inference"
+    "neuroos-monitor"
+    "neuroos-kernel"
+    "neuroos-confirm"
+    "neuroos-knowledge"
+    "neuroos-voice"
+    "neuroos-fetcher"
+    "neuroosctl"
+    "neuroos-gen-units"
+  )
+  for bin in "${candidates[@]}"; do
+    src=""
+    if [[ -f "$root/target/release/$bin" ]]; then
+      src="$root/target/release/$bin"
+    elif [[ "$bin" == "neuroos-voice" && -f "$root/cpp/build/voice-release/neuroos-voice/neuroos-voice" ]]; then
+      src="$root/cpp/build/voice-release/neuroos-voice/neuroos-voice"
+    elif [[ "$bin" == "neuroos-inference" && -f "$root/cpp/build/voice-release/neuroos-inference/neuroos-inference" ]]; then
+      src="$root/cpp/build/voice-release/neuroos-inference/neuroos-inference"
+    elif [[ -f "$destdir$prefix/bin/$bin" ]]; then
+      src="$destdir$prefix/bin/$bin"
+    fi
+    if [[ -n "$src" ]]; then
+      install -m 0755 "$src" "$u_opt/bin/$bin"
+      echo "Installed $bin to $u_opt/bin"
+    fi
+  done
 
   # Copy libraries to ~/.local/opt/neuroos/lib
   if [[ -d "$destdir$prefix/lib" && "$(ls -A "$destdir$prefix/lib" 2>/dev/null)" ]]; then
