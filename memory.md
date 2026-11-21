@@ -15,7 +15,7 @@
 | Current phase | Phase 7 — Voice (C2), started 2026-11-17 on branch `phase-7` |
 | Current story | P5 work packages W0–W16 in `docs/plans/phase-05-knowledge-plan.md` |
 | Overall progress | 6 / 11 phases done (Phase 5 awaiting merge) |
-| Health | 🟨 Phase 7 built, soak passed, voice chosen; KPI-3 not met on a first 2 h test and a follow-up chain reaction needs a fix (reports/phase-07-voice.md §7b); owner is away a few days, voice service left stopped |
+| Health | 🟨 Phase 7 built, soak passed, voice chosen; follow-up chain reaction fixed (BUG-088); remaining items are owner recordings for KPI-3/4/5 and live desktop trial |
 | Next milestone | M4 — knowledge (C5) |
 
 ---
