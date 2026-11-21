@@ -111,8 +111,21 @@ async fn cleanup_with_real_dialog(scenario: &str) -> (i32, bool, Vec<&'static st
     (r.status, still_there, log)
 }
 
+fn have_compositor() -> bool {
+    let Some(runtime) = std::env::var_os("XDG_RUNTIME_DIR") else {
+        return false;
+    };
+    let Some(display) = std::env::var_os("WAYLAND_DISPLAY") else {
+        return false;
+    };
+    std::path::Path::new(&runtime).join(display).exists()
+}
+
 #[tokio::test]
 async fn local_real_dialog_allow_after_delay_runs_the_cleanup() {
+    if !have_compositor() {
+        return;
+    }
     let (status, still_there, log) = cleanup_with_real_dialog("allow-early").await;
     assert_eq!(status, DispatchStatus::Executed as i32);
     assert!(!still_there);
@@ -121,6 +134,9 @@ async fn local_real_dialog_allow_after_delay_runs_the_cleanup() {
 
 #[tokio::test]
 async fn local_real_dialog_enter_on_open_denies_and_nothing_is_deleted() {
+    if !have_compositor() {
+        return;
+    }
     let (status, still_there, log) = cleanup_with_real_dialog("enter").await;
     assert_eq!(status, DispatchStatus::Rejected as i32);
     assert!(still_there);
@@ -129,6 +145,9 @@ async fn local_real_dialog_enter_on_open_denies_and_nothing_is_deleted() {
 
 #[tokio::test]
 async fn local_real_dialog_escape_denies() {
+    if !have_compositor() {
+        return;
+    }
     let (status, still_there, _) = cleanup_with_real_dialog("escape").await;
     assert_eq!(status, DispatchStatus::Rejected as i32);
     assert!(still_there);

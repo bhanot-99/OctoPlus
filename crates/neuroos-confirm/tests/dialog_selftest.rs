@@ -28,8 +28,21 @@ fn danger() -> String {
     )
 }
 
+fn have_compositor() -> bool {
+    let Some(runtime) = std::env::var_os("XDG_RUNTIME_DIR") else {
+        return false;
+    };
+    let Some(display) = std::env::var_os("WAYLAND_DISPLAY") else {
+        return false;
+    };
+    std::path::Path::new(&runtime).join(display).exists()
+}
+
 /// Runs one scenario; returns (exit success, parsed decision).
-fn run(request: &str, scenario: &str) -> (bool, DialogDecision) {
+fn run(request: &str, scenario: &str) -> Option<(bool, DialogDecision)> {
+    if !have_compositor() {
+        return None;
+    }
     let mut child = Command::new(env!("CARGO_BIN_EXE_neuroos-confirm"))
         .args(["--self-test", scenario])
         .env("GSK_RENDERER", "cairo")
@@ -47,19 +60,23 @@ fn run(request: &str, scenario: &str) -> (bool, DialogDecision) {
     let out = child.wait_with_output().unwrap();
     let req: DialogRequest = serde_json::from_str(request).unwrap();
     let decision = DialogDecision::parse_for(&out.stdout, &req).unwrap();
-    (out.status.success(), decision)
+    Some((out.status.success(), decision))
 }
 
 #[test]
 fn local_dialog_enter_on_open_denies() {
-    let (ok, d) = run(&cleanup(1000, 120_000), "enter");
+    let Some((ok, d)) = run(&cleanup(1000, 120_000), "enter") else {
+        return;
+    };
     assert!(ok);
     assert_eq!(d.decision, Decision::Deny);
 }
 
 #[test]
 fn local_dialog_allow_inactive_during_delay() {
-    let (ok, d) = run(&cleanup(1000, 120_000), "allow-early");
+    let Some((ok, d)) = run(&cleanup(1000, 120_000), "allow-early") else {
+        return;
+    };
     assert!(ok, "approve worked inside the delay");
     assert_eq!(d.decision, Decision::Allow);
 }
@@ -67,28 +84,36 @@ fn local_dialog_allow_inactive_during_delay() {
 #[test]
 fn local_dialog_negative_control_zero_delay_is_caught() {
     // Harness check (rules.md §8.9): with no delay the early click succeeds and the test must say so.
-    let (ok, d) = run(&cleanup(0, 120_000), "allow-early");
+    let Some((ok, d)) = run(&cleanup(0, 120_000), "allow-early") else {
+        return;
+    };
     assert!(!ok);
     assert_eq!(d.decision, Decision::Allow);
 }
 
 #[test]
 fn local_dialog_escape_denies() {
-    let (ok, d) = run(&cleanup(1000, 120_000), "escape");
+    let Some((ok, d)) = run(&cleanup(1000, 120_000), "escape") else {
+        return;
+    };
     assert!(ok);
     assert_eq!(d.decision, Decision::Deny);
 }
 
 #[test]
 fn local_dialog_countdown_expires() {
-    let (ok, d) = run(&cleanup(1000, 1500), "expire");
+    let Some((ok, d)) = run(&cleanup(1000, 1500), "expire") else {
+        return;
+    };
     assert!(ok);
     assert_eq!(d.decision, Decision::Expired);
 }
 
 #[test]
 fn local_dialog_edited_query_is_returned() {
-    let (ok, d) = run(&search(), "edit:dry scalp shampoo");
+    let Some((ok, d)) = run(&search(), "edit:dry scalp shampoo") else {
+        return;
+    };
     assert!(ok);
     assert_eq!(d.decision, Decision::Allow);
     assert_eq!(d.query.as_deref(), Some("dry scalp shampoo"));
@@ -96,7 +121,9 @@ fn local_dialog_edited_query_is_returned() {
 
 #[test]
 fn local_dialog_dangerous_needs_phrase() {
-    let (ok, d) = run(&danger(), "danger");
+    let Some((ok, d)) = run(&danger(), "danger") else {
+        return;
+    };
     assert!(ok, "approved without the typed phrase");
     assert_eq!(d.decision, Decision::Allow);
 }

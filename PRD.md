@@ -514,7 +514,7 @@ The full plan is [security.md](security.md). Binding requirements:
 | ID | Question | Default until answered | Needed by |
 | :--- | :--- | :--- | :--- |
 | OQ-01 | The buddy's name and wake phrase | "hey jarvis" (stock model) | Phase 7 — closed 2026-11-18 (D-37) |
-| OQ-02 | Search provider | Decide by a short comparison in Phase 8 | Phase 8 |
+| OQ-02 | Search provider | **Closed 2026-11-21 (Phase 8, D-39):** Decoupled `SearchAdapter` trait with privacy-preserving generic HTML adapter, default configurable endpoint | Phase 8 |
 | OQ-03 | Default quiet hours and which nudges start enabled | 22:00–08:00; all enabled except break reminders set to notify | Phase 6 |
 | OQ-04 | Which Kokoro voice | `af_heart` (chosen by the owner, D-37) | Phase 7 — closed 2026-11-18 |
 | OQ-05 | Notes folder and calendar source | **Closed 2026-11-16 (Phase 3):** no folder is watched by default; the user lists folders in `[[monitor.folders]]` with a kind (`git`, `notes`, `calendar`). `~/Notes` and local `.ics` files are the suggested entries, not defaults, so nothing is read without the user's say-so (R0-8 spirit, FR-MON-11) | Phase 3 |

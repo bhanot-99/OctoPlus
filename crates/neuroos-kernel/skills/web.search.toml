@@ -1,17 +1,10 @@
 capability = "web.search"
 tier = "REVIEW"
 disabled = false
-implemented = false
-kind = "child"
+implemented = true
+kind = "kernel"
 
 [args.query]
 type = "string"
 max_len = 256
 required = true
-
-[sandbox]
-read_only = []
-read_write = []
-timeout_ms = 1000
-memory_mib = 16
-cpu_s = 1

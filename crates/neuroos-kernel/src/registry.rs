@@ -313,8 +313,8 @@ mod tests {
                 true,
                 SkillKind::Child,
             ),
-            ("web.fetch", Tier::Review, false, false, SkillKind::Child),
-            ("web.search", Tier::Review, false, false, SkillKind::Child),
+            ("web.fetch", Tier::Review, false, true, SkillKind::Kernel),
+            ("web.search", Tier::Review, false, true, SkillKind::Kernel),
             ("shell.exec", Tier::Dangerous, true, false, SkillKind::Child),
         ];
 

@@ -4,15 +4,34 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use neuroos_fetcher::FetcherHandler;
+use neuroos_fetcher::search::GenericSearchAdapter;
+use neuroos_fetcher::token::{self, Approval, SecretKey, Verdict};
+use neuroos_fetcher::transport::MockTransport;
 use neuroos_ipc::server::{ServerConfig, ensure_private_dir};
 use neuroos_ipc::{Client, Server};
 use neuroos_proto::v1::envelope::Body;
-use neuroos_proto::v1::{ErrorCode, FetchRequest, Ping};
+use neuroos_proto::v1::{ApprovalToken, ErrorCode, FetchRequest, SearchRequest};
 
 #[tokio::test]
-async fn test_fetcher_stubs_return_unsupported() {
-    let handler = Arc::new(FetcherHandler::new());
+async fn test_fetcher_validates_token_and_fetches() {
+    let key = Arc::new(SecretKey::from_bytes([99u8; 32]));
     let temp_dir = tempfile::tempdir().unwrap();
+    let spool_dir = temp_dir.path().join("spool");
+    std::fs::create_dir_all(&spool_dir).unwrap();
+
+    let mock_transport = MockTransport::new();
+    mock_transport.register(
+        "https://example.com/item",
+        "<html><head><title>Item Title</title></head><body><p>Item Body Text</p></body></html>",
+    );
+
+    let handler = Arc::new(FetcherHandler::new(
+        key.clone(),
+        spool_dir.clone(),
+        Arc::new(GenericSearchAdapter::default()),
+        Arc::new(mock_transport),
+    ));
+
     let sock_dir = temp_dir.path().join("fetch");
     ensure_private_dir(&sock_dir).unwrap();
     let sock = sock_dir.join("fetch.sock");
@@ -32,39 +51,82 @@ async fn test_fetcher_stubs_return_unsupported() {
 
     let client = Client::connect(&sock, 1024 * 1024).await.unwrap();
 
-    // 1. FetchRequest returns UnsupportedVersion in Phase 1
+    // 1. FetchRequest without token is denied
     let err = client
         .call(
             Body::FetchRequest(FetchRequest {
-                url: "https://example.com".into(),
+                url: "https://example.com/item".into(),
                 token: None,
             }),
             Duration::from_millis(500),
         )
         .await
         .unwrap_err();
-
     let wire = err.to_wire();
     assert_eq!(
         ErrorCode::try_from(wire.code).unwrap(),
-        ErrorCode::UnsupportedVersion,
-        "FetchRequest must return UnsupportedVersion in Phase 1 (rules.md §6.2)"
+        ErrorCode::PermissionDenied,
+        "FetchRequest without token must be PermissionDenied"
     );
 
-    // 2. Invalid body (Ping) returns InvalidRequest
+    // 2. FetchRequest with valid token succeeds
+    let now = neuroos_common::time::now_ns().unwrap();
+    let approval = Approval {
+        action_id: [1; 16],
+        nonce: [2; 16],
+        capability: "web.fetch".to_string(),
+        args_hash: token::args_hash(r#"{"url":"https://example.com/item"}"#),
+        verdict: Verdict::Allow,
+        expires_at_ns: now + 60_000_000_000,
+    };
+    let mac = token::issue_token(&key, &approval);
+    let valid_token = ApprovalToken {
+        nonce: approval.nonce.to_vec(),
+        expires_at_ns: approval.expires_at_ns,
+        mac: mac.to_vec(),
+        action_id: approval.action_id.to_vec(),
+    };
+
+    let resp = client
+        .call(
+            Body::FetchRequest(FetchRequest {
+                url: "https://example.com/item".into(),
+                token: Some(valid_token),
+            }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap();
+
+    if let Body::FetchResult(result) = resp {
+        assert_eq!(result.egress.len(), 1);
+        assert_eq!(result.egress[0].host, "example.com");
+        assert_eq!(result.spool_files.len(), 1);
+
+        let spooled = spool_dir.join(&result.spool_files[0]);
+        assert!(spooled.exists());
+        let spooled_text = std::fs::read_to_string(spooled).unwrap();
+        assert!(spooled_text.contains("Item Title"));
+        assert!(spooled_text.contains("Item Body Text"));
+    } else {
+        panic!("unexpected response body: {resp:?}");
+    }
+
+    // 3. SearchRequest without token is denied
     let err = client
         .call(
-            Body::Ping(Ping {
-                payload: b"ping".to_vec(),
+            Body::SearchRequest(SearchRequest {
+                query: "shampoo".into(),
+                max_pages: 2,
+                token: None,
             }),
             Duration::from_millis(500),
         )
         .await
         .unwrap_err();
-    let wire = err.to_wire();
     assert_eq!(
-        ErrorCode::try_from(wire.code).unwrap(),
-        ErrorCode::InvalidRequest
+        ErrorCode::try_from(err.to_wire().code).unwrap(),
+        ErrorCode::PermissionDenied
     );
 
     let _ = stop_tx.send(true);

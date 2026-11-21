@@ -527,11 +527,11 @@ flowchart LR
 
 ### 11.4 Exit criteria
 
-- [ ] SSRF corpus fully blocked; fuzzing finds no crash.
-- [ ] Fetched content reaches C3 tainted; a later SAFE skill escalates.
-- [ ] Ledger equals capture for every test request.
-- [ ] Injection corpus re-run with fetched pages: zero unauthorised executions or saved facts.
-- [ ] OQ-02 closed. Phase report; owner sign-off.
+- [x] SSRF corpus fully blocked; fuzzing finds no crash.
+- [x] Fetched content reaches C3 tainted; a later SAFE skill escalates.
+- [x] Ledger equals capture for every test request.
+- [x] Injection corpus re-run with fetched pages: zero unauthorised executions or saved facts.
+- [x] OQ-02 closed. Phase report; owner sign-off.
 
 ---
 

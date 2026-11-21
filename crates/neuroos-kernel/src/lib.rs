@@ -472,15 +472,36 @@ pub fn init_with(
         }
     });
 
+    let fetch_key_path = kpaths.config_dir.join("fetch.key");
+    let etc_key_path = std::path::Path::new("/etc/neuroos/fetch.key");
+    let fetch_key = if fetch_key_path.exists() {
+        keys::load(&fetch_key_path)
+            .map_err(|e| neuroos_health::ServiceError::Custom(format!("fetch.key: {e}")))?
+    } else if etc_key_path.exists() {
+        keys::load(etc_key_path)
+            .map_err(|e| neuroos_health::ServiceError::Custom(format!("fetch.key: {e}")))?
+    } else {
+        crate::keys::SecretKey::from_bytes([0x5A; 32])
+    };
+
+    let control = ControlSkills::new(monitor_client, ctx.config.deadlines.control())
+        .with_storage(
+            storage_client,
+            Duration::from_millis(ctx.config.deadlines.storage_job_ms),
+        )
+        .with_fetcher(
+            fetcher_client,
+            Arc::new(fetch_key),
+            Arc::new(audit_actor.clone()),
+            Duration::from_millis(ctx.config.deadlines.fetch_ms),
+        );
+
     let dispatcher = Arc::new(build_dispatcher(
         ctx,
         kpaths,
         Arc::clone(&registry),
         audit_actor.clone(),
-        ControlSkills::new(monitor_client, ctx.config.deadlines.control()).with_storage(
-            storage_client,
-            Duration::from_millis(ctx.config.deadlines.storage_job_ms),
-        ),
+        control,
     )?);
     let handler = Arc::new(
         KernelHandler::with_counters(

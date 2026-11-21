@@ -16,7 +16,6 @@ use neuroos_ipc::{
     Client, Handler, HandlerError, IpcError, ReconnectingClient, Request, Server, StreamSink,
 };
 use neuroos_knowledge::sanitize::{CLOSE_TAG, OPEN_TAG};
-use neuroos_knowledge::status::NO_LOOKUP_YET;
 use neuroos_knowledge::turn::{KnowledgeHandler, Metrics, Peers, Timing};
 use neuroos_proto::v1::envelope::Body;
 use neuroos_proto::v1::{
@@ -893,16 +892,26 @@ async fn no_answer_path_hands_back_a_taint_below_the_users_own_words() {
 
 #[tokio::test]
 async fn a_fresh_question_gets_the_lookup_offer_and_yes_is_answered_honestly() {
-    let s = Stack::start(Opts::default()).await;
+    let s = Stack::start(Opts {
+        result_json: r#"{"spool_files":["/var/spool/neuroos-fetcher/1.json","/var/spool/neuroos-fetcher/2.json"]}"#.into(),
+        ..Opts::default()
+    })
+    .await;
     let (said, _) = s.ask("what is the latest version of rust").await;
     assert!(
         said.ends_with(neuroos_knowledge::chat::LOOKUP_OFFER),
         "{said}"
     );
-    let (said, done) = s.ask("yes").await;
-    assert_eq!(said, NO_LOOKUP_YET);
-    assert_eq!(route(&done), Route::GeneralChat);
-    assert!(s.rec().dispatches.is_empty());
+    let (said, _done) = s.ask("yes").await;
+    assert_eq!(said, "I searched the web and found 2 relevant pages.");
+    assert_eq!(
+        s.rec().dispatches,
+        vec![(
+            "web.search".into(),
+            r#"{"query":"what is the latest version of rust"}"#.into(),
+            USER | MODEL
+        )]
+    );
     assert_eq!(
         s.rec().prompts.len(),
         1,
