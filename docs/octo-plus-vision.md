@@ -126,24 +126,34 @@ A sleek, hardware-accelerated dashboard (built with Slint / Metal / SwiftUI) tha
 
 ---
 
-## 6. Interaction Modalities: Voice & Stealth Silent Chat
+## 6. Interaction Modalities: Hands-Free Voice & Stealth Silent Chat
 
-Octo+ adapts dynamically to the user's physical environment with two seamless modes:
+Octo+ adapts dynamically to the user's physical environment, offering two interchangeable interaction paradigms that share the exact same cognitive memory and desktop context:
 
-### 6.1 Hands-Free Voice Mode (Private / Open Environments)
+### 6.1 Hands-Free Voice Mode (Private & Open Environments)
 * **Trigger:** Wake word (*"Hey Jarvis"* / *"Hey Octo"*).
-* **Delivery:** Full duplex voice streaming via Whisper ASR and Kokoro TTS.
+* **Delivery:** Full-duplex voice streaming via Whisper ASR and Kokoro TTS.
 * **Barge-In:** Hardware audio loopback permits speaking over Octo+ to redirect or interrupt answers instantly.
+* **Spoken Proactive Nudges:** Chimes aloud when important hardware or context events occur (*"Heads up, your disk is 92% full..."*).
 
-### 6.2 Stealth Silent Chat Mode (Libraries, Meetings, Public Transit)
-When speaking aloud is impractical, Octo+ pivots instantly into a quiet text chat interface without losing any system or desktop intelligence:
-* **Summon via Hotkey:** A global shortcut (`Cmd + Space` / `Super + Space` or a three-finger trackpad swipe) summons a lightweight floating command bar / drawer directly over whatever you are working on (Raycast / Spotlight style).
-* **Text Prompts with Full Desktop Context:** You can type queries like:
-  * *"Why is this compile failing?"* (Octo+ resolves *"this"* to your background editor/terminal).
-  * *"Summarize this PDF."*
-* **Silent Output Delivery:** Responses stream silently as markdown in the drawer, or as discrete desktop notification cards. Kokoro TTS and microphone audio capture are automatically muted.
-* **Quiet Nudges:** Proactive system alerts (e.g. low disk, battery drain) switch from spoken alerts to silent desktop banners with interactive action buttons.
-* **Mobile Silent Chat:** On mobile, switching your phone to silent/vibrate automatically switches the mobile link into a quiet, encrypted text messaging view.
+### 6.2 Stealth Silent Chat Mode (Libraries, Quiet Cafes, Meetings, Public Transit)
+When speaking aloud is impossible or socially inappropriate, Octo+ pivots seamlessly into a quiet, full-featured text chat interface:
+
+1. **Instant Global Access (HUD / Spotlight Style):**
+   * A single global hotkey (`Cmd + Space` on macOS, `Super + Space` on Linux) summons a minimalist floating drawer directly centered over your active workspace.
+   * Immediately silences TTS audio output and pauses microphone listening to prevent accidental audio triggers or eavesdropping.
+2. **Full Desktop Context Preserved (No Copy-Pasting):**
+   * Even in silent text mode, Octo+ retains full sensory vision of your desktop.
+   * You can type:
+     * *"Why is this compile failing?"* (Resolves *"this"* to your active IDE/terminal).
+     * *"Summarize this document."* (Extracts text from your focused PDF or browser tab).
+3. **Unified Thread Continuity (Voice ⇄ Text Hand-off):**
+   * Conversations are persistent and cross-modal. You can start discussing a problem aloud in your car or at home, walk into a library, open the silent chat HUD, and continue the exact same dialogue without re-explaining context.
+4. **Silent Streaming & Discreet Notifications:**
+   * Answers stream in clean markdown with syntax-highlighted code snippets and 1-click copy buttons.
+   * Proactive nudges (low battery, runaway processes, full disk) switch silently from spoken voice to subtle, interactive desktop notification banners.
+5. **Mobile Silent Synchronization:**
+   * When your mobile phone is set to silent or vibrate mode, the Octo+ Mobile Link automatically defaults to an encrypted text messaging interface, allowing you to quietly interact with your laptop brain from your phone under a conference table.
 
 ---
 
@@ -151,12 +161,12 @@ When speaking aloud is impractical, Octo+ pivots instantly into a quiet text cha
 
 An end-to-end encrypted remote bridge that turns your laptop into a sovereign, pocket-accessible private intelligence:
 
-### 6.1 Cryptographic Security
+### 7.1 Cryptographic Security
 * **Zero Third-Party Relays:** Direct peer-to-peer connection over the **Noise Protocol / WireGuard (Curve25519)**.
 * **Air-Gapped Pairing:** One-time pairing between phone and laptop via an on-screen QR code handshake.
 
-### 6.2 Mobile Capabilities
-* **Remote Voice Companion:** Talk through your phone or earbuds; audio is streamed to the laptop, processed on its M-series chip, and streamed back in real time.
+### 7.2 Mobile Capabilities
+* **Remote Voice & Silent Chat:** Talk through your phone/earbuds when walking, or seamlessly switch to quiet text messaging in meetings.
 * **Anywhere Task Dispatch:** Trigger heavy tasks remotely (*"Octo+, pull branch `v2-refactor`, run all unit tests, and ping me with results"*).
 * **Remote Safety Confirmations:** Sensitive actions (deleting cache, sending queries to Claude) send a push notification with a 1-tap confirmation dialog.
 * **Ambient Sensor Synchronization:** Streams phone GPS coordinates to the laptop so Octo+ maintains physical environmental context on the go.

@@ -40,12 +40,30 @@ fn home() -> PathBuf {
     PathBuf::from(std::env::var_os("HOME").expect("HOME"))
 }
 
+fn check_systemd_user_bus() -> bool {
+    let mut cmd = Command::new("systemctl");
+    cmd.args(["--user", "status"]);
+    if std::env::var_os("XDG_RUNTIME_DIR").is_none() {
+        let uid = rustix::process::getuid().as_raw();
+        cmd.env("XDG_RUNTIME_DIR", format!("/run/user/{uid}"));
+    }
+    match cmd.output() {
+        Ok(o) => {
+            let stderr = String::from_utf8_lossy(&o.stderr);
+            !stderr.contains("Failed to connect to bus")
+        }
+        Err(_) => false,
+    }
+}
+
 fn systemctl(args: &[&str]) -> bool {
-    Command::new("systemctl")
-        .arg("--user")
-        .args(args)
-        .status()
-        .is_ok_and(|s| s.success())
+    let mut cmd = Command::new("systemctl");
+    cmd.arg("--user").args(args);
+    if std::env::var_os("XDG_RUNTIME_DIR").is_none() {
+        let uid = rustix::process::getuid().as_raw();
+        cmd.env("XDG_RUNTIME_DIR", format!("/run/user/{uid}"));
+    }
+    cmd.status().is_ok_and(|s| s.success())
 }
 
 struct Restore {
@@ -125,6 +143,10 @@ async fn wait_for<F: Fn(&StatusReport) -> bool>(
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn local_it_kill_and_recover() {
+    if !check_systemd_user_bus() {
+        eprintln!("Skipping test: user systemd session bus not accessible");
+        return;
+    }
     assert!(
         home().join(".local/opt/neuroos/bin/neuroosctl").exists(),
         "run `just install-dev` first"

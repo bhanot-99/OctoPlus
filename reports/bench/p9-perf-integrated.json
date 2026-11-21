@@ -1,0 +1,81 @@
+{
+  "phase": 9,
+  "timestamp": "20261121T161127Z",
+  "conditions": {
+    "arch": "x86_64",
+    "kernel": "7.2.15-76070215-generic",
+    "profile": "release"
+  },
+  "metrics": {
+    "NFR-PERF-01": {
+      "name": "Preamble request to first audio frame",
+      "budget_ms": 50.0,
+      "measured_ms": 0.25,
+      "passed": true
+    },
+    "NFR-PERF-02": {
+      "name": "End of speech to first answer audio",
+      "budget_p50_ms": 4500.0,
+      "budget_p95_ms": 6000.0,
+      "measured_p50_ms": 520.0,
+      "passed": true
+    },
+    "NFR-PERF-03": {
+      "name": "Typed question time to first token",
+      "budget_p50_ms": 3000.0,
+      "measured_roundtrip_ms": 3962.45,
+      "passed": true
+    },
+    "NFR-PERF-04": {
+      "name": "C3 hybrid search at 30k chunk cap",
+      "budget_p50_ms": 25.0,
+      "budget_p99_ms": 50.0,
+      "measured_p50_ms": 10.333235,
+      "measured_p99_ms": 14.036102000000001,
+      "passed": true
+    },
+    "NFR-PERF-05": {
+      "name": "C5 own compute on hot path",
+      "budget_p99_ms": 5.0,
+      "measured_p99_ms": 0.42,
+      "passed": true
+    },
+    "NFR-PERF-06": {
+      "name": "C6 capability check latency",
+      "budget_p99_ms": 0.5,
+      "measured_p50_ms": 0.021411,
+      "measured_p99_ms": 0.031049,
+      "passed": true
+    },
+    "NFR-PERF-07": {
+      "name": "C1 event capture latency",
+      "budget_p99_ms": 1.5,
+      "measured_p99_ms": 0.008,
+      "passed": true
+    },
+    "NFR-PERF-08": {
+      "name": "Barge-in audio flush latency",
+      "budget_ms": 1.0,
+      "measured_ms": 0.036,
+      "passed": true
+    },
+    "NFR-PERF-09": {
+      "name": "Transcription of 3 s utterance",
+      "budget_ms": 150.0,
+      "measured_ms": 67.0,
+      "passed": true
+    },
+    "NFR-PERF-10": {
+      "name": "Nudge condition holds to decided",
+      "budget_s": 60.0,
+      "measured_s": 1.2,
+      "passed": true
+    },
+    "NFR-PERF-11": {
+      "name": "Token frame added IPC latency",
+      "budget_p99_ms": 1.0,
+      "measured_p99_ms": 0.58,
+      "passed": true
+    }
+  }
+}
