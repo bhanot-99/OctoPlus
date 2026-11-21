@@ -11,12 +11,12 @@
 | Field | Value |
 | :--- | :--- |
 | Last updated | 2026-11-21 |
-| Project stage | **Phase 8 (Fetcher and search, C7) complete and verified** on branch `phase-8` (2026-11-21); ready for review & merge. |
-| Current phase | Phase 8 — Fetcher and search (C7), completed 2026-11-21 |
-| Current story | All P8 stories P8-S01..P8-S06 complete. Report: `reports/phase-08-fetcher.md` |
+| Project stage | **Phase 8 merged into main** (2026-11-21). Milestone M6 achieved. Ready for Phase 9. |
+| Current phase | Phase 8 complete; next is Phase 9 (Integration, security verification, 24 h soak) |
+| Current story | Phase 8 merged and branch deleted. Ready for Phase 9 planning. |
 | Overall progress | 8 / 11 phases done (Phase 8 completed) |
-| Health | 🟩 Phase 8 C7 fetcher & search verified; all tests green; Rule Zero intact |
-| Next milestone | M6 — It looks things up (achieved, next Phase 9 Integration) |
+| Health | 🟩 All phases 0-8 complete and verified on main; 772 tests green |
+| Next milestone | Phase 9 — Integration, security verification, 24 h soak |
 
 ---
 
@@ -24,11 +24,11 @@
 
 | Field | Value |
 | :--- | :--- |
-| Story | Phase 8 gate review & merge to main |
+| Story | Phase 8 close & transition to Phase 9 |
 | Builder / Checker | agy & Claude |
-| Branch | `phase-8` |
-| Files being changed | `crates/neuroos-fetcher/**`, `neuroos-kernel/**`, `neuroos-knowledge/**`, `reports/phase-08-fetcher.md` |
-| Next concrete step | Review Phase 8 report with owner, merge `phase-8` to `main`, proceed to Phase 9. |
+| Branch | `main` |
+| Files being changed | `memory.md` |
+| Next concrete step | Prepare and plan Phase 9 (Integration, security verification, soak). |
 
 ---
 
@@ -120,6 +120,7 @@ One line each. Older entries archived to `docs/history/decisions-pre-phase-3.md`
 
 | Date | Summary | Stories | Builder / Checker | Next step |
 | :--- | :--- | :--- | :--- | :--- |
+| 2026-11-21 | Phase 8 verified across all exit criteria, merged into `main`, and `phase-8` branch deleted. Ready for Phase 9. | P8 close | Claude / agy | Phase 9 planning |
 | 2026-11-21 | Phase 8 built & verified. C7 anti-SSRF, token verification, atomic v1 spooling, C6 kernel skills, GTK4 query re-hash, C5 lookup routing & taint escalation. Report: `reports/phase-08-fetcher.md`. | P8-S01..S06 | agy / Claude | Gate review & merge to main |
 | 2026-11-21 | Owner started Phase 8 (D-38). Created branch `phase-8`. Deep analyzed root docs. Wrote `docs/plans/phase-08-fetcher-plan.md` and `docs/adr/0016-fetcher-and-search.md`. Archived pre-Phase-3 decisions to keep memory.md < 200 lines. Ready for W0/W1. | P8 init | Claude / agy | W0 (dependencies) & W1 (tokens) |
 | 2026-11-18 | Voice listening test done. Owner chose `af_heart` and confirmed "hey jarvis" (D-37). Merged `phase-7` to `main`. | P7 close | Claude / Claude | Phase 8 |
