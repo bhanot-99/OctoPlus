@@ -126,7 +126,28 @@ A sleek, hardware-accelerated dashboard (built with Slint / Metal / SwiftUI) tha
 
 ---
 
-## 6. Octo+ Mobile Neural Link (Remote P2P Bridge)
+## 6. Interaction Modalities: Voice & Stealth Silent Chat
+
+Octo+ adapts dynamically to the user's physical environment with two seamless modes:
+
+### 6.1 Hands-Free Voice Mode (Private / Open Environments)
+* **Trigger:** Wake word (*"Hey Jarvis"* / *"Hey Octo"*).
+* **Delivery:** Full duplex voice streaming via Whisper ASR and Kokoro TTS.
+* **Barge-In:** Hardware audio loopback permits speaking over Octo+ to redirect or interrupt answers instantly.
+
+### 6.2 Stealth Silent Chat Mode (Libraries, Meetings, Public Transit)
+When speaking aloud is impractical, Octo+ pivots instantly into a quiet text chat interface without losing any system or desktop intelligence:
+* **Summon via Hotkey:** A global shortcut (`Cmd + Space` / `Super + Space` or a three-finger trackpad swipe) summons a lightweight floating command bar / drawer directly over whatever you are working on (Raycast / Spotlight style).
+* **Text Prompts with Full Desktop Context:** You can type queries like:
+  * *"Why is this compile failing?"* (Octo+ resolves *"this"* to your background editor/terminal).
+  * *"Summarize this PDF."*
+* **Silent Output Delivery:** Responses stream silently as markdown in the drawer, or as discrete desktop notification cards. Kokoro TTS and microphone audio capture are automatically muted.
+* **Quiet Nudges:** Proactive system alerts (e.g. low disk, battery drain) switch from spoken alerts to silent desktop banners with interactive action buttons.
+* **Mobile Silent Chat:** On mobile, switching your phone to silent/vibrate automatically switches the mobile link into a quiet, encrypted text messaging view.
+
+---
+
+## 7. Octo+ Mobile Neural Link (Remote P2P Bridge)
 
 An end-to-end encrypted remote bridge that turns your laptop into a sovereign, pocket-accessible private intelligence:
 
@@ -142,7 +163,7 @@ An end-to-end encrypted remote bridge that turns your laptop into a sovereign, p
 
 ---
 
-## 7. Target Hardware & Deployment Profile
+## 8. Target Hardware & Deployment Profile
 
 | Component | Target Specification |
 | :--- | :--- |
@@ -155,7 +176,7 @@ An end-to-end encrypted remote bridge that turns your laptop into a sovereign, p
 
 ---
 
-## 8. Development Roadmap
+## 9. Development Roadmap
 
 1. **Phase 1 (Foundations):** Complete Semantic NeuroOS baseline and PhaseLoopNN 3M–26M prototype.
 2. **Phase 2 (Packaging & Cockpit):** Build unified installer bundle and native visual dashboard.
