@@ -11,11 +11,11 @@
 | Field | Value |
 | :--- | :--- |
 | Last updated | 2026-11-21 |
-| Project stage | **Phase 9 completed on branch `phase-9`** (2026-11-21). Milestone M7 verified. |
-| Current phase | Phase 9 complete; ready for Phase 10 (Packaging and release) |
-| Current story | Phase 9 all exit criteria verified; gate review & release prep |
+| Project stage | **Phase 9 merged into main** (2026-11-21). Milestone M7 achieved. Ready for Phase 10. |
+| Current phase | Phase 9 complete; next is Phase 10 (Packaging and release) |
+| Current story | Phase 9 merged and branch deleted. Ready for Phase 10 planning. |
 | Overall progress | 9 / 11 phases done (Phase 9 completed) |
-| Health | 🟩 All phases 0-9 complete and verified; full test suite green |
+| Health | 🟩 All phases 0-9 complete and verified on main; full test suite green |
 | Next milestone | Phase 10 — Packaging and release v1.0.0 |
 
 ---
@@ -26,9 +26,9 @@
 | :--- | :--- |
 | Story | Phase 9 close & transition to Phase 10 |
 | Builder / Checker | agy & Claude |
-| Branch | `phase-9` |
-| Files being changed | `memory.md`, `reports/phase-09-integration-soak.md` |
-| Next concrete step | Owner acceptance sign-off, merge `phase-9` to `main`, begin Phase 10. |
+| Branch | `main` |
+| Files being changed | `memory.md` |
+| Next concrete step | Prepare and plan Phase 10 (Packaging, .deb, install scripts, release v1.0.0). |
 
 ---
 
