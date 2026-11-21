@@ -12,6 +12,7 @@ pub mod run;
 pub mod status;
 pub mod storage;
 pub mod style;
+pub mod voice;
 
 use std::path::PathBuf;
 
@@ -86,6 +87,12 @@ pub enum Commands {
         command: NudgesCommands,
     },
 
+    /// The voice service: what it is doing right now.
+    Voice {
+        #[command(subcommand)]
+        command: VoiceCommands,
+    },
+
     /// Personal facts the buddy remembers (list, add, remove).
     Profile {
         #[command(subcommand)]
@@ -155,6 +162,17 @@ pub enum StorageCommands {
     },
 }
 
+/// Subcommands under `neuroosctl voice` (text equivalent of the voice status, DP-7).
+#[derive(Debug, Subcommand)]
+pub enum VoiceCommands {
+    /// Is the microphone being captured, is a turn running, is anyone else on the microphone.
+    Status {
+        /// One JSON object.
+        #[arg(long)]
+        json: bool,
+    },
+}
+
 /// Subcommands under `neuroosctl nudges` (FR-NUD-02).
 #[derive(Debug, Subcommand)]
 pub enum NudgesCommands {
@@ -178,6 +196,9 @@ pub enum NudgesCommands {
     Test {
         /// Rule id, as shown by `list`.
         rule: String,
+        /// Say the line aloud instead (also how to hear the buddy's voice).
+        #[arg(long)]
+        voice: bool,
     },
 }
 

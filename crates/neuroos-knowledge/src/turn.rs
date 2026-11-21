@@ -24,8 +24,9 @@ use neuroos_ipc::{Handler, HandlerError, ReconnectingClient, Request, StreamSink
 use neuroos_proto::v1::envelope::Body;
 use neuroos_proto::v1::{
     Ack, AnswerChunk, AnswerDone, AskRequest, DispatchRequest, DispatchStatus, ErrorCode,
-    EvaluateRequest, Evidence, GenerateRequest, NudgeList, Origin, ProfileListRequest,
-    QueryFocusHistory, QueryHybrid, Route, StoreInteraction, Taint,
+    EvaluateRequest, Evidence, GenerateRequest, NudgeList, Origin, PreambleKind, PreambleRequest,
+    ProfileListRequest, QueryFocusHistory, QueryHybrid, Route, SpeakChunk, StoreInteraction, Taint,
+    VoiceCommand,
 };
 use neuroos_taint::TaintFlags;
 use tracing::warn;
@@ -41,6 +42,7 @@ use crate::prompt::{self, Budgets, PromptInput};
 use crate::router::{self, ActionHint, RouteInput, RouteKind};
 use crate::sanitize::neutralise;
 use crate::session::{Session, SessionConfig};
+use crate::speech::SentenceStream;
 use crate::status::{self, NO_LOOKUP_YET, Need};
 
 /// Longest question accepted, in bytes (the prompt cuts it further to its token cap).
@@ -103,6 +105,8 @@ pub struct Metrics {
     pub route_general: Arc<AtomicU64>,
     /// Evidence items dropped for a missing taint (R0-4).
     pub evidence_no_taint: Arc<AtomicU64>,
+    /// Times the user spoke over a spoken answer (FR-VOI-07).
+    pub barge_ins: Arc<AtomicU64>,
 }
 
 /// State carried between turns.
@@ -262,6 +266,76 @@ impl KnowledgeHandler {
     }
 
     // ---- the turn -----------------------------------------------------------------------
+
+    /// A turn that began as speech (FR-VOI-04, Architecture §6.1). The same turn engine answers;
+    /// its text is rewritten on the way out as a preamble request first (FR-KNO-02) and then
+    /// speakable sentences (FR-KNO-08), all on this request's own stream.
+    async fn voice_ask(&self, cmd: VoiceCommand, sink: &StreamSink) -> Result<Body, HandlerError> {
+        let now = if cmd.t_speech_start_ns == 0 {
+            now_ns().unwrap_or(0)
+        } else {
+            cmd.t_speech_start_ns
+        };
+        // A reply to a nudge needs no "let me look" in front of it.
+        if !self.nudge.reply_window_open(now) {
+            let cutoff = f64::from(self.cfg.desktop_route_score_milli) / 1000.0;
+            let first = router::route(&RouteInput {
+                text: &cmd.text,
+                nudge_window_open: false,
+                retrieval_best_score: None,
+                cutoff,
+            });
+            let kind = match first.route {
+                RouteKind::Action => PreambleKind::Acknowledge,
+                RouteKind::Desktop => PreambleKind::Looking,
+                _ => PreambleKind::Thinking,
+            };
+            // Best effort: a preamble that cannot be sent never fails the answer.
+            let _ = sink
+                .send(Body::PreambleRequest(PreambleRequest { kind: kind as i32 }))
+                .await;
+        }
+        let ask = AskRequest {
+            text: cmd.text,
+            origin: Origin::Voice as i32,
+            at_ns: cmd.t_speech_start_ns,
+        };
+        let (local, mut rx) = StreamSink::channel(16);
+        let run = async move {
+            let result = self.ask(ask, &local).await;
+            drop(local);
+            result
+        };
+        let relay = async {
+            let mut stream = SentenceStream::new();
+            let mut sequence = 0_u32;
+            let mut speak = |texts: Vec<String>| {
+                texts
+                    .into_iter()
+                    .map(|text| {
+                        sequence += 1;
+                        Body::SpeakChunk(SpeakChunk { text, sequence })
+                    })
+                    .collect::<Vec<_>>()
+            };
+            while let Some(env) = rx.recv().await {
+                if let Some(Body::AnswerChunk(c)) = env.body {
+                    for frame in speak(stream.feed(&c.text)) {
+                        if sink.send(frame).await.is_err() {
+                            return;
+                        }
+                    }
+                }
+            }
+            for frame in speak(stream.flush()) {
+                if sink.send(frame).await.is_err() {
+                    return;
+                }
+            }
+        };
+        let (result, ()) = tokio::join!(run, relay);
+        result
+    }
 
     async fn ask(&self, ask: AskRequest, sink: &StreamSink) -> Result<Body, HandlerError> {
         self.metrics.requests.fetch_add(1, Ordering::Relaxed);
@@ -468,6 +542,18 @@ impl KnowledgeHandler {
                         false,
                     ));
                 };
+                // An owner-asked test of the voice: the same template and numbers, said aloud.
+                if t.speak {
+                    return if self.nudge.speak(&t.rule_id, &template, &args).await {
+                        Ok(Body::Ack(Ack {}))
+                    } else {
+                        Err(HandlerError::new(
+                            ErrorCode::Unavailable,
+                            "the voice is not available or is busy",
+                            true,
+                        ))
+                    };
+                }
                 // A test line is a visual check the owner asked for: never with a sound, so it
                 // cannot be heard at a bad moment (review F1).
                 if self.nudge.notify(&template, &args, true).await {
@@ -1052,6 +1138,13 @@ impl Handler for KnowledgeHandler {
     async fn handle(&self, req: Request, sink: StreamSink) -> Result<Body, HandlerError> {
         match req.body {
             Body::AskRequest(ask) => self.ask(ask, &sink).await,
+            Body::VoiceCommand(cmd) => self.voice_ask(cmd, &sink).await,
+            // The user spoke over the answer. The generation is cancelled by C2 cancelling the
+            // request's stream; this message only records that it happened (FR-VOI-07).
+            Body::BargeIn(_) => {
+                self.metrics.barge_ins.fetch_add(1, Ordering::Relaxed);
+                Ok(Body::Ack(Ack {}))
+            }
             b @ (Body::NudgeListRequest(_) | Body::NudgeSetEnabled(_) | Body::NudgeTest(_)) => {
                 self.nudge_admin(b).await
             }

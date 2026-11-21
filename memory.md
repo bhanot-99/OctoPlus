@@ -12,10 +12,10 @@
 | :--- | :--- |
 | Last updated | 2026-11-17 |
 | Project stage | **Phase 5 (Knowledge and conversation, C5) built, gate green, ready to merge** from branch `phase-5` (2026-11-17); KPI-12 grading and KPI-1 recordings are still the owner's. Phase 4 signed off and merged. |
-| Current phase | Phase 6 done; next Phase 7 — Voice |
+| Current phase | Phase 7 — Voice (C2), started 2026-11-17 on branch `phase-7` |
 | Current story | P5 work packages W0–W16 in `docs/plans/phase-05-knowledge-plan.md` |
 | Overall progress | 6 / 11 phases done (Phase 5 awaiting merge) |
-| Health | 🟩 Phase 6 signed off by the owner 2026-11-17 (trial follows as a follow-up) |
+| Health | 🟨 Phase 7 built, soak passed, voice chosen; follow-up chain reaction fixed (BUG-088); remaining items are owner recordings for KPI-3/4/5 and live desktop trial |
 | Next milestone | M4 — knowledge (C5) |
 
 ---
@@ -54,6 +54,18 @@ Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done �
 
 ## 4. Current Phase Board
 
+**Phase 7 — Voice (C2)** (report: `reports/phase-07-voice.md`)
+
+| ID | Story | Status | Builder | Checker |
+| :--- | :--- | :--- | :--- | :--- |
+| P7-S01 | Wake word starts listening; nothing transcribed otherwise | Done | Claude, agy | Claude |
+| P7-S02 | Instant preamble, answer as it is generated | Done | Claude | Claude |
+| P7-S03 | Speaking over it stops it at once | Done | Claude, agy | Claude, agy review |
+| P7-S04 | Reply without the wake word | Done | Claude | Claude |
+| P7-S05 | One consistent voice | Done, voice choice is the owner's | Claude | Claude |
+| P7-S06 | Spoken nudge at a good moment | Done | Claude | Claude, agy review |
+| P7-S07 | Cheap while silent | Done (2.3 % of one core) | Claude | Claude |
+
 **Phase 6 — Nudge engine** (Phase 5 board: `reports/phase-05-knowledge.md`)
 
 | Story | Title | Status | Builder | Checker |
@@ -76,6 +88,9 @@ One line each. Anything architectural also gets an ADR.
 
 | Date | ID | Decision | ADR |
 | :--- | :--- | :--- | :--- |
+| 2026-11-18 | D-37 | Owner chose the voice `af_heart` (voice 1 of the listening test) and confirmed the wake phrase "hey jarvis" with the stock model. OQ-01 and OQ-04 closed; both are the compiled defaults, so no `voice.conf` is needed. | 0015 |
+| 2026-11-17 | D-36 | Owner approved the Phase 7 downloads (whisper.cpp v1.9.5 submodule, whisper tiny.en, Silero VAD, openWakeWord hey_jarvis plus its feature models, Kokoro fp32 with voices af_heart, af_bella, af_nicole, am_michael) with wake phrase "hey jarvis" and voice af_heart as defaults (OQ-01, OQ-04). | 0015 |
+| 2026-11-17 | D-35 | Owner started Phase 7: "start executing phase 7 as planned". Plan: `docs/plans/phase-07-voice-plan.md`. Claude's design calls (build pure logic first, wake phrase "hey jarvis", espeak-ng linked dynamically, Kokoro fp32, spoken nudge only when voice is free) are open to overturn at sign-off. Downloads wait for the owner's approval. | 0015 (Proposed) |
 | 2026-11-17 | D-34 | Owner asked to fix BUG-070. Router generalised (rules, not a model) and measured on four blind sets written by agy: first runs 76.2, 79.0, 86.7, 94.3 %; KPI-13 on unseen wording now about 90-94 %. Branch `bug-070-router`, not yet merged. | BUG-070 |
 | 2026-11-17 | D-33 | Owner approved all of Phase 6 and accepted D-32 and ADR-0014 as recommended; signed off on replay and test evidence. The one-week trial (OQ-03) and the two-week KPI-9 run continue as follow-ups; the live reply check is still open. | 0014 (Accepted) |
 | 2026-11-17 | D-32 | Owner started Phase 6: "you are already connected with agy, so understand your role and agy's role and start executing phase 6 as planned". Plan: `docs/plans/phase-06-nudges-plan.md`. Claude's design calls under that go-ahead (state in C3's nudge log, paused inferred from own pauses and stale data, quiet hours by machine time zone, episode semantics, two disk rules, upcoming-event rule and notification buttons not built) are open to overturn at sign-off. | 0014 (Proposed) |

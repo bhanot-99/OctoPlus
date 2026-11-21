@@ -189,19 +189,11 @@ void LlamaEngine::Reset() {
 
 Result<PrefillResult> LlamaEngine::Prefill(const std::vector<std::int32_t>& tokens,
                                            std::uint32_t stable_prefix_tokens) {
-  std::size_t common = 0;
-  while (common < cached_tokens_.size() && common < tokens.size() &&
-         cached_tokens_[common] == tokens[common]) {
-    ++common;
-  }
-
-  std::uint32_t to_reuse = 0;
+  const std::uint32_t to_reuse = ReusablePrefixTokens(cached_tokens_, tokens, stable_prefix_tokens);
   llama_memory_t mem = llama_get_memory(ctx_);
-  if (common >= stable_prefix_tokens && common > 0) {
-    to_reuse = static_cast<std::uint32_t>(common);
+  if (to_reuse > 0) {
     llama_memory_seq_rm(mem, 0, static_cast<llama_pos>(to_reuse), -1);
   } else {
-    to_reuse = 0;
     llama_memory_clear(mem, true);
   }
 

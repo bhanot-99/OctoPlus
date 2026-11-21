@@ -26,6 +26,10 @@ struct CliConfig {
   SocketPolicy* voice_sp = nullptr;
   SocketPolicy* control_sp = nullptr;
   std::filesystem::path landlock_canary;
+  // Where the voice models are (Phase 7) and the owner's optional settings file. Without
+  // --models-dir the service runs without engines and reports DEGRADED.
+  std::filesystem::path models_dir;
+  std::filesystem::path voice_config;
 };
 
 inline bool ParseUint32(std::string_view s, std::uint32_t* out) {
@@ -89,6 +93,10 @@ inline bool ParseCliArgs(int argc, const char* const* argv, CliConfig* cfg) {
         std::cerr << "neuroos-voice: invalid numeric value for --threads: " << val << "\n";
         return false;
       }
+    } else if (arg == "--models-dir" && i + 1 < argc) {
+      cfg->models_dir = argv[++i];
+    } else if (arg == "--voice-config" && i + 1 < argc) {
+      cfg->voice_config = argv[++i];
     } else if (arg == "--landlock-canary" && i + 1 < argc) {
       cfg->landlock_canary = argv[++i];
     } else {

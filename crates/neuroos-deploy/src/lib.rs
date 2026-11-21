@@ -375,6 +375,14 @@ fn generate_user_service_internal(
         // is fine (`-`): the compiled-in defaults apply.
         out.push_str("BindReadOnlyPaths=-%h/.config/neuroos/nudges.toml\n");
     }
+    if part == Part::Voice {
+        // The owner's voice settings (microphone, voice, wake threshold), read before the
+        // sandbox is applied. A missing file is fine: the compiled-in defaults apply.
+        out.push_str("BindReadOnlyPaths=-%h/.config/neuroos/voice.conf\n");
+        // ProtectHome=tmpfs also empties /run/user: the audio server's socket is the one thing
+        // C2 needs from there. `-` so a session without PipeWire still starts (DEGRADED).
+        out.push_str("BindPaths=-%t/pipewire-0\n");
+    }
 
     // Decision 4: specific persistent data paths.
     match part {
@@ -416,8 +424,8 @@ fn generate_user_service_internal(
     out.push_str("PrivateTmp=true\n");
 
     if part == Part::Voice {
-        out.push_str("# C2: Architecture §8.1 permits PrivateDevices and RestrictRealtime exemptions for audio;\n");
-        out.push_str("# kept fully hardened for Phase 1 (no audio yet)\n");
+        out.push_str("# C2: audio runs through the PipeWire socket in the runtime folder (no device files),\n");
+        out.push_str("# so PrivateDevices stays on; only real-time scheduling is exempt (Architecture §8.1).\n");
     }
 
     out.push_str("PrivateDevices=true\n");
@@ -428,7 +436,9 @@ fn generate_user_service_internal(
     out.push_str("ProtectClock=true\n");
     out.push_str("ProtectHostname=true\n");
     out.push_str("RestrictNamespaces=true\n");
-    out.push_str("RestrictRealtime=true\n");
+    if part != Part::Voice {
+        out.push_str("RestrictRealtime=true\n");
+    }
     out.push_str("RestrictSUIDSGID=true\n");
     out.push_str("RestrictAddressFamilies=AF_UNIX\n");
     out.push_str("LockPersonality=true\n");
@@ -468,7 +478,9 @@ fn generate_user_service_internal(
                     "ExecStart=%h/.local/opt/neuroos/bin/neuroos-voice \
                     --socket %t/neuroos/voice/voice/voice.sock=neuroos-knowledge.service \
                     --socket %t/neuroos/voice/control/control.sock=uid \
-                    --health-socket %t/neuroos/voice/health/health.sock=neuroos-healthd.service\n",
+                    --health-socket %t/neuroos/voice/health/health.sock=neuroos-healthd.service \
+                    --models-dir %h/.local/opt/neuroos/models/voice \
+                    --voice-config %h/.config/neuroos/voice.conf\n",
                 );
             }
             _ => {

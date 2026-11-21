@@ -13,13 +13,15 @@ ProtectSystem=strict
 ProtectHome=tmpfs
 BindReadOnlyPaths=%h/.local/opt/neuroos
 BindReadOnlyPaths=-%h/.config/neuroos/config.toml
+BindReadOnlyPaths=-%h/.config/neuroos/voice.conf
+BindPaths=-%t/pipewire-0
 InaccessiblePaths=-/run/neuroos-fetcher
 TemporaryFileSystem=%t/neuroos
 BindPaths=%t/neuroos/voice
 BindPaths=%t/neuroos/knowledge/knowledge
 PrivateTmp=true
-# C2: Architecture §8.1 permits PrivateDevices and RestrictRealtime exemptions for audio;
-# kept fully hardened for Phase 1 (no audio yet)
+# C2: audio runs through the PipeWire socket in the runtime folder (no device files),
+# so PrivateDevices stays on; only real-time scheduling is exempt (Architecture §8.1).
 PrivateDevices=true
 ProtectKernelTunables=true
 ProtectKernelModules=true
@@ -28,7 +30,6 @@ ProtectControlGroups=true
 ProtectClock=true
 ProtectHostname=true
 RestrictNamespaces=true
-RestrictRealtime=true
 RestrictSUIDSGID=true
 RestrictAddressFamilies=AF_UNIX
 LockPersonality=true
@@ -42,7 +43,7 @@ UMask=0077
 MemoryMax=768M
 Restart=on-failure
 RestartSec=2s
-ExecStart=%h/.local/opt/neuroos/bin/neuroos-voice --socket %t/neuroos/voice/voice/voice.sock=neuroos-knowledge.service --socket %t/neuroos/voice/control/control.sock=uid --health-socket %t/neuroos/voice/health/health.sock=neuroos-healthd.service
+ExecStart=%h/.local/opt/neuroos/bin/neuroos-voice --socket %t/neuroos/voice/voice/voice.sock=neuroos-knowledge.service --socket %t/neuroos/voice/control/control.sock=uid --health-socket %t/neuroos/voice/health/health.sock=neuroos-healthd.service --models-dir %h/.local/opt/neuroos/models/voice --voice-config %h/.config/neuroos/voice.conf
 
 [Install]
 WantedBy=neuroos.target

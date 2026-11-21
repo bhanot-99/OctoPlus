@@ -36,6 +36,8 @@ const RESTORE_LOOKBACK_S: u64 = 90 * 86_400;
 const C3_DEADLINE: Duration = Duration::from_millis(500);
 /// Longest wait for C6 to show a notification.
 const NOTIFY_DEADLINE: Duration = Duration::from_secs(2);
+/// C2 answers a status question or takes a spoken line quickly or not at all.
+const VOICE_DEADLINE: Duration = Duration::from_secs(2);
 
 /// The connections the engine uses.
 #[derive(Debug, Clone)]
@@ -46,6 +48,32 @@ pub struct NudgePeers {
     pub kernel: Arc<ReconnectingClient>,
     /// C4, only to know whether it is reachable ("a part is degraded").
     pub inference: Arc<ReconnectingClient>,
+    /// C2: whether it can speak now, and the spoken nudge itself (Phase 7).
+    pub voice: Arc<ReconnectingClient>,
+}
+
+/// What C2 says about the moment (FR-VOI-10): whether voice can be used at all, whether
+/// another app holds the microphone, and whether a turn is being heard or spoken.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct VoiceView {
+    /// C2 is reachable and is capturing, so a spoken nudge can be answered by voice.
+    pub available: bool,
+    /// Another application is capturing the microphone (a likely call).
+    pub mic_busy: bool,
+    /// A spoken turn is in progress or C2 is speaking.
+    pub busy: bool,
+}
+
+impl VoiceView {
+    /// Reads C2's status reply.
+    #[must_use]
+    pub fn from_status(s: &neuroos_proto::v1::VoiceStatus) -> Self {
+        Self {
+            available: s.capture_running,
+            mic_busy: s.mic_in_use_by_other,
+            busy: s.turn_in_progress || s.speaking,
+        }
+    }
 }
 
 /// The reply window opened by a delivered nudge.
@@ -427,6 +455,42 @@ impl NudgeHandle {
         true
     }
 
+    /// Asks C2 about the moment; unavailable voice when C2 is not reachable.
+    pub async fn voice_view(&self) -> VoiceView {
+        // No `is_connected` shortcut: the first evaluation after a start would otherwise find a
+        // link that has not been dialled yet and show a nudge that could have been spoken. The
+        // client fails fast (and backs off) when C2 is not there.
+        match self
+            .peers
+            .voice
+            .call(
+                Body::VoiceStatusRequest(neuroos_proto::v1::VoiceStatusRequest {}),
+                VOICE_DEADLINE,
+            )
+            .await
+        {
+            Ok(Body::VoiceStatus(s)) => VoiceView::from_status(&s),
+            _ => VoiceView::default(),
+        }
+    }
+
+    /// Speaks a nudge through C2 from a template id and numbers (FR-VOI-11, R0-6); false if C2
+    /// cannot take it, in which case the caller shows a notification instead.
+    pub async fn speak(&self, rule_id: &str, template: &str, args: &[(String, f64)]) -> bool {
+        let body = Body::SpeakNudge(neuroos_proto::v1::SpeakNudge {
+            rule_id: rule_id.to_string(),
+            template_id: template.to_string(),
+            args: template_args(args),
+        });
+        match self.peers.voice.call(body, VOICE_DEADLINE).await {
+            Ok(_) => true,
+            Err(e) => {
+                warn!("could not speak a nudge: {e}");
+                false
+            }
+        }
+    }
+
     /// The engine loop: one [`NudgeHandle::tick`] every `tick_s` until `stop` fires.
     pub async fn run(&self, tz: jiff::tz::TimeZone, mut stop: tokio::sync::watch::Receiver<bool>) {
         let mut every = tokio::time::interval(Duration::from_secs(self.cfg.tick_s));
@@ -440,8 +504,8 @@ impl NudgeHandle {
                 }
                 _ = every.tick() => {
                     let now = neuroos_common::time::now_ns().unwrap_or(0);
-                    // Voice arrives in Phase 7; until then a spoken decision is impossible.
-                    self.tick(now, &tz, false).await;
+                    let voice = self.voice_view().await;
+                    self.tick_with(now, &tz, voice).await;
                 }
             }
         }
@@ -454,6 +518,15 @@ impl NudgeHandle {
 
     /// One evaluation (FR-NUD-01). Exposed so tests can drive it with a chosen clock.
     pub async fn tick(&self, now_ns: u64, tz: &jiff::tz::TimeZone, voice_available: bool) {
+        let voice = VoiceView {
+            available: voice_available,
+            ..VoiceView::default()
+        };
+        self.tick_with(now_ns, tz, voice).await;
+    }
+
+    /// One evaluation with what C2 said about the moment.
+    pub async fn tick_with(&self, now_ns: u64, tz: &jiff::tz::TimeZone, voice: VoiceView) {
         if !self.restore(now_ns).await {
             self.idle.store(true, Ordering::Relaxed);
             return;
@@ -488,10 +561,10 @@ impl NudgeHandle {
                 locked_known: sig.locked_known,
                 monitor_stale: built.monitor_stale,
                 own_pause_active: own_pause,
-                in_turn: self.in_turn.load(Ordering::SeqCst) > 0,
-                mic_busy: false,
+                in_turn: self.in_turn.load(Ordering::SeqCst) > 0 || voice.busy,
+                mic_busy: voice.mic_busy,
                 quiet_hours: signals::in_quiet_hours(minute, core.quiet_start, core.quiet_end),
-                voice_available,
+                voice_available: voice.available,
             });
             let out = core.pure.step(now_ns, &built.readings, &ctx);
             let (decisions, dropped) = (out.decisions, out.dropped);
@@ -541,13 +614,26 @@ impl NudgeHandle {
                 all(NudgeOutcome::Dropped)
             }
             Action::Speak | Action::Notify { .. } => {
-                // Voice arrives in Phase 7: a spoken decision is only reachable when voice is
-                // available, and until then the gate has already downgraded it.
+                // A spoken decision is only reachable when C2 said it can speak; if it cannot take
+                // the line after all, the user still gets the notification (FR-NUD-05).
+                debug!(
+                    "nudge {} goes out as {:?} ({:?})",
+                    d.candidate.rule_id, d.action, d.reason
+                );
                 let silent = matches!(d.action, Action::Notify { silent: true });
-                let spoken = matches!(d.action, Action::Speak);
-                if self
-                    .notify(&d.candidate.template, &d.candidate.args, silent)
-                    .await
+                let wants_voice = matches!(d.action, Action::Speak) && d.merged_from.is_empty();
+                let spoken = wants_voice
+                    && self
+                        .speak(
+                            &d.candidate.rule_id,
+                            &d.candidate.template,
+                            &d.candidate.args,
+                        )
+                        .await;
+                if spoken
+                    || self
+                        .notify(&d.candidate.template, &d.candidate.args, silent)
+                        .await
                 {
                     self.counters.notified.fetch_add(1, Ordering::Relaxed);
                     // The reply window opens for what the user can answer (a single nudge).

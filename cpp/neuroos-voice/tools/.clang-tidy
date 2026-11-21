@@ -1,0 +1,14 @@
+# Developer tools (the voice evaluation and say tools), never run by a unit and never shipped:
+# the same relaxations as cpp/tools, plus the C varargs of printf-style reports, WAV bytes written
+# through char pointers, and a main() that is allowed to end on an exception.
+InheritParentConfig: true
+Checks: >
+  -readability-function-cognitive-complexity,
+  -bugprone-unchecked-optional-access,
+  -bugprone-exception-escape,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -bugprone-implicit-widening-of-multiplication-result,
+  -cert-err33-c,
+  -concurrency-mt-unsafe

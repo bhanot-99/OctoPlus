@@ -114,6 +114,14 @@ fn every_baseline_line_present_in_user_units() {
         ];
 
         for stanza in expected_stanzas {
+            // C2 is the one documented exemption: audio scheduling (Architecture §8.1).
+            if part == Part::Voice && stanza == "RestrictRealtime=true" {
+                assert!(
+                    !lines.contains(&stanza),
+                    "C2 must not carry the restriction"
+                );
+                continue;
+            }
             assert!(
                 lines.contains(&stanza),
                 "part {:?} unit missing baseline stanza '{}'",
@@ -780,4 +788,56 @@ fn only_the_knowledge_unit_binds_the_nudge_rules_file() {
         assert!(!generate_unit(part).contains(bind), "{part:?}");
     }
     assert!(generate_unit(Part::Knowledge).contains(bind));
+}
+
+#[test]
+fn the_voice_unit_binds_its_settings_keeps_the_hardening_except_realtime_and_names_the_models() {
+    let files = generate_all_files(&manifest_path()).unwrap();
+    let unit = &files
+        .iter()
+        .find(|f| f.rel_path == Path::new("systemd/user/neuroos-voice.service"))
+        .unwrap()
+        .content;
+    assert!(unit.contains("BindReadOnlyPaths=-%h/.config/neuroos/voice.conf"));
+    assert!(
+        unit.contains("BindPaths=-%t/pipewire-0"),
+        "the audio socket"
+    );
+    assert!(unit.contains("--models-dir %h/.local/opt/neuroos/models/voice"));
+    assert!(unit.contains("--voice-config %h/.config/neuroos/voice.conf"));
+    assert!(
+        !unit.contains("RestrictRealtime=true"),
+        "audio scheduling is the one documented exemption"
+    );
+    for kept in [
+        "PrivateNetwork=true",
+        "PrivateDevices=true",
+        "RestrictAddressFamilies=AF_UNIX",
+        "MemoryDenyWriteExecute=true",
+        "CapabilityBoundingSet=",
+        "ProtectHome=tmpfs",
+    ] {
+        assert!(unit.contains(kept), "{kept}");
+    }
+    // No other part gets the settings file, and every other part keeps its real-time restriction.
+    for part in [
+        Part::Storage,
+        Part::Inference,
+        Part::Monitor,
+        Part::Kernel,
+        Part::Knowledge,
+    ] {
+        let name = format!("systemd/user/neuroos-{}.service", part.name());
+        let other = &files
+            .iter()
+            .find(|f| f.rel_path == Path::new(&name))
+            .unwrap()
+            .content;
+        assert!(!other.contains("voice.conf"), "{name}");
+        assert!(
+            !other.contains("pipewire"),
+            "{name}: only C2 sees the audio socket"
+        );
+        assert!(other.contains("RestrictRealtime=true"), "{name}");
+    }
 }

@@ -139,6 +139,22 @@ pub struct StreamSink {
 }
 
 impl StreamSink {
+    /// A sink that is not tied to a connection: frames sent into it come out of the returned
+    /// receiver. A handler that needs to rewrite its own stream (C5 turning answer text into
+    /// speech chunks) runs the inner work against this sink and relays what it receives.
+    #[must_use]
+    pub fn channel(capacity: usize) -> (Self, mpsc::Receiver<Envelope>) {
+        let (tx, rx) = mpsc::channel(capacity.max(1));
+        (
+            Self {
+                tx,
+                request_id: 0,
+                trace_id: String::new(),
+            },
+            rx,
+        )
+    }
+
     /// Sends one non-final frame.
     ///
     /// # Errors

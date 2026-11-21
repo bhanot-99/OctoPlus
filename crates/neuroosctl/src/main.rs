@@ -14,6 +14,7 @@ use neuroosctl::profile::run_profile;
 use neuroosctl::status::run_status;
 use neuroosctl::storage::run_storage;
 use neuroosctl::style::Styler;
+use neuroosctl::voice::run_voice;
 use neuroosctl::{Cli, Commands};
 
 #[tokio::main]
@@ -64,6 +65,7 @@ async fn main() {
         }
         Commands::Storage { command } => run_storage(&runtime_root, command, styler).await,
         Commands::Nudges { command } => run_nudges(&runtime_root, command, styler).await,
+        Commands::Voice { command } => run_voice(&runtime_root, command, styler).await,
         Commands::Profile { command } => run_profile(&runtime_root, command, styler).await,
         Commands::Audit { command } => run_audit(&runtime_root, command, styler).await,
         Commands::Egress { command } => run_egress(&runtime_root, command, styler).await,

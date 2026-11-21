@@ -11,6 +11,8 @@
     },
     { "name": "debug", "inherits": "base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "NEUROOS_WITH_LLAMA": "ON" } },
     { "name": "release", "inherits": "base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "NEUROOS_WITH_LLAMA": "ON" } },
+    { "name": "voice", "inherits": "base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "NEUROOS_WITH_LLAMA": "OFF", "NEUROOS_WITH_VOICE_ENGINES": "ON" } },
+    { "name": "voice-release", "inherits": "base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "NEUROOS_WITH_LLAMA": "OFF", "NEUROOS_WITH_VOICE_ENGINES": "ON" } },
     {
       "name": "asan", "inherits": "base",
       "cacheVariables": {
@@ -36,6 +38,8 @@
   "buildPresets": [
     { "name": "debug", "configurePreset": "debug" },
     { "name": "release", "configurePreset": "release" },
+    { "name": "voice", "configurePreset": "voice" },
+    { "name": "voice-release", "configurePreset": "voice-release" },
     { "name": "asan", "configurePreset": "asan" },
     { "name": "tsan", "configurePreset": "tsan" },
     { "name": "coverage", "configurePreset": "coverage" }
@@ -43,6 +47,8 @@
   "testPresets": [
     { "name": "debug", "configurePreset": "debug", "output": { "outputOnFailure": true } },
     { "name": "release", "configurePreset": "release", "output": { "outputOnFailure": true } },
+    { "name": "voice", "configurePreset": "voice", "output": { "outputOnFailure": true } },
+    { "name": "voice-release", "configurePreset": "voice-release", "output": { "outputOnFailure": true } },
     { "name": "asan", "configurePreset": "asan", "output": { "outputOnFailure": true } },
     { "name": "tsan", "configurePreset": "tsan", "output": { "outputOnFailure": true } },
     { "name": "coverage", "configurePreset": "coverage", "output": { "outputOnFailure": true } }

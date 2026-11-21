@@ -24,6 +24,47 @@ TEST(SandboxTest, MissingPathFailsClosedBeforeRestricting) {
   EXPECT_TRUE(res.error().message.find("missing or unreadable") != std::string::npos);
 }
 
+// A single file (the audio server's socket, in C2) can be granted on its own: the rule carries
+// file rights only, and its neighbour stays closed.
+TEST(SandboxTest, ASingleFileCanBeGrantedAndItsNeighbourStaysClosed) {
+  auto base =
+      std::filesystem::temp_directory_path() / ("neuroos_sandbox_file_" + std::to_string(getpid()));
+  std::filesystem::remove_all(base);
+  std::filesystem::create_directories(base);
+  const auto granted = base / "granted.txt";
+  const auto neighbour = base / "neighbour.txt";
+  {
+    std::ofstream(granted) << "g";
+    std::ofstream(neighbour) << "n";
+  }
+  const pid_t pid = fork();
+  ASSERT_GE(pid, 0);
+  if (pid == 0) {
+    Policy policy;
+    policy.read_write.push_back(granted);
+    if (!Restrict(policy).ok()) {
+      _exit(10);
+    }
+    const int w = open(granted.c_str(), O_WRONLY);
+    if (w < 0) {
+      _exit(11);
+    }
+    close(w);
+    if (open(neighbour.c_str(), O_RDONLY) >= 0) {
+      _exit(12);
+    }
+    if (errno != EACCES) {
+      _exit(13);
+    }
+    _exit(0);
+  }
+  int status = 0;
+  waitpid(pid, &status, 0);
+  ASSERT_TRUE(WIFEXITED(status));
+  EXPECT_EQ(WEXITSTATUS(status), 0) << "child exit code identifies the failing step";
+  std::filesystem::remove_all(base);
+}
+
 TEST(SandboxTest, CoveredHelper) {
   const auto tmp = std::filesystem::temp_directory_path();
   EXPECT_TRUE(Covered(tmp, {tmp}));

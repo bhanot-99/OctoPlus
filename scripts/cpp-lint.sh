@@ -26,5 +26,22 @@ fi
 # clang on Ubuntu may pick a GCC install without libstdc++ headers; point it at the
 # GCC we actually build with.
 gcc_dir="/usr/lib/gcc/x86_64-linux-gnu/$(gcc -dumpversion | cut -d. -f1)"
-clang-tidy --quiet -p "$build" --extra-arg="--gcc-install-dir=$gcc_dir" "${units[@]}"
+# The voice engines need ONNX Runtime, whisper.cpp, PipeWire and espeak-ng: their sources are only
+# in the `voice` preset's compile commands. They are linted there when that tree is built, which
+# `just build` does wherever the pinned ONNX Runtime archive has been unpacked (the reference
+# machine); hosted CI does not have it and skips them.
+voice_build="$root/cpp/build/voice"
+core_units=(); voice_units=()
+for u in "${units[@]}"; do
+  case "$u" in
+    */neuroos-voice/src/engines/*|*/neuroos-voice/tests/engines/*|*/neuroos-voice/tools/*) voice_units+=("$u") ;;
+    *) core_units+=("$u") ;;
+  esac
+done
+clang-tidy --quiet -p "$build" --extra-arg="--gcc-install-dir=$gcc_dir" "${core_units[@]}"
+if [[ -f "$voice_build/compile_commands.json" ]]; then
+  clang-tidy --quiet -p "$voice_build" --extra-arg="--gcc-install-dir=$gcc_dir" "${voice_units[@]}"
+else
+  echo "cpp-lint: note - cpp/build/voice not configured; the voice engine sources were not tidied"
+fi
 echo "cpp-lint: ok - ${#sources[@]} files"

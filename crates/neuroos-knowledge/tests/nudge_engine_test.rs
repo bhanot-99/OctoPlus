@@ -19,7 +19,7 @@ use neuroos_proto::v1::monitor_event::Event;
 use neuroos_proto::v1::{
     Ack, AskRequest, BatterySample, ChargeState, DiskSample, DispatchResult, DispatchStatus,
     ErrorCode, EvaluateResult, HealthSignals, MonitorEvent, NudgeListRequest, NudgeLogEntries,
-    NudgeLogEntry, NudgeOutcome, NudgeSetEnabled, NudgeTest, Origin, Taint, Tier,
+    NudgeLogEntry, NudgeOutcome, NudgeSetEnabled, NudgeTest, Origin, Taint, Tier, VoiceStatus,
 };
 
 const S: u64 = 1_000_000_000;
@@ -38,6 +38,7 @@ struct Rec {
     notifies: Vec<Notify>,
     dispatches: Vec<(String, String, u32)>,
     log: Vec<(String, i32, u64)>,
+    spoken: Vec<Notify>,
 }
 
 type Shared = Arc<Mutex<Rec>>;
@@ -79,6 +80,37 @@ impl Handler for FakeC6 {
                 tier: Tier::Safe as i32,
                 allowed_without_dialog: true,
             })),
+            _ => Err(HandlerError::unsupported()),
+        }
+    }
+}
+
+/// A stand-in C2: answers the status question and takes spoken nudges.
+struct FakeC2 {
+    rec: Shared,
+    status: Arc<Mutex<VoiceStatus>>,
+    speak_fails: bool,
+}
+
+impl Handler for FakeC2 {
+    async fn handle(&self, req: Request, _sink: StreamSink) -> Result<Body, HandlerError> {
+        match req.body {
+            Body::VoiceStatusRequest(_) => Ok(Body::VoiceStatus(*self.status.lock().unwrap())),
+            Body::SpeakNudge(n) => {
+                if self.speak_fails {
+                    return Err(HandlerError::new(
+                        ErrorCode::Unavailable,
+                        "no speaker",
+                        true,
+                    ));
+                }
+                self.rec.lock().unwrap().spoken.push((
+                    n.template_id,
+                    n.args.into_iter().map(|a| (a.name, a.value)).collect(),
+                    false,
+                ));
+                Ok(Body::Ack(Ack {}))
+            }
             _ => Err(HandlerError::unsupported()),
         }
     }
@@ -135,6 +167,7 @@ struct Stack {
     rec: Shared,
     signals: Arc<Mutex<HealthSignals>>,
     stored: Arc<Mutex<Vec<NudgeLogEntry>>>,
+    voice_status: Arc<Mutex<VoiceStatus>>,
     nudge: NudgeHandle,
     stop: tokio::sync::watch::Sender<bool>,
 }
@@ -144,6 +177,8 @@ struct Opts {
     c6_up: bool,
     c4_up: bool,
     notify_fails: bool,
+    voice_up: bool,
+    speak_fails: bool,
     cfg: NudgesConfig,
     stored: Vec<NudgeLogEntry>,
 }
@@ -155,6 +190,8 @@ impl Default for Opts {
             c6_up: true,
             c4_up: true,
             notify_fails: false,
+            voice_up: false,
+            speak_fails: false,
             cfg: NudgesConfig::default(),
             stored: Vec::new(),
         }
@@ -192,6 +229,23 @@ impl Stack {
         let rec: Shared = Arc::default();
         let signals = Arc::new(Mutex::new(quiet_signals()));
         let stored = Arc::new(Mutex::new(o.stored.clone()));
+        let voice_status = Arc::new(Mutex::new(VoiceStatus {
+            capture_running: true,
+            ..VoiceStatus::default()
+        }));
+        let c2 = socks.join("c2.sock");
+        if o.voice_up {
+            serve(
+                &c2,
+                FakeC2 {
+                    rec: rec.clone(),
+                    status: voice_status.clone(),
+                    speak_fails: o.speak_fails,
+                },
+                &stop,
+            )
+            .await;
+        }
         let (c6, c3, c4, c5) = (
             socks.join("c6.sock"),
             socks.join("c3.sock"),
@@ -233,6 +287,8 @@ impl Stack {
         // In production the maintainer task keeps these connected; the tests do it once.
         let _ = peers.kernel.get().await;
         let _ = peers.inference.get().await;
+        let voice = c(&c2);
+        let _ = voice.get().await;
         let nudge = NudgeHandle::new(
             defaults().unwrap(),
             o.cfg.clone(),
@@ -240,6 +296,7 @@ impl Stack {
                 storage: peers.storage.clone(),
                 kernel: peers.kernel.clone(),
                 inference: peers.inference.clone(),
+                voice,
             },
         );
         let counter = || Arc::new(std::sync::atomic::AtomicU64::new(0));
@@ -254,6 +311,7 @@ impl Stack {
             route_desktop: counter(),
             route_general: counter(),
             evidence_no_taint: counter(),
+            barge_ins: counter(),
         };
         let handler = KnowledgeHandler::new(
             peers,
@@ -275,6 +333,7 @@ impl Stack {
             rec,
             signals,
             stored,
+            voice_status,
             nudge,
             stop,
         }
@@ -282,6 +341,23 @@ impl Stack {
 
     async fn tick(&self, now: u64) {
         self.nudge.tick(now, &jiff::tz::TimeZone::UTC, false).await;
+    }
+
+    /// A tick that first asks C2 about the moment, as the engine loop does.
+    async fn tick_voice(&self, now: u64) {
+        let view = self.nudge.voice_view().await;
+        self.nudge
+            .tick_with(now, &jiff::tz::TimeZone::UTC, view)
+            .await;
+    }
+
+    async fn run_disk_voice(&self, from: u64, secs: u64, used_pct: u64) {
+        let mut t = 0;
+        while t <= secs {
+            self.set_disk(from + t * S, used_pct);
+            self.tick_voice(from + t * S).await;
+            t += 30;
+        }
     }
 
     fn set_disk(&self, now: u64, used_pct: u64) {
@@ -778,6 +854,7 @@ async fn nudges_list_enable_disable_and_test() {
 
     s.admin(Body::NudgeTest(NudgeTest {
         rule_id: "disk_critical".into(),
+        speak: false,
     }))
     .await
     .unwrap();
@@ -791,7 +868,8 @@ async fn nudges_list_enable_disable_and_test() {
     }
     assert!(
         s.admin(Body::NudgeTest(NudgeTest {
-            rule_id: "x".into()
+            rule_id: "x".into(),
+            speak: false,
         }))
         .await
         .is_err()
@@ -875,4 +953,139 @@ fn the_log_fold_ends_a_snooze_at_a_later_enable_and_keeps_a_later_snooze() {
         hour,
     );
     assert_eq!(fired, vec![("r".to_string(), 7 * S, 0, None)]);
+}
+
+// ---- spoken nudges (Phase 7, FR-NUD-05, FR-VOI-10/11) -----------------------------------------------
+
+#[tokio::test]
+async fn a_good_moment_with_voice_ready_speaks_the_nudge_and_shows_nothing() {
+    let s = Stack::start(Opts {
+        voice_up: true,
+        ..Opts::default()
+    })
+    .await;
+    s.run_disk_voice(NOON, 150, 92).await;
+    let rec = s.rec();
+    assert_eq!(rec.spoken.len(), 1, "{:?}", rec.spoken);
+    assert_eq!(rec.spoken[0].0, "disk.nearly_full");
+    assert_eq!(rec.spoken[0].1, vec![("percent".to_string(), 92.0)]);
+    assert!(
+        rec.notifies.is_empty(),
+        "spoken instead of a popup: {:?}",
+        rec.notifies
+    );
+    assert!(rec.dispatches.is_empty(), "a nudge never acts (R0-6)");
+    drop(rec);
+    assert_eq!(s.logged("disk_nearly_full", NudgeOutcome::Spoken), 1);
+}
+
+#[tokio::test]
+async fn a_spoken_nudge_can_be_answered_by_a_reply() {
+    let s = Stack::start(Opts {
+        voice_up: true,
+        ..Opts::default()
+    })
+    .await;
+    s.run_disk_voice(NOON, 150, 92).await;
+    let (said, _) = s.ask("show me", NOON + 160 * S).await;
+    assert!(said.starts_with("Okay."), "{said}");
+    assert_eq!(s.rec().dispatches[0].0, "system.disk_report");
+}
+
+#[tokio::test]
+async fn another_app_on_the_microphone_or_a_turn_in_progress_means_no_speech() {
+    for status in [
+        VoiceStatus {
+            capture_running: true,
+            mic_in_use_by_other: true,
+            ..VoiceStatus::default()
+        },
+        VoiceStatus {
+            capture_running: true,
+            turn_in_progress: true,
+            ..VoiceStatus::default()
+        },
+        VoiceStatus {
+            capture_running: true,
+            speaking: true,
+            ..VoiceStatus::default()
+        },
+    ] {
+        let s = Stack::start(Opts {
+            voice_up: true,
+            ..Opts::default()
+        })
+        .await;
+        *s.voice_status.lock().unwrap() = status;
+        s.run_disk_voice(NOON, 300, 92).await;
+        let rec = s.rec();
+        assert!(rec.spoken.is_empty(), "{status:?}: {:?}", rec.spoken);
+        assert!(rec.notifies.is_empty(), "{status:?}: held, not shown");
+    }
+}
+
+#[tokio::test]
+async fn voice_that_is_not_capturing_means_a_notification_not_speech() {
+    let s = Stack::start(Opts {
+        voice_up: true,
+        ..Opts::default()
+    })
+    .await;
+    *s.voice_status.lock().unwrap() = VoiceStatus::default();
+    s.run_disk_voice(NOON, 150, 92).await;
+    assert!(s.rec().spoken.is_empty());
+    assert_eq!(s.rec().notifies.len(), 1);
+}
+
+#[tokio::test]
+async fn a_speaker_that_fails_falls_back_to_the_notification() {
+    let s = Stack::start(Opts {
+        voice_up: true,
+        speak_fails: true,
+        ..Opts::default()
+    })
+    .await;
+    s.run_disk_voice(NOON, 150, 92).await;
+    assert!(s.rec().spoken.is_empty());
+    assert_eq!(s.rec().notifies.len(), 1, "the user still hears about it");
+    assert_eq!(s.logged("disk_nearly_full", NudgeOutcome::Notified), 1);
+}
+
+#[tokio::test]
+async fn with_no_voice_part_at_all_the_notification_path_is_unchanged() {
+    let s = Stack::start(Opts::default()).await;
+    s.run_disk_voice(NOON, 150, 92).await;
+    assert!(s.rec().spoken.is_empty());
+    assert_eq!(s.rec().notifies.len(), 1);
+}
+
+#[tokio::test]
+async fn a_spoken_test_line_goes_to_the_voice_and_fails_when_it_cannot() {
+    let s = Stack::start(Opts {
+        voice_up: true,
+        ..Opts::default()
+    })
+    .await;
+    s.admin(Body::NudgeTest(NudgeTest {
+        rule_id: "disk_critical".into(),
+        speak: true,
+    }))
+    .await
+    .unwrap();
+    {
+        let rec = s.rec();
+        assert_eq!(rec.spoken.len(), 1);
+        assert_eq!(rec.spoken[0].0, "disk.critical");
+        assert!(rec.notifies.is_empty(), "said aloud, not shown");
+    }
+    let none = Stack::start(Opts::default()).await;
+    assert!(
+        none.admin(Body::NudgeTest(NudgeTest {
+            rule_id: "disk_critical".into(),
+            speak: true,
+        }))
+        .await
+        .is_err(),
+        "no voice part: an error, never a silent success"
+    );
 }

@@ -58,3 +58,28 @@ class Engine {
 };
 
 }  // namespace neuroos::inference
+
+namespace neuroos::inference {
+
+// How many leading tokens of `tokens` can be taken from the cache of the previous request
+// (`cached`: that request's prompt followed by what it generated). Never all of them: the last
+// prompt token must be decoded again so its logits are fresh, or an identical prompt (a repeated
+// question) is sampled from the logits the previous answer ended on, which gave an empty answer
+// (BUG-076). Nothing is reused below `stable_prefix_tokens`.
+inline std::uint32_t ReusablePrefixTokens(const std::vector<std::int32_t>& cached,
+                                          const std::vector<std::int32_t>& tokens,
+                                          std::uint32_t stable_prefix_tokens) {
+  std::size_t common = 0;
+  while (common < cached.size() && common < tokens.size() && cached[common] == tokens[common]) {
+    ++common;
+  }
+  if (!tokens.empty() && common >= tokens.size()) {
+    common = tokens.size() - 1;
+  }
+  if (common == 0 || common < stable_prefix_tokens) {
+    return 0;
+  }
+  return static_cast<std::uint32_t>(common);
+}
+
+}  // namespace neuroos::inference

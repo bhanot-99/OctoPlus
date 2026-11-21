@@ -384,3 +384,33 @@ TEST(FlagsTest, RejectsBadNumericWithoutExceptions) {
 
 }  // namespace
 }  // namespace neuroos::inference
+
+// BUG-076: asking the same thing twice gave an empty second answer, because the whole prompt was
+// "cached" and nothing was decoded, so the answer was sampled from stale logits.
+namespace neuroos::inference {
+namespace {
+
+TEST(ReusablePrefix, AnIdenticalPromptStillDecodesItsLastToken) {
+  const std::vector<std::int32_t> prompt{1, 2, 3, 4, 5};
+  std::vector<std::int32_t> cached = prompt;  // the previous request: prompt then its answer
+  cached.insert(cached.end(), {90, 91, 92});
+  EXPECT_EQ(ReusablePrefixTokens(cached, prompt, 0), 4U) << "never the whole prompt";
+  EXPECT_EQ(ReusablePrefixTokens(prompt, prompt, 0), 4U);
+}
+
+TEST(ReusablePrefix, ALongerPromptReusesTheSharedPrefixOnly) {
+  const std::vector<std::int32_t> cached{1, 2, 3, 70, 71};
+  const std::vector<std::int32_t> next{1, 2, 3, 4, 5, 6};
+  EXPECT_EQ(ReusablePrefixTokens(cached, next, 0), 3U);
+}
+
+TEST(ReusablePrefix, NothingIsReusedBelowTheStablePrefixOrFromAnEmptyCache) {
+  EXPECT_EQ(ReusablePrefixTokens({1, 2, 3}, {1, 2, 9, 9}, 3), 0U);
+  EXPECT_EQ(ReusablePrefixTokens({}, {1, 2, 3}, 0), 0U);
+  EXPECT_EQ(ReusablePrefixTokens({7, 8}, {1, 2, 3}, 0), 0U);
+  EXPECT_EQ(ReusablePrefixTokens({1}, {1}, 0), 0U) << "a one-token prompt is decoded in full";
+  EXPECT_EQ(ReusablePrefixTokens({1, 2}, {}, 0), 0U);
+}
+
+}  // namespace
+}  // namespace neuroos::inference
