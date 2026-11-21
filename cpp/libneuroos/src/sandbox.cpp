@@ -30,14 +30,22 @@ constexpr int kRequiredAbi = 4;
 // Scope isolation ABI version (abstract Unix sockets and signals).
 constexpr int kScopeAbi = 6;
 
+// Scope flags added in Landlock ABI v6 (kernel >= 6.12).
+// Defined conditionally so compilation succeeds on older kernel headers (e.g. Linux 6.8).
+#ifndef LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET
+#define LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET (1ULL << 0)
+#endif
+#ifndef LANDLOCK_SCOPE_SIGNAL
+#define LANDLOCK_SCOPE_SIGNAL (1ULL << 1)
+#endif
+
 // All filesystem access rights for Landlock ABI v4.
 constexpr std::uint64_t kAccessFsAll =
     LANDLOCK_ACCESS_FS_EXECUTE | LANDLOCK_ACCESS_FS_WRITE_FILE | LANDLOCK_ACCESS_FS_READ_FILE |
     LANDLOCK_ACCESS_FS_READ_DIR | LANDLOCK_ACCESS_FS_REMOVE_DIR | LANDLOCK_ACCESS_FS_REMOVE_FILE |
     LANDLOCK_ACCESS_FS_MAKE_CHAR | LANDLOCK_ACCESS_FS_MAKE_DIR | LANDLOCK_ACCESS_FS_MAKE_REG |
     LANDLOCK_ACCESS_FS_MAKE_SOCK | LANDLOCK_ACCESS_FS_MAKE_FIFO | LANDLOCK_ACCESS_FS_MAKE_BLOCK |
-    LANDLOCK_ACCESS_FS_MAKE_SYM | LANDLOCK_ACCESS_FS_REFER | LANDLOCK_ACCESS_FS_TRUNCATE |
-    LANDLOCK_ACCESS_FS_IOCTL_DEV;
+    LANDLOCK_ACCESS_FS_MAKE_SYM | LANDLOCK_ACCESS_FS_REFER | LANDLOCK_ACCESS_FS_TRUNCATE;
 
 // Read-only filesystem access rights for Landlock ABI v4.
 constexpr std::uint64_t kAccessFsRead =
@@ -49,6 +57,14 @@ constexpr std::uint64_t kAccessNetAll =
 
 // Scoped access rights for Landlock ABI v6.
 constexpr std::uint64_t kScopeAll = LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET | LANDLOCK_SCOPE_SIGNAL;
+
+// Landlock ruleset attribute layout with scoped access (ABI v6).
+// Defined locally so compilation succeeds when <linux/landlock.h> lacks .scoped (kernel < 6.12).
+struct LandlockRulesetAttrV6 {
+  std::uint64_t handled_access_fs{0};
+  std::uint64_t handled_access_net{0};
+  std::uint64_t scoped{0};
+};
 
 Status CheckPaths(const std::vector<std::filesystem::path>& paths) {
   for (const auto& p : paths) {
@@ -70,8 +86,7 @@ std::uint64_t RightsForFd(int fd, std::uint64_t allowed) {
   struct stat st {};
   if (fstat(fd, &st) == 0 && !S_ISDIR(st.st_mode)) {
     return allowed & (LANDLOCK_ACCESS_FS_EXECUTE | LANDLOCK_ACCESS_FS_WRITE_FILE |
-                      LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_TRUNCATE |
-                      LANDLOCK_ACCESS_FS_IOCTL_DEV);
+                      LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_TRUNCATE);
   }
   return allowed;
 }
@@ -114,19 +129,19 @@ Result<Report> Restrict(const Policy& policy) {
     };
   }
 
-  landlock_ruleset_attr attr{};
+  const bool want_scopes = (abi >= kScopeAbi);
+  LandlockRulesetAttrV6 attr{};
   attr.handled_access_fs = kAccessFsAll;
   attr.handled_access_net = kAccessNetAll;
-
-  const bool want_scopes = (abi >= kScopeAbi);
   if (want_scopes) {
     attr.scoped = kScopeAll;
   }
 
   // Syscall 2: Create a Landlock ruleset handling all FS (ABI v4) and TCP (ABI v4) rights,
   // plus best-effort scope isolation (ABI v6).
+  const size_t attr_size = want_scopes ? sizeof(LandlockRulesetAttrV6) : 16;
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
-  long ruleset_fd = syscall(SYS_landlock_create_ruleset, &attr, sizeof(attr), 0);
+  long ruleset_fd = syscall(SYS_landlock_create_ruleset, &attr, attr_size, 0);
   bool scoped = false;
   if (ruleset_fd >= 0) {
     scoped = want_scopes;
@@ -134,7 +149,7 @@ Result<Report> Restrict(const Policy& policy) {
     // Scopes are best-effort: retry without scopes if the running kernel does not support them.
     attr.scoped = 0;
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
-    ruleset_fd = syscall(SYS_landlock_create_ruleset, &attr, sizeof(attr), 0);
+    ruleset_fd = syscall(SYS_landlock_create_ruleset, &attr, static_cast<size_t>(16), 0);
   }
 
   if (ruleset_fd < 0) {
