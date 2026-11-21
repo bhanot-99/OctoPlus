@@ -41,12 +41,18 @@ async fn test_init_provisions_keys_and_configs() {
     let fetch_meta = fs::metadata(&fetch_file).unwrap();
     assert_eq!(fetch_meta.permissions().mode() & 0o777, 0o600);
 
-    // Verify config.toml and nudges.toml exist with 0600
+    // Verify config.toml and nudges.toml exist with 0600 and parse without errors
     let cfg_file = cfg_dir.join("config.toml");
     assert!(cfg_file.exists());
     assert_eq!(
         fs::metadata(&cfg_file).unwrap().permissions().mode() & 0o777,
         0o600
+    );
+    let parsed_cfg = neuroos_common::config::Config::load_from(&cfg_file);
+    assert!(
+        parsed_cfg.is_ok(),
+        "config.toml failed schema validation: {:?}",
+        parsed_cfg.err()
     );
 
     let nudges_file = cfg_dir.join("nudges.toml");

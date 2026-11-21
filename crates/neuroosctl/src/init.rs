@@ -50,7 +50,7 @@ pub async fn run_init(opts: InitOptions, s: Styler) -> i32 {
 
     // 2. Configuration Templates
     println!("\n{}", s.bold("2. Provisioning Configuration Files..."));
-    if let Err(e) = provision_configs(&config_dir, opts.force) {
+    if let Err(e) = provision_configs(&config_dir, opts.force, &s) {
         eprintln!("error: config provisioning failed: {e}");
         return 1;
     }
@@ -121,23 +121,29 @@ fn provision_keys(config_dir: &Path, force: bool) -> Result<(), String> {
     Ok(())
 }
 
-fn provision_configs(config_dir: &Path, force: bool) -> Result<(), String> {
+fn provision_configs(config_dir: &Path, force: bool, s: &Styler) -> Result<(), String> {
     let config_path = config_dir.join("config.toml");
     if !config_path.exists() || force {
         let default_config = r#"# Semantic-NeuroOS Configuration (v1.0.0)
+# Rules.md §5: Unknown keys are fatal. All sections are optional with safe defaults.
 
 [kernel]
-# Optional build folders allowed for cleanup (empty by default, ADR-0010)
+# Build folders allowed for cleanup operations (empty by default, ADR-0010)
 cleanup_build_folders = []
 
 [monitor]
-poll_interval_s = 5
-# Folders watched by the monitor (e.g. [[monitor.folders]])
-folders = []
+# Context monitor sample intervals (seconds)
+cpu_interval_s = 5
+disk_interval_s = 60
+battery_interval_s = 60
+thermal_interval_s = 10
+idle_timeout_s = 60
 
-[voice]
-voice_id = "af_heart"
-wake_phrase = "hey jarvis"
+[nudges]
+# Nudge engine master switch and quiet hours (OQ-03: 22:00 to 08:00, minutes after midnight)
+enabled = true
+quiet_start_min = 1320
+quiet_end_min = 480
 "#;
         fs::write(&config_path, default_config)
             .map_err(|e| format!("writing {}: {e}", config_path.display()))?;
@@ -145,27 +151,29 @@ wake_phrase = "hey jarvis"
         println!("  Created {} (mode 0600)", config_path.display());
     } else {
         println!("  Existing {} found (retained)", config_path.display());
+        if let Err(e) = neuroos_common::config::Config::load_from(&config_path) {
+            println!(
+                "  {} Existing {} contains invalid configuration: {e}",
+                s.degraded("WARNING:"),
+                config_path.display()
+            );
+            println!(
+                "  Fix the file or run {} to overwrite with defaults.",
+                s.bold("neuroosctl init --force")
+            );
+        }
     }
 
     let nudges_path = config_dir.join("nudges.toml");
     if !nudges_path.exists() || force {
-        let default_nudges = r#"# Semantic-NeuroOS Nudge Rules Configuration (v1.0.0)
+        let default_nudges = r#"# Semantic-NeuroOS Nudge Rules Overrides & Additions (v1.0.0)
+# Defaults for disk, battery, thermal, session, and health rules are compiled in (design.md §8.5).
+# To override a default rule or add a custom rule, define [rule.<id>].
 
-[policy]
-quiet_hours_start = "22:00"
-quiet_hours_end = "08:00"
-max_spoken_nudges_per_hour = 3
-cooldown_seconds = 600
-
-[rules.disk]
-enabled = true
-threshold_percent = 90
-action = "notify"
-
-[rules.battery]
-enabled = true
-threshold_percent = 20
-action = "spoken"
+# Example override:
+# [rule.disk_nearly_full]
+# fire_at = 90
+# cooldown = "24h"
 "#;
         fs::write(&nudges_path, default_nudges)
             .map_err(|e| format!("writing {}: {e}", nudges_path.display()))?;
