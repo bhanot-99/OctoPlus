@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+case "$1" in
+  configure)
+    # 1. Provision sysusers
+    if command -v systemd-sysusers >/dev/null 2>&1; then
+      systemd-sysusers /usr/lib/sysusers.d/neuroos.conf || true
+    fi
+
+    # 2. Provision tmpfiles
+    if command -v systemd-tmpfiles >/dev/null 2>&1; then
+      systemd-tmpfiles --create /usr/lib/tmpfiles.d/neuroos-fetcher.conf || true
+    fi
+
+    # 3. Create default directory structure
+    install -d -m 0755 /opt/neuroos/bin
+    install -d -m 0755 /opt/neuroos/models
+    install -d -m 0755 /etc/neuroos
+    install -d -m 0770 -o neuroos-fetcher -g neuroos /var/spool/neuroos-fetcher 2>/dev/null || true
+
+    # 4. Generate system fetch.key if missing
+    if [[ ! -f /etc/neuroos/fetch.key ]]; then
+      dd if=/dev/urandom of=/etc/neuroos/fetch.key bs=32 count=1 status=none
+      chmod 0640 /etc/neuroos/fetch.key
+      chown root:neuroos /etc/neuroos/fetch.key 2>/dev/null || true
+    fi
+
+    # 5. Reload systemd daemon
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl daemon-reload || true
+    fi
+
+    echo "Semantic-NeuroOS 1.0.0 installed successfully."
+    echo "To complete user setup, run: neuroosctl init"
+    ;;
+  abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+  *)
+    echo "postinst called with unknown argument \`$1'" >&2
+    exit 1
+    ;;
+esac
+
+exit 0

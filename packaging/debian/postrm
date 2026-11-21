@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+case "$1" in
+  purge)
+    rm -rf /var/spool/neuroos-fetcher
+    rm -rf /etc/neuroos
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl daemon-reload || true
+    fi
+    echo "Semantic-NeuroOS system files purged."
+    ;;
+  remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl daemon-reload || true
+    fi
+    ;;
+  *)
+    echo "postrm called with unknown argument \`$1'" >&2
+    exit 1
+    ;;
+esac
+
+exit 0

@@ -69,6 +69,23 @@ async fn main() {
         Commands::Profile { command } => run_profile(&runtime_root, command, styler).await,
         Commands::Audit { command } => run_audit(&runtime_root, command, styler).await,
         Commands::Egress { command } => run_egress(&runtime_root, command, styler).await,
+        Commands::Init {
+            force,
+            skip_models,
+            yes,
+            config_dir,
+        } => {
+            neuroosctl::init::run_init(
+                neuroosctl::init::InitOptions {
+                    force,
+                    skip_models,
+                    yes,
+                    config_dir,
+                },
+                styler,
+            )
+            .await
+        }
         Commands::Replay {
             dump,
             speed,

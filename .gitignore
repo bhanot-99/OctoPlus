@@ -1,5 +1,6 @@
 # Build output
 /target/
+/dist/
 # Nested workspaces (probes) build into their own target folders.
 **/target/
 /build/

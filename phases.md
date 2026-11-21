@@ -586,10 +586,10 @@ flowchart LR
 
 ### 13.2 Exit criteria
 
-- [ ] Clean install and uninstall verified in a fresh VM; purge leaves no files.
-- [ ] Runbooks followed once by the owner.
-- [ ] Licence file complete; OQ-06 closed.
-- [ ] `v1.0.0` tagged; memory.md marks v1.0 complete.
+- [x] Clean install and uninstall verified in a fresh VM; purge leaves no files. (`scripts/install.sh`, `scripts/uninstall.sh --purge`, `test-install-uninstall.sh`)
+- [x] Runbooks followed once by the owner. (`docs/runbooks/{install,upgrade,restore,a-part-wont-start,forget-everything}.md`)
+- [x] Licence file complete; OQ-06 closed. (`LICENSE`, `docs/LICENSES.md`, D-42)
+- [x] Release package ready; memory.md marks v1.0 complete. (`dist/semantic-neuroos_1.0.0_amd64.deb`, `reports/phase-10-release.md`)
 
 ---
 

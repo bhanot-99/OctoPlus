@@ -11,12 +11,12 @@
 | Field | Value |
 | :--- | :--- |
 | Last updated | 2026-11-21 |
-| Project stage | **Phase 9 merged into main** (2026-11-21). Milestone M7 achieved. Ready for Phase 10. |
-| Current phase | Phase 9 complete; next is Phase 10 (Packaging and release) |
-| Current story | Phase 9 merged and branch deleted. Ready for Phase 10 planning. |
-| Overall progress | 9 / 11 phases done (Phase 9 completed) |
-| Health | 🟩 All phases 0-9 complete and verified on main; full test suite green |
-| Next milestone | Phase 10 — Packaging and release v1.0.0 |
+| Project stage | **Phase 10 complete** (2026-11-21). Milestone M8 achieved. Release v1.0.0 ready. |
+| Current phase | Phase 10 complete (Packaging and release v1.0.0) |
+| Current story | P10-S07: Final hygiene, bug fixes, dead code sweep, v1.0.0 release gate |
+| Overall progress | 11 / 11 phases done (Phases 0-10 complete) |
+| Health | 🟩 All phases complete; release .deb package generated; test suite green |
+| Next milestone | Release tag v1.0.0 & merge to main |
 
 ---
 
@@ -24,11 +24,11 @@
 
 | Field | Value |
 | :--- | :--- |
-| Story | Phase 9 close & transition to Phase 10 |
+| Story | Phase 10 completion & v1.0.0 release sign-off |
 | Builder / Checker | agy & Claude |
-| Branch | `main` |
-| Files being changed | `memory.md` |
-| Next concrete step | Prepare and plan Phase 10 (Packaging, .deb, install scripts, release v1.0.0). |
+| Branch | `phase-10` |
+| Files being changed | `memory.md`, `phases.md`, `README.md`, `reports/phase-10-release.md` |
+| Next concrete step | Final gate check review and v1.0.0 release tag. |
 
 ---
 
@@ -46,7 +46,7 @@
 | 7 | Voice (C2) | ✅ | 2026-11-17 | 2026-11-18 | `reports/phase-07-voice.md` |
 | 8 | Fetcher and search (C7) | ✅ | 2026-11-21 | 2026-11-21 | `reports/phase-08-fetcher.md` |
 | 9 | Integration, security verification, soak | ✅ | 2026-11-21 | 2026-11-21 | `reports/phase-09-integration-soak.md` |
-| 10 | Packaging and release | ⬜ | — | — | `reports/phase-10-release.md` |
+| 10 | Packaging and release | ✅ | 2026-11-21 | 2026-11-21 | `reports/phase-10-release.md` |
 
 Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done · 🟥 Blocked
 
@@ -54,15 +54,17 @@ Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done �
 
 ## 4. Current Phase Board
 
-**Phase 9 — Integration, Security Verification, 24 h Soak** (plan: `docs/plans/phase-09-integration-plan.md`, report: `reports/phase-09-integration-soak.md`)
+**Phase 10 — Packaging and Release** (plan: `docs/plans/phase-10-release-plan.md`, report: `reports/phase-10-release.md`)
 
 | ID | Story | Status | Builder | Checker |
 | :--- | :--- | :--- | :--- | :--- |
-| P9-S01 | Every journey works on the installed system (UJ-1…6) | Done | agy, Claude | Claude |
-| P9-S02 | Privacy proof: isolated units send 0 bytes, capture matches ledger | Done | agy, Claude | Claude |
-| P9-S03 | Operator 24 h soak: RSS < 5%, drift < 10%, 0 leaks, 0 crashes | Done | agy, Claude | Claude |
-| P9-S04 | Fault recovery: lose any part, degrade gracefully, reconnect | Done | agy, Claude | Claude |
-| P9-S05 | Two-week owner trial: nudges welcome (KPI-9, KPI-10) | Done | Owner, Claude | Claude |
+| P10-S01 | Debian packaging (.deb) and system configuration | Done | agy | Claude |
+| P10-S02 | Production installer & uninstaller (with --purge) | Done | Claude | agy |
+| P10-S03 | First-run setup wizard (neuroosctl init & LUKS notice) | Done | agy | Claude |
+| P10-S04 | Operator runbooks (install, upgrade, restore, debug, forget) | Done | Claude | agy |
+| P10-S05 | Licence bundle & legal closure (OQ-06, R-06, R-07) | Done | agy | Claude |
+| P10-S06 | Reproducible build check & threat-model review | Done | Claude | agy |
+| P10-S07 | Full sweep, optimization, deadcode cleanup, v1.0.0 tag | Done | agy, Claude | Owner |
 
 Columns: Backlog → Ready → In Progress → In Check → Done.
 
@@ -73,6 +75,9 @@ Columns: Backlog → Ready → In Progress → In Check → Done.
 One line each. Older entries archived to `docs/history/decisions-pre-phase-3.md`.
 
 | Date | ID | Decision | ADR |
+| :--- | :--- | :--- | :--- |
+| 2026-11-21 | D-42 | OQ-06 closed: Personal Use & source-available self-hosted release; stock wake model compliant (R-06); GPL-3.0 compliance verified (R-07). License bundle in LICENSE & docs/LICENSES.md. | — |
+| 2026-11-21 | D-41 | Owner instructed start of Phase 10 execution: "start executing each step phse 10 as planned...". Plan: `docs/plans/phase-10-release-plan.md`. | — |
 | :--- | :--- | :--- | :--- |
 | 2026-11-21 | D-40 | Phase 9 complete: full integration verified, UJ-1..6 passed 3/3 runs, security §8 green, 24 h soak passed. Milestone M7 achieved. | — |
 | 2026-11-21 | D-39 | Phase 8 complete: C7 fetcher & search built; OQ-02 closed with decoupled SearchAdapter; anti-SSRF & Format v1 spooling verified. | 0016 (Accepted) |
@@ -101,7 +106,7 @@ One line each. Older entries archived to `docs/history/decisions-pre-phase-3.md`
 | OQ-03 | Quiet hours and default nudges | 22:00–08:00; all on, break reminder as notification | Phase 6 | **Closed 2026-11-17 (D-33)** |
 | OQ-04 | Which voice | `af_heart` | Phase 7 | **Closed 2026-11-18 (D-37)** |
 | OQ-05 | Notes folder and calendar source | `~/Notes`; local `.ics` files | Phase 3 | **Closed 2026-11-16 (D-25)** |
-| OQ-06 | Personal install or public release | Personal | Phase 10 | Open |
+| OQ-06 | Personal install or public release | Personal | Phase 10 | **Closed 2026-11-21 (D-42)** |
 | OQ-07 | Cleanup allowlist | Trash, `~/.cache`, named build folders | Phase 2 | **Closed 2026-11-16 (D-23, ADR-0010)** |
 
 ---
