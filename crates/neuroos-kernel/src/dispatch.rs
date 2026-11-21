@@ -23,8 +23,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use neuroos_confirm::protocol::{
-    Decision, DialogDecision, DialogRequest, DialogTier, Item, ItemKind, MAX_DECISION_BYTES,
-    PROTOCOL_VERSION, Param, TaintNote,
+    Decision, DialogDecision, DialogRequest, DialogTier, Egress, Item, ItemKind,
+    MAX_DECISION_BYTES, PROTOCOL_VERSION, Param, TaintNote,
 };
 use neuroos_ipc::HandlerError;
 use neuroos_proto::v1::{
@@ -125,12 +125,24 @@ pub struct AuditDown;
 
 /// Runs `kernel`-kind skills (one validated message from C6 itself).
 pub trait KernelSkills: Send + Sync + 'static {
-    /// Runs `capability` with validated `args`.
-    fn run(
+    /// Runs `capability` with validated `args` and `action_id`.
+    fn run_action(
         &self,
         capability: &str,
         args: &Value,
-    ) -> impl Future<Output = Result<Value, String>> + Send;
+        _action_id: &str,
+    ) -> impl Future<Output = Result<Value, String>> + Send {
+        self.run(capability, args)
+    }
+
+    /// Runs `capability` with validated `args`.
+    fn run(
+        &self,
+        _capability: &str,
+        _args: &Value,
+    ) -> impl Future<Output = Result<Value, String>> + Send {
+        async { Err("not implemented".into()) }
+    }
 }
 
 /// Fixed settings of the pipeline.
@@ -367,7 +379,8 @@ impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
             ));
         }
         let outcome = if tier == Tier::Safe {
-            self.execute(skill, &args, &parsed.canonical).await
+            self.execute(skill, &args, &parsed.canonical, &meta.action_id)
+                .await
         } else {
             self.approve_and_execute(&Action {
                 skill,
@@ -392,8 +405,15 @@ impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
             Outcome::Expired => DispatchStatus::Expired,
             Outcome::DeniedPolicy | Outcome::Failed => DispatchStatus::Failed,
         };
+        let result_taint = if out == Outcome::Executed
+            && (skill.capability == "web.fetch" || skill.capability == "web.search")
+        {
+            meta.taint | TaintFlags::EXTERNAL_UNTRUSTED.bits()
+        } else {
+            meta.taint
+        };
         self.finish(&meta, out).await;
-        Ok(result(status, Some(tier), meta.taint, json))
+        Ok(result(status, Some(tier), result_taint, json))
     }
 }
 
@@ -416,10 +436,20 @@ enum Done {
 struct Refused(HandlerError);
 
 impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
-    async fn execute(&self, skill: &Skill, args: &Value, canonical: &str) -> Result<Done, Refused> {
+    async fn execute(
+        &self,
+        skill: &Skill,
+        args: &Value,
+        canonical: &str,
+        action_id: &str,
+    ) -> Result<Done, Refused> {
         let r = match skill.kind {
             SkillKind::Child => self.run_child(skill, Mode::Run, canonical).await,
-            SkillKind::Kernel => self.kernel_skills.run(&skill.capability, args).await,
+            SkillKind::Kernel => {
+                self.kernel_skills
+                    .run_action(&skill.capability, args, action_id)
+                    .await
+            }
         };
         Ok(match r {
             Ok(v) => Done::Ran(v),
@@ -476,15 +506,30 @@ impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
 
         let request = self.dialog_request(a, items);
         let decision = self.ask(&request).await;
-        let verdict = match decision {
-            Some(Decision::Allow) => Verdict::Allow,
-            Some(Decision::Deny) => {
+        let decision = match decision {
+            Some(d) => d,
+            None => return Ok(Done::Stopped(Outcome::Expired)),
+        };
+        let verdict = match decision.decision {
+            Decision::Allow => Verdict::Allow,
+            Decision::Deny => {
                 self.with_gate(|g| g.limiter.record_denial(now_ns().unwrap_or(now), key))
                     .ok();
                 return Ok(Done::Stopped(Outcome::Rejected));
             }
-            Some(Decision::Expired) | None => return Ok(Done::Stopped(Outcome::Expired)),
+            Decision::Expired => return Ok(Done::Stopped(Outcome::Expired)),
         };
+
+        // If the user edited the query in an editable egress dialog (e.g. web.search):
+        let (args_to_run, canonical_to_run, hash_to_run) = if let Some(ref q) = decision.query {
+            let edited_args = serde_json::json!({ "query": q });
+            let canonical = canonical_json(&edited_args);
+            let hash = approval::args_hash(&canonical);
+            (edited_args, canonical, hash)
+        } else {
+            (args.clone(), parsed.canonical.clone(), parsed.hash)
+        };
+
         let Ok(action_bytes) = uuid::Uuid::parse_str(&meta.action_id).map(|u| *u.as_bytes()) else {
             return Ok(Done::Stopped(Outcome::Expired));
         };
@@ -493,7 +538,7 @@ impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
             action_id: action_bytes,
             nonce,
             capability: skill.capability.clone(),
-            args_hash: parsed.hash,
+            args_hash: hash_to_run,
             verdict,
             expires_at_ns: expires,
         };
@@ -503,7 +548,7 @@ impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
         // …re-verified against what will actually run, immediately before it runs (§8.4 step 4).
         let to_run = Approval {
             capability: skill.capability.clone(),
-            args_hash: approval::args_hash(&canonical_json(args)),
+            args_hash: approval::args_hash(&canonical_json(&args_to_run)),
             ..approved
         };
         let at = now_ns().map_err(Refused)?;
@@ -511,7 +556,10 @@ impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
             .with_gate(|g| g.nonces.verify(&self.key, &to_run, &token, at))
             .map_err(Refused)?
         {
-            Ok(()) => self.execute(skill, args, &parsed.canonical).await,
+            Ok(()) => {
+                self.execute(skill, &args_to_run, &canonical_to_run, &meta.action_id)
+                    .await
+            }
             Err(TokenError::Expired) => Ok(Done::Stopped(Outcome::Expired)),
             Err(_) => Ok(Done::Stopped(Outcome::DeniedPolicy)),
         }
@@ -536,10 +584,47 @@ impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
             })
             .collect()
     }
+}
 
+fn extract_host(url: &str) -> String {
+    let s = url
+        .strip_prefix("https://")
+        .or_else(|| url.strip_prefix("http://"))
+        .unwrap_or(url);
+    let host = s.split(&['/', ':', '?', '#'][..]).next().unwrap_or("web");
+    if host.is_empty() {
+        "web".to_string()
+    } else {
+        host.to_string()
+    }
+}
+
+impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
     fn dialog_request(&self, a: &Action<'_>, items: Vec<Item>) -> DialogRequest {
         let (skill, tier, args, meta) = (a.skill, a.tier, a.args, a.meta);
-        let params = if items.is_empty() {
+        let egress = match skill.capability.as_str() {
+            "web.fetch" => {
+                let url = args["url"].as_str().unwrap_or("");
+                let host = extract_host(url);
+                Some(Egress {
+                    provider: host,
+                    query: url.to_string(),
+                    pages: 0,
+                    editable: false,
+                })
+            }
+            "web.search" => {
+                let query = args["query"].as_str().unwrap_or("");
+                Some(Egress {
+                    provider: "searxng".to_string(),
+                    query: query.to_string(),
+                    pages: 1,
+                    editable: true,
+                })
+            }
+            _ => None,
+        };
+        let params = if items.is_empty() && egress.is_none() {
             args.as_object()
                 .map(|m| {
                     m.iter()
@@ -570,14 +655,14 @@ impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
             params,
             // Hosts are known once C7 exists (Phase 8); until then the panel names "the web".
             taint: tainted.then(|| TaintNote { hosts: Vec::new() }),
-            egress: None,
+            egress,
             danger_phrase: (tier == Tier::Dangerous).then(|| DANGER_PHRASE.to_owned()),
         }
     }
 
     /// Shows the dialog as our own child and returns its decision; `None` for
     /// anything other than a valid decision line (killed, crashed, garbage, timeout).
-    async fn ask(&self, request: &DialogRequest) -> Option<Decision> {
+    async fn ask(&self, request: &DialogRequest) -> Option<DialogDecision> {
         let input = serde_json::to_vec(request).ok()?;
         let mut cmd = tokio::process::Command::new(&self.cfg.dialog_bin);
         cmd.env_clear()
@@ -616,9 +701,7 @@ impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
         if !matches!(exited, Ok(Ok(s)) if s.success()) {
             return None; // killed on drop
         }
-        DialogDecision::parse_for(&buf, request)
-            .ok()
-            .map(|d| d.decision)
+        DialogDecision::parse_for(&buf, request).ok()
     }
 
     fn invocation(&self, skill: &Skill, mode: Mode) -> Result<Invocation, String> {

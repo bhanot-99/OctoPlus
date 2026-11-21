@@ -554,6 +554,25 @@ fn describe(skill: &str, v: &Value) -> Option<String> {
                 list.join(". ")
             ))
         }
+        "web.search" => {
+            let spools = v.get("spool_files").and_then(Value::as_array)?;
+            let count = spools.len();
+            if count == 0 {
+                Some("I searched the web but didn't find any results.".to_string())
+            } else {
+                Some(format!(
+                    "I searched the web and found {count} relevant pages."
+                ))
+            }
+        }
+        "web.fetch" => {
+            let spools = v.get("spool_files").and_then(Value::as_array)?;
+            if spools.is_empty() {
+                Some("I couldn't fetch that web page.".to_string())
+            } else {
+                Some("I fetched the web page and saved it.".to_string())
+            }
+        }
         _ => None,
     }
 }

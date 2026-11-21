@@ -222,8 +222,8 @@ async fn policy_refusals_are_audited_both_ways() {
             ErrorCode::InvalidRequest,
         ),
         (
-            "web.search",
-            r#"{"query":"x"}"#,
+            "shell.exec",
+            r#"{"command":"ls"}"#,
             Some(0),
             ErrorCode::PermissionDenied,
         ),

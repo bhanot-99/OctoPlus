@@ -120,8 +120,8 @@ struct State {
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Pending {
     None,
-    /// "Would you like me to look that up?" (answered "I can't look things up yet" until Phase 8.)
-    Lookup,
+    /// "Would you like me to look that up?" (records the original question for web.search).
+    Lookup(String),
     /// "Want me to remember that?" with the user's own words.
     Remember(String),
 }
@@ -427,19 +427,24 @@ impl KnowledgeHandler {
         let pending = self.with_state(|s| std::mem::replace(&mut s.pending, Pending::None));
         match pending {
             Pending::None => Ok(None),
-            Pending::Lookup => {
+            Pending::Lookup(query) => {
                 if chat::accepts_lookup(text) {
-                    // Phase 8 brings the search; until then the honest answer (FR-CHT-04).
-                    Self::say(sink, NO_LOOKUP_YET).await?;
-                    self.remember_turn(TurnRecord {
-                        question: text,
-                        answer: NO_LOOKUP_YET,
-                        origin,
-                        at_ns: now,
-                        taint: TaintFlags::USER_PROVIDED,
-                    })
-                    .await;
-                    return Ok(Some(Self::done(Route::GeneralChat, self.base_taint())));
+                    let args = serde_json::json!({ "query": query }).to_string();
+                    let ctx = self.base_taint();
+                    let done = self
+                        .dispatch(
+                            Call {
+                                skill: "web.search",
+                                args_json: &args,
+                                taint: ctx,
+                                origin,
+                                question: text,
+                                at_ns: now,
+                            },
+                            sink,
+                        )
+                        .await?;
+                    return Ok(Some(done));
                 }
                 if chat::yes_no(text) == Some(false) {
                     Self::say(sink, "Okay.").await?;
@@ -865,7 +870,7 @@ impl KnowledgeHandler {
             let with = chat::with_offer(&answer, true);
             Self::say(sink, &with[answer.len()..]).await?;
             shown = with;
-            pending = Pending::Lookup;
+            pending = Pending::Lookup(text.to_string());
         } else if !desktop && chat::personal_fact_statement(text) {
             let offer = format!(" {}", chat::REMEMBER_OFFER);
             Self::say(sink, &offer).await?;

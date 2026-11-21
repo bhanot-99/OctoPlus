@@ -55,6 +55,21 @@ else
   echo "note: target/release/neuroos-fetcher not found (built in later tasks), skipping binary copy"
 fi
 
+echo "=== 4.5. Ensuring /etc/neuroos/fetch.key exists ==="
+install -d -m 0755 /etc/neuroos
+if [[ ! -f /etc/neuroos/fetch.key ]]; then
+  dd if=/dev/urandom of=/etc/neuroos/fetch.key bs=32 count=1 status=none
+  chmod 0640 /etc/neuroos/fetch.key
+  chown root:neuroos /etc/neuroos/fetch.key
+  echo "Generated 32-byte /etc/neuroos/fetch.key (0640 root:neuroos)"
+fi
+user_home="$(eval echo "~$SUDO_USER")"
+user_config="$user_home/.config/neuroos"
+if [[ -d "$user_config" ]] && [[ ! -f "$user_config/fetch.key" ]]; then
+  install -m 0600 -o "$SUDO_USER" -g "$SUDO_USER" /etc/neuroos/fetch.key "$user_config/fetch.key"
+  echo "Copied fetch.key to $user_config/fetch.key"
+fi
+
 echo "=== 5. Reloading systemd daemon ==="
 if command -v systemctl >/dev/null 2>&1; then
   systemctl daemon-reload

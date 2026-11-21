@@ -7,6 +7,7 @@ message ApprovalToken {
   bytes nonce = 1;
   uint64 expires_at_ns = 2;
   bytes mac = 3;
+  bytes action_id = 4;
 }
 
 message FetchRequest {
