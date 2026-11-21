@@ -104,6 +104,10 @@ Result<VoiceConfig> ParseVoiceConfig(std::string_view text) {
       if (!ParseUint(value, 0, 60, &cfg.follow_up_s)) {
         return Bad(where + ": 0 to 60");
       }
+    } else if (key == "max_consecutive_follow_ups") {
+      if (!ParseUint(value, 0, 10, &cfg.max_consecutive_follow_ups)) {
+        return Bad(where + ": 0 to 10");
+      }
     } else if (key == "stt_threads") {
       if (!ParseUint(value, 1, 16, &cfg.stt_threads)) {
         return Bad(where + ": 1 to 16");

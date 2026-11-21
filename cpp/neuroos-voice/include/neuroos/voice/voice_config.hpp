@@ -18,11 +18,12 @@ struct VoiceConfig {
   std::string playback_node;
   // The one voice (FR-VOI-09, OQ-04): a Kokoro voice file name without ".bin".
   std::string voice = "af_heart";
-  std::uint32_t speed_milli = 1000;    // 1000 = normal speed
-  float wake_threshold = 0.5F;         // openWakeWord score that counts as the phrase
-  std::uint32_t end_silence_ms = 600;  // FR-VOI-04
-  std::uint32_t follow_up_s = 8;       // FR-VOI-08
-  std::uint32_t stt_threads = 4;       // whisper.cpp threads while transcribing
+  std::uint32_t speed_milli = 1000;              // 1000 = normal speed
+  float wake_threshold = 0.5F;                   // openWakeWord score that counts as the phrase
+  std::uint32_t end_silence_ms = 600;            // FR-VOI-04
+  std::uint32_t follow_up_s = 8;                 // FR-VOI-08
+  std::uint32_t max_consecutive_follow_ups = 1;  // cap follow-ups without the wake word (BUG-088)
+  std::uint32_t stt_threads = 4;                 // whisper.cpp threads while transcribing
 };
 
 // Parses the file text on top of the defaults.

@@ -78,7 +78,7 @@ TEST(TurnMachineTest, HappyPathWithFollowUpUtterance) {
   ASSERT_EQ(acts.size(), 1U);
   EXPECT_EQ(acts[0], (TurnAction{.kind = TurnActionKind::kBeginUtterance,
                                  .with_backlog = true,
-                                 .in_follow_up = false}));
+                                 .in_follow_up = true}));
 
   // 9. Speech ends -> Transcribing
   t += 1'000'000'000;
@@ -97,21 +97,95 @@ TEST(TurnMachineTest, HappyPathWithFollowUpUtterance) {
                                  .with_backlog = false,
                                  .in_follow_up = true}));
 
-  // Finish answer and speaking
+  // Finish answer and speaking for the follow-up turn.
+  // With max_consecutive_follow_ups = 1 (the default), this was the one allowed follow-up:
+  // playback idle returns the machine to kIdle without opening a second follow-up window (BUG-088).
   t += 200'000'000;
   tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = t});
   t += 500'000'000;
   tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyFinished, .now_ns = t});
   t += 1'000'000'000;
-  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kPlaybackIdle, .now_ns = t});
-  EXPECT_EQ(tm.state(), TurnState::kFollowUp);
-
-  // 11. FollowUp expires on Tick -> Idle
-  t += 8'000'000'001;
-  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = t});
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kPlaybackIdle, .now_ns = t});
   EXPECT_EQ(tm.state(), TurnState::kIdle);
   EXPECT_FALSE(tm.follow_up_open());
+  EXPECT_EQ(tm.consecutive_follow_ups(), 0U);
   EXPECT_TRUE(acts.empty());
+}
+
+TEST(TurnMachineTest, ConsecutiveFollowUpsAreCapped) {
+  // max_consecutive_follow_ups = 2 allows two follow-ups before returning to Idle
+  TurnConfig cfg;
+  cfg.max_consecutive_follow_ups = 2;
+  TurnMachine tm(cfg);
+  std::uint64_t t = 1'000'000'000;
+
+  // Turn 0: Wake word
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kWakeWord, .now_ns = t});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechStarted, .now_ns = t + 100});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = t + 1000});
+  tm.OnEvent(
+      TurnEvent{.kind = TurnEventKind::kTranscribed, .now_ns = t + 1200, .text_empty = false});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = t + 1400});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyFinished, .now_ns = t + 1800});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kPlaybackIdle, .now_ns = t + 2500});
+  EXPECT_EQ(tm.state(), TurnState::kFollowUp);
+  EXPECT_EQ(tm.consecutive_follow_ups(), 0U);
+
+  // Turn 1: First follow-up
+  t += 3'000'000'000;
+  auto acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechStarted, .now_ns = t});
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_TRUE(acts[0].in_follow_up);
+  EXPECT_EQ(tm.consecutive_follow_ups(), 1U);
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = t + 1000});
+  acts = tm.OnEvent(
+      TurnEvent{.kind = TurnEventKind::kTranscribed, .now_ns = t + 1200, .text_empty = false});
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_TRUE(acts[0].in_follow_up);
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = t + 1400});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyFinished, .now_ns = t + 1800});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kPlaybackIdle, .now_ns = t + 2500});
+  EXPECT_EQ(tm.state(), TurnState::kFollowUp);  // Still allowed since 1 < 2
+
+  // Turn 2: Second follow-up
+  t += 4'000'000'000;
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechStarted, .now_ns = t});
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_TRUE(acts[0].in_follow_up);
+  EXPECT_EQ(tm.consecutive_follow_ups(), 2U);
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = t + 1000});
+  tm.OnEvent(
+      TurnEvent{.kind = TurnEventKind::kTranscribed, .now_ns = t + 1200, .text_empty = false});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = t + 1400});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyFinished, .now_ns = t + 1800});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kPlaybackIdle, .now_ns = t + 2500});
+  // Now consecutive_follow_ups >= 2: machine returns to Idle!
+  EXPECT_EQ(tm.state(), TurnState::kIdle);
+  EXPECT_FALSE(tm.follow_up_open());
+  EXPECT_EQ(tm.consecutive_follow_ups(), 0U);
+
+  // Background speech in Idle does NOT start capture without wake word
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechStarted, .now_ns = t + 3000});
+  EXPECT_EQ(tm.state(), TurnState::kIdle);
+  EXPECT_TRUE(acts.empty());
+}
+
+TEST(TurnMachineTest, MaxConsecutiveFollowUpsZeroDisablesFollowUp) {
+  TurnConfig cfg;
+  cfg.max_consecutive_follow_ups = 0;
+  TurnMachine tm(cfg);
+  const std::uint64_t t = 1'000'000'000;
+
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kWakeWord, .now_ns = t});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechStarted, .now_ns = t + 100});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = t + 1000});
+  tm.OnEvent(
+      TurnEvent{.kind = TurnEventKind::kTranscribed, .now_ns = t + 1200, .text_empty = false});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = t + 1400});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyFinished, .now_ns = t + 1800});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kPlaybackIdle, .now_ns = t + 2500});
+  EXPECT_EQ(tm.state(), TurnState::kIdle);
+  EXPECT_FALSE(tm.follow_up_open());
 }
 
 TEST(TurnMachineTest, BargeInOrderInSpeaking) {

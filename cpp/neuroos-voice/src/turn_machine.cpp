@@ -17,6 +17,7 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
         state_entered_ns_ = e.now_ns;
         speech_started_in_capture_ = false;
         utterance_is_follow_up_ = false;
+        consecutive_follow_ups_ = 0;
         TurnAction act;
         act.kind = TurnActionKind::kBeginUtterance;
         act.with_backlog = false;
@@ -28,6 +29,7 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
         state_entered_ns_ = e.now_ns;
         reply_is_nudge_ = true;
         reply_finished_ = false;
+        consecutive_follow_ups_ = 0;
         return {};
       }
       return {};
@@ -48,6 +50,7 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
             (e.now_ns - state_entered_ns_) >= cfg_.no_speech_timeout_ns) {
           state_ = TurnState::kIdle;
           state_entered_ns_ = e.now_ns;
+          consecutive_follow_ups_ = 0;
           TurnAction act;
           act.kind = TurnActionKind::kDiscardCapture;
           act.with_backlog = false;
@@ -73,6 +76,7 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
       if (e.kind == TurnEventKind::kDeviceLost) {
         state_ = TurnState::kIdle;
         state_entered_ns_ = e.now_ns;
+        consecutive_follow_ups_ = 0;
         TurnAction act;
         act.kind = TurnActionKind::kDiscardCapture;
         act.with_backlog = false;
@@ -89,6 +93,7 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
         state_entered_ns_ = e.now_ns;
         speech_started_in_capture_ = false;
         utterance_is_follow_up_ = false;
+        consecutive_follow_ups_ = 0;
         TurnAction act;
         act.kind = TurnActionKind::kBeginUtterance;
         act.with_backlog = false;
@@ -109,11 +114,13 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
         }
         state_ = TurnState::kIdle;
         state_entered_ns_ = e.now_ns;
+        consecutive_follow_ups_ = 0;
         return {};
       }
       if (e.kind == TurnEventKind::kDeviceLost) {
         state_ = TurnState::kIdle;
         state_entered_ns_ = e.now_ns;
+        consecutive_follow_ups_ = 0;
         return {};
       }
       return {};
@@ -128,9 +135,15 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
         return {};
       }
       if (e.kind == TurnEventKind::kReplyFinished) {
-        state_ = TurnState::kFollowUp;
+        if (consecutive_follow_ups_ < cfg_.max_consecutive_follow_ups) {
+          state_ = TurnState::kFollowUp;
+          state_entered_ns_ = e.now_ns;
+          follow_up_deadline_ns_ = e.now_ns + cfg_.follow_up_ns;
+          return {};
+        }
+        state_ = TurnState::kIdle;
         state_entered_ns_ = e.now_ns;
-        follow_up_deadline_ns_ = e.now_ns + cfg_.follow_up_ns;
+        consecutive_follow_ups_ = 0;
         return {};
       }
       if (e.kind == TurnEventKind::kTick) {
@@ -138,6 +151,7 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
             (e.now_ns - state_entered_ns_) >= cfg_.answer_timeout_ns) {
           state_ = TurnState::kIdle;
           state_entered_ns_ = e.now_ns;
+          consecutive_follow_ups_ = 0;
           TurnAction act;
           act.kind = TurnActionKind::kCancelReply;
           act.with_backlog = false;
@@ -151,6 +165,7 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
         state_entered_ns_ = e.now_ns;
         speech_started_in_capture_ = true;
         utterance_is_follow_up_ = false;
+        consecutive_follow_ups_ = 0;
         // A preamble or a first sentence may already be queued with the current epoch: flush
         // so that nothing of the old reply is spoken over the user (the review's F2).
         return {
@@ -168,6 +183,7 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
       if (e.kind == TurnEventKind::kDeviceLost) {
         state_ = TurnState::kIdle;
         state_entered_ns_ = e.now_ns;
+        consecutive_follow_ups_ = 0;
         TurnAction act;
         act.kind = TurnActionKind::kCancelReply;
         act.with_backlog = false;
@@ -183,6 +199,7 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
         state_entered_ns_ = e.now_ns;
         speech_started_in_capture_ = (e.kind == TurnEventKind::kSpeechStarted);
         utterance_is_follow_up_ = false;
+        consecutive_follow_ups_ = 0;
         return {
             TurnAction{
                 .kind = TurnActionKind::kFlushOutput, .with_backlog = false, .in_follow_up = false},
@@ -201,9 +218,15 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
       }
       if (e.kind == TurnEventKind::kPlaybackIdle) {
         if (reply_finished_ || reply_is_nudge_) {
-          state_ = TurnState::kFollowUp;
+          if (consecutive_follow_ups_ < cfg_.max_consecutive_follow_ups) {
+            state_ = TurnState::kFollowUp;
+            state_entered_ns_ = e.now_ns;
+            follow_up_deadline_ns_ = e.now_ns + cfg_.follow_up_ns;
+            return {};
+          }
+          state_ = TurnState::kIdle;
           state_entered_ns_ = e.now_ns;
-          follow_up_deadline_ns_ = e.now_ns + cfg_.follow_up_ns;
+          consecutive_follow_ups_ = 0;
           return {};
         }
         return {};
@@ -211,6 +234,7 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
       if (e.kind == TurnEventKind::kDeviceLost) {
         state_ = TurnState::kIdle;
         state_entered_ns_ = e.now_ns;
+        consecutive_follow_ups_ = 0;
         return {
             TurnAction{
                 .kind = TurnActionKind::kFlushOutput, .with_backlog = false, .in_follow_up = false},
@@ -227,10 +251,11 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
         state_entered_ns_ = e.now_ns;
         speech_started_in_capture_ = true;
         utterance_is_follow_up_ = true;
+        ++consecutive_follow_ups_;
         return {
             TurnAction{.kind = TurnActionKind::kBeginUtterance,
                        .with_backlog = true,
-                       .in_follow_up = false},
+                       .in_follow_up = true},
         };
       }
       if (e.kind == TurnEventKind::kWakeWord) {
@@ -238,6 +263,7 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
         state_entered_ns_ = e.now_ns;
         speech_started_in_capture_ = false;
         utterance_is_follow_up_ = false;
+        consecutive_follow_ups_ = 0;
         return {
             TurnAction{.kind = TurnActionKind::kBeginUtterance,
                        .with_backlog = false,
@@ -248,6 +274,7 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
         if (e.now_ns >= follow_up_deadline_ns_) {
           state_ = TurnState::kIdle;
           state_entered_ns_ = e.now_ns;
+          consecutive_follow_ups_ = 0;
         }
         return {};
       }
@@ -256,11 +283,13 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
         state_entered_ns_ = e.now_ns;
         reply_is_nudge_ = true;
         reply_finished_ = false;
+        consecutive_follow_ups_ = 0;
         return {};
       }
       if (e.kind == TurnEventKind::kDeviceLost) {
         state_ = TurnState::kIdle;
         state_entered_ns_ = e.now_ns;
+        consecutive_follow_ups_ = 0;
         return {};
       }
       return {};
@@ -280,5 +309,7 @@ bool TurnMachine::turn_in_progress() const {
 bool TurnMachine::follow_up_open() const { return state_ == TurnState::kFollowUp; }
 
 bool TurnMachine::speaking() const { return state_ == TurnState::kSpeaking; }
+
+std::uint32_t TurnMachine::consecutive_follow_ups() const { return consecutive_follow_ups_; }
 
 }  // namespace neuroos::voice

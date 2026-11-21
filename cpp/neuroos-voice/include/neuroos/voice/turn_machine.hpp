@@ -54,6 +54,7 @@ struct TurnConfig {
   std::uint64_t answer_timeout_ns = 60'000'000'000;    // C5 never replied
   std::uint64_t follow_up_ns =
       8'000'000'000;  // FR-VOI-08: listen without wake word after spoken output
+  std::uint32_t max_consecutive_follow_ups = 1;  // cap follow-ups without the wake word (BUG-088)
 };
 
 class TurnMachine {
@@ -65,12 +66,14 @@ class TurnMachine {
                                                 // kSpeaking
   [[nodiscard]] bool follow_up_open() const;    // kFollowUp
   [[nodiscard]] bool speaking() const;          // kSpeaking
+  [[nodiscard]] std::uint32_t consecutive_follow_ups() const;
 
  private:
   TurnConfig cfg_;
   TurnState state_ = TurnState::kIdle;
   std::uint64_t state_entered_ns_ = 0;
   std::uint64_t follow_up_deadline_ns_ = 0;
+  std::uint32_t consecutive_follow_ups_ = 0;
   bool speech_started_in_capture_ = false;
   bool utterance_is_follow_up_ = false;
   bool reply_is_nudge_ = false;
