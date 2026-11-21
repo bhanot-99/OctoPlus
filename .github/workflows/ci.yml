@@ -25,13 +25,16 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: System packages
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             ninja-build cmake g++ protobuf-compiler libprotobuf-dev \
-            libgtest-dev libgmock-dev clang-format clang-tidy shellcheck
+            libgtest-dev libgmock-dev clang-format clang-tidy shellcheck \
+            pkg-config libgtk-4-dev libssl-dev
 
       - name: Rust toolchain (pinned by rust-toolchain.toml)
         run: rustup show active-toolchain || rustup toolchain install
