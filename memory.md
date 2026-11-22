@@ -76,6 +76,10 @@ One line each. Older entries archived to `docs/history/decisions-pre-phase-3.md`
 
 | Date | ID | Decision | ADR |
 | :--- | :--- | :--- | :--- |
+| 2026-11-22 | D-47 | Owner asked to start speech before the first whole sentence (NFR-PERF-02). The first spoken piece of an answer may end at a comma, semicolon or colon after 40 characters; later pieces stay whole sentences. Not yet measured live. | — |
+| 2026-11-22 | D-46 | Owner approved coverage fuzzing of the URL gate (nightly toolchain + `cargo-fuzz`), the nftables port rule for C7 (FR-FET-10: TCP 443 and DNS only), and the coverage and sanitizer runs. | — |
+| 2026-11-22 | D-45 | Owner: C2 voice budget 800 MiB while speaking, `MemoryMax` 960 MiB (was 620 / 768; measured peak 766 MiB with 60-character speech pieces). | 0015 |
+| 2026-11-22 | D-44 | Owner: the project is licensed **GPL-3.0-only** (statically linked GPL-3.0-only `cosmic-protocols`, GPL-3.0 `espeak-ng`). R-07 closed. | — |
 | 2026-11-22 | D-43 | Owner directive: full audit, close phase gaps, live tests, hardening ("MASTER DIRECTIVE", 2026-11-22). Under it Claude added the C7-only crates ADR-0016 names (`reqwest` rustls/ring, `hickory-resolver`, `url`; downloaded from crates.io; `cargo deny` clean) and left sudo, long runs, pushes and the licence to the owner. Owner may overturn. | 0016 |
 | 2026-11-21 | D-42 | OQ-06 closed: Personal Use & source-available self-hosted release; stock wake model compliant (R-06); GPL-3.0 compliance verified (R-07). License bundle in LICENSE & docs/LICENSES.md. | — |
 | 2026-11-21 | D-41 | Owner instructed start of Phase 10 execution: "start executing each step phse 10 as planned...". Plan: `docs/plans/phase-10-release-plan.md`. | — |
@@ -116,9 +120,9 @@ One line each. Older entries archived to `docs/history/decisions-pre-phase-3.md`
 
 | Date | Type | Item | Owner | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| 2026-11-22 | Blocker | Reference machine: system fetcher is the old mock binary and `/etc/neuroos/fetch.key` is missing (BUG-111); needs sudo. | Owner | Open |
-| 2026-11-22 | Gap | FR-FET-10: no kernel limit of C7 to TCP 443 (BUG-110); nftables rule needs root. | Owner | Open |
-| 2026-11-22 | Decision | Licence: `LICENSE` is MIT/Apache-2.0 but `neuroos-monitor` statically links GPL-3.0-only `cosmic-protocols` (R-07). | Owner | Open |
+| 2026-11-22 | Blocker | Reference machine: system fetcher was the old mock binary and `/etc/neuroos/fetch.key` was missing (BUG-111). Deployed by the owner 2026-11-22; real searches work (egress ledger). | Owner | Closed |
+| 2026-11-22 | Gap | FR-FET-10: C7 limited to TCP 443 by Landlock (BUG-118) and an nftables rule (BUG-110). Rule loaded 2026-11-22 (owner ran `sudo scripts/install-fetcher.sh`; `nft list ruleset` shows `meta skuid 983 tcp dport 443 accept`, DNS 53, reject counter 0). | Owner | Closed |
+| 2026-11-22 | Decision | Licence: GPL-3.0-only (D-44). | Owner | Closed |
 | 2026-11-22 | Watch | Memory headroom: C4 used 2724 / 2800 MiB and C2 590 / 620 MiB on the live stack. | Claude | Watching |
 | 2026-11-21 | Watch | R0-1 / NFR-SEC-03: C7 is the only network door. `deny.toml` now allows the HTTP/DNS crates only under `neuroos-fetcher` (`wrappers`); `scripts/check-netban.sh` proves the ban still fires elsewhere. | Claude | Open |
 | 2026-11-21 | Watch | rules.md §8.4: Zero test traffic leaves the machine. All Phase 8 tests must use private network namespaces (`ip netns`). | Claude | Open |
