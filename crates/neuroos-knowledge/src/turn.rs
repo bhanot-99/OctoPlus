@@ -54,6 +54,9 @@ const WEB_INGEST_POLL: Duration = Duration::from_millis(250);
 /// C3's source tag for documents that came through C7's spool.
 const WEB_SOURCE: &str = "c7";
 
+/// Chunks asked of C3 when looking for the pages a search just stored (C3's own maximum).
+const WEB_QUERY_TOP_K: u32 = 20;
+
 /// Most bytes kept of one stored page chunk in a web answer's prompt.
 const WEB_EXCERPT_BYTES: usize = 300;
 
@@ -884,7 +887,9 @@ impl KnowledgeHandler {
         loop {
             let q = Body::QueryHybrid(QueryHybrid {
                 text: question.to_string(),
-                top_k: self.cfg.evidence_top_k,
+                // Older copies of the same pages (earlier lookups) rank as high as the fresh
+                // ones, so ask for the most C3 gives and keep the fresh ones afterwards.
+                top_k: WEB_QUERY_TOP_K,
                 min_score: 0.0,
                 domains: vec![Domain::ExternalDocuments as i32],
             });
