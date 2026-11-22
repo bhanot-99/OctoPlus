@@ -24,6 +24,11 @@ struct VoiceConfig {
   std::uint32_t follow_up_s = 8;                 // FR-VOI-08
   std::uint32_t max_consecutive_follow_ups = 1;  // cap follow-ups without the wake word (BUG-088)
   std::uint32_t stt_threads = 4;                 // whisper.cpp threads while transcribing
+  // What may interrupt the answer while it is being spoken. false (the default): only the wake
+  // phrase. A laptop's speakers sit next to its microphone, so the assistant's own voice comes
+  // back as "speech" and, treated as an interruption, started endless new questions. true: any
+  // speech interrupts (fine with headphones). Config key: barge_in = wake | speech.
+  bool barge_in_by_speech = false;
 };
 
 // Parses the file text on top of the defaults.

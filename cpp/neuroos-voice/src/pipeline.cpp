@@ -163,6 +163,15 @@ PipelineStatus VoicePipeline::status() const {
     s.turn_in_progress = machine_.turn_in_progress();
     s.speaking = machine_.speaking();
     s.follow_up_open = machine_.follow_up_open();
+    s.wake_words = stats_.wake_words;
+    switch (machine_.state()) {
+      case TurnState::kIdle: s.phase = 0; break;
+      case TurnState::kCapturing: s.phase = 1; break;
+      case TurnState::kTranscribing: s.phase = 2; break;
+      case TurnState::kAwaitingAnswer: s.phase = 3; break;
+      case TurnState::kSpeaking: s.phase = 4; break;
+      case TurnState::kFollowUp: s.phase = 5; break;
+    }
   }
   s.capture_running = running_ && d_.source->running();
   s.mic_in_use_by_other = d_.mic_probe != nullptr && d_.mic_probe->OtherAppCapturing();
@@ -406,7 +415,8 @@ void VoicePipeline::ProcessFrame(std::span<const std::int16_t> frame) {
     return;
   }
 
-  const bool started = state == TurnState::kSpeaking ? barge.started : main.started;
+  const bool started =
+      state == TurnState::kSpeaking ? (cfg_.barge_in_by_speech && barge.started) : main.started;
   if (started) {
     if (d_.on_trace) {
       d_.on_trace("speech_started");

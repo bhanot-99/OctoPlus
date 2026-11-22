@@ -196,6 +196,15 @@ pub enum VoiceCommands {
         #[arg(long)]
         json: bool,
     },
+    /// A live signal of what the voice service is doing: listening, heard you, thinking, speaking.
+    Watch {
+        /// Also show each stage as a desktop notification (needs `notify-send`).
+        #[arg(long)]
+        notify: bool,
+        /// How often to ask the voice service, in milliseconds.
+        #[arg(long, default_value_t = 150, value_parser = clap::value_parser!(u64).range(50..=2000))]
+        interval_ms: u64,
+    },
 }
 
 /// Subcommands under `neuroosctl nudges` (FR-NUD-02).

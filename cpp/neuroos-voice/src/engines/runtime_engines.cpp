@@ -226,6 +226,7 @@ Result<std::unique_ptr<VoiceRuntime>> BuildVoiceRuntime(const RuntimeOptions& o)
   pc.vad.end_silence_ns = static_cast<std::uint64_t>(o.config.end_silence_ms) * 1'000'000ULL;
   pc.turn.follow_up_ns = static_cast<std::uint64_t>(o.config.follow_up_s) * 1'000'000'000ULL;
   pc.turn.max_consecutive_follow_ups = o.config.max_consecutive_follow_ups;
+  pc.barge_in_by_speech = o.config.barge_in_by_speech;
   rt->pipeline_ = std::make_unique<VoicePipeline>(d, pc);
   rt->pipeline_->PreloadClips();
   return std::unique_ptr<VoiceRuntime>(std::move(rt));

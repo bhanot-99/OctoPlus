@@ -157,7 +157,7 @@ struct Rig {
   std::uint64_t now = 1'000'000'000;
   std::unique_ptr<VoicePipeline> p;
 
-  Rig() {
+  explicit Rig(bool barge_in_by_speech = true) {
     VoicePipeline::Deps d;
     d.source = &source;
     d.sink = &sink;
@@ -171,7 +171,9 @@ struct Rig {
     d.tts_exec = &tts_exec;
     d.mono_ns = [this] { return now; };
     d.wall_ns = [this] { return 1'700'000'000'000'000'000ULL + now; };
-    p = std::make_unique<VoicePipeline>(d, PipelineConfig{});
+    PipelineConfig cfg;
+    cfg.barge_in_by_speech = barge_in_by_speech;
+    p = std::make_unique<VoicePipeline>(d, cfg);
     EXPECT_TRUE(p->Start().ok());
   }
 
@@ -417,6 +419,35 @@ TEST(VoicePipeline, ItsOwnVoiceComingBackThroughTheMicrophoneDoesNotInterruptIt)
   EXPECT_EQ(r.sink.flushes, 0);
   EXPECT_EQ(r.link.cancels, 0);
   EXPECT_TRUE(r.p->status().speaking);
+}
+
+// Live: laptop speakers next to the microphone returned the answer as loud "speech", every
+// echo counted as an interruption and started a new question (and reset the follow-up cap), so
+// the assistant talked to itself. By default only the wake phrase interrupts.
+TEST(VoicePipeline, LoudSpeechAloneDoesNotInterruptWhenOnlyTheWakePhraseMay) {
+  Rig r(/*barge_in_by_speech=*/false);
+  r.AskByVoice();
+  r.link.receiver->OnSpeak("A long answer. With two sentences.");
+  r.Settle();
+  ASSERT_TRUE(r.p->status().speaking);
+  r.Frames(1000, 40);  // loud speech at the microphone, no wake phrase
+  EXPECT_EQ(r.sink.flushes, 0);
+  EXPECT_EQ(r.link.cancels, 0);
+  EXPECT_EQ(r.link.barge_ins, 0);
+  EXPECT_TRUE(r.p->status().speaking);
+}
+
+TEST(VoicePipeline, TheWakePhraseStillInterruptsAnAnswerBeingSpoken) {
+  Rig r(/*barge_in_by_speech=*/false);
+  r.AskByVoice();
+  r.link.receiver->OnSpeak("A long answer. With two sentences.");
+  r.Settle();
+  ASSERT_TRUE(r.p->status().speaking);
+  r.Frames(2000, 6);  // the wake phrase
+  r.Frames(1000, 3);
+  EXPECT_EQ(r.link.cancels, 1);
+  EXPECT_EQ(r.link.barge_ins, 1);
+  EXPECT_FALSE(r.p->status().speaking);
 }
 
 TEST(VoicePipeline, ASpokenNudgeIsTwoSentencesAndOpensAFollowUp) {

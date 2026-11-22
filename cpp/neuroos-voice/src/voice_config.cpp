@@ -108,6 +108,14 @@ Result<VoiceConfig> ParseVoiceConfig(std::string_view text) {
       if (!ParseUint(value, 0, 10, &cfg.max_consecutive_follow_ups)) {
         return Bad(where + ": 0 to 10");
       }
+    } else if (key == "barge_in") {
+      if (value == "wake") {
+        cfg.barge_in_by_speech = false;
+      } else if (value == "speech") {
+        cfg.barge_in_by_speech = true;
+      } else {
+        return Bad(where + ": wake or speech");
+      }
     } else if (key == "stt_threads") {
       if (!ParseUint(value, 1, 16, &cfg.stt_threads)) {
         return Bad(where + ": 1 to 16");

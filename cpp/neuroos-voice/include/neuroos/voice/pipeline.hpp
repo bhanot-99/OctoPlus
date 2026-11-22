@@ -111,6 +111,9 @@ struct PipelineConfig {
     c.off_threshold = 0.5F;
     return c;
   }();
+  // true: speech alone interrupts an answer being spoken (the bar is barge_in_vad). false: only
+  // the wake phrase does (the service default, see VoiceConfig::barge_in_by_speech).
+  bool barge_in_by_speech = true;
   TurnConfig turn;
   std::size_t max_piece_chars = 60;
   std::uint64_t backlog_ns =
@@ -127,6 +130,9 @@ struct PipelineStatus {
   bool follow_up_open = false;
   bool mic_in_use_by_other = false;
   bool capture_running = false;
+  // The turn machine's state, as the TurnPhase numbers in voice.proto.
+  std::uint32_t phase = 0;
+  std::uint64_t wake_words = 0;
 };
 
 struct PipelineStats {

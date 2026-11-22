@@ -134,6 +134,8 @@ Status VoiceService::HandleStatus(const ipc::Request& /*req*/, v1::Envelope* rep
   status->set_follow_up_open(st.follow_up_open);
   status->set_mic_in_use_by_other(st.mic_in_use_by_other);
   status->set_capture_running(st.capture_running);
+  status->set_phase(static_cast<v1::TurnPhase>(st.phase));
+  status->set_wake_words(st.wake_words);
   return ok_status();
 }
 

@@ -13,6 +13,17 @@ TEST(VoiceConfig, EmptyTextGivesTheDefaults) {
   EXPECT_EQ(c.value().follow_up_s, 8U);
   EXPECT_EQ(c.value().max_consecutive_follow_ups, 1U);
   EXPECT_TRUE(c.value().capture_node.empty());
+  EXPECT_FALSE(c.value().barge_in_by_speech) << "only the wake phrase interrupts by default";
+}
+
+TEST(VoiceConfig, BargeInCanBeSwitchedToAnySpeech) {
+  const auto speech = ParseVoiceConfig("barge_in = speech\n");
+  ASSERT_TRUE(speech.ok());
+  EXPECT_TRUE(speech.value().barge_in_by_speech);
+  const auto wake = ParseVoiceConfig("barge_in = wake\n");
+  ASSERT_TRUE(wake.ok());
+  EXPECT_FALSE(wake.value().barge_in_by_speech);
+  EXPECT_FALSE(ParseVoiceConfig("barge_in = sometimes\n").ok());
 }
 
 TEST(VoiceConfig, KeysOverrideTheDefaults) {

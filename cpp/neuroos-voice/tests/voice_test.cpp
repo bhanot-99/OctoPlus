@@ -83,6 +83,8 @@ TEST_F(VoiceTest, VoiceStatusReturnsFixedStatus) {
   EXPECT_FALSE(status.follow_up_open());
   EXPECT_FALSE(status.mic_in_use_by_other());
   EXPECT_FALSE(status.capture_running());
+  EXPECT_EQ(status.phase(), v1::TURN_PHASE_IDLE);
+  EXPECT_EQ(status.wake_words(), 0U);
 }
 
 TEST_F(VoiceTest, ControlSocketReturnsVoiceStatus) {
