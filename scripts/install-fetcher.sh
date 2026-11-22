@@ -73,6 +73,13 @@ fi
 echo "=== 5. Reloading systemd daemon ==="
 if command -v systemctl >/dev/null 2>&1; then
   systemctl daemon-reload
+  # A running C7 keeps executing the old binary and the old key until it restarts.
+  if systemctl is-active --quiet neuroos-fetcher.service; then
+    systemctl restart neuroos-fetcher.service
+    echo "Restarted the running neuroos-fetcher.service onto the new binary and key"
+    echo "install-fetcher complete."
+    exit 0
+  fi
 fi
 
 echo "install-fetcher complete. The unit was NOT started or enabled."
