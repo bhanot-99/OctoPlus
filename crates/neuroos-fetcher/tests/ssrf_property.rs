@@ -96,5 +96,8 @@ proptest! {
 fn a_mapped_literal_is_judged_by_its_address_not_its_spelling() {
     let ok = SafeUrl::parse("https://[::ffff:6f00:1]/").expect("public mapped address");
     assert_eq!(ok.ip_literal(), Some("::ffff:111.0.0.1".parse().unwrap()));
-    assert!(SafeUrl::parse("https://[::ffff:7f00:1]/").is_err(), "mapped 127.0.0.1");
+    assert!(
+        SafeUrl::parse("https://[::ffff:7f00:1]/").is_err(),
+        "mapped 127.0.0.1"
+    );
 }
