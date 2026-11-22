@@ -173,6 +173,41 @@ async fn activity_lists_segments_and_chunks_in_time_order_inside_the_range() {
     assert!(none.items.is_empty());
 }
 
+/// Regression (audit A-18): with many short focus changes (about 20 a minute in real use)
+/// the answer is what took the time, not the oldest slice of the range; repeated windows
+/// with the same app and title are one item.
+#[tokio::test]
+async fn activity_keeps_what_took_the_time_and_merges_repeats() {
+    let (s, _d) = store().await;
+    let max = neuroos_storage::query::ACTIVITY_MAX as u64;
+    let mut segs: Vec<Output> = (0..max + 20)
+        .map(|i| seg("term", &format!("cmd {i}"), 1000 + i, 1001 + i))
+        .collect();
+    // One long piece of work after all the short ones, split by two brief switches away.
+    segs.push(seg("editor", "report.md", 5000, 5600));
+    segs.push(seg("chat", "x", 5600, 5601));
+    segs.push(seg("editor", "report.md", 5601, 6200));
+    s.ingest(segs).await.unwrap();
+    let r = s
+        .activity(QueryActivity {
+            from_ns: 0,
+            to_ns: 10_000 * S,
+        })
+        .await
+        .unwrap();
+    assert!(r.items.len() <= max as usize);
+    let editor: Vec<_> = r
+        .items
+        .iter()
+        .filter(|i| i.label == "Used editor: report.md")
+        .collect();
+    assert_eq!(editor.len(), 1, "repeats of one window are merged");
+    assert_eq!(editor[0].start_ns, 5000 * S);
+    assert_eq!(editor[0].end_ns, 6200 * S);
+    let starts: Vec<u64> = r.items.iter().map(|i| i.start_ns).collect();
+    assert!(starts.windows(2).all(|w| w[0] <= w[1]), "time-ordered");
+}
+
 #[tokio::test]
 async fn health_signals_carry_recent_samples_and_the_live_flags() {
     let (s, _d) = store().await;

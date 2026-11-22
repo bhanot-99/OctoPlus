@@ -92,7 +92,8 @@ impl Store {
     }
 
     /// `QueryActivity` (FR-STO-08): what happened in `[from, to]`, time-ordered, at most
-    /// [`ACTIVITY_MAX`] items.
+    /// [`ACTIVITY_MAX`] items. Focus windows are merged per app and title and chosen by the
+    /// time spent in them inside the range.
     ///
     /// # Errors
     /// [`DbError`] on read failure.
@@ -107,9 +108,15 @@ impl Store {
         let mut items = self
             .read(move |c| {
                 let mut v: Vec<ActivityItem> = Vec::new();
+                // One item per app and title, the ones that took the most time inside the
+                // range first (focus changes many times a minute, so "the oldest N" would be
+                // a random early slice; audit A-18). The result is re-sorted by time below.
                 let mut s = c.prepare(
-                    "SELECT app_id, title, start_ns, end_ns FROM focus_history
-                     WHERE end_ns >= ?1 AND start_ns <= ?2 ORDER BY start_ns LIMIT ?3",
+                    "SELECT app_id, title, MIN(start_ns), MAX(end_ns),
+                            SUM(MIN(end_ns, ?2) - MAX(start_ns, ?1)) AS spent
+                     FROM focus_history
+                     WHERE end_ns >= ?1 AND start_ns <= ?2
+                     GROUP BY app_id, title ORDER BY spent DESC LIMIT ?3",
                 )?;
                 for row in s.query_map(params![from, to, ACTIVITY_MAX as i64], |r| {
                     Ok((
