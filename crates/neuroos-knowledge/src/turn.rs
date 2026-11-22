@@ -23,10 +23,10 @@ use neuroos_health::LatencyHistogram;
 use neuroos_ipc::{Handler, HandlerError, ReconnectingClient, Request, StreamSink};
 use neuroos_proto::v1::envelope::Body;
 use neuroos_proto::v1::{
-    Ack, AnswerChunk, AnswerDone, AskRequest, DispatchRequest, DispatchResult, DispatchStatus,
-    Domain, ErrorCode, EvaluateRequest, Evidence, GenerateRequest, NudgeList, Origin, PreambleKind,
-    PreambleRequest, ProfileListRequest, QueryFocusHistory, QueryHybrid, Route, SpeakChunk,
-    StoreInteraction, Taint, VoiceCommand,
+    Ack, ActivityItem, AnswerChunk, AnswerDone, AskRequest, DispatchRequest, DispatchResult,
+    DispatchStatus, Domain, ErrorCode, EvaluateRequest, Evidence, GenerateRequest, NudgeList,
+    Origin, PreambleKind, PreambleRequest, ProfileListRequest, QueryActivity, QueryFocusHistory,
+    QueryHybrid, Route, SpeakChunk, StoreInteraction, Taint, VoiceCommand,
 };
 use neuroos_taint::TaintFlags;
 use tracing::warn;
@@ -180,6 +180,8 @@ struct Retrieved {
     evidence: Option<(Vec<Evidence>, bool)>,
     focus: Option<String>,
     facts: Option<Vec<Fact>>,
+    /// What the user did over the range their question names (FR-STO-08), as one block.
+    activity: Option<Evidence>,
 }
 
 /// Handles requests on `knowledge/knowledge`.
@@ -944,7 +946,10 @@ impl KnowledgeHandler {
         if c3_down {
             self.metrics.c3_degraded.fetch_add(1, Ordering::Relaxed);
         }
-        let (raw, stale) = retrieved.evidence.unwrap_or_default();
+        let (mut raw, stale) = retrieved.evidence.unwrap_or_default();
+        if let Some(activity) = retrieved.activity {
+            raw.insert(0, activity);
+        }
         let selected = evidence::select(raw, min_score, self.cfg.evidence_top_k as usize);
         self.metrics
             .evidence_no_taint
@@ -1073,15 +1078,17 @@ impl KnowledgeHandler {
         if !matches!(ready, Ok(Ok(_))) {
             return Retrieved::default();
         }
-        let (ev, focus, facts) = tokio::join!(
+        let (ev, focus, facts, activity) = tokio::join!(
             self.query_evidence(text),
             self.query_focus(anchor, deictic, now),
             self.query_facts(text),
+            self.query_activity(text, now),
         );
         Retrieved {
             evidence: ev,
             focus,
             facts,
+            activity,
         }
     }
 
@@ -1123,6 +1130,25 @@ impl KnowledgeHandler {
                 .or_else(|| r.windows.first())
                 .map(|w| format!("{}: {}", w.app_id, w.title)),
             _ => None,
+        }
+    }
+
+    /// For a question about a time range ("what did I work on in the last hour"), what C3
+    /// recorded in that range, as one evidence block (FR-STO-08, P5-S02; audit A-18).
+    async fn query_activity(&self, text: &str, now: u64) -> Option<Evidence> {
+        let secs = deictic::activity_range(text)?;
+        let from_ns = now.saturating_sub(secs.saturating_mul(1_000_000_000));
+        let q = Body::QueryActivity(QueryActivity {
+            from_ns,
+            to_ns: now,
+        });
+        match self.peers.storage.call(q, self.timing.storage_query).await {
+            Ok(Body::ActivityResult(r)) => Some(activity_block(&r.items, from_ns, now)),
+            Ok(_) => None,
+            Err(e) => {
+                warn!("C3 activity query failed (answering without it): {e}");
+                None
+            }
         }
     }
 
@@ -1307,6 +1333,63 @@ impl KnowledgeHandler {
             warn!("could not store the turn in C3: {e}");
         }
     }
+}
+
+/// Most activity lines one answer is given (the evidence block has a token budget).
+const ACTIVITY_LINES: usize = 12;
+
+/// Formats activity items as one evidence block: the longest spans first chosen, then shown
+/// in time order with relative times ("from 40 to 12 minutes ago"), so no time zone is
+/// needed. Window titles can come from web pages, so the block is always untrusted.
+fn activity_block(items: &[ActivityItem], from_ns: u64, now: u64) -> Evidence {
+    let span = |i: &ActivityItem| i.end_ns.min(now).saturating_sub(i.start_ns.max(from_ns));
+    let mut chosen: Vec<&ActivityItem> = items.iter().collect();
+    chosen.sort_by_key(|i| std::cmp::Reverse(span(i)));
+    chosen.truncate(ACTIVITY_LINES);
+    chosen.sort_by_key(|i| i.start_ns);
+    let taint = chosen.iter().fold(TaintFlags::EXTERNAL_UNTRUSTED, |t, i| {
+        t.merge(
+            TaintFlags::decode(i.taint.as_ref().map(|x| x.flags))
+                .unwrap_or(TaintFlags::EXTERNAL_UNTRUSTED),
+        )
+    });
+    let text = if chosen.is_empty() {
+        "Recorded activity in that time: nothing was recorded.".to_string()
+    } else {
+        let lines: Vec<String> = chosen
+            .iter()
+            .map(|i| {
+                format!(
+                    "- {}, {}",
+                    i.label,
+                    ago_range(now, i.start_ns.max(from_ns), i.end_ns.min(now))
+                )
+            })
+            .collect();
+        format!("Recorded activity in that time:\n{}", lines.join("\n"))
+    };
+    Evidence {
+        chunk_id: u64::MAX,
+        domain: Domain::WindowFocus as i32,
+        text,
+        score: 1.0,
+        taint: Some(taint_msg(taint)),
+        at_ns: now,
+        source: "activity".to_string(),
+    }
+}
+
+/// "from 40 to 12 minutes ago", "from 5 to 3 hours ago", "in the last minute".
+fn ago_range(now: u64, start: u64, end: u64) -> String {
+    let mins = |t: u64| now.saturating_sub(t) / 60_000_000_000;
+    let (a, b) = (mins(start), mins(end));
+    if a == 0 {
+        return "in the last minute".to_string();
+    }
+    if a >= 120 {
+        return format!("from {} to {} hours ago", a / 60, b / 60);
+    }
+    format!("from {a} to {b} minutes ago")
 }
 
 impl Handler for KnowledgeHandler {

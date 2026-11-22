@@ -152,6 +152,63 @@ fn parse_anchor(norm: &str, deictic: bool) -> Anchor {
     Anchor::None
 }
 
+/// Openings of a question about the user's own past activity.
+const ACTIVITY_OPENINGS: &[&str] = &[
+    "what",
+    "which",
+    "how",
+    "show",
+    "tell me",
+    "summarize",
+    "summarise",
+    "list",
+    "remind me",
+];
+
+/// Phrases that make it about what the user did.
+const ACTIVITY_CUES: &[&str] = &[
+    "did i",
+    "was i",
+    "have i",
+    "had i",
+    "i did",
+    "i was",
+    "i worked",
+    "i have been",
+    "i ve been",
+    "i spent",
+    "i used",
+    "my day",
+    "my activity",
+    "my work",
+    "i been",
+];
+
+/// When `text` asks what the user did over a time range ("what did I work on in the last
+/// hour", "summarise my day"), the length of that range in seconds (FR-STO-08, P5-S02).
+/// `None` for anything else, including questions about one moment ("what was I reading
+/// five minutes ago", answered from focus history).
+#[must_use]
+pub fn activity_range(text: &str) -> Option<u64> {
+    let norm = router::normalise(text);
+    let opens = ACTIVITY_OPENINGS
+        .iter()
+        .any(|o| norm == *o || norm.starts_with(&format!("{o} ")));
+    if !opens
+        || !ACTIVITY_CUES
+            .iter()
+            .any(|c| router::contains_word(&norm, c))
+    {
+        return None;
+    }
+    match parse_anchor(&norm, false) {
+        Anchor::Range(secs) => Some(secs),
+        // "summarise my day" names no range word: today.
+        _ if router::contains_word(&norm, "my day") => Some(86_400),
+        _ => None,
+    }
+}
+
 /// Parses deictic status and temporal anchor from input text.
 #[must_use]
 pub fn parse(text: &str) -> DeicticInfo {
@@ -159,4 +216,32 @@ pub fn parse(text: &str) -> DeicticInfo {
     let deictic = router::detect_deictic(&norm);
     let anchor = parse_anchor(&norm, deictic);
     DeicticInfo { deictic, anchor }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn activity_questions_with_a_range() {
+        for (q, secs) in [
+            ("What did I work on in the last hour?", 3600),
+            ("what was I doing this morning", 86_400),
+            ("Summarise my day", 86_400),
+            ("how long have I been coding today", 86_400),
+            ("what did I do yesterday?", 172_800),
+            ("show me what I worked on this week", 604_800),
+        ] {
+            assert_eq!(activity_range(q), Some(secs), "{q}");
+        }
+        for q in [
+            "what was I reading five minutes ago",
+            "what is the capital of France",
+            "what did the news say today",
+            "how do I fix this error",
+            "I worked on the report today",
+        ] {
+            assert_eq!(activity_range(q), None, "{q}");
+        }
+    }
 }

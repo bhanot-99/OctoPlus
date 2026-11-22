@@ -19,9 +19,10 @@ use neuroos_knowledge::sanitize::{CLOSE_TAG, OPEN_TAG};
 use neuroos_knowledge::turn::{KnowledgeHandler, Metrics, Peers, Timing};
 use neuroos_proto::v1::envelope::Body;
 use neuroos_proto::v1::{
-    Ack, AnswerDone, AskRequest, BargeIn, DispatchResult, DispatchStatus, Domain, ErrorCode,
-    EvaluateResult, Evidence, FocusHistoryResult, FocusWindow, GenerateDone, HybridResult, Origin,
-    ProfileFact, ProfileFacts, Route, StopReason, Taint, Tier, TokenChunk,
+    Ack, ActivityItem, ActivityResult, AnswerDone, AskRequest, BargeIn, DispatchResult,
+    DispatchStatus, Domain, ErrorCode, EvaluateResult, Evidence, FocusHistoryResult, FocusWindow,
+    GenerateDone, HybridResult, Origin, ProfileFact, ProfileFacts, Route, StopReason, Taint, Tier,
+    TokenChunk,
 };
 use neuroos_taint::TaintFlags;
 
@@ -39,6 +40,7 @@ struct Rec {
     grammars: Vec<String>,
     stored: Vec<(String, String, u32)>,
     focus_queries: Vec<u64>,
+    activity_queries: Vec<(u64, u64)>,
 }
 
 type Shared = Arc<Mutex<Rec>>;
@@ -84,6 +86,7 @@ impl Handler for FakeKernel {
 
 struct FakeStorage {
     rec: Shared,
+    activity: Vec<ActivityItem>,
     evidence: Vec<Evidence>,
     facts: Vec<ProfileFact>,
     focus: Option<FocusWindow>,
@@ -107,6 +110,16 @@ impl Handler for FakeStorage {
                     .collect(),
                 stale_index: self.stale,
             })),
+            Body::QueryActivity(q) => {
+                self.rec
+                    .lock()
+                    .unwrap()
+                    .activity_queries
+                    .push((q.from_ns, q.to_ns));
+                Ok(Body::ActivityResult(ActivityResult {
+                    items: self.activity.clone(),
+                }))
+            }
             Body::QueryFocusHistory(q) => {
                 self.rec.lock().unwrap().focus_queries.push(q.at_ns);
                 Ok(Body::FocusHistoryResult(FocusHistoryResult {
@@ -190,6 +203,7 @@ impl Handler for FakeInference {
 // ---- the stack -----------------------------------------------------------------------------------
 
 struct Opts {
+    activity: Vec<ActivityItem>,
     allow: bool,
     kernel_up: bool,
     inference_up: bool,
@@ -209,6 +223,7 @@ struct Opts {
 impl Default for Opts {
     fn default() -> Self {
         Self {
+            activity: Vec::new(),
             allow: true,
             kernel_up: true,
             inference_up: true,
@@ -283,6 +298,7 @@ impl Stack {
                 &c3,
                 FakeStorage {
                     rec: rec.clone(),
+                    activity: o.activity.clone(),
                     evidence: o.evidence.clone(),
                     facts: o.facts.clone(),
                     focus: o.focus.clone(),
@@ -604,9 +620,16 @@ async fn hostile_evidence_cannot_break_the_wrapper_or_act() {
         ..Opts::default()
     })
     .await;
-    let (_, done) = s.ask("what was I working on earlier").await;
+    // No time range in the question, so the hostile document is the only untrusted block
+    // (a range such as "earlier" adds the activity block, wrapped separately).
+    let (_, done) = s.ask("what was I working on").await;
     let rec = s.rec();
+    assert!(rec.activity_queries.is_empty());
     let b = body(&rec.prompts[0]);
+    assert!(
+        b.contains("shell.exec"),
+        "the hostile document is in the prompt: {b}"
+    );
     assert_eq!(b.matches(OPEN_TAG).count(), 1);
     assert_eq!(b.matches(CLOSE_TAG).count(), 1);
     assert_eq!(rec.prompts[0].matches("<|im_start|>").count(), 3);
@@ -896,6 +919,58 @@ async fn no_answer_path_hands_back_a_taint_below_the_users_own_words() {
 }
 
 // ---- offers: lookup and remembering ----------------------------------------------------------------
+
+/// Regression (audit A-18, P5-S02 / FR-STO-08): "what did I work on in the last hour" is
+/// answered from C3's activity for exactly that hour, as untrusted evidence, longest first
+/// chosen and shown in time order.
+#[tokio::test]
+async fn an_activity_question_is_answered_from_the_activity_of_that_range() {
+    const NOW: u64 = 100_000_000_000_000;
+    const MIN: u64 = 60_000_000_000;
+    let item = |label: &str, from_min: u64, to_min: u64| ActivityItem {
+        domain: Domain::WindowFocus as i32,
+        label: label.to_string(),
+        start_ns: NOW - from_min * MIN,
+        end_ns: NOW - to_min * MIN,
+        taint: Some(Taint { flags: 0 }),
+    };
+    let s = Stack::start(Opts {
+        activity: vec![
+            item("Used editor: report.md", 50, 10),
+            item("Used browser: Rust docs", 9, 2),
+        ],
+        answer: vec!["You worked on report.md.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+    let (said, done) = s
+        .ask_at("What did I work on in the last hour?", NOW)
+        .await
+        .unwrap();
+    assert_eq!(said, "You worked on report.md.");
+    assert_eq!(done.route, Route::DesktopAnswer as i32);
+    assert_ne!(
+        done.taint.unwrap().flags & EXTERNAL,
+        0,
+        "titles are untrusted"
+    );
+    let rec = s.rec();
+    assert_eq!(rec.activity_queries, vec![(NOW - 60 * MIN, NOW)]);
+    let p = body(&rec.prompts[0]);
+    let a = p.find("report.md, from 50 to 10 minutes ago").expect(p);
+    let b = p.find("Rust docs, from 9 to 2 minutes ago").expect(p);
+    assert!(a < b, "time order: {p}");
+}
+
+/// An empty range is said plainly instead of leaving the model to guess (FR-CHT-02).
+#[tokio::test]
+async fn an_empty_activity_range_is_stated() {
+    let s = Stack::start(Opts::default()).await;
+    let _ = s.ask("what did I do yesterday?").await;
+    let rec = s.rec();
+    assert_eq!(rec.activity_queries.len(), 1);
+    assert!(body(&rec.prompts[0]).contains("nothing was recorded"));
+}
 
 const TWO_PAGES: &str = r#"{"spool_files":["search_1_0.json","search_1_1.json"],"requests":3}"#;
 
@@ -1429,7 +1504,8 @@ async fn check_injection(h: &Hostile, hijack: &str) {
         }
     }
     // 2. The prompt keeps its three ChatML markers whatever the text says, and wrapper pairs stay
-    //    balanced: at most one for the window title and one for the evidence.
+    //    balanced: at most one for the window title, one for the evidence and one for the
+    //    activity block.
     for p in &rec.prompts {
         assert_eq!(p.matches("<|im_start|>").count(), 3, "{ctx}");
         assert_eq!(p.matches("<|im_end|>").count(), 2, "{ctx}");
@@ -1439,7 +1515,12 @@ async fn check_injection(h: &Hostile, hijack: &str) {
             b.matches(CLOSE_TAG).count(),
             "{ctx}"
         );
-        let expected = usize::from(h.slot == "evidence") + usize::from(h.slot == "title");
+        // A question naming a time range also gets the activity block (FR-STO-08), wrapped
+        // on its own like every document.
+        let activity = neuroos_knowledge::deictic::activity_range(&question).is_some();
+        let expected = usize::from(h.slot == "evidence")
+            + usize::from(h.slot == "title")
+            + usize::from(activity);
         assert_eq!(b.matches(OPEN_TAG).count(), expected, "{ctx}");
     }
     // 3. Hostile evidence and titles taint the turn.
