@@ -112,7 +112,7 @@ struct PipelineConfig {
     return c;
   }();
   TurnConfig turn;
-  std::size_t max_piece_chars = 220;
+  std::size_t max_piece_chars = 60;
   std::uint64_t backlog_ns =
       400'000'000;  // audio kept from before a speech start (barge-in, follow-up)
   std::uint64_t wake_lookback_ns = 600'000'000;  // audio kept from before a wake word was reported

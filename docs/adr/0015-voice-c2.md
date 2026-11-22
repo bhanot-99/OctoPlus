@@ -44,3 +44,9 @@ The buddy should be talked to hands-free and answer in one natural voice, and it
 | C5 → C2 push of text over `voice.sock` for answers | The request's own stream is simpler and carries cancellation for free. |
 | Keep the wake phrase in the transcript and let C5 ignore it | C5's router and prompt would have to know it; stripping at the source keeps C5 text-only. |
 | Poll the audio device for removal | A removed microphone does not look removed by sample flow; the registry says so directly. |
+
+## Addendum 2026-11-22: speech pieces of at most 60 characters
+
+Kokoro's working memory grows with the text of one call. `neuroos-voice-say`, peak RSS, three runs each: 5 characters 465–477 MiB, 40 → 615–625, 80 → 741–803, 120 → 942–974, 160 → 1,095–1,143 MiB. With pieces of up to 220 characters C2 pressed its 768 MiB `MemoryMax` 676 times in six spoken answers (the kernel reclaimed and swapped it mid-sentence); with 60 it did not once, and the time to the first spoken answer stayed in the same 4.5–6 s bucket. The splitter still breaks at `,` `;` `:` first, then at a space.
+
+Still open: C2 peaked at 766 MiB RSS, over its provisional 620 MiB budget (PRD §6.2). Reaching 620 would need pieces of about 30 characters. The owner decides between shorter pieces and a re-measured budget; the owner also listens for joins between pieces. Pinned by `PipelineConfigTest.SpeechPiecesStayShortEnoughForTheVoiceMemoryLimit`.

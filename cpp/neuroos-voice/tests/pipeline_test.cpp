@@ -673,3 +673,10 @@ TEST(VoicePipeline, RealWorkerThreadsGiveTheSameResult) {
 
 }  // namespace
 }  // namespace neuroos::voice
+
+// Kokoro's working memory grows with the text it is given (about 4 MiB per character on top
+// of ~460 MiB, measured 2026-11-22). At 220 characters C2 pressed its 768 MiB MemoryMax 676
+// times in six spoken answers; at 60 it never did. ADR-0015 addendum.
+TEST(PipelineConfigTest, SpeechPiecesStayShortEnoughForTheVoiceMemoryLimit) {
+  EXPECT_LE(neuroos::voice::PipelineConfig{}.max_piece_chars, 60U);
+}
