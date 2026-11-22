@@ -5,11 +5,11 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use neuroos_ipc::ReconnectingClient;
+use neuroos_ipc::{IpcError, ReconnectingClient};
 use neuroos_proto::v1::envelope::Body;
 use neuroos_proto::v1::{
-    ApprovalToken, FetchRequest, ForgetRequest, PauseRequest, ProfileAdd, ProfileRemove,
-    SearchRequest, Taint,
+    ApprovalToken, EgressEntry, FetchRequest, ForgetRequest, PauseRequest, ProfileAdd,
+    ProfileRemove, SearchRequest, Taint,
 };
 use neuroos_taint::TaintFlags;
 use serde_json::{Value, json};
@@ -18,6 +18,9 @@ use crate::actor::AuditActor;
 use crate::approval::{self, Approval, Verdict};
 use crate::dispatch::KernelSkills;
 use crate::keys::SecretKey;
+
+/// How long a fetch token is valid (Architecture §8.4: single use, short-lived).
+const TOKEN_LIFETIME_NS: u64 = 120 * 1_000_000_000;
 
 /// Longest pause `privacy.pause` accepts (matches its manifest schema).
 pub const MAX_PAUSE_MINUTES: u64 = 480;
@@ -60,17 +63,18 @@ impl ControlSkills {
         self
     }
 
-    /// Gives the skills a C7 fetcher client and fetch.key for `web.fetch` and `web.search` (Phase 8).
+    /// Gives the skills a C7 fetcher client and fetch.key for `web.fetch` and `web.search`
+    /// (Phase 8). With no key the web skills fail with `fetch_key_unavailable`.
     #[must_use]
     pub fn with_fetcher(
         mut self,
         fetcher: Arc<ReconnectingClient>,
-        key: Arc<SecretKey>,
+        key: Option<Arc<SecretKey>>,
         audit: Arc<AuditActor>,
         deadline: Duration,
     ) -> Self {
         self.fetcher = Some((fetcher, deadline));
-        self.fetch_key = Some(key);
+        self.fetch_key = key;
         self.audit_actor = Some(audit);
         self
     }
@@ -172,137 +176,122 @@ impl ControlSkills {
 
     /// FR-FET-01/04: fetch one approved web link via C7 and record to egress ledger.
     async fn web_fetch(&self, action_id: &str, args: &Value) -> Result<Value, String> {
-        let (fetcher, deadline) = self.fetcher.as_ref().ok_or("fetcher_unavailable")?;
-        let key = self.fetch_key.as_ref().ok_or("fetch_key_unavailable")?;
         let url = args["url"].as_str().ok_or("bad_args")?;
-
-        let now_ns = neuroos_common::time::now_ns().map_err(|e| e.to_string())?;
-        let expires_at_ns = now_ns.saturating_add(120 * 1_000_000_000);
-        let mut nonce = [0u8; 16];
-        getrandom::fill(&mut nonce).map_err(|e| e.to_string())?;
-
-        let action_bytes = uuid::Uuid::parse_str(action_id)
-            .map(|u| *u.as_bytes())
-            .unwrap_or([0u8; 16]);
-
-        let canonical_args = format!(r#"{{"url":"{url}"}}"#);
-        let args_hash = approval::args_hash(&canonical_args);
-
-        let app = Approval {
-            action_id: action_bytes,
-            nonce,
-            capability: "web.fetch".to_string(),
-            args_hash,
-            verdict: Verdict::Allow,
-            expires_at_ns,
-        };
-        let token_mac = approval::issue(key, &app).map_err(|e| e.to_string())?;
-
-        let token = ApprovalToken {
-            nonce: nonce.to_vec(),
-            expires_at_ns,
-            mac: token_mac.0.to_vec(),
-            action_id: action_bytes.to_vec(),
-        };
-
+        let token = self.sign("web.fetch", action_id, &format!(r#"{{"url":"{url}"}}"#))?;
         let req = FetchRequest {
             url: url.to_string(),
             token: Some(token),
         };
-
-        let client = fetcher.get().await.map_err(|_| "fetcher_unavailable")?;
-        let resp = client
-            .call(Body::FetchRequest(req), *deadline)
+        self.call_fetcher(action_id, Body::FetchRequest(req), url)
             .await
-            .map_err(|e| format!("fetch_failed: {e}"))?;
-
-        if let Body::FetchResult(result) = resp {
-            if let Some(actor) = &self.audit_actor {
-                for entry in &result.egress {
-                    let _ = actor
-                        .egress_append(
-                            entry.at_ns,
-                            action_id.to_string(),
-                            entry.host.clone(),
-                            entry.sent_text.clone(),
-                            entry.bytes_out,
-                            entry.bytes_in,
-                        )
-                        .await;
-                }
-            }
-            Ok(json!({ "spool_files": result.spool_files }))
-        } else {
-            Err("unexpected_fetcher_response".into())
-        }
     }
 
     /// FR-FET-05: run one approved web search via C7 and record to egress ledger.
     async fn web_search(&self, action_id: &str, args: &Value) -> Result<Value, String> {
-        let (fetcher, deadline) = self.fetcher.as_ref().ok_or("fetcher_unavailable")?;
-        let key = self.fetch_key.as_ref().ok_or("fetch_key_unavailable")?;
         let query = args["query"].as_str().ok_or("bad_args")?;
+        let token = self.sign(
+            "web.search",
+            action_id,
+            &format!(r#"{{"query":"{query}"}}"#),
+        )?;
+        let req = SearchRequest {
+            query: query.to_string(),
+            max_pages: neuroos_common::search::SEARCH_RESULT_PAGES,
+            token: Some(token),
+        };
+        self.call_fetcher(action_id, Body::SearchRequest(req), query)
+            .await
+    }
 
+    /// Signs a single-use token binding exactly `capability` and `canonical_args`
+    /// (Architecture §8.4). Without `fetch.key` there is no token and no web skill (A-03).
+    fn sign(
+        &self,
+        capability: &str,
+        action_id: &str,
+        canonical_args: &str,
+    ) -> Result<ApprovalToken, String> {
+        let key = self.fetch_key.as_ref().ok_or("fetch_key_unavailable")?;
         let now_ns = neuroos_common::time::now_ns().map_err(|e| e.to_string())?;
-        let expires_at_ns = now_ns.saturating_add(120 * 1_000_000_000);
+        let expires_at_ns = now_ns.saturating_add(TOKEN_LIFETIME_NS);
         let mut nonce = [0u8; 16];
         getrandom::fill(&mut nonce).map_err(|e| e.to_string())?;
-
         let action_bytes = uuid::Uuid::parse_str(action_id)
             .map(|u| *u.as_bytes())
             .unwrap_or([0u8; 16]);
-
-        let canonical_args = format!(r#"{{"query":"{query}"}}"#);
-        let args_hash = approval::args_hash(&canonical_args);
-
         let app = Approval {
             action_id: action_bytes,
             nonce,
-            capability: "web.search".to_string(),
-            args_hash,
+            capability: capability.to_string(),
+            args_hash: approval::args_hash(canonical_args),
             verdict: Verdict::Allow,
             expires_at_ns,
         };
-        let token_mac = approval::issue(key, &app).map_err(|e| e.to_string())?;
-
-        let token = ApprovalToken {
+        let mac = approval::issue(key, &app).map_err(|e| e.to_string())?;
+        Ok(ApprovalToken {
             nonce: nonce.to_vec(),
             expires_at_ns,
-            mac: token_mac.0.to_vec(),
+            mac: mac.0.to_vec(),
             action_id: action_bytes.to_vec(),
-        };
+        })
+    }
 
-        let req = SearchRequest {
-            query: query.to_string(),
-            max_pages: 2,
-            token: Some(token),
-        };
-
+    /// Sends one request to C7 and writes every request it reports to the egress ledger
+    /// (R0-2, FR-FET-09). If the call breaks after C7 may have sent something (time out,
+    /// lost connection), an `unconfirmed` line with the approved text is written instead,
+    /// so the ledger never shows less than may have left. A ledger that cannot be written
+    /// fails the action (rules.md §6.5).
+    async fn call_fetcher(&self, action_id: &str, body: Body, sent: &str) -> Result<Value, String> {
+        let (fetcher, deadline) = self.fetcher.as_ref().ok_or("fetcher_unavailable")?;
         let client = fetcher.get().await.map_err(|_| "fetcher_unavailable")?;
-        let resp = client
-            .call(Body::SearchRequest(req), *deadline)
-            .await
-            .map_err(|e| format!("search_failed: {e}"))?;
-
-        if let Body::FetchResult(result) = resp {
-            if let Some(actor) = &self.audit_actor {
-                for entry in &result.egress {
-                    let _ = actor
-                        .egress_append(
-                            entry.at_ns,
-                            action_id.to_string(),
-                            entry.host.clone(),
-                            entry.sent_text.clone(),
-                            entry.bytes_out,
-                            entry.bytes_in,
-                        )
-                        .await;
-                }
+        let result = match client.call(body, *deadline).await {
+            Ok(Body::FetchResult(r)) => r,
+            Ok(_) => return Err("unexpected_fetcher_response".into()),
+            // C7 refused before any network use: nothing left the machine.
+            Err(e @ IpcError::Remote { .. }) => return Err(format!("fetch_failed: {e}")),
+            Err(e) => {
+                let now = neuroos_common::time::now_ns().unwrap_or_default();
+                let unconfirmed = EgressEntry {
+                    host: "unconfirmed".to_string(),
+                    sent_text: sent.to_string(),
+                    bytes_out: 0,
+                    bytes_in: 0,
+                    at_ns: now,
+                };
+                self.record_egress(action_id, &[unconfirmed]).await?;
+                return Err(format!("fetch_failed: {e}"));
             }
-            Ok(json!({ "spool_files": result.spool_files }))
-        } else {
-            Err("unexpected_fetcher_response".into())
+        };
+        self.record_egress(action_id, &result.egress).await?;
+        Ok(json!({
+            "spool_files": result.spool_files,
+            "requests": result.egress.len(),
+        }))
+    }
+
+    async fn record_egress(&self, action_id: &str, entries: &[EgressEntry]) -> Result<(), String> {
+        let actor = self.audit_actor.as_ref().ok_or("ledger_unavailable")?;
+        let mut failed = false;
+        for e in entries {
+            if let Err(err) = actor
+                .egress_append(
+                    e.at_ns,
+                    action_id.to_string(),
+                    e.host.clone(),
+                    e.sent_text.clone(),
+                    e.bytes_out,
+                    e.bytes_in,
+                )
+                .await
+            {
+                tracing::error!(error = %err, "egress ledger write failed");
+                failed = true;
+            }
         }
+        if failed {
+            return Err("ledger_write_failed".into());
+        }
+        Ok(())
     }
 }
 

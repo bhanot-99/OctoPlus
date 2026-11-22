@@ -586,44 +586,60 @@ impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
     }
 }
 
+/// The host the dialog names for a link. It ends where C7's (WHATWG) parser ends it,
+/// including at `\`; an address with user info is never fetched (C7 refuses it), so the
+/// dialog says so instead of naming either side of the `@`.
 fn extract_host(url: &str) -> String {
     let s = url
         .strip_prefix("https://")
         .or_else(|| url.strip_prefix("http://"))
         .unwrap_or(url);
-    let host = s.split(&['/', ':', '?', '#'][..]).next().unwrap_or("web");
+    let authority = s.split(&['/', '\\', '?', '#'][..]).next().unwrap_or("");
+    if authority.contains('@') {
+        return "invalid address".to_string();
+    }
+    let host = authority.split(':').next().unwrap_or("");
     if host.is_empty() {
         "web".to_string()
     } else {
-        host.to_string()
+        host.to_ascii_lowercase()
+    }
+}
+
+/// What the dialog says will leave the machine for a web skill (FR-FET-05, design.md §6):
+/// the host or provider, the exact text, and how many result pages are read.
+#[must_use]
+pub fn egress_for(capability: &str, args: &serde_json::Value) -> Option<Egress> {
+    match capability {
+        "web.fetch" => {
+            let url = args["url"].as_str().unwrap_or("");
+            let host = extract_host(url);
+            Some(Egress {
+                provider: host,
+                query: url.to_string(),
+                pages: 0,
+                editable: false,
+            })
+        }
+        "web.search" => {
+            let query = args["query"].as_str().unwrap_or("");
+            // The same provider and page count C7 uses (audit A-09: it said "searxng"
+            // and 1 page while C7 sent the query elsewhere and read 2).
+            Some(Egress {
+                provider: neuroos_common::search::SEARCH_PROVIDER.to_string(),
+                query: query.to_string(),
+                pages: neuroos_common::search::SEARCH_RESULT_PAGES,
+                editable: true,
+            })
+        }
+        _ => None,
     }
 }
 
 impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
     fn dialog_request(&self, a: &Action<'_>, items: Vec<Item>) -> DialogRequest {
         let (skill, tier, args, meta) = (a.skill, a.tier, a.args, a.meta);
-        let egress = match skill.capability.as_str() {
-            "web.fetch" => {
-                let url = args["url"].as_str().unwrap_or("");
-                let host = extract_host(url);
-                Some(Egress {
-                    provider: host,
-                    query: url.to_string(),
-                    pages: 0,
-                    editable: false,
-                })
-            }
-            "web.search" => {
-                let query = args["query"].as_str().unwrap_or("");
-                Some(Egress {
-                    provider: "searxng".to_string(),
-                    query: query.to_string(),
-                    pages: 1,
-                    editable: true,
-                })
-            }
-            _ => None,
-        };
+        let egress = egress_for(&skill.capability, args);
         let params = if items.is_empty() && egress.is_none() {
             args.as_object()
                 .map(|m| {
@@ -885,4 +901,36 @@ fn hex(bytes: &[u8]) -> String {
             let _ = write!(s, "{b:02x}");
             s
         })
+}
+
+#[cfg(test)]
+mod egress_tests {
+    use super::*;
+
+    /// Regression (audit A-09): the dialog names the provider and page count C7 really uses.
+    #[test]
+    fn search_dialog_names_the_real_provider_and_page_count() {
+        let e = egress_for("web.search", &serde_json::json!({"query": "dry scalp"})).unwrap();
+        assert_eq!(e.provider, neuroos_common::search::SEARCH_PROVIDER);
+        assert_eq!(e.pages, neuroos_common::search::SEARCH_RESULT_PAGES);
+        assert_eq!(e.query, "dry scalp");
+        assert!(e.editable);
+    }
+
+    #[test]
+    fn fetch_dialog_names_the_host_the_fetcher_contacts() {
+        let host = |u: &str| {
+            egress_for("web.fetch", &serde_json::json!({ "url": u }))
+                .unwrap()
+                .provider
+        };
+        assert_eq!(host("https://Example.com:443/a?b#c"), "example.com");
+        assert_eq!(host("https://evil.example\\good.example/"), "evil.example");
+        assert_eq!(
+            host("https://good.example@evil.example/"),
+            "invalid address"
+        );
+        assert_eq!(host("https:///nohost"), "web");
+        assert!(egress_for("system.cleanup", &serde_json::json!({})).is_none());
+    }
 }

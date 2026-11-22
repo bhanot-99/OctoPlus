@@ -474,14 +474,21 @@ pub fn init_with(
 
     let fetch_key_path = kpaths.config_dir.join("fetch.key");
     let etc_key_path = std::path::Path::new("/etc/neuroos/fetch.key");
+    // No built-in fallback (audit A-03): a fixed key is public, so anyone reaching C7 could
+    // forge approvals. Without a key the kernel still runs; only the web skills are off.
     let fetch_key = if fetch_key_path.exists() {
-        keys::load(&fetch_key_path)
-            .map_err(|e| neuroos_health::ServiceError::Custom(format!("fetch.key: {e}")))?
+        Some(
+            keys::load(&fetch_key_path)
+                .map_err(|e| neuroos_health::ServiceError::Custom(format!("fetch.key: {e}")))?,
+        )
     } else if etc_key_path.exists() {
-        keys::load(etc_key_path)
-            .map_err(|e| neuroos_health::ServiceError::Custom(format!("fetch.key: {e}")))?
+        Some(
+            keys::load(etc_key_path)
+                .map_err(|e| neuroos_health::ServiceError::Custom(format!("fetch.key: {e}")))?,
+        )
     } else {
-        crate::keys::SecretKey::from_bytes([0x5A; 32])
+        tracing::warn!("no fetch.key: web.fetch and web.search are unavailable");
+        None
     };
 
     let control = ControlSkills::new(monitor_client, ctx.config.deadlines.control())
@@ -491,9 +498,12 @@ pub fn init_with(
         )
         .with_fetcher(
             fetcher_client,
-            Arc::new(fetch_key),
+            fetch_key.map(Arc::new),
             Arc::new(audit_actor.clone()),
-            Duration::from_millis(ctx.config.deadlines.fetch_ms),
+            // C7 spends at most `fetch_ms` on one whole request (search pages included) and
+            // then answers; the extra control margin covers the IPC round trip, so C6 never
+            // gives up while C7 is still reporting what it sent (R0-2).
+            Duration::from_millis(ctx.config.deadlines.fetch_ms) + ctx.config.deadlines.control(),
         );
 
     let dispatcher = Arc::new(build_dispatcher(
