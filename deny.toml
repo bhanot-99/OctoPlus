@@ -31,7 +31,8 @@ unused-allowed-license = "allow"
 exceptions = [
     { allow = ["Apache-2.0 WITH LLVM-exception"], crate = "target-lexicon" },
     # ADR-0007 (owner accepted 2026-11-15, risk R-07, PRD §10): COSMIC's window protocol
-    # bindings are GPL-3.0-only. Personal install; the crate is used by C1 alone.
+    # bindings are GPL-3.0-only; used by C1 alone. R-07 closed by D-44 (2026-11-22): the
+    # project itself is GPL-3.0-only, so binaries that include this crate are too.
     { allow = ["GPL-3.0-only"], crate = "cosmic-protocols" },
 ]
 

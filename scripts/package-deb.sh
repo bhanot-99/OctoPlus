@@ -166,7 +166,10 @@ Source: https://github.com/bhanot-99/Semantic-NeuroOS
 
 Files: *
 Copyright: 2026 Semantic-NeuroOS Contributors
-License: MIT or Apache-2.0
+License: GPL-3.0-only
+ On Debian systems the full text is in /usr/share/common-licenses/GPL-3.
+ Third-party components and model weights keep their own licences
+ (docs/LICENSES.md in the source).
 EOF
 chmod 0644 "$staging/usr/share/doc/semantic-neuroos/copyright"
 

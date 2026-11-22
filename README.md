@@ -678,7 +678,7 @@ Development is delivered across 11 structured phases:
 | **7** | **Voice Pipeline (C2)** | ✅ Done | PipeWire 16 kHz capture, Silero VAD, openWakeWord, whisper.cpp ASR, Kokoro fp32 TTS (`af_heart`), barge-in. |
 | **8** | **Controlled Fetcher (C7)** | 🟨 Built, not signed off | Real HTTPS transport added in the 2026-11-22 audit (it shipped with a mock); SSRF gate, token verification, search provider. Needs the owner's sudo deploy and a live lookup. |
 | **9** | **Integration & Soak** | 🟨 Partly verified | Chaos and recovery, live input/voice checks and measured benchmarks pass; the 24 h soak and the two-week owner trial have **not** been run. |
-| **10** | **Packaging & Release** | 🟨 Open items | `.deb` (unsigned), installer/uninstaller, `neuroosctl init`, runbooks. Open: licence decision, fresh-VM install, rebuild of the package. |
+| **10** | **Packaging & Release** | 🟨 Open items | `.deb` (unsigned), installer/uninstaller, `neuroosctl init`, runbooks. Open: fresh-VM install, rebuild of the package. Licence: GPL-3.0-only (D-44). |
 
 Current, evidence-based status: [`reports/hardening-audit-2026-11-22.md`](reports/hardening-audit-2026-11-22.md).
 
@@ -701,4 +701,4 @@ For detailed implementation and design documents, refer to the project specifica
 
 ## License
 
-See [`LICENSE`](LICENSE) and [`docs/LICENSES.md`](docs/LICENSES.md). **Open owner decision:** `neuroos-monitor` statically links the GPL-3.0-only `cosmic-protocols` crate, so the MIT/Apache-2.0 terms in `LICENSE` may not fit binaries that include it (risk R-07). Model weights and third-party components: [`models/manifest.toml`](models/manifest.toml), [`deny.toml`](deny.toml).
+**GPL-3.0-only** — see [`LICENSE`](LICENSE). The owner chose GPL-3.0 on 2026-11-22 (D-44) because `neuroos-monitor` statically links the GPL-3.0-only `cosmic-protocols` crate and the voice part uses the GPL-3.0 `espeak-ng` library (risk R-07, now closed). Third-party components and model weights keep their own licences: [`docs/LICENSES.md`](docs/LICENSES.md), [`models/manifest.toml`](models/manifest.toml), [`deny.toml`](deny.toml).

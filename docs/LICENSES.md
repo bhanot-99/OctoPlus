@@ -25,7 +25,7 @@ This document records license classifications and compliance obligations for all
 
 - **OQ-06 ("Personal install only, or public release"):** Formally resolved and closed as **Personal Use & Source-Available Self-Hosted Release**.
 - **Risk R-06 Resolution:** Because deployment is scoped to self-hosted personal operation, the openWakeWord stock `hey_jarvis` model is fully compliant. Commercial redistributors must train a custom model prior to distribution.
-- **Risk R-07 — open, owner decision (audit 2026-11-22):** the earlier text said all GPL-3.0 parts are dynamically linked; that is not true for `cosmic-protocols`, which is compiled into `neuroos-monitor`. The root `LICENSE` offers the project under MIT or Apache-2.0, which may not be the right terms for a binary that includes GPL-3.0-only code, and the `.deb` distributes such binaries. For a personal install nothing is distributed; before any release the owner decides between licensing the affected binaries (or the project) under GPL-3.0, or replacing `cosmic-protocols` (ADR-0007). Not legal advice; a licence review is recommended.
+- **Risk R-07 — closed (owner decision D-44, 2026-11-22):** `cosmic-protocols` (GPL-3.0-only) is compiled into `neuroos-monitor` and `espeak-ng` (GPL-3.0) is linked by `neuroos-voice`. The project is now licensed **GPL-3.0-only** (`LICENSE`, `Cargo.toml`, the `.deb` copyright file), so every binary built from it, and the `.deb`, are distributed under GPL-3.0 with their source. All other allowed dependency licences (MIT, Apache-2.0, BSD-2/3-Clause, ISC, Zlib, Unicode-3.0, MPL-2.0; `deny.toml`) are compatible with GPL-3.0. Model weights are data with their own licences (`models/manifest.toml`). Not legal advice.
 
 ---
 

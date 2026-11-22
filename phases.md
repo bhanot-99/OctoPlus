@@ -594,7 +594,7 @@ flowchart LR
 
 - [~] Install, uninstall and purge verified in a staging folder (`test-install-uninstall.sh`, now also checks drop-in folder modes); **not in a fresh VM.**
 - [ ] Runbooks followed once by the owner: **not done** (written, not followed).
-- [ ] Licence: **owner decision needed.** `LICENSE` says MIT/Apache-2.0, but `neuroos-monitor` statically links the GPL-3.0-only `cosmic-protocols` crate and `docs/LICENSES.md` wrongly says GPL parts are dynamically linked.
+- [x] Licence: the project is **GPL-3.0-only** (owner decision D-44, 2026-11-22), which fits the statically linked GPL-3.0-only `cosmic-protocols` crate and `espeak-ng`; `docs/LICENSES.md` corrected.
 - [ ] Release package: the 2026-11-21 `.deb` carries the mock-transport fetcher; rebuild after sign-off. Reproducible-build check compares no hashes (it checks NX/PIE only).
 
 ---

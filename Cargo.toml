@@ -29,7 +29,7 @@ exclude = ["tests/security/netban-probe", "tests/spikes/s05-probe"]
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.100"
-license = "MIT OR Apache-2.0"
+license = "GPL-3.0-only"
 publish = false
 
 # Only crates from the Architecture §14 allowlist, and only once a crate uses them. A new entry needs a justification (rules.md §5).
