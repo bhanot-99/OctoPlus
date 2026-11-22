@@ -41,10 +41,17 @@ lint: build
     shellcheck scripts/*.sh tests/scripts/*.sh
     cargo machete
 
-# Unit, property and contract tests.
+# Unit, property and contract tests. Live tests stop and start the user's units; if
+# neuroos.target was running before, it is started again afterwards, pass or fail.
 test: build
+    #!/usr/bin/env bash
+    set -euo pipefail
+    was_active=0
+    systemctl --user is-active --quiet neuroos.target && was_active=1
+    restore() { if [[ $was_active == 1 ]]; then systemctl --user start neuroos.target || true; fi; }
+    trap restore EXIT
     cargo nextest run --workspace --locked --no-tests=fail
-    cd cpp && ctest --preset {{cpp_preset}} --no-tests=error
+    (cd cpp && ctest --preset {{cpp_preset}} --no-tests=error)
     tests/scripts/fetch-models-test.sh
     # C7's real HTTPS transport against a local server in a private network namespace (rules.md §8.4).
     tests/scripts/fetcher-netns-test.sh

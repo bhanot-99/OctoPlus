@@ -23,11 +23,30 @@ fn runtime_root() -> PathBuf {
 
 #[tokio::test]
 async fn local_a_voice_command_gets_a_preamble_then_speakable_sentences() {
+    // Other live tests stop and restart units; bring the stack up and wait until it really
+    // answers (not a status line) instead of skipping or racing a restart (audit A-22).
+    let _ = std::process::Command::new("systemctl")
+        .args(["--user", "start", "neuroos.target"])
+        .status();
+    let ctl = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .unwrap_or_default()
+        .join(".local/opt/neuroos/bin/neuroosctl");
+    let ready = (0..90).any(|_| {
+        let ok = std::process::Command::new(&ctl)
+            .args(["ask", "--once", "Say OK"])
+            .output()
+            .is_ok_and(|o| o.status.success());
+        if !ok {
+            std::thread::sleep(Duration::from_secs(2));
+        }
+        ok
+    });
+    assert!(ready, "the installed stack did not answer within 180 s");
     let sock = paths::socket_path(&runtime_root(), Part::Knowledge, "knowledge");
-    let Ok(client) = Client::connect(&sock, 1 << 20).await else {
-        eprintln!("skipping: the stack is not running");
-        return;
-    };
+    let client = Client::connect(&sock, 1 << 20)
+        .await
+        .expect("knowledge socket after the stack answered");
     let t0 = Instant::now();
     let mut stream = client
         .stream(
