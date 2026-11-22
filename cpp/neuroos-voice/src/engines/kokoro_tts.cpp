@@ -164,7 +164,7 @@ Result<std::unique_ptr<Tts>> MakeKokoroTts(const KokoroPaths& paths) {
     return Error{.message = "cannot start the phonemizer", .retryable = false, .code = 7};
   }
   try {
-    // Memory first (PRD §6.2: C2 has 620 MiB): no pre-packed weight copies and no arena that
+    // Memory first (PRD §6.2: C2 has 800 MiB): no pre-packed weight copies and no arena that
     // keeps what a sentence needed after the sentence.
     auto so = engines::SessionOptions(2);
     so.DisableCpuMemArena();

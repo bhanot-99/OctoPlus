@@ -239,7 +239,7 @@ mem_path = sys.argv[4]
 # PRD §6.2 RSS budgets in MiB (steady state; the soak opens no approval dialog).
 BUDGET_MIB = {"neuroos-healthd": 15, "neuroos-storage": 320, "neuroos-inference": 2800,
               "neuroos-monitor": 30, "neuroos-kernel": 15, "neuroos-knowledge": 60,
-              "neuroos-voice": 620}
+              "neuroos-voice": 800}
 mem = {}
 with open(mem_path) as f:
     for row in csv.DictReader(f):

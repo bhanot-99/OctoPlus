@@ -15,8 +15,9 @@ use serde::Deserialize;
 /// Hard limit (MemoryMax) for C1 monitor from PRD §6.2 row C1 monitor (48 MiB).
 pub const MEMORY_MAX_MONITOR: &str = "48M";
 
-/// Hard limit (MemoryMax) for C2 voice from PRD §6.2 row C2 voice (768 MiB).
-pub const MEMORY_MAX_VOICE: &str = "768M";
+/// Hard limit (MemoryMax) for C2 voice from PRD §6.2 row C2 voice (960 MiB; owner decision
+/// D-45, 2026-11-22: budget 800 MiB while speaking).
+pub const MEMORY_MAX_VOICE: &str = "960M";
 
 /// Hard limit (MemoryMax) for C3 storage from PRD §6.2 row C3 storage (400 MiB; ADR-0012 item 10).
 pub const MEMORY_MAX_STORAGE: &str = "400M";

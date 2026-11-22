@@ -230,7 +230,8 @@ TEST(LocalMemory, EachEngineAndTheWholeStayInsideTheBudget) {
       "RSS MiB: base %.0f, +vad %.0f, +wake %.0f, +stt %.0f, +tts %.0f, after a turn %.0f\n", base,
       after_vad, after_wake, after_stt, after_tts, steady);
 #ifdef NDEBUG
-  EXPECT_LT(steady, 600.0) << "PRD §6.2: C2 steady state must stay under its 620 MiB budget";
+  // At rest C2 measured about 460-480 MiB; its 800 MiB budget (D-45) is for speaking.
+  EXPECT_LT(steady, 600.0) << "PRD §6.2: C2 at rest stays well under its 800 MiB budget";
 #endif
 }
 

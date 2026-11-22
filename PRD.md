@@ -352,7 +352,7 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | Part | RSS budget | Hard limit (`MemoryMax`) | Label |
 | :--- | :--- | :--- | :--- |
 | C1 monitor | 30 MiB | 48 MiB | T (P: 9 MiB) |
-| C2 voice | 620 MiB steady, 480 MiB idle | 768 MiB | P — re-measure over a full 4 h soak |
+| C2 voice | 800 MiB while speaking (about 460–480 MiB at rest) | 960 MiB | M: 766 MiB peak over six spoken answers with speech pieces of at most 60 characters (2026-11-22, ADR-0015 addendum); owner decision D-45 raised it from 620 / 768 MiB. Re-checked by the 24 h soak |
 | C3 storage | 320 MiB | 400 MiB | M: 309 MiB process RSS with the real embedding model (bge-small-en-v1.5, about 234 MiB before any data) and the full 30,000-chunk matrix and index, 4 s of queries (Phase 4, `reports/bench/p4-search-*.json`, ADR-0012 item 10); restated from ADR-0004 |
 | C4 inference | 2,800 MiB | 3,220 MiB | M: 2,770 MiB peak for one turn, Qwen3-4B Q4_K_M, `-c 2048`, weight repacking off (S-02, ADR-0005); 2,734 MiB with the 8-bit K cache, 2026-11-22 (ADR-0005 addendum) |
 | C4 VRAM (GPU path only) | 3,100 MiB | checked before load: less free → CPU path | M: 3,010 MiB peak, one turn, `-c 2048`, RTX 3050 4 GB (S-02, ADR-0008 addendum) |
@@ -360,7 +360,7 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | C6 kernel | 15 MiB (+ 55 MiB while a dialog is open) | 128 MiB | M: dialog RSS 49.8 MiB, cgroup hit the old 64 MiB limit (Phase 2 gate; ADR-0010 item 13) |
 | C7 fetcher | 15 MiB | 48 MiB | T |
 | healthd | 15 MiB | 32 MiB | T (P: 9 MiB) |
-| **Total** | **≤ 4,000 MiB** (3,875 MiB with the budgets above) | — | T — ADR-0005 |
+| **Total** | **≤ 4,000 MiB** measured together (the budgets above add up to 4,055 MiB; they are per-part ceilings, not all reached at once) | — | T — ADR-0005 |
 
 - **Idle CPU:** all parts together ≤ 3% of total CPU; C2 alone < 3.5% of one core against a real microphone (P: 1.6–3.0%).
 - **Live chunk cap (C3):** 30,000 chunks (≈ 46 MiB of vectors in memory).

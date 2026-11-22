@@ -77,7 +77,7 @@ impl Part {
     pub const fn rss_budget_mib(self) -> u64 {
         match self {
             Part::Monitor => 30,
-            Part::Voice => 620,
+            Part::Voice => 800,
             Part::Storage => 320,
             Part::Inference => 2800,
             Part::Knowledge => 60,
