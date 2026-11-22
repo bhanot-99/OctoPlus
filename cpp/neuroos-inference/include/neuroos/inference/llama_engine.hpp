@@ -21,6 +21,10 @@ class LlamaEngine : public Engine {
                                                    std::uint32_t ctx, std::uint32_t batch,
                                                    std::uint32_t threads);
 
+  // Context settings for Load: sizes, threads, and an 8-bit K cache.
+  static llama_context_params ContextParams(std::uint32_t ctx, std::uint32_t batch,
+                                            std::uint32_t threads);
+
   ~LlamaEngine() override;
   LlamaEngine(const LlamaEngine&) = delete;
   LlamaEngine& operator=(const LlamaEngine&) = delete;

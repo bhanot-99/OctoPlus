@@ -98,6 +98,18 @@ LocalFixture CreateLocalServer(const std::string& prefix,
   return f;
 }
 
+// The K cache is stored at 8 bits (ADR-0005 addendum, 2026-11-22) to keep C4 inside its
+// PRD §6.2 budget. V stays f16 so flash attention can stay off (it slowed prefill here).
+TEST(LocalInferenceTest, local_ContextParamsStoreTheKCacheAtEightBits) {
+  const llama_context_params p = LlamaEngine::ContextParams(2048, 512, 8);
+  EXPECT_EQ(p.n_ctx, 2048U);
+  EXPECT_EQ(p.n_batch, 512U);
+  EXPECT_EQ(p.n_threads, 8);
+  EXPECT_EQ(p.type_k, GGML_TYPE_Q8_0);
+  EXPECT_EQ(p.type_v, GGML_TYPE_F16);
+  EXPECT_EQ(p.flash_attn_type, LLAMA_FLASH_ATTN_TYPE_DISABLED);
+}
+
 TEST(LocalInferenceTest, local_RealModelGeneratesTokens) {
   const auto model_path = GetRealModelPath();
   ASSERT_TRUE(std::filesystem::exists(model_path)) << "Model file not found at " << model_path;

@@ -354,7 +354,7 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | C1 monitor | 30 MiB | 48 MiB | T (P: 9 MiB) |
 | C2 voice | 620 MiB steady, 480 MiB idle | 768 MiB | P — re-measure over a full 4 h soak |
 | C3 storage | 320 MiB | 400 MiB | M: 309 MiB process RSS with the real embedding model (bge-small-en-v1.5, about 234 MiB before any data) and the full 30,000-chunk matrix and index, 4 s of queries (Phase 4, `reports/bench/p4-search-*.json`, ADR-0012 item 10); restated from ADR-0004 |
-| C4 inference | 2,800 MiB | 3,220 MiB | M: 2,770 MiB peak for one turn, Qwen3-4B Q4_K_M, `-c 2048`, weight repacking off (S-02, ADR-0005) |
+| C4 inference | 2,800 MiB | 3,220 MiB | M: 2,770 MiB peak for one turn, Qwen3-4B Q4_K_M, `-c 2048`, weight repacking off (S-02, ADR-0005); 2,734 MiB with the 8-bit K cache, 2026-11-22 (ADR-0005 addendum) |
 | C4 VRAM (GPU path only) | 3,100 MiB | checked before load: less free → CPU path | M: 3,010 MiB peak, one turn, `-c 2048`, RTX 3050 4 GB (S-02, ADR-0008 addendum) |
 | C5 knowledge | 60 MiB | 96 MiB | T |
 | C6 kernel | 15 MiB (+ 55 MiB while a dialog is open) | 128 MiB | M: dialog RSS 49.8 MiB, cgroup hit the old 64 MiB limit (Phase 2 gate; ADR-0010 item 13) |

@@ -17,6 +17,22 @@
 
 namespace neuroos::inference {
 
+llama_context_params LlamaEngine::ContextParams(std::uint32_t ctx, std::uint32_t batch,
+                                                std::uint32_t threads) {
+  llama_context_params cparams = llama_context_default_params();
+  cparams.n_ctx = ctx;
+  cparams.n_batch = batch;
+  cparams.n_threads = static_cast<std::int32_t>(threads);
+  cparams.n_threads_batch = static_cast<std::int32_t>(threads);
+  // 8-bit K cache (ADR-0005 addendum, 2026-11-22): about 54 MiB less at -c 2048, so C4 stays
+  // inside its PRD §6.2 budget; greedy answers were identical and first chunks +3 %. An 8-bit
+  // V cache too saves 137 MiB but needs flash attention, which cost +18 % on this CPU.
+  cparams.type_k = GGML_TYPE_Q8_0;
+  cparams.type_v = GGML_TYPE_F16;
+  cparams.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_DISABLED;
+  return cparams;
+}
+
 Result<std::unique_ptr<LlamaEngine>> LlamaEngine::Load(const std::filesystem::path& model_path,
                                                        std::uint32_t ctx, std::uint32_t batch,
                                                        std::uint32_t threads) {
@@ -34,12 +50,7 @@ Result<std::unique_ptr<LlamaEngine>> LlamaEngine::Load(const std::filesystem::pa
     };
   }
 
-  llama_context_params cparams = llama_context_default_params();
-  cparams.n_ctx = ctx;
-  cparams.n_batch = batch;
-  cparams.n_threads = static_cast<std::int32_t>(threads);
-  cparams.n_threads_batch = static_cast<std::int32_t>(threads);
-
+  const llama_context_params cparams = ContextParams(ctx, batch, threads);
   llama_context* lctx = llama_init_from_model(model, cparams);
   if (lctx == nullptr) {
     llama_model_free(model);

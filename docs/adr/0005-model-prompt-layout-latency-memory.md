@@ -78,3 +78,15 @@ Two findings changed the plan:
 | BitNet b1.58 2B4T | Failed the pin-time correctness check (perplexity 101 vs 15–20). |
 | Keep the 512-token layout | ≈ 6.1 s voice wait on CPU. |
 | Keep repacking on | +1.6 GB RSS (over the cap) and slower prefill on this build. |
+
+## Addendum 2026-11-22: 8-bit K cache
+
+Measured on the installed stack (8 fixed questions, C4 restarted for each set, greedy decoding). At `-c 2048` the f16 cache peaked at 2,788 MiB (2,813 MiB under mixed load), over the 2,800 MiB budget.
+
+| KV cache | Peak RSS | First answer chunk | Answers |
+| :--- | --: | :--- | :--- |
+| f16 / f16 (before) | 2,788 MiB | 1.0–2.75 s | — |
+| q8_0 / q8_0, flash attention on | 2,651 MiB | about +0.4 s each (+18 %) | identical, 8/8 |
+| **q8_0 K / f16 V, flash attention off (chosen)** | **2,734 MiB** | **about +0.08 s each (+3 %)** | **identical, 8/8** |
+
+An 8-bit V cache needs flash attention, which slowed prefill on this CPU. The chosen setting leaves 66 MiB of headroom; the 24 h soak re-checks it under load. Pinned by `local_ContextParamsStoreTheKCacheAtEightBits`.
