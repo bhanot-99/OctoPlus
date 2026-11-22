@@ -520,14 +520,22 @@ impl<A: AuditPort, K: KernelSkills> Dispatcher<A, K> {
             Decision::Expired => return Ok(Done::Stopped(Outcome::Expired)),
         };
 
-        // If the user edited the query in an editable egress dialog (e.g. web.search):
-        let (args_to_run, canonical_to_run, hash_to_run) = if let Some(ref q) = decision.query {
-            let edited_args = serde_json::json!({ "query": q });
-            let canonical = canonical_json(&edited_args);
-            let hash = approval::args_hash(&canonical);
-            (edited_args, canonical, hash)
-        } else {
-            (args.clone(), parsed.canonical.clone(), parsed.hash)
+        // An edited query counts only when this dialog offered an editable query (web.search),
+        // and it passes the skill's own argument schema again (length, type) before it is
+        // signed: fail closed on anything else (rules.md §6.5, audit A-16).
+        let editable = request.egress.as_ref().is_some_and(|e| e.editable);
+        let (args_to_run, canonical_to_run, hash_to_run) = match decision.query {
+            Some(ref q) if editable => {
+                let edited = serde_json::json!({ "query": q }).to_string();
+                let Ok(edited_args) = validate_args_json(&skill.args, &edited) else {
+                    return Ok(Done::Stopped(Outcome::DeniedPolicy));
+                };
+                let canonical = canonical_json(&edited_args);
+                let hash = approval::args_hash(&canonical);
+                (edited_args, canonical, hash)
+            }
+            Some(_) => return Ok(Done::Stopped(Outcome::DeniedPolicy)),
+            None => (args.clone(), parsed.canonical.clone(), parsed.hash),
         };
 
         let Ok(action_bytes) = uuid::Uuid::parse_str(&meta.action_id).map(|u| *u.as_bytes()) else {
