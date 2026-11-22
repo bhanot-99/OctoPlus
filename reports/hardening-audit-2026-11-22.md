@@ -157,7 +157,7 @@ Branch head after A-22, 2026-11-22: `cargo fmt --check` ✓ · `clippy -D warnin
 - **Licence:** a binary built from this repo contains GPL-3.0-only code while `LICENSE` says MIT/Apache-2.0. Fine for personal use; not for distribution as is. Not legal advice.
 - **FR-FET-10** (TCP 443 only) is not enforced by the kernel.
 - **Memory:** C4 went over its 2800 MiB budget (2813 MiB) under mixed load during the soak smoke run, and C2 sits at 95–98 % of 620 MiB. A real 24 h soak may hit `MemoryMax`.
-- **Voice latency:** NFR-PERF-02 fails (answer audio p50 4.5–6 s); fix needs a speech-chunking decision.
+- **Voice latency:** NFR-PERF-02 failed (answer audio p50 4.5–6 s). The owner decided D-47 (speak the first clause early); built, **not yet re-measured**. Voice approved as the base version for now (D-48).
 - **Answer quality** of the small local model: occasional wrong facts (BUG-112).
 - **Packet capture** (KPI-6) and **coverage fuzzing** not done; the 24 h soak and owner trial not run; hosted CI has not run Phases 8–10.
 - **Independent check:** every change here was built and checked by the same agent.

@@ -76,6 +76,7 @@ One line each. Older entries archived to `docs/history/decisions-pre-phase-3.md`
 
 | Date | ID | Decision | ADR |
 | :--- | :--- | :--- | :--- |
+| 2026-11-22 | D-48 | Owner approved the voice system (C2) **for now as the base version**, with room to upgrade later, after a live test of the wake phrase, a spoken turn, the new `neuroosctl voice watch` signal and the echo-loop fix (BUG-126). Known limits accepted: no echo cancellation (only the wake phrase interrupts a spoken answer; `barge_in = speech` for headphones), quiet voice at the microphone needs a sensible capture gain (mic boost was +20 dB, capture +30 dB: lowered to +10 dB and about +13 dB), the speech recogniser can hallucinate on noise, NFR-PERF-02 not re-measured after D-47, KPI-3/4/5 not run on the owner's voice, the spoken nudge (UJ-2) not yet checked. | 0015 |
 | 2026-11-22 | D-47 | Owner asked to start speech before the first whole sentence (NFR-PERF-02). The first spoken piece of an answer may end at a comma, semicolon or colon after 40 characters; later pieces stay whole sentences. Not yet measured live. | — |
 | 2026-11-22 | D-46 | Owner approved coverage fuzzing of the URL gate (nightly toolchain + `cargo-fuzz`), the nftables port rule for C7 (FR-FET-10: TCP 443 and DNS only), and the coverage and sanitizer runs. | — |
 | 2026-11-22 | D-45 | Owner: C2 voice budget 800 MiB while speaking, `MemoryMax` 960 MiB (was 620 / 768; measured peak 766 MiB with 60-character speech pieces). | 0015 |

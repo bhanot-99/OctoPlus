@@ -1,6 +1,7 @@
 # Phase 7 — Voice (C2) and spoken nudges: Report
 
 **Date:** 2026-11-18 · **Branch:** `phase-7` · **Builder:** Claude (pipeline, engines, service, C5 side, unit, tools, measurements), agy (ring buffer, sentence splitter, VAD gate, turn state machine, spoken lines, WAV reader, word error rate, Silero and openWakeWord adapters) · **Checker:** Claude (independent probes of every agy piece), agy (read-only review of Claude's code)
+**Owner decision 2026-11-22 (D-48):** the voice system is approved *for now* as the **base version** (v1), with room to upgrade. Open and accepted: no echo cancellation, a wake-phrase-only interrupt by default (BUG-126), the answer-start time after D-47 not yet measured (NFR-PERF-02), KPI-3/4/5 on the owner's voice and the spoken nudge (UJ-2) not yet run. A live signal now exists: `neuroosctl voice watch`.
 **Status:** Built and working on the real stack; gate result in §7. Owner-only items left (§8): your voice on the KPIs, the voice choice, the 4 h soak, a trial, sign-off, merge. Design calls are D-35 and ADR-0015 (Proposed), open to overturn.
 
 ## 1. Summary
