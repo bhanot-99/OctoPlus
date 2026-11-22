@@ -37,6 +37,17 @@ bool NoiseTranscript(const std::string& s) {
          t == "[music]" || t == "(music)" || t == "[noise]";
 }
 
+// Did speech just begin that should start (or interrupt) a turn? While the answer is being
+// spoken, speech counts only if the config lets speech interrupt; otherwise only the wake
+// phrase does (BUG-126: a laptop's speakers feed the answer back as "speech").
+bool SpeechStarted(const PipelineConfig& cfg, TurnState state, const VadEvent& main,
+                   const VadEvent& barge) {
+  if (state == TurnState::kSpeaking) {
+    return cfg.barge_in_by_speech && barge.started;
+  }
+  return main.started;
+}
+
 }  // namespace
 
 // ---- executors
@@ -427,8 +438,7 @@ void VoicePipeline::ProcessFrame(std::span<const std::int16_t> frame) {
     return;
   }
 
-  const bool started =
-      state == TurnState::kSpeaking ? (cfg_.barge_in_by_speech && barge.started) : main.started;
+  const bool started = SpeechStarted(cfg_, state, main, barge);
   if (started) {
     if (d_.on_trace) {
       d_.on_trace("speech_started");
