@@ -83,12 +83,15 @@ pub enum KeyError {
     /// File size is not exactly 32 bytes.
     #[error("key file must be exactly 32 bytes, got {0}")]
     WrongSize(usize),
-    /// Permissions are too permissive (must be mode 0600).
-    #[error("key file permissions must be 0600, got {0:o}")]
+    /// Permissions are too permissive: the group may only read and others nothing.
+    #[error("key file must not be group-writable or readable by others, got mode {0:o}")]
     BadPermissions(u32),
 }
 
-/// Loads a secret key from `path`, enforcing permissions mode 0600.
+/// Loads a secret key from `path`. The installers make `/etc/neuroos/fetch.key`
+/// `0640 root:neuroos` so this service's group can read it; anything wider (group write,
+/// any access for others) is refused (audit A-08: the old exact-0600 check refused the key
+/// every installer writes).
 ///
 /// # Errors
 /// Returns [`KeyError`] if the file cannot be read, has invalid permissions, or is not 32 bytes.
@@ -96,7 +99,7 @@ pub fn load_key(path: &Path) -> Result<SecretKey, KeyError> {
     let mut file = File::open(path).map_err(|e| KeyError::Io(e.to_string()))?;
     let meta = file.metadata().map_err(|e| KeyError::Io(e.to_string()))?;
     let mode = meta.permissions().mode() & 0o777;
-    if mode != 0o600 {
+    if mode & 0o027 != 0 {
         return Err(KeyError::BadPermissions(mode));
     }
     let mut buf = Vec::new();
@@ -359,8 +362,17 @@ mod tests {
             Err(KeyError::BadPermissions(0o644))
         ));
 
-        std::fs::set_permissions(file.path(), std::fs::Permissions::from_mode(0o600)).unwrap();
-        let loaded = load_key(file.path()).unwrap();
-        assert_eq!(loaded.bytes(), &[7u8; 32]);
+        for bad in [0o604, 0o660, 0o620, 0o601] {
+            std::fs::set_permissions(file.path(), std::fs::Permissions::from_mode(bad)).unwrap();
+            assert!(
+                matches!(load_key(file.path()), Err(KeyError::BadPermissions(_))),
+                "{bad:o}"
+            );
+        }
+        for good in [0o600, 0o640, 0o400, 0o440] {
+            std::fs::set_permissions(file.path(), std::fs::Permissions::from_mode(good)).unwrap();
+            let loaded = load_key(file.path()).unwrap();
+            assert_eq!(loaded.bytes(), &[7u8; 32], "{good:o}");
+        }
     }
 }

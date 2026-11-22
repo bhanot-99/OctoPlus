@@ -116,8 +116,8 @@ impl AddressPolicy {
     }
 
     /// Validates an IPv6 address against Architecture §8.6 rules:
-    /// `::/128, ::1/128, ::ffff:0:0/96` (checked after unmapping), `64:ff9b::/96, fc00::/7,
-    /// fe80::/10, ff00::/8, 2001:db8::/32`.
+    /// `::/96` (covers `::/128`, `::1/128` and IPv4-compatible), `::ffff:0:0/96` (checked
+    /// after unmapping), `64:ff9b::/96, fc00::/7, fe80::/10, ff00::/8, 2001:db8::/32`.
     pub fn validate_ipv6(ip: Ipv6Addr) -> Result<(), SsrError> {
         let segments = ip.segments();
 
@@ -127,6 +127,12 @@ impl AddressPolicy {
         }
         // ::1/128 (Loopback)
         if ip.is_loopback() {
+            return Err(SsrError::BlockedIp(IpAddr::V6(ip)));
+        }
+
+        // ::/96 (deprecated IPv4-compatible, e.g. ::7f00:1): a `sit` tunnel can carry it to
+        // the embedded IPv4 address, so it is never a public destination (audit A-04).
+        if segments[..6].iter().all(|&s| s == 0) {
             return Err(SsrError::BlockedIp(IpAddr::V6(ip)));
         }
 
@@ -184,14 +190,21 @@ impl AddressPolicy {
 }
 
 /// Parsed, validated URL representation safe for network operations.
+///
+/// Parsing uses the WHATWG parser of the `url` crate, the same one the HTTP client uses, so
+/// the host checked here is exactly the host the client connects to (no parser differential,
+/// audit A-04). IP-literal hosts are validated here because the client connects to them
+/// without asking the resolver; host names are validated after resolution
+/// ([`crate::transport`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SafeUrl {
-    /// Hostname or domain string.
+    /// Host name (lower case) or IP literal (IPv6 without brackets).
     pub host: String,
     /// Path and query string.
     pub path_and_query: String,
-    /// Canonicalized full URL string.
+    /// Canonical full URL, without fragment: the exact text that is requested.
     pub full_url: String,
+    ip: Option<IpAddr>,
 }
 
 impl SafeUrl {
@@ -203,71 +216,89 @@ impl SafeUrl {
         if raw.len() > MAX_URL_LEN {
             return Err(SsrError::UrlTooLong);
         }
-
-        // Strict prefix requirement: must start with "https://"
-        let rest = raw
-            .strip_prefix("https://")
-            .ok_or_else(|| SsrError::DisallowedScheme(raw.to_string()))?;
-
-        // Extract host + optional port and path
-        let (authority, path_and_query) = match rest.find('/') {
-            Some(idx) => (&rest[..idx], &rest[idx..]),
-            None => (rest, "/"),
-        };
-
-        if authority.is_empty() {
-            return Err(SsrError::InvalidUrl("missing host in URL".to_string()));
+        // Only the exact lower-case prefix: no scheme-relative or mixed-case tricks.
+        if !raw.starts_with("https://") {
+            return Err(SsrError::DisallowedScheme(scheme_of(raw)));
         }
+        let url = url::Url::parse(raw).map_err(|e| SsrError::InvalidUrl(e.to_string()))?;
+        Self::from_url(url)
+    }
 
-        // Check for user credentials (user:pass@)
-        if authority.contains('@') {
+    /// Resolves `location` (a redirect target) against this URL and validates the result.
+    ///
+    /// # Errors
+    /// Returns [`SsrError`] if the target is invalid or violates policy.
+    pub fn join(&self, location: &str) -> Result<Self, SsrError> {
+        if location.len() > MAX_URL_LEN {
+            return Err(SsrError::UrlTooLong);
+        }
+        let base =
+            url::Url::parse(&self.full_url).map_err(|e| SsrError::InvalidUrl(e.to_string()))?;
+        let url = base
+            .join(location)
+            .map_err(|e| SsrError::InvalidUrl(e.to_string()))?;
+        Self::from_url(url)
+    }
+
+    /// The host as an IP address when the URL names one directly.
+    #[must_use]
+    pub fn ip_literal(&self) -> Option<IpAddr> {
+        self.ip
+    }
+
+    fn from_url(mut url: url::Url) -> Result<Self, SsrError> {
+        if url.scheme() != "https" {
+            return Err(SsrError::DisallowedScheme(url.scheme().to_string()));
+        }
+        if !url.username().is_empty() || url.password().is_some() {
             return Err(SsrError::CredentialsNotAllowed);
         }
-
-        // Parse host and optional port
-        let (host, port_opt) = if authority.starts_with('[') {
-            // IPv6 literal
-            let end_bracket = authority
-                .find(']')
-                .ok_or_else(|| SsrError::InvalidUrl("unclosed IPv6 bracket".to_string()))?;
-            let host_part = &authority[1..end_bracket];
-            let remainder = &authority[end_bracket + 1..];
-            let port = if let Some(p) = remainder.strip_prefix(':') {
-                Some(p.parse::<u16>().map_err(|_| {
-                    SsrError::InvalidUrl(format!("invalid port number in {authority}"))
-                })?)
-            } else {
-                None
-            };
-            (host_part.to_string(), port)
-        } else if let Some(idx) = authority.rfind(':') {
-            let host_part = &authority[..idx];
-            let port_str = &authority[idx + 1..];
-            let port = port_str
-                .parse::<u16>()
-                .map_err(|_| SsrError::InvalidUrl(format!("invalid port number in {authority}")))?;
-            (host_part.to_string(), Some(port))
-        } else {
-            (authority.to_string(), None)
-        };
-
-        if let Some(port) = port_opt.filter(|&p| p != 443) {
+        // The parser drops the default port, so any port left is a custom one.
+        if let Some(port) = url.port() {
             return Err(SsrError::CustomPort(port));
         }
-
-        // If host is an IP literal, validate it immediately
-        if let Ok(ip) = host.parse::<IpAddr>() {
+        let (host, ip) = match url.host() {
+            Some(url::Host::Domain(d)) => {
+                // A name made only of digits, dots and hex is an address in some resolvers'
+                // eyes even when the WHATWG parser leaves it a name; refuse it outright.
+                if d.parse::<IpAddr>().is_ok() || d.is_empty() {
+                    return Err(SsrError::InvalidUrl("ambiguous host".to_string()));
+                }
+                (d.to_string(), None)
+            }
+            Some(url::Host::Ipv4(v4)) => (v4.to_string(), Some(IpAddr::V4(v4))),
+            Some(url::Host::Ipv6(v6)) => (v6.to_string(), Some(IpAddr::V6(v6))),
+            None => return Err(SsrError::InvalidUrl("missing host in URL".to_string())),
+        };
+        if let Some(ip) = ip {
             AddressPolicy.validate_ip(ip)?;
         }
-
-        let full_url = format!("https://{}{path_and_query}", host);
-
+        url.set_fragment(None);
+        let full_url = url.to_string();
+        if full_url.len() > MAX_URL_LEN {
+            return Err(SsrError::UrlTooLong);
+        }
+        let path_and_query = match url.query() {
+            Some(q) => format!("{}?{q}", url.path()),
+            None => url.path().to_string(),
+        };
         Ok(Self {
             host,
-            path_and_query: path_and_query.to_string(),
+            path_and_query,
             full_url,
+            ip,
         })
     }
+}
+
+/// The scheme part of `raw` for the error message, bounded so no long input is echoed.
+fn scheme_of(raw: &str) -> String {
+    raw.split(':')
+        .next()
+        .unwrap_or_default()
+        .chars()
+        .take(16)
+        .collect()
 }
 
 /// Redirect tracking state ensuring at most 3 redirects occur.
@@ -293,6 +324,19 @@ impl RedirectTracker {
         }
         self.hops += 1;
         SafeUrl::parse(next_url)
+    }
+
+    /// Records one redirect hop from `current` to `location` (relative or absolute) and
+    /// validates the target.
+    ///
+    /// # Errors
+    /// Returns [`SsrError::TooManyRedirects`] if exceeded, or any [`SsrError`] if invalid.
+    pub fn follow(&mut self, current: &SafeUrl, location: &str) -> Result<SafeUrl, SsrError> {
+        if self.hops >= MAX_REDIRECTS {
+            return Err(SsrError::TooManyRedirects);
+        }
+        self.hops += 1;
+        current.join(location)
     }
 
     /// Returns the number of hops taken so far.
@@ -438,5 +482,67 @@ mod tests {
             tracker.step("https://d.com/"),
             Err(SsrError::TooManyRedirects)
         );
+    }
+    /// Regression (audit A-04): the URL must be judged by the same parser that sends it.
+    /// The old hand-rolled parser read each of these as a harmless host name, while the
+    /// WHATWG parser inside the HTTP client connects to a private address.
+    #[test]
+    fn parser_differentials_cannot_reach_private_addresses() {
+        for raw in [
+            "https://127.0.0.1\\x.example.com/",
+            "https://2130706433/",
+            "https://0x7f.0.0.1/",
+            "https://0177.0.0.1/",
+            "https://127.1/",
+            "https://[::ffff:7f00:1]/",
+            "https://[::127.0.0.1]/",
+            "https://127.0.0.1%2f.example.com/",
+        ] {
+            let res = SafeUrl::parse(raw);
+            assert!(res.is_err(), "{raw:?} must be refused, got {res:?}");
+        }
+    }
+
+    #[test]
+    fn backslash_ends_the_host_like_the_client_parser() {
+        let u = SafeUrl::parse("https://example.com\\@127.0.0.1/").unwrap();
+        assert_eq!(u.host, "example.com");
+        assert_eq!(u.full_url, "https://example.com/@127.0.0.1/");
+    }
+
+    #[test]
+    fn host_ends_at_query_or_fragment() {
+        let u = SafeUrl::parse("https://Example.COM?q=1#frag").unwrap();
+        assert_eq!(u.host, "example.com");
+        assert_eq!(u.path_and_query, "/?q=1");
+        assert_eq!(u.full_url, "https://example.com/?q=1");
+    }
+
+    #[test]
+    fn ipv6_literal_keeps_brackets_in_full_url() {
+        let u = SafeUrl::parse("https://[2606:4700:4700::1111]/dns").unwrap();
+        assert_eq!(u.full_url, "https://[2606:4700:4700::1111]/dns");
+        assert_eq!(
+            u.ip_literal(),
+            Some("2606:4700:4700::1111".parse().unwrap())
+        );
+    }
+
+    #[test]
+    fn ipv4_compatible_ipv6_is_blocked() {
+        for blocked in ["::7f00:1", "::a00:1", "::808:808"] {
+            let ip = blocked.parse::<IpAddr>().unwrap();
+            assert!(AddressPolicy.validate_ip(ip).is_err(), "{blocked}");
+        }
+    }
+
+    #[test]
+    fn redirect_targets_resolve_against_the_current_url() {
+        let base = SafeUrl::parse("https://example.com/a/b?x=1").unwrap();
+        assert_eq!(base.join("/c").unwrap().full_url, "https://example.com/c");
+        assert_eq!(base.join("d").unwrap().full_url, "https://example.com/a/d");
+        assert!(base.join("http://example.com/").is_err());
+        assert!(base.join("https://10.0.0.1/").is_err());
+        assert!(base.join("//127.0.0.1/").is_err());
     }
 }

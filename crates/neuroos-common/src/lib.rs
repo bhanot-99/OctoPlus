@@ -6,6 +6,7 @@
 pub mod config;
 pub mod logging;
 pub mod paths;
+pub mod search;
 pub mod socketmap;
 pub mod time;
 

@@ -67,6 +67,12 @@ wayland-protocols = { version = "0.32.13", features = ["client", "staging"] }
 # Phase 4 (C3): embedding. No `fastembed` (HTTP client, R0-1), no `tokenizers` (its hash-table crates fail cargo-deny: BSL-1.0, unmaintained fxhash; WordPiece is written by hand) and no `ort` binary download:
 # the runtime is loaded from a pinned, hash-checked file (ADR-0012).
 ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "load-dynamic", "api-31"] }
+# Phase 8 (C7 only, Architecture §14, ADR-0016): HTTPS client and resolver. cargo-deny bans
+# them everywhere else (deny.toml `wrappers`). rustls on ring with the system's CA roots: no
+# OpenSSL, no aws-lc, no bundled root list; no cookies, proxies or HTTP/2 (request hygiene, FR-FET-06).
+hickory-resolver = { version = "0.26.3", default-features = false, features = ["tokio", "system-config"] }
+reqwest = { version = "0.12.28", default-features = false, features = ["rustls-tls-native-roots"] }
+url = "2.5.8"
 # Tests
 proptest = "1.12.0"
 tempfile = "3.27.0"

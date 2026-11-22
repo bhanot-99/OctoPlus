@@ -133,19 +133,51 @@ async fn test_fetcher_validates_token_and_fetches() {
     let _ = handle.await;
 }
 
-#[tokio::test]
-async fn test_fetcher_service_init_and_run() {
-    let temp_dir = tempfile::tempdir().unwrap();
-    let runtime_dir = temp_dir.path().join("fetcher");
-    let config_file = temp_dir.path().join("config.toml");
+fn service_args(dir: &std::path::Path) -> (neuroos_health::CommonArgs, std::path::PathBuf) {
+    let runtime_dir = dir.join("fetcher");
+    let config_file = dir.join("config.toml");
     std::fs::write(&config_file, b"").unwrap();
-
     let args = neuroos_health::CommonArgs {
         runtime_dir: Some(runtime_dir.clone()),
         config: Some(config_file),
         allow_uid: Some(neuroos_ipc::peer::current_uid()),
         soak: false,
     };
+    (args, runtime_dir.join("fetch/fetch.sock"))
+}
+
+/// Regression (audit A-03): with no key file the service refuses to start; there is no
+/// built-in fallback key that would let a forged approval through.
+#[test]
+fn service_refuses_to_start_without_its_key() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let (args, fetch_sock) = service_args(temp_dir.path());
+    let missing = temp_dir.path().join("no-such.key");
+    let res = neuroos_health::ServiceBuilder::new(
+        neuroos_common::paths::Part::Fetcher,
+        "neuroos-fetcher",
+        "0.1.0",
+    )
+    .skip_restrict(true)
+    .args(args)
+    .run(|ctx| neuroos_fetcher::init_with_key(&missing, ctx));
+    assert!(res.is_err(), "must not start without fetch.key");
+    // The builder binds before `init`; once `init` fails the service is gone, so nothing
+    // answers on the socket.
+    assert!(
+        std::os::unix::net::UnixStream::connect(&fetch_sock).is_err(),
+        "no socket may be served without a key"
+    );
+}
+
+#[tokio::test]
+async fn test_fetcher_service_init_and_run() {
+    use std::os::unix::fs::PermissionsExt;
+    let temp_dir = tempfile::tempdir().unwrap();
+    let (args, fetch_sock) = service_args(temp_dir.path());
+    let key_path = temp_dir.path().join("fetch.key");
+    std::fs::write(&key_path, [9u8; 32]).unwrap();
+    std::fs::set_permissions(&key_path, std::fs::Permissions::from_mode(0o640)).unwrap();
 
     let (stop_tx, stop_rx) = tokio::sync::oneshot::channel();
 
@@ -158,10 +190,9 @@ async fn test_fetcher_service_init_and_run() {
         .skip_restrict(true)
         .args(args)
         .external_stop(stop_rx)
-        .run(neuroos_fetcher::init)
+        .run(move |ctx| neuroos_fetcher::init_with_key(&key_path, ctx))
     });
 
-    let fetch_sock = runtime_dir.join("fetch/fetch.sock");
     for _ in 0..50 {
         if fetch_sock.exists() {
             break;

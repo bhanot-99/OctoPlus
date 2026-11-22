@@ -48,16 +48,16 @@ highlight = "all"
 skip = [{ crate = "syn", reason = "same version, host and target builds" }]
 
 # NFR-SEC-03 / R0-1: no HTTP client, DNS resolver, websocket or telemetry SDK
-# anywhere except C7 `neuroos-fetcher`. C7 does not exist yet, so for now every
-# entry is banned outright. Phase 8 adds `wrappers = ["neuroos-fetcher", ...]` to the
-# entries C7 needs (reqwest chain, hickory), so each is allowed only as a direct
-# dependency of the fetcher or of a crate that is itself only reachable from it.
+# anywhere except C7 `neuroos-fetcher`. The entries C7 needs (the reqwest chain and
+# hickory) carry `wrappers`: each is allowed only as a direct dependency of the fetcher,
+# or of a crate that is itself banned everywhere but the fetcher. Everything else stays
+# banned outright; scripts/check-netban.sh proves the ban still fires for other crates.
 deny = [
     # HTTP clients
-    { crate = "reqwest", reason = "HTTP client (NFR-SEC-03)" },
-    { crate = "hyper", reason = "HTTP stack (NFR-SEC-03)" },
-    { crate = "hyper-util", reason = "HTTP stack (NFR-SEC-03)" },
-    { crate = "hyper-rustls", reason = "HTTP stack (NFR-SEC-03)" },
+    { crate = "reqwest", reason = "HTTP client (NFR-SEC-03)", wrappers = ["neuroos-fetcher"] },
+    { crate = "hyper", reason = "HTTP stack (NFR-SEC-03)", wrappers = ["reqwest", "hyper-util", "hyper-rustls"] },
+    { crate = "hyper-util", reason = "HTTP stack (NFR-SEC-03)", wrappers = ["reqwest", "hyper-rustls"] },
+    { crate = "hyper-rustls", reason = "HTTP stack (NFR-SEC-03)", wrappers = ["reqwest"] },
     { crate = "h2", reason = "HTTP/2 stack (NFR-SEC-03)" },
     { crate = "ureq", reason = "HTTP client (NFR-SEC-03)" },
     { crate = "curl", reason = "HTTP client (NFR-SEC-03)" },
@@ -68,8 +68,9 @@ deny = [
     { crate = "minreq", reason = "HTTP client (NFR-SEC-03)" },
     { crate = "awc", reason = "HTTP client (NFR-SEC-03)" },
     # DNS resolvers
-    { crate = "hickory-resolver", reason = "DNS resolver (NFR-SEC-03)" },
-    { crate = "hickory-proto", reason = "DNS (NFR-SEC-03)" },
+    { crate = "hickory-resolver", reason = "DNS resolver (NFR-SEC-03)", wrappers = ["neuroos-fetcher"] },
+    { crate = "hickory-proto", reason = "DNS (NFR-SEC-03)", wrappers = ["hickory-resolver", "hickory-net"] },
+    { crate = "hickory-net", reason = "DNS (NFR-SEC-03)", wrappers = ["hickory-resolver"] },
     { crate = "trust-dns-resolver", reason = "DNS resolver (NFR-SEC-03)" },
     { crate = "trust-dns-proto", reason = "DNS (NFR-SEC-03)" },
     { crate = "async-std-resolver", reason = "DNS resolver (NFR-SEC-03)" },
