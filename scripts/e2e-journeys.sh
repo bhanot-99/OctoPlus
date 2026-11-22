@@ -16,7 +16,6 @@ while [[ $# -gt 0 ]]; do
 done
 
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 echo "=== Phase 9 Step 1: E2E User Journeys Verification (UJ-1..UJ-6) ==="
 echo "Target consecutive successful runs: $runs"
