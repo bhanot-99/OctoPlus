@@ -1,0 +1,109 @@
+{
+  "phase": 9,
+  "timestamp": "20261122T031629Z",
+  "commit": "26d602a",
+  "conditions": {
+    "arch": "x86_64",
+    "kernel": "7.2.15-76070215-generic",
+    "governor": "performance",
+    "cpus": 16,
+    "profile": "release, installed units"
+  },
+  "metrics": {
+    "NFR-PERF-01": {
+      "name": "Preamble request to first audio",
+      "budget_ms": 50.0,
+      "statistic": "p99",
+      "measured_ms": 0.5,
+      "status": "pass",
+      "how": "neuroos-voice/preamble_to_audio histogram, 6 samples, p99 bucket upper bound"
+    },
+    "NFR-PERF-02": {
+      "name": "End of speech to first answer audio",
+      "budget_ms": 4500.0,
+      "statistic": "p99",
+      "measured_ms": 10000.0,
+      "status": "FAIL",
+      "how": "neuroos-voice/command_to_answer_audio histogram, 6 samples, p99 bucket upper bound"
+    },
+    "NFR-PERF-03": {
+      "name": "Typed question to first answer chunk",
+      "budget_ms": 3000.0,
+      "statistic": "p50",
+      "measured_ms": 2398.546,
+      "status": "pass",
+      "how": "client side, 20 questions, 0 failed",
+      "p95_ms": 2809.152971000003
+    },
+    "NFR-PERF-04": {
+      "name": "C3 hybrid query at 30k chunks",
+      "budget_ms": 50.0,
+      "statistic": "p99",
+      "measured_ms": 22.682,
+      "status": "pass",
+      "how": "neuroos-bench-storage-scan, 100 warm queries, release build",
+      "p50_ms": 13.855820000000001
+    },
+    "NFR-PERF-05": {
+      "name": "C5 own compute on the hot path",
+      "budget_ms": 5.0,
+      "statistic": "p99",
+      "measured_ms": 0.25,
+      "status": "pass",
+      "how": "neuroos-knowledge/c5_compute histogram, 28 samples, p99 bucket upper bound"
+    },
+    "NFR-PERF-06": {
+      "name": "C6 capability check",
+      "budget_ms": 0.5,
+      "statistic": "p99",
+      "measured_ms": 0.064,
+      "status": "pass",
+      "how": "neuroos-bench-kernel-check, 2000 checks, release build"
+    },
+    "NFR-PERF-07": {
+      "name": "C1 event capture",
+      "budget_ms": 1.5,
+      "statistic": "p99",
+      "measured_ms": 1.0,
+      "status": "pass",
+      "how": "neuroos-monitor/capture_latency histogram, 376 samples, p99 bucket upper bound"
+    },
+    "NFR-PERF-08": {
+      "name": "Barge-in flush",
+      "budget_ms": 1.0,
+      "statistic": "p99",
+      "measured_ms": 0.1,
+      "status": "pass",
+      "how": "neuroos-voice/barge_in_flush histogram, 1 samples, p99 bucket upper bound"
+    },
+    "NFR-PERF-09": {
+      "name": "Transcription of a 3 s utterance",
+      "budget_ms": 150.0,
+      "statistic": "p99",
+      "measured_ms": 250.0,
+      "status": "FAIL",
+      "how": "neuroos-voice/transcribe histogram, 6 samples, p99 bucket upper bound"
+    },
+    "NFR-PERF-10": {
+      "name": "Nudge condition to decision",
+      "budget_ms": 60000.0,
+      "statistic": "p99",
+      "measured_ms": null,
+      "status": "not measured",
+      "reason": "needs a held condition on the live stack; see nudge replay tests"
+    },
+    "NFR-PERF-11": {
+      "name": "Token frame added IPC latency",
+      "budget_ms": 1.0,
+      "statistic": "p99",
+      "measured_ms": null,
+      "status": "not measured",
+      "reason": "not re-measured here; spike S-03 figure in PRD \u00a76.1"
+    }
+  },
+  "summary": {
+    "measured": 9,
+    "failed": 2,
+    "not_measured": 2
+  }
+}

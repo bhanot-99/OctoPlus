@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 9691da15940a0aacf11508c1c7acdfffb92ffc9cac83f69c7193fd7862a5c3b3 # shrinks to raw = "https://127.0.0.1"
