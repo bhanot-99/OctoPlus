@@ -61,8 +61,9 @@ fn ctl_command() -> Command {
 #[tokio::test]
 async fn local_e2e_all_user_journeys() {
     if !check_systemd_user_bus() {
-        eprintln!("Skipping test: user systemd session bus not accessible");
-        return;
+        panic!(
+            "local test without its environment (rules.md \u{a7}8.6: run in the local gate): user systemd session bus not accessible"
+        );
     }
 
     let dev_bin = home_opt_bin();

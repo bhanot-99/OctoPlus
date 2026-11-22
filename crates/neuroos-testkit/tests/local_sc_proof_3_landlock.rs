@@ -151,8 +151,9 @@ fn counter(report: &StatusReport, part: Part, name: &str) -> Option<u64> {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn local_sc_proof_3_landlock_in_real_units() {
     if !check_systemd_user_bus() {
-        eprintln!("Skipping test: user systemd session bus not accessible");
-        return;
+        panic!(
+            "local test without its environment (rules.md \u{a7}8.6: run in the local gate): user systemd session bus not accessible"
+        );
     }
     let prefix = home().join(".local/opt/neuroos");
     assert!(

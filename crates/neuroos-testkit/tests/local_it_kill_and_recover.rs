@@ -144,8 +144,9 @@ async fn wait_for<F: Fn(&StatusReport) -> bool>(
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn local_it_kill_and_recover() {
     if !check_systemd_user_bus() {
-        eprintln!("Skipping test: user systemd session bus not accessible");
-        return;
+        panic!(
+            "local test without its environment (rules.md \u{a7}8.6: run in the local gate): user systemd session bus not accessible"
+        );
     }
     assert!(
         home().join(".local/opt/neuroos/bin/neuroosctl").exists(),

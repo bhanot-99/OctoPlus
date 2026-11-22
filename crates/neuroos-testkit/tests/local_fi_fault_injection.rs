@@ -97,8 +97,9 @@ static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 fn local_fi_corrupt_model_never_loads() {
     let _lock = TEST_LOCK.lock().unwrap();
     if !check_systemd_user_bus() {
-        eprintln!("Skipping test: user systemd session bus not accessible");
-        return;
+        panic!(
+            "local test without its environment (rules.md \u{a7}8.6: run in the local gate): user systemd session bus not accessible"
+        );
     }
     let prefix = home().join(".local/opt/neuroos");
     let models = prefix.join("models");
@@ -187,8 +188,9 @@ fn local_fi_corrupt_model_never_loads() {
 fn local_fi_overlong_prompt_is_rejected_and_c4_stays_up() {
     let _lock = TEST_LOCK.lock().unwrap();
     if !check_systemd_user_bus() {
-        eprintln!("Skipping test: user systemd session bus not accessible");
-        return;
+        panic!(
+            "local test without its environment (rules.md \u{a7}8.6: run in the local gate): user systemd session bus not accessible"
+        );
     }
     let ctl = home().join(".local/opt/neuroos/bin/neuroosctl");
     assert!(ctl.exists(), "run `just install-dev` first");

@@ -64,8 +64,9 @@ fn check_systemd_user_bus() -> bool {
 #[test]
 fn local_sc_proof_1_no_network_in_real_units() {
     if !check_systemd_user_bus() {
-        eprintln!("Skipping test: user systemd session bus not accessible");
-        return;
+        panic!(
+            "local test without its environment (rules.md \u{a7}8.6: run in the local gate): user systemd session bus not accessible"
+        );
     }
 
     // 1. Start a local TCP listener on 127.0.0.1

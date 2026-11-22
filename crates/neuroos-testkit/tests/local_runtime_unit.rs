@@ -49,8 +49,9 @@ fn local_runtime_unit_creates_socket_dirs_with_mode_0700() {
     let xdg = match std::env::var("XDG_RUNTIME_DIR") {
         Ok(dir) => dir,
         Err(_) => {
-            eprintln!("Skipping test: XDG_RUNTIME_DIR not set (needs a user session)");
-            return;
+            panic!(
+                "local test without its environment (rules.md \u{a7}8.6: run in the local gate): XDG_RUNTIME_DIR not set (needs a user session)"
+            );
         }
     };
 
@@ -63,12 +64,14 @@ fn local_runtime_unit_creates_socket_dirs_with_mode_0700() {
             if !out.status.success()
                 && String::from_utf8_lossy(&out.stderr).contains("Failed to connect to bus") =>
         {
-            eprintln!("Skipping test: user systemd session bus not accessible");
-            return;
+            panic!(
+                "local test without its environment (rules.md \u{a7}8.6: run in the local gate): user systemd session bus not accessible"
+            );
         }
         Err(_) => {
-            eprintln!("Skipping test: systemctl command failed to execute");
-            return;
+            panic!(
+                "local test without its environment (rules.md \u{a7}8.6: run in the local gate): systemctl command failed to execute"
+            );
         }
         _ => {}
     }

@@ -62,8 +62,9 @@ fn check_systemd_user_bus() -> bool {
 #[test]
 fn local_sc_proof_2_socket_map_enforced() {
     if !check_systemd_user_bus() {
-        eprintln!("Skipping test: user systemd session bus not accessible");
-        return;
+        panic!(
+            "local test without its environment (rules.md \u{a7}8.6: run in the local gate): user systemd session bus not accessible"
+        );
     }
 
     let unit_dir = user_unit_dir();
