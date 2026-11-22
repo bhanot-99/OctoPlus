@@ -68,16 +68,24 @@ started_at="$(date +"%Y-%m-%d %H:%M:%S")"
 systemctl --user restart neuroos-knowledge   # its first evaluation now finds a voice that is ready
 before=$("$ctl" audit tail 2>/dev/null | grep -c "system.disk_report" || true)
 echo "waiting up to 100 s for the nudge to be spoken..."
+# "last: 0 min ago" in `nudges list` means only that the engine decided about the rule: a held
+# nudge counts too. Spoken means C2 wrote nudge audio (the trace) - wait for that.
 spoken=0
 for _ in $(seq 1 20); do
   sleep 5
-  if "$ctl" nudges list 2>/dev/null | grep -qE "disk_nearly_full.*last: [01] min ago"; then spoken=1; break; fi
+  if journalctl --user -u neuroos-voice --since "$started_at" --no-pager 2>/dev/null \
+      | grep -q "voice: audio_written"; then spoken=1; break; fi
 done
 if [[ "$spoken" == 0 ]]; then
-  echo "HELD: the nudge did not fire (the desktop reports you idle or locked, or the disk is under 40%)."
+  if "$ctl" nudges list 2>/dev/null | grep -qE "disk_nearly_full.*last: [01] min ago"; then
+    echo "HELD: the engine decided the nudge but did not speak it (the desktop reports you away,"
+    echo "      idle or locked, or busy). Run this at the keyboard, active."
+  else
+    echo "HELD: the nudge did not fire (the disk is under 40%, or C5 could not read C3)."
+  fi
   exit 3
 fi
-echo "the nudge fired; listening for the follow-up window"
+echo "the nudge was spoken; listening for the follow-up window"
 # The follow-up window (8 s) opens when the nudge has been said: speak the answer inside it.
 opened=0
 for _ in $(seq 1 120); do
