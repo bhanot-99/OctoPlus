@@ -7,13 +7,16 @@
 # 1. Voice and text questions with varied lengths and topics.
 # 2. Synthetic telemetry, sensor events, and health checks.
 # 3. Scheduled SQLite backup and GC maintenance sweeps.
-# 4. Periodic approved web search exercising C7 spooling and egress ledger.
+# 4. An hourly SAFE skill through C6 (system.disk_report). An approved web search needs a
+#    click in the dialog (R0-7), so the soak cannot run one unattended: not covered here.
 # 5. Continuous metric sampling via healthd.
 #
 # Pass criteria (NFR-REL-04):
-# - Total and per-unit RSS growth < 5% from post-warmup baseline.
-# - p99 latency drift < 10%.
-# - Zero unexpected crashes, restarts or core dumps.
+# - Per-unit RSS growth < 5% from the post-warm-up baseline.
+# - p99 drift < 10% of the time to first answer chunk for one fixed probe question (the
+#   varied questions are load, not the measure: their lengths differ).
+# - Zero restarts (systemd NRestarts and main PID unchanged).
+# A run shorter than 4 h is reported "not asserted" (rules.md §9.3), never "passed".
 set -euo pipefail
 
 hours=24
@@ -51,6 +54,8 @@ pids=()
 had_conf=0
 if [[ -f "$vconf" ]]; then had_conf=1; cp "$vconf" "$work/voice.conf.orig"; fi
 
+# Runs from the EXIT trap below; shellcheck cannot see that call.
+# shellcheck disable=SC2317
 cleanup() {
   echo "Cleaning up soak runner resources..."
   for p in "${pids[@]}"; do kill "$p" 2>/dev/null || true; done
@@ -95,14 +100,15 @@ units=(
   "neuroos-voice"
 )
 
-declare -A initial_pids
+declare -A initial_pids initial_restarts
 for u in "${units[@]}"; do
   pid=$(systemctl --user show -p MainPID --value "$u.service" 2>/dev/null || echo "0")
   initial_pids["$u"]="$pid"
+  initial_restarts["$u"]=$(systemctl --user show -p NRestarts --value "$u.service" 2>/dev/null || echo 0)
   echo "  $u: PID $pid"
 done
 
-echo "timestamp_utc,elapsed_secs,unit,rss_mib,p99_latency_ms,restarts" > "$csv_file"
+echo "timestamp_utc,elapsed_secs,unit,rss_mib,probe_first_chunk_ms,restarts" > "$csv_file"
 
 questions=(
   "What is two plus two?"
@@ -134,12 +140,23 @@ while (( $(date +%s) < end_time )); do
   curr_hr=$(( elapsed / 3600 ))
   iter=$(( iter + 1 ))
 
-  # A. Submit Typed Query
+  # A. Load: one question from the varied set.
   q="${questions[$((iter % ${#questions[@]}))]}"
-  t0=$(date +%s%N)
-  "$ctl" ask "$q" >/dev/null 2>&1 || true
-  t1=$(date +%s%N)
-  lat_ms=$(awk "BEGIN {print ($t1 - $t0) / 1000000}")
+  "$ctl" ask --once "$q" >/dev/null 2>&1 || true
+
+  # A2. Probe: the same short question every time; time to its first answer chunk.
+  lat_ms=$(python3 - "$ctl" <<'PROBE'
+import json, subprocess, sys, time
+t0 = time.monotonic()
+p = subprocess.Popen([sys.argv[1], "ask", "--json", "--once", "Say OK"], stdout=subprocess.PIPE, text=True)
+first = -1.0
+for line in p.stdout:
+    if first < 0 and json.loads(line).get("type") == "chunk":
+        first = (time.monotonic() - t0) * 1000.0
+p.wait()
+print(f"{first:.1f}")
+PROBE
+)
 
   # B. Voice exchange if synthesizer is available (every 3rd iteration)
   if [[ -x "$say" ]] && (( iter % 3 == 0 )); then
@@ -147,9 +164,9 @@ while (( $(date +%s) < end_time )); do
     pw-play --target "$sink" "$work/soak_q.wav" 2>/dev/null || true
   fi
 
-  # C. Hourly Search through C7
+  # C. Hourly SAFE skill through C6 (not a web search, see the header).
   if (( curr_hr > last_search_hr )); then
-    echo "[$curr_hr h] Executing hourly approved search..."
+    echo "[$curr_hr h] Running the hourly SAFE skill (system.disk_report)..."
     "$ctl" run system.disk_report >/dev/null 2>&1 || true
     last_search_hr="$curr_hr"
   fi
@@ -170,8 +187,9 @@ while (( $(date +%s) < end_time )); do
     if [[ "$curr_pid" != "0" && -d "/proc/$curr_pid" ]]; then
       rss=$(awk '/VmRSS/ {print int($2/1024)}' "/proc/$curr_pid/status" 2>/dev/null || echo "0")
     fi
-    restarts=0
-    if [[ "$curr_pid" != "${initial_pids[$u]}" ]]; then
+    restarts=$(systemctl --user show -p NRestarts --value "$u.service" 2>/dev/null || echo 0)
+    restarts=$(( restarts - ${initial_restarts[$u]:-0} ))
+    if [[ "$curr_pid" != "${initial_pids[$u]}" ]] && (( restarts == 0 )); then
       restarts=1
     fi
     echo "$now_iso,$elapsed,$u,$rss,$lat_ms,$restarts" >> "$csv_file"
@@ -183,83 +201,69 @@ done
 echo ""
 echo "Soak run finished. Analyzing metrics..."
 
-python3 - "$csv_file" "$report_json" "$summary_md" <<'PY'
+verdict_status=0
+python3 - "$csv_file" "$report_json" "$summary_md" <<'PY' || verdict_status=$?
 import csv, json, sys
 
 csv_path = sys.argv[1]
 json_out = sys.argv[2]
 md_out = sys.argv[3]
 
+MIN_ASSERT_S = 4 * 3600  # rules.md §9.3: shorter runs cannot show a settled curve
+
 by_unit = {}
+probe = []
 with open(csv_path) as f:
-    r = csv.DictReader(f)
-    for row in r:
-        u = row["unit"]
-        by_unit.setdefault(u, []).append({
-            "elapsed": int(row["elapsed_secs"]),
-            "rss": int(row["rss_mib"]),
-            "latency": float(row["p99_latency_ms"]),
-            "restarts": int(row["restarts"])
-        })
+    for row in csv.DictReader(f):
+        by_unit.setdefault(row["unit"], []).append(
+            {"elapsed": int(row["elapsed_secs"]), "rss": int(row["rss_mib"]),
+             "restarts": int(row["restarts"])})
+        if row["unit"] == "neuroos-healthd":  # one probe value per iteration
+            probe.append((int(row["elapsed_secs"]), float(row["probe_first_chunk_ms"])))
 
-results = {}
-all_passed = True
+def p99(vals):
+    vals = sorted(v for v in vals if v >= 0)
+    return vals[min(len(vals) - 1, int(round(0.99 * (len(vals) - 1))))] if vals else None
 
+duration = max((s["elapsed"] for v in by_unit.values() for s in v), default=0)
+asserted = duration >= MIN_ASSERT_S
+results, all_ok = {}, True
 for u, samples in by_unit.items():
-    if not samples:
-        continue
-    n = len(samples)
-    q1 = max(1, n // 4)
-    # Skip initial warm-up samples if enough samples exist
-    warm_samples = samples[max(1, n // 10):] if n >= 10 else samples
-    nw = len(warm_samples)
-    qw = max(1, nw // 4)
-    baseline_rss = sum(s["rss"] for s in warm_samples[:qw]) / qw
-    final_rss = sum(s["rss"] for s in warm_samples[-qw:]) / qw
-    rss_growth_pct = round(((final_rss - baseline_rss) / max(1.0, baseline_rss)) * 100.0, 2)
-    
-    baseline_lat = sum(s["latency"] for s in warm_samples[:qw]) / qw
-    final_lat = sum(s["latency"] for s in warm_samples[-qw:]) / qw
-    # If run duration is under 15 minutes, latency variance between varied question sizes is expected
-    is_short_run = samples[-1]["elapsed"] < 900
-    lat_drift_pct = round(((final_lat - baseline_lat) / max(1.0, baseline_lat)) * 100.0, 2)
-    lat_passed = (lat_drift_pct < 10.0) if not is_short_run else True
-    
-    total_restarts = sum(s["restarts"] for s in samples)
-    
-    passed = (rss_growth_pct < 5.0) and lat_passed and (total_restarts == 0)
-    if not passed:
-        all_passed = False
-        
-    results[u] = {
-        "baseline_rss_mib": round(baseline_rss, 1),
-        "final_rss_mib": round(final_rss, 1),
-        "rss_growth_pct": rss_growth_pct,
-        "latency_drift_pct": lat_drift_pct,
-        "restarts": total_restarts,
-        "passed": passed
-    }
+    warm = samples[len(samples) // 10:] or samples
+    q = max(1, len(warm) // 4)
+    base = sum(s["rss"] for s in warm[:q]) / q
+    final = sum(s["rss"] for s in warm[-q:]) / q
+    growth = round((final - base) / max(1.0, base) * 100.0, 2)
+    restarts = max(s["restarts"] for s in samples)
+    ok = growth < 5.0 and restarts == 0
+    all_ok &= ok
+    results[u] = {"baseline_rss_mib": round(base, 1), "final_rss_mib": round(final, 1),
+                  "rss_growth_pct": growth, "restarts": restarts, "within_limits": ok}
 
-output = {
-    "soak_passed": all_passed,
-    "units": results
-}
-
+warm_probe = probe[len(probe) // 10:] or probe
+q = max(1, len(warm_probe) // 4)
+p_first, p_last = p99([v for _, v in warm_probe[:q]]), p99([v for _, v in warm_probe[-q:]])
+failed_probes = sum(1 for _, v in probe if v < 0)
+drift = None if not p_first or p_last is None else round((p_last - p_first) / p_first * 100.0, 2)
+drift_ok = drift is not None and drift < 10.0 and failed_probes == 0
+all_ok &= drift_ok
+verdict = ("PASS" if all_ok else "FAIL") if asserted else ("NOT ASSERTED (run shorter than 4 h)" if all_ok else "FAIL")
+output = {"verdict": verdict, "duration_s": duration, "asserted": asserted,
+          "probe": {"p99_first_quarter_ms": p_first, "p99_last_quarter_ms": p_last,
+                    "drift_pct": drift, "failed_probes": failed_probes, "samples": len(probe)},
+          "units": results}
 with open(json_out, "w") as f:
     json.dump(output, f, indent=2)
-
 with open(md_out, "w") as f:
-    f.write("# 24-Hour Soak Results (NFR-REL-04)\n\n")
-    f.write(f"**Overall Status:** {'PASS' if all_passed else 'FAIL'}\n\n")
-    f.write("| Unit | Baseline RSS (MiB) | Final RSS (MiB) | Growth % | Drift % | Restarts | Status |\n")
-    f.write("| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n")
+    f.write(f"# Soak results (NFR-REL-04)\n\n**Verdict:** {verdict} · duration {duration} s\n\n")
+    f.write(f"Probe p99 first quarter {p_first} ms, last quarter {p_last} ms, drift {drift} %, failed probes {failed_probes}\n\n")
+    f.write("| Unit | Baseline RSS (MiB) | Final RSS (MiB) | Growth % | Restarts | Within limits |\n|:--|--:|--:|--:|--:|:--|\n")
     for u, d in results.items():
-        f.write(f"| `{u}` | {d['baseline_rss_mib']} | {d['final_rss_mib']} | {d['rss_growth_pct']}% | {d['latency_drift_pct']}% | {d['restarts']} | {'PASS' if d['passed'] else 'FAIL'} |\n")
-
-print(f"Soak analysis complete: {'PASS' if all_passed else 'FAIL'}")
+        f.write(f"| `{u}` | {d['baseline_rss_mib']} | {d['final_rss_mib']} | {d['rss_growth_pct']} | {d['restarts']} | {d['within_limits']} |\n")
+print(f"Soak verdict: {verdict}")
+sys.exit(0 if all_ok else 1)
 PY
 
 cp "$report_json" "$latest_json"
-echo "=========================================================="
-echo "24-Hour Soak completed successfully. Results saved."
-echo "=========================================================="
+echo "Results: $report_json"
+exit "$verdict_status"
