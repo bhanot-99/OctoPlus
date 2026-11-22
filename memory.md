@@ -10,13 +10,13 @@
 
 | Field | Value |
 | :--- | :--- |
-| Last updated | 2026-11-21 |
-| Project stage | **Phase 10 complete** (2026-11-21). Milestone M8 achieved. Release v1.0.0 ready. |
-| Current phase | Phase 10 complete (Packaging and release v1.0.0) |
-| Current story | P10-S07: Final hygiene, bug fixes, dead code sweep, v1.0.0 release gate |
-| Overall progress | 11 / 11 phases done (Phases 0-10 complete) |
-| Health | 🟩 All phases complete; release .deb package generated; test suite green |
-| Next milestone | Release tag v1.0.0 & merge to main |
+| Last updated | 2026-11-22 |
+| Project stage | **Hardening audit** (2026-11-22, branch `hardening-audit`): Phases 0-7 hold; Phases 8-10 reopened — their evidence did not hold up (`reports/hardening-audit-2026-11-22.md`). |
+| Current phase | Phases 8-10 back in gate review |
+| Current story | Audit fixes A-01..A-21 done on the branch; owner items left |
+| Overall progress | 8 / 11 phases signed off on real evidence (0-7); 8-10 need owner steps and sign-off |
+| Health | 🟨 Code gate green on the branch; 24 h soak, owner trial, sudo deploy of C7 and licence decision open |
+| Next milestone | Owner: deploy C7 + key (sudo), live lookup, 24 h soak, licence decision, merge `hardening-audit` |
 
 ---
 
@@ -24,11 +24,11 @@
 
 | Field | Value |
 | :--- | :--- |
-| Story | Phase 10 completion & v1.0.0 release sign-off |
-| Builder / Checker | agy & Claude |
-| Branch | `phase-10` |
-| Files being changed | `memory.md`, `phases.md`, `README.md`, `reports/phase-10-release.md` |
-| Next concrete step | Final gate check review and v1.0.0 release tag. |
+| Story | Hardening audit (owner directive 2026-11-22, D-43) |
+| Builder / Checker | Claude / Claude (agy not used: owner did not ask for it this session) — an independent review is still owed |
+| Branch | `hardening-audit` (from `main` 61ba5b8; not pushed, not merged) |
+| Files being changed | see `reports/hardening-audit-2026-11-22.md` §2 |
+| Next concrete step | Owner list in the audit report §5 (sudo deploy of C7 and its key first). |
 
 ---
 
@@ -44,9 +44,9 @@
 | 5 | Knowledge and conversation (C5) | ✅ | 2026-11-17 | 2026-11-17 | `reports/phase-05-knowledge.md` |
 | 6 | Nudge engine | ✅ | 2026-11-17 | 2026-11-17 | `reports/phase-06-nudges.md` |
 | 7 | Voice (C2) | ✅ | 2026-11-17 | 2026-11-18 | `reports/phase-07-voice.md` |
-| 8 | Fetcher and search (C7) | ✅ | 2026-11-21 | 2026-11-21 | `reports/phase-08-fetcher.md` |
-| 9 | Integration, security verification, soak | ✅ | 2026-11-21 | 2026-11-21 | `reports/phase-09-integration-soak.md` |
-| 10 | Packaging and release | ✅ | 2026-11-21 | 2026-11-21 | `reports/phase-10-release.md` |
+| 8 | Fetcher and search (C7) | 🟨 | 2026-11-21 | — | `reports/phase-08-fetcher.md` (corrected 2026-11-22) |
+| 9 | Integration, security verification, soak | 🟨 | 2026-11-21 | — | `reports/phase-09-integration-soak.md` (corrected 2026-11-22) |
+| 10 | Packaging and release | 🟨 | 2026-11-21 | — | `reports/phase-10-release.md` (corrected 2026-11-22) |
 
 Legend: ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done · 🟥 Blocked
 
@@ -76,6 +76,7 @@ One line each. Older entries archived to `docs/history/decisions-pre-phase-3.md`
 
 | Date | ID | Decision | ADR |
 | :--- | :--- | :--- | :--- |
+| 2026-11-22 | D-43 | Owner directive: full audit, close phase gaps, live tests, hardening ("MASTER DIRECTIVE", 2026-11-22). Under it Claude added the C7-only crates ADR-0016 names (`reqwest` rustls/ring, `hickory-resolver`, `url`; downloaded from crates.io; `cargo deny` clean) and left sudo, long runs, pushes and the licence to the owner. Owner may overturn. | 0016 |
 | 2026-11-21 | D-42 | OQ-06 closed: Personal Use & source-available self-hosted release; stock wake model compliant (R-06); GPL-3.0 compliance verified (R-07). License bundle in LICENSE & docs/LICENSES.md. | — |
 | 2026-11-21 | D-41 | Owner instructed start of Phase 10 execution: "start executing each step phse 10 as planned...". Plan: `docs/plans/phase-10-release-plan.md`. | — |
 | :--- | :--- | :--- | :--- |
@@ -115,7 +116,11 @@ One line each. Older entries archived to `docs/history/decisions-pre-phase-3.md`
 
 | Date | Type | Item | Owner | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| 2026-11-21 | Watch | R0-1 / NFR-SEC-03: C7 is the only network door. `cargo deny check` must verify no network crate leaks into C1–C6. | Claude | Open |
+| 2026-11-22 | Blocker | Reference machine: system fetcher is the old mock binary and `/etc/neuroos/fetch.key` is missing (BUG-111); needs sudo. | Owner | Open |
+| 2026-11-22 | Gap | FR-FET-10: no kernel limit of C7 to TCP 443 (BUG-110); nftables rule needs root. | Owner | Open |
+| 2026-11-22 | Decision | Licence: `LICENSE` is MIT/Apache-2.0 but `neuroos-monitor` statically links GPL-3.0-only `cosmic-protocols` (R-07). | Owner | Open |
+| 2026-11-22 | Watch | Memory headroom: C4 used 2724 / 2800 MiB and C2 590 / 620 MiB on the live stack. | Claude | Watching |
+| 2026-11-21 | Watch | R0-1 / NFR-SEC-03: C7 is the only network door. `deny.toml` now allows the HTTP/DNS crates only under `neuroos-fetcher` (`wrappers`); `scripts/check-netban.sh` proves the ban still fires elsewhere. | Claude | Open |
 | 2026-11-21 | Watch | rules.md §8.4: Zero test traffic leaves the machine. All Phase 8 tests must use private network namespaces (`ip netns`). | Claude | Open |
 | 2026-11-16 | Risk | C6 memory with dialog open: MemoryMax is 128 MiB (D-24). Monitor GTK dialog memory during search form. | Claude | Watching |
 
@@ -125,6 +130,7 @@ One line each. Older entries archived to `docs/history/decisions-pre-phase-3.md`
 
 | Date | Summary | Stories | Builder / Checker | Next step |
 | :--- | :--- | :--- | :--- | :--- |
+| 2026-11-22 | Hardening audit on `hardening-audit`: 21 findings (BUG-089..112), 3 S1 in C6/C7 (public fallback key, URL-gate parser gap, ledger gaps) and C7 shipped with a mock transport; real transport built and tested in a private netns; activity questions and web answers wired in C5; Phase 9/10 evidence corrected; live input, voice, chaos and bench runs. Report: `reports/hardening-audit-2026-11-22.md`. | audit | Claude / Claude | Owner items §5 |
 | 2026-11-21 | Phase 9 verified across all exit criteria. E2E UJ-1..6 passed 3/3 runs, security §8 green, chaos & fault recovery verified, soak passed. Report: `reports/phase-09-integration-soak.md`. | P9-S01..S05 | agy / Claude | Gate review & merge to main |
 | 2026-11-21 | Phase 8 verified across all exit criteria, merged into `main`, and `phase-8` branch deleted. Ready for Phase 9. | P8 close | Claude / agy | Phase 9 planning |
 | 2026-11-21 | Phase 8 built & verified. C7 anti-SSRF, token verification, atomic v1 spooling, C6 kernel skills, GTK4 query re-hash, C5 lookup routing & taint escalation. Report: `reports/phase-08-fetcher.md`. | P8-S01..S06 | agy / Claude | Gate review & merge to main |

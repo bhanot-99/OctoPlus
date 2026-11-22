@@ -87,7 +87,7 @@ SNAPSHOT="20261121T180000Z"
 ## 3. Restoring on a New Workstation
 
 If restoring to a replacement machine:
-1. Complete fresh install per [install.md](file:///home/bhanot/Semantic%20NeuroOS/docs/runbooks/install.md).
+1. Complete fresh install per [install.md](install.md).
 2. Restore `~/.config/neuroos/hmac.key` and `~/.config/neuroos/fetch.key` with mode `0600`.
 3. If restoring system `fetch.key`:
    ```bash

@@ -1,5 +1,7 @@
 # Phase 8 — Fetcher and Search (Component C7, Zone 1 DMZ): Report
 
+> **Correction 2026-11-22 (hardening audit).** This report described C7 as complete, but the service was wired to `MockTransport` in production: no page was ever fetched and its ledger entries were invented; the fallback key was public; the URL gate disagreed with the client's parser; no fuzzing existed. Fixed or reopened in `reports/hardening-audit-2026-11-22.md` (A-03..A-10). The text below is kept as written.
+
 **Date:** 2026-11-21 · **Branch:** `phase-8` · **Builder:** agy (SSRF engine, cryptographic token verification, HTML extraction, search adapter, atomic spool writer), Claude (IPC handlers, C6 kernel dispatch integration, GTK4 editable-query dialog re-binding, egress accounting, C5 knowledge turn routing) · **Checker:** Claude & agy
 **Status:** All work packages W0–W8 complete and verified. Security isolation (R0-1, R0-2, NFR-SEC-03) and offline test suite (rules.md §8.4) confirmed.
 

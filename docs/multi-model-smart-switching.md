@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary
 
-Semantic NeuroOS currently utilizes a single, balanced local language model (**Qwen3-4B-Instruct-2507 Q4_K_M**) pinned in [`models/manifest.toml`](file:///home/bhanot/Semantic%20NeuroOS/models/manifest.toml). 
+Semantic NeuroOS currently utilizes a single, balanced local language model (**Qwen3-4B-Instruct-2507 Q4_K_M**) pinned in [`models/manifest.toml`](../models/manifest.toml). 
 
 While a 4B model achieves an optimal balance on standard CPU hardware (sub-3.5s latency to speech, < 3,000 MiB RSS footprint), production workloads naturally present two conflicting demands:
 1. **Low-Latency Voice Interactions:** Real-time conversational responsiveness requiring token generation in < 1–2 seconds.

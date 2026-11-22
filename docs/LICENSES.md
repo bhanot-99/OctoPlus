@@ -14,8 +14,8 @@ This document records license classifications and compliance obligations for all
 | **Kokoro-82M** | Speech synthesis (TTS) | Apache-2.0 | Permissive neural voice weights. |
 | **bge-small-en-v1.5** | Local text embeddings | MIT | Permissive ONNX model. |
 | **openWakeWord** (stock weights) | Wake-phrase detection | Apache-2.0 (code); Non-commercial (stock weights) | **Risk R-06**: Stock pre-trained model is restricted to non-commercial / personal use. Compliant under OQ-06 Personal Use disposition. |
-| **espeak-ng** | TTS phonemization library | GPL-3.0 | **Risk R-07**: Dynamically linked external library. Build instructions and sources provided. |
-| **cosmic-protocols** | Wayland protocols for COSMIC | GPL-3.0-only | **Risk R-07**: Wayland protocol XML bindings. |
+| **espeak-ng** | TTS phonemization library | GPL-3.0 | **Risk R-07**: dynamically linked system library (`libespeak-ng.so.1`, checked with `ldd` on 2026-11-22). Dynamic linking alone does not settle GPL obligations for the combined program. |
+| **cosmic-protocols** | Wayland protocols for COSMIC | GPL-3.0-only | **Risk R-07**: a Rust crate, so it is **statically linked** into `neuroos-monitor` (no shared library; checked 2026-11-22). |
 | **ONNX Runtime** | Inference runtime | MIT | Pinned release binary with hash verification. |
 | **SQLite** | Local metadata & vector store | Public Domain | Bundled via rusqlite. |
 
@@ -25,7 +25,7 @@ This document records license classifications and compliance obligations for all
 
 - **OQ-06 ("Personal install only, or public release"):** Formally resolved and closed as **Personal Use & Source-Available Self-Hosted Release**.
 - **Risk R-06 Resolution:** Because deployment is scoped to self-hosted personal operation, the openWakeWord stock `hey_jarvis` model is fully compliant. Commercial redistributors must train a custom model prior to distribution.
-- **Risk R-07 Resolution:** All GPL-3.0 dependencies (`espeak-ng`, `cosmic-protocols`) are isolated to their designated interfaces, dynamically linked or compiled via open build scripts, and full source code recipes are provided.
+- **Risk R-07 — open, owner decision (audit 2026-11-22):** the earlier text said all GPL-3.0 parts are dynamically linked; that is not true for `cosmic-protocols`, which is compiled into `neuroos-monitor`. The root `LICENSE` offers the project under MIT or Apache-2.0, which may not be the right terms for a binary that includes GPL-3.0-only code, and the `.deb` distributes such binaries. For a personal install nothing is distributed; before any release the owner decides between licensing the affected binaries (or the project) under GPL-3.0, or replacing `cosmic-protocols` (ADR-0007). Not legal advice; a licence review is recommended.
 
 ---
 

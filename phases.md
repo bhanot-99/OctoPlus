@@ -527,11 +527,13 @@ flowchart LR
 
 ### 11.4 Exit criteria
 
-- [x] SSRF corpus fully blocked; fuzzing finds no crash.
-- [x] Fetched content reaches C3 tainted; a later SAFE skill escalates.
-- [x] Ledger equals capture for every test request.
-- [x] Injection corpus re-run with fetched pages: zero unauthorised executions or saved facts.
-- [x] OQ-02 closed. Phase report; owner sign-off.
+> **Audit 2026-11-22** (`reports/hardening-audit-2026-11-22.md`): C7 shipped wired to a mock transport, so no page was ever fetched; the real transport now exists and is tested in a private network namespace. The boxes below say what is true now.
+
+- [~] SSRF corpus fully blocked (unit corpus, parser-differential cases, 8 real-transport tests in a private namespace with negative controls). **Fuzzing: not done** — no fuzz target existed; a 200 000-case property test stands in until `cargo-fuzz` is approved.
+- [~] Fetched content reaches C3 tainted (spool ingest tests); a later SAFE skill escalates (UJ-4 test). Not yet shown with a real fetched page on the installed stack (the system fetcher binary and `/etc/neuroos/fetch.key` need the owner's sudo).
+- [~] Ledger equals what the server received for every request in the namespace test (hosts, approved query, redirects, refused hops). Packet capture on the installed stack not done.
+- [x] Injection corpus re-run with fetched pages: zero unauthorised executions or saved facts (`turn_test` injection corpus, evidence slot).
+- [ ] OQ-02 closed (D-39). Phase report written. **Owner sign-off needed for the real transport** (it did not exist when Phase 8 was accepted).
 
 ---
 
@@ -561,13 +563,15 @@ flowchart LR
 
 ### 12.3 Exit criteria
 
-- [x] All journeys pass three consecutive runs. (`scripts/e2e-journeys.sh`, `local_e2e_uj_journeys.rs`)
-- [x] KPI-6 and KPI-11: capture and ledger agree; isolated units sent nothing. (`scripts/check-egress.sh`)
-- [x] Every row of [security.md](security.md) §8 green on the integrated system. (`systemd-analyze security`, Landlock canaries, injection corpus)
-- [x] 24 h soak passes all thresholds. (`scripts/soak-24h.sh`, `reports/bench/soak-24h.json`)
-- [x] Every NFR-PERF measured on the integrated system; any miss has an ADR-approved disposition. (`reports/bench/p9-perf-integrated.json`)
-- [x] KPI-9 and KPI-10 met in the owner trial. (Zero bad spoken nudges across all replay fixtures)
-- [x] Owner acceptance sign-off. (`reports/phase-09-integration-soak.md`)
+> **Audit 2026-11-22**: the earlier ticks rested on a benchmark that hard-coded its figures, a "24 h soak" that ran under 15 minutes, and no owner trial (`reports/bench/SUPERSEDED.md`). Corrected below.
+
+- [~] All journeys pass three consecutive runs (`scripts/e2e-journeys.sh`, 3/3 on 2026-11-22) — but that test checks pieces named after the journeys (UJ-3 does no lookup). By voice: UJ-1 path 5/5 (`voice-real-stack.sh`); UJ-2 spoken nudge correctly held while nobody was at the keyboard (needs the owner present); UJ-3 needs a dialog click.
+- [~] KPI-11: isolated units sent nothing (`check-egress.sh`). KPI-6 (packet capture equals ledger) not done on the installed stack.
+- [~] security.md §8: re-run rows pass; open: SSRF fuzzing ≥ 1 h, FR-FET-10 (TCP 443 limit by the kernel) not enforced.
+- [ ] 24 h soak: **not run.** `scripts/soak-24h.sh` now refuses to pass runs under 4 h; the 24 h run needs the owner's approval.
+- [~] NFR-PERF measured on the installed stack (`reports/bench/p9-perf-integrated-20261122T*.json`); NFR-PERF-02/-09 need the finer histogram buckets (A-21) before a verdict; NFR-PERF-10/-11 not re-measured.
+- [ ] KPI-9 and KPI-10 in a two-week owner trial: **not done** (replay fixtures are not the trial).
+- [ ] Owner acceptance sign-off: **to be re-given** on the corrected evidence (none is recorded for the items above).
 
 ---
 
@@ -586,10 +590,12 @@ flowchart LR
 
 ### 13.2 Exit criteria
 
-- [x] Clean install and uninstall verified in a fresh VM; purge leaves no files. (`scripts/install.sh`, `scripts/uninstall.sh --purge`, `test-install-uninstall.sh`)
-- [x] Runbooks followed once by the owner. (`docs/runbooks/{install,upgrade,restore,a-part-wont-start,forget-everything}.md`)
-- [x] Licence file complete; OQ-06 closed. (`LICENSE`, `docs/LICENSES.md`, D-42)
-- [x] Release package ready; memory.md marks v1.0 complete. (`dist/semantic-neuroos_1.0.0_amd64.deb`, `reports/phase-10-release.md`)
+> **Audit 2026-11-22**: corrected below.
+
+- [~] Install, uninstall and purge verified in a staging folder (`test-install-uninstall.sh`, now also checks drop-in folder modes); **not in a fresh VM.**
+- [ ] Runbooks followed once by the owner: **not done** (written, not followed).
+- [ ] Licence: **owner decision needed.** `LICENSE` says MIT/Apache-2.0, but `neuroos-monitor` statically links the GPL-3.0-only `cosmic-protocols` crate and `docs/LICENSES.md` wrongly says GPL parts are dynamically linked.
+- [ ] Release package: the 2026-11-21 `.deb` carries the mock-transport fetcher; rebuild after sign-off. Reproducible-build check compares no hashes (it checks NX/PIE only).
 
 ---
 

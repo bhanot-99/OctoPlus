@@ -452,7 +452,7 @@ bitflags! {
 
 ## 9. Models & Hardware Accelerators
 
-All machine learning models are verified by SHA-256 checksums in [`models/manifest.toml`](file:///home/bhanot/Semantic%20NeuroOS/models/manifest.toml) before loading. Models are never fetched dynamically at runtime.
+All machine learning models are verified by SHA-256 checksums in [`models/manifest.toml`](models/manifest.toml) before loading. Models are never fetched dynamically at runtime.
 
 | Role | Model ID | Artifact / Format | Size | License | Purpose |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -602,7 +602,7 @@ neuroosctl profile remove 1
 ### Security & Audit Verification
 ```bash
 # Inspect recent actions recorded by the safety kernel
-neuroosctl audit list --limit 10
+neuroosctl audit tail --limit 10
 
 # Cryptographically verify the hash-chained audit ledger
 neuroosctl audit verify
@@ -646,6 +646,20 @@ just sanitize
 just sc
 ```
 
+Live checks on the installed, running stack (after `just install-dev` and
+`systemctl --user start neuroos.target`); each prints PASS/FAIL per check:
+
+```bash
+tests/scripts/live-input-test.sh          # typed inputs, outputs, injection, concurrency, cancel
+tests/scripts/fetcher-netns-test.sh       # C7's real HTTPS transport in a private network namespace (also in `just test`)
+scripts/voice-real-stack.sh               # one spoken exchange through virtual audio devices (nothing audible)
+scripts/voice-sc-checks.sh                # voice security: strict capture, no audio on disk
+scripts/voice-nudge-check.sh              # spoken nudge (UJ-2); run at the keyboard, or it reports HELD
+scripts/chaos-injection.sh                # kill and recover every part, mid-answer kill, restart storm
+scripts/bench-integrated.sh --voice 6     # NFR-PERF figures from the live stack; unmeasured items say so
+scripts/soak-24h.sh --hours 24            # NFR-REL-04; runs under 4 h are reported "not asserted"
+```
+
 ---
 
 ## 14. Project Roadmap & Delivery Status
@@ -662,9 +676,11 @@ Development is delivered across 11 structured phases:
 | **5** | **Knowledge & Chat (C5)** | ✅ Done | Turn routing, deictic resolution, 384-token prompt assembler, control-token neutralizer, session history. |
 | **6** | **Nudge Engine** | ✅ Done | Background rule evaluator (disk, battery, thermal, memory), cooldowns, quiet hours, context policy gate. |
 | **7** | **Voice Pipeline (C2)** | ✅ Done | PipeWire 16 kHz capture, Silero VAD, openWakeWord, whisper.cpp ASR, Kokoro fp32 TTS (`af_heart`), barge-in. |
-| **8** | **Controlled Fetcher (C7)** | ✅ Done | Zone 1 egress daemon, SSRF protection, token verification, web search provider integration. |
-| **9** | **Integration & Soak** | ✅ Done | Full 24-hour multi-modal soak, fault injection & chaos resilience, live Wayland compositor recovery tests. |
-| **10** | **Packaging & Release** | ✅ Done | Signed `.deb` distribution, production installer/uninstaller, `neuroosctl init`, operator runbooks, v1.0.0. |
+| **8** | **Controlled Fetcher (C7)** | 🟨 Built, not signed off | Real HTTPS transport added in the 2026-11-22 audit (it shipped with a mock); SSRF gate, token verification, search provider. Needs the owner's sudo deploy and a live lookup. |
+| **9** | **Integration & Soak** | 🟨 Partly verified | Chaos and recovery, live input/voice checks and measured benchmarks pass; the 24 h soak and the two-week owner trial have **not** been run. |
+| **10** | **Packaging & Release** | 🟨 Open items | `.deb` (unsigned), installer/uninstaller, `neuroosctl init`, runbooks. Open: licence decision, fresh-VM install, rebuild of the package. |
+
+Current, evidence-based status: [`reports/hardening-audit-2026-11-22.md`](reports/hardening-audit-2026-11-22.md).
 
 ---
 
@@ -685,4 +701,4 @@ For detailed implementation and design documents, refer to the project specifica
 
 ## License
 
-Semantic-NeuroOS is licensed under dual [MIT](LICENSE-MIT) OR [Apache-2.0](LICENSE-APACHE) terms, with specific exceptions for model weights and third-party submodules documented in [`models/manifest.toml`](models/manifest.toml) and [`deny.toml`](deny.toml).
+See [`LICENSE`](LICENSE) and [`docs/LICENSES.md`](docs/LICENSES.md). **Open owner decision:** `neuroos-monitor` statically links the GPL-3.0-only `cosmic-protocols` crate, so the MIT/Apache-2.0 terms in `LICENSE` may not fit binaries that include it (risk R-07). Model weights and third-party components: [`models/manifest.toml`](models/manifest.toml), [`deny.toml`](deny.toml).

@@ -535,10 +535,13 @@ Both are JSON lines, hash-chained (`prev_hash` = SHA-256 of the previous line), 
 ### 8.6 Anti-SSRF policy (C7)
 
 - Blocked IPv4: `0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.0.0.0/24, 192.168.0.0/16, 198.18.0.0/15, 224.0.0.0/4, 240.0.0.0/4, 255.255.255.255/32`.
-- Blocked IPv6: `::/128, ::1/128, ::ffff:0:0/96` (checked after unmapping), `64:ff9b::/96, fc00::/7, fe80::/10, ff00::/8, 2001:db8::/32`.
-- Resolve once, validate every address, connect to the validated address with the original name for TLS.
-- Redirects: at most 3, each fully re-validated. No credentials in URLs. Default port only.
-- The search provider host is fixed in config; result pages are validated like any other link.
+- Blocked IPv6: `::/96` (covers `::/128`, `::1/128` and the deprecated IPv4-compatible form), `::ffff:0:0/96` (checked after unmapping), `64:ff9b::/96, fc00::/7, fe80::/10, ff00::/8, 2001:db8::/32`.
+- URLs are judged with the same WHATWG parser the HTTP client uses (`url` crate), so the gate and the client never disagree about the host (a backslash, a decimal or hex IPv4 host).
+- Resolve once, validate every address, connect to the validated address with the original name for TLS: the client's resolver is C7's own validating resolver, which refuses the whole answer if any address is blocked; IP-literal hosts are validated by the URL gate.
+- Redirects: never followed by the client; each `Location` is re-validated as a new URL and counted, at most 3. No credentials in URLs. Default port only.
+- Every hop attempted is reported to C6 for the ledger, including those of a fetch that then fails and redirects to other hosts; a lost answer leaves an `unconfirmed` ledger line.
+- The search provider host is fixed in one place (`neuroos-common::search`), which C6's dialog also reads; result pages are validated like any other link.
+- Known gap (FR-FET-10): no kernel rule yet limits C7 to TCP 443 (systemd has no connect-port filter; an nftables rule needs root, owner item).
 
 ---
 
