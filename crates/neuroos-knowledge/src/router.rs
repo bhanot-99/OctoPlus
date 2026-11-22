@@ -1075,6 +1075,28 @@ const TEXT_TASK_VERBS: &[&str] = &[
 ];
 
 /// True when the text names the user (I, my, me).
+/// `norm` without a leading "tell me", "can you show me", "please give me", "let me know".
+fn without_request_opening(norm: &str) -> &str {
+    const OPENINGS: &[&str] = &[
+        "can you tell me",
+        "could you tell me",
+        "can you show me",
+        "could you show me",
+        "can you give me",
+        "please tell me",
+        "please show me",
+        "please give me",
+        "tell me",
+        "show me",
+        "give me",
+        "let me know",
+    ];
+    OPENINGS
+        .iter()
+        .find_map(|o| strip_prefix_word(norm, o))
+        .unwrap_or(norm)
+}
+
 fn mentions_self(norm: &str) -> bool {
     SELF_WORDS.iter().any(|w| contains_word(norm, w))
 }
@@ -1511,7 +1533,9 @@ pub fn route(input: &RouteInput<'_>) -> RouteDecision {
 
     // A time word alone ("who won the match yesterday") is not about the user's activity; it
     // needs the user in the sentence or an activity word.
-    let about_user = mentions_self(&norm)
+    // The "me" of a polite opening ("tell me", "can you show me") is not about the user's
+    // activity: "tell me the weather today" is a general question (BUG-117).
+    let about_user = mentions_self(without_request_opening(&norm))
         || PATTERNS
             .activity_cues
             .iter()

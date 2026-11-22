@@ -298,3 +298,28 @@ proptest! {
         prop_assert_eq!(decision.action_hint, None);
     }
 }
+
+/// Owner, 2026-11-22: "tell me the weather of delhi today" was routed to the user's own
+/// activity because of the "me" in "tell me", so it never offered a lookup.
+#[test]
+fn a_leading_tell_me_does_not_make_a_question_about_the_user() {
+    use neuroos_knowledge::router::{RouteInput, RouteKind, route};
+    let r = |t: &str| {
+        route(&RouteInput {
+            text: t,
+            nudge_window_open: false,
+            retrieval_best_score: None,
+            cutoff: 0.5,
+        })
+        .route
+    };
+    assert_eq!(r("tell me the weather of delhi today"), RouteKind::General);
+    assert_eq!(r("can you tell me the news today"), RouteKind::General);
+    assert_eq!(r("give me today's headlines"), RouteKind::General);
+    // The user is still in the sentence: their own activity.
+    assert_eq!(r("tell me what i did today"), RouteKind::Desktop);
+    assert_eq!(
+        r("show me what i worked on this morning"),
+        RouteKind::Desktop
+    );
+}

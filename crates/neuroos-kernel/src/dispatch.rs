@@ -915,6 +915,38 @@ fn hex(bytes: &[u8]) -> String {
 mod egress_tests {
     use super::*;
 
+    /// BUG-116: the request C6 sends must pass the dialog's own checks, or the dialog
+    /// refuses it and every web action expires ("That timed out"). The audit's A-09 fix
+    /// named the provider "DuckDuckGo", which is not a host.
+    #[test]
+    fn web_dialog_requests_pass_the_dialogs_validation() {
+        for (cap, args) in [
+            (
+                "web.search",
+                serde_json::json!({"query": "weather in delhi today"}),
+            ),
+            (
+                "web.fetch",
+                serde_json::json!({"url": "https://example.com/a"}),
+            ),
+        ] {
+            let req = DialogRequest {
+                version: PROTOCOL_VERSION,
+                action_id: "0190f5a2-7c1e-7d3a-8b4f-2a9c6e1d0b3f".into(),
+                capability: cap.into(),
+                tier: DialogTier::Review,
+                expires_in_ms: 120_000,
+                approve_delay_ms: APPROVE_DELAY_MS,
+                items: Vec::new(),
+                params: Vec::new(),
+                taint: None,
+                egress: egress_for(cap, &args),
+                danger_phrase: None,
+            };
+            assert!(req.validate().is_ok(), "{cap}: {:?}", req.validate());
+        }
+    }
+
     /// Regression (audit A-09): the dialog names the provider and page count C7 really uses.
     #[test]
     fn search_dialog_names_the_real_provider_and_page_count() {

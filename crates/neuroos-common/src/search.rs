@@ -6,8 +6,21 @@
 /// The provider's HTML search endpoint; the query is appended as `q=`.
 pub const SEARCH_ENDPOINT: &str = "https://html.duckduckgo.com/html/";
 
-/// The provider's name as the approval dialog shows it.
-pub const SEARCH_PROVIDER: &str = "DuckDuckGo";
+/// The host the query goes to, as the approval dialog shows it. It must be a lower-case
+/// host name: the dialog refuses anything else (BUG-116), and it is the host of
+/// [`SEARCH_ENDPOINT`], so the user is shown where the text really goes.
+pub const SEARCH_PROVIDER: &str = "html.duckduckgo.com";
 
 /// Result pages one approved search reads (UJ-3, design.md §6: "up to 2 result pages").
 pub const SEARCH_RESULT_PAGES: u32 = 2;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_provider_is_the_endpoints_host() {
+        let rest = SEARCH_ENDPOINT.strip_prefix("https://").unwrap();
+        assert_eq!(rest.split('/').next(), Some(SEARCH_PROVIDER));
+    }
+}
