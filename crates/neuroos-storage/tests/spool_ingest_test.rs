@@ -237,7 +237,7 @@ fn only_the_lead_of_a_long_page_is_stored() {
     };
     let items = document_items(&doc, 10);
     assert_eq!(items.len(), WEB_PAGE_MAX_CHUNKS);
-    assert!(WEB_PAGE_MAX_CHUNKS * CHUNK_CHARS <= 12_000);
+    const { assert!(WEB_PAGE_MAX_CHUNKS * CHUNK_CHARS <= 12_000) };
     // A short page is stored whole.
     let short = SpoolDoc {
         text: sentence.repeat(3),
