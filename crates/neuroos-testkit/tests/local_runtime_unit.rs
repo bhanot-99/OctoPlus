@@ -7,8 +7,25 @@ use std::process::Command;
 use neuroos_common::paths::Part;
 use neuroos_common::socketmap::SOCKET_MAP;
 
+/// Stops the runtime unit when the test ends. Every installed part `Requires=` the runtime
+/// unit, so stopping it takes the user's whole stack down with it: when `neuroos.target` was
+/// running before the test, it is started again (the gate must not leave the buddy off).
 struct UnitGuard {
     name: &'static str,
+    restore_target: bool,
+}
+
+impl UnitGuard {
+    fn new(name: &'static str) -> Self {
+        let restore_target = Command::new("systemctl")
+            .args(["--user", "is-active", "--quiet", "neuroos.target"])
+            .status()
+            .is_ok_and(|s| s.success());
+        Self {
+            name,
+            restore_target,
+        }
+    }
 }
 
 impl Drop for UnitGuard {
@@ -19,6 +36,11 @@ impl Drop for UnitGuard {
         let _ = Command::new("systemctl")
             .args(["--user", "reset-failed", self.name])
             .status();
+        if self.restore_target {
+            let _ = Command::new("systemctl")
+                .args(["--user", "start", "neuroos.target"])
+                .status();
+        }
     }
 }
 
@@ -53,9 +75,7 @@ fn local_runtime_unit_creates_socket_dirs_with_mode_0700() {
 
     let runtime_root = PathBuf::from(&xdg).join("neuroos");
 
-    let _guard = UnitGuard {
-        name: "neuroos-runtime.service",
-    };
+    let _guard = UnitGuard::new("neuroos-runtime.service");
 
     // First stop if already running
     let _ = Command::new("systemctl")
