@@ -1,0 +1,34 @@
+# Coverage-guided fuzzing of C7's URL gate (security.md §8 "SSRF policy": fuzz ≥ 1 h).
+# Separate workspace: needs the nightly toolchain and cargo-fuzz (owner approval D-46).
+#   cargo +nightly fuzz run ssrf_parse -- -max_total_time=3600
+[package]
+name = "neuroos-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+license = "GPL-3.0-only"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+url = "2.5.8"
+neuroos-fetcher = { path = "../crates/neuroos-fetcher" }
+
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "ssrf_parse"
+path = "fuzz_targets/ssrf_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ssrf_redirect"
+path = "fuzz_targets/ssrf_redirect.rs"
+test = false
+doc = false
+bench = false

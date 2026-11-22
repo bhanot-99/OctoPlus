@@ -41,3 +41,9 @@ egress.jsonl*
 *.swp
 __pycache__/
 *.pyc
+
+# cargo-fuzz output (see fuzz/Cargo.toml); fuzz/seeds/ is committed
+fuzz/target/
+fuzz/corpus/
+fuzz/artifacts/
+fuzz/coverage/

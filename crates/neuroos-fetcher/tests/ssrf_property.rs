@@ -73,7 +73,12 @@ proptest! {
         prop_assert!(client.port().is_none());
         prop_assert!(client.username().is_empty() && client.password().is_none());
         let host = client.host_str().expect("host").trim_matches(|c| c == '[' || c == ']');
-        prop_assert_eq!(host, safe.host.as_str());
+        // One address can be written two ways ("::ffff:6f00:1" / "::ffff:111.0.0.1", found by
+        // the fuzzer): literals are compared as addresses.
+        match (host.parse::<IpAddr>(), safe.host.parse::<IpAddr>()) {
+            (Ok(a), Ok(b)) => prop_assert_eq!(a, b),
+            _ => prop_assert_eq!(host, safe.host.as_str()),
+        }
         // A literal address must be public; a name is checked after resolution (transport).
         if let Ok(ip) = host.parse::<IpAddr>() {
             prop_assert!(AddressPolicy.validate_ip(ip).is_ok(), "{raw:?} -> {ip}");
@@ -82,4 +87,14 @@ proptest! {
         let direct = url::Url::parse(&raw).expect("raw parses when the gate accepted it");
         prop_assert_eq!(direct.host_str(), client.host_str());
     }
+}
+
+/// Found by `cargo fuzz` (ssrf_parse, 2026-11-22): an IPv4-mapped literal that the client
+/// writes in hex. It names a public address, so it is accepted, on the right address; the
+/// mapped loopback is still refused.
+#[test]
+fn a_mapped_literal_is_judged_by_its_address_not_its_spelling() {
+    let ok = SafeUrl::parse("https://[::ffff:6f00:1]/").expect("public mapped address");
+    assert_eq!(ok.ip_literal(), Some("::ffff:111.0.0.1".parse().unwrap()));
+    assert!(SafeUrl::parse("https://[::ffff:7f00:1]/").is_err(), "mapped 127.0.0.1");
 }
