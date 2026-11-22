@@ -478,6 +478,17 @@ fn after(ms: u64, f: impl FnOnce() + 'static) {
     glib::timeout_add_local_once(Duration::from_millis(ms), f);
 }
 
+fn late_allow(u: Rc<Ui>) {
+    if u.outcome.borrow().is_some() {
+        return;
+    }
+    if u.approvable() {
+        u.allow.activate();
+    } else {
+        after(50, move || late_allow(u));
+    }
+}
+
 fn screenshot(ui: &Ui, path: &str) -> Result<(), String> {
     let paintable = gtk::WidgetPaintable::new(Some(&ui.window));
     let snap = gtk::Snapshot::new();
@@ -514,9 +525,9 @@ fn schedule_self_test(ui: &Rc<Ui>, test: SelfTest) {
             if u.outcome.borrow().is_some() {
                 u.fail("approved inside the delay");
             }
-            after(delay + 300, move || {
-                u.allow.activate();
-            });
+            // Wait until the dialog really is approvable: under load the window can become
+            // active late and re-arm the delay (rule 2), so a fixed sleep would race it.
+            after(delay + 300, move || late_allow(u));
         }),
         SelfTest::Escape => after(300, move || {
             let _ = WidgetExt::activate_action(&u.window, "confirm.deny", None);
