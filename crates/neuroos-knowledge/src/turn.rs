@@ -53,6 +53,13 @@ const MAX_KEPT_ANSWER_BYTES: usize = 4096;
 const WEB_INGEST_POLL: Duration = Duration::from_millis(250);
 /// C3's source tag for documents that came through C7's spool.
 const WEB_SOURCE: &str = "c7";
+
+/// Most bytes kept of one stored page chunk in a web answer's prompt.
+const WEB_EXCERPT_BYTES: usize = 300;
+
+/// Evidence budget (tokens) for a web answer: a few question-matching excerpts rather than the
+/// 128-token head of one chunk. About 2 s more prefill than the default, once per lookup.
+const WEB_EVIDENCE_TOKENS: u32 = 320;
 /// Most characters of the answer stored in C3 as the turn summary.
 const SUMMARY_CHARS: usize = 240;
 /// Longest action answer asked of C4, in tokens.
@@ -920,6 +927,19 @@ impl KnowledgeHandler {
             self.with_state(|s| s.session.render(self.cfg.history_tokens));
         // Evidence from the web is untrusted whatever C3 says (R0-4: never lowered).
         let ev_taint = ev.taint.merge(TaintFlags::EXTERNAL_UNTRUSTED);
+        // A stored page chunk opens with menus and language lists, and the prompt keeps only the
+        // head of each item: keep the lines that answer the question instead, so the figure asked
+        // for is not cut off (live: the GDP chunk held it at byte 611 of a 384-byte budget).
+        let excerpts: Vec<Evidence> = ev
+            .items
+            .iter()
+            .map(|e| Evidence {
+                text: evidence::excerpt_for_question(&e.text, question, WEB_EXCERPT_BYTES),
+                ..e.clone()
+            })
+            .collect();
+        let mut budgets = self.budgets();
+        budgets.evidence = budgets.evidence.max(WEB_EVIDENCE_TOKENS);
         let prompt = prompt::assemble(
             &PromptInput {
                 facts: &[],
@@ -928,11 +948,11 @@ impl KnowledgeHandler {
                 focus_taint: TaintFlags::empty(),
                 history: &history,
                 history_taint: history_taint.merge(out_taint),
-                evidence: &ev.items,
+                evidence: &excerpts,
                 evidence_taint: ev_taint,
                 question,
             },
-            &self.budgets(),
+            &budgets,
         );
         if !self.kernel_allows(prompt.taint).await? {
             return Err(HandlerError::new(

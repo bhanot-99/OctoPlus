@@ -122,3 +122,116 @@ pub fn select(evidence: Vec<Evidence>, cutoff: f64, max: usize) -> Selected {
         dropped_duplicate,
     }
 }
+/// Words too common to tell one line from another.
+const STOP_WORDS: &[&str] = &[
+    "the", "and", "what", "whats", "how", "who", "when", "where", "why", "which", "does", "did",
+    "for", "from", "with", "about", "that", "this", "are", "was", "were", "can", "you", "your",
+    "please", "check", "internet", "online", "web", "search", "look", "tell", "give", "find",
+];
+
+/// Cuts a long page chunk down to the lines that answer `question` (web answers only).
+///
+/// A stored page chunk often starts with menus and language lists; the prompt keeps only the
+/// head of each chunk, so the figure asked for could sit past the cut. Lines are scored by the
+/// distinct question words they hold (a digit adds a point, since most asked-for facts are
+/// numbers), the best lines are kept in their original order up to `max_bytes`, and nothing is
+/// invented: every kept line is verbatim. A chunk that already fits is returned unchanged.
+#[must_use]
+pub fn excerpt_for_question(text: &str, question: &str, max_bytes: usize) -> String {
+    if text.len() <= max_bytes {
+        return text.trim().to_string();
+    }
+    let words: HashSet<String> = question
+        .split(|c: char| !c.is_alphanumeric())
+        .map(str::to_lowercase)
+        .filter(|w| w.chars().count() >= 3 && !STOP_WORDS.contains(&w.as_str()))
+        .collect();
+    let mut scored: Vec<(usize, usize, &str)> = text
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .enumerate()
+        .map(|(i, l)| {
+            let lower = l.to_lowercase();
+            let hits = words.iter().filter(|w| lower.contains(w.as_str())).count();
+            let digit = usize::from(hits > 0 && l.bytes().any(|b| b.is_ascii_digit()));
+            (hits * 2 + digit, i, l)
+        })
+        .filter(|(score, _, _)| *score > 0)
+        .collect();
+    if scored.is_empty() {
+        return truncate_at_char(text.trim(), max_bytes).to_string();
+    }
+    // Best first; earlier lines win ties.
+    scored.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
+    let mut kept: Vec<(usize, &str)> = Vec::new();
+    let mut used = 0;
+    for (_, i, l) in scored {
+        let l = truncate_at_char(l, max_bytes);
+        if used + l.len() + 1 > max_bytes {
+            continue;
+        }
+        used += l.len() + 1;
+        kept.push((i, l));
+    }
+    kept.sort_by_key(|(i, _)| *i);
+    kept.into_iter()
+        .map(|(_, l)| l)
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn truncate_at_char(s: &str, max_bytes: usize) -> &str {
+    let mut end = max_bytes.min(s.len());
+    while !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    &s[..end]
+}
+
+#[cfg(test)]
+mod excerpt_tests {
+    use super::excerpt_for_question;
+
+    #[test]
+    fn the_line_with_the_figure_survives_menus_before_it() {
+        let mut page = String::new();
+        for l in [
+            "English",
+            "Deutsch",
+            "Español",
+            "Français",
+            "日本語",
+            "Language",
+        ] {
+            page.push_str(l);
+            page.push('\n');
+        }
+        for _ in 0..30 {
+            page.push_str("data-astro-reload href menu item\n");
+        }
+        page.push_str("Gross Domestic Product (GDP) of India is $4.06 trillion as of 2026.\n");
+        page.push_str("Nominal GDP, PPP GDP\n");
+        let got = excerpt_for_question(&page, "check on internet, what is the GDP of india", 300);
+        assert!(got.len() <= 300);
+        assert!(got.contains("$4.06 trillion"), "{got}");
+        assert!(!got.contains("Deutsch"));
+    }
+
+    #[test]
+    fn short_text_is_unchanged_and_no_match_falls_back_to_the_head() {
+        assert_eq!(
+            excerpt_for_question("  tiny  ", "gdp of india", 300),
+            "tiny"
+        );
+        let long = "x".repeat(900);
+        assert_eq!(excerpt_for_question(&long, "gdp of india", 300).len(), 300);
+    }
+
+    #[test]
+    fn multibyte_text_is_never_cut_inside_a_character() {
+        let long = "インド".repeat(200);
+        let got = excerpt_for_question(&long, "gdp", 100);
+        assert!(got.len() <= 100 && got.chars().all(|c| c == 'イ' || c == 'ン' || c == 'ド'));
+    }
+}
