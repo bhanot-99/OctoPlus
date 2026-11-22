@@ -1020,6 +1020,40 @@ async fn an_earlier_answer_to_the_same_words_does_not_hide_the_lookup_offer() {
     assert_eq!(route(&done), Route::DesktopAnswer);
 }
 
+/// Live, on a fresh install: "Write a very long story about a lighthouse keeper." asked a second
+/// time matched its own first turn at 0.80 and was answered "I don't have anything on that."
+/// (the Desktop route). Past turns decide the route only when the question is about them.
+#[tokio::test]
+async fn asking_the_same_question_twice_does_not_make_it_a_desktop_question() {
+    let past_turn = |text: &str| Evidence {
+        domain: Domain::VoiceInteraction as i32,
+        ..ev(1, text, 0.80, USER | MODEL)
+    };
+    let s = Stack::start(Opts {
+        evidence: vec![past_turn(
+            "Asked: Write a short story about a lighthouse keeper. Answered: I don't have anything on that.",
+        )],
+        answer: vec!["Once there was a keeper.".into()],
+        ..Opts::default()
+    })
+    .await;
+    let (said, done) = s
+        .ask("Write a short story about a lighthouse keeper.")
+        .await;
+    assert_eq!(route(&done), Route::GeneralChat);
+    assert_eq!(said, "Once there was a keeper.");
+    // A question about the conversation itself may use those turns.
+    let s = Stack::start(Opts {
+        evidence: vec![past_turn(
+            "Asked: what is the capital of France Answered: Paris.",
+        )],
+        ..Opts::default()
+    })
+    .await;
+    let (_, done) = s.ask("what did I ask you earlier?").await;
+    assert_eq!(route(&done), Route::DesktopAnswer);
+}
+
 const TWO_PAGES: &str = r#"{"spool_files":["search_1_0.json","search_1_1.json"],"requests":3}"#;
 
 fn web_ev(id: u64, text: &str) -> Evidence {

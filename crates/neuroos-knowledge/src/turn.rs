@@ -1033,14 +1033,15 @@ impl KnowledgeHandler {
         self.metrics
             .evidence_no_taint
             .fetch_add(u64::from(selected.dropped_no_taint), Ordering::Relaxed);
-        // A question about something that changes (weather, news, prices) is not about the
-        // user's desktop: our own earlier answers to the same words must not pull it there, or
-        // no lookup is offered and the old "I don't have real-time data" is repeated.
-        let fresh_question = chat::freshness_cue(text);
+        // Our own earlier answers are stored as memory too. They must not pull a question onto the
+        // Desktop route: asked twice, "write a long story" matched its own first turn at 0.80 and
+        // got "I don't have anything on that."; a weather question got no lookup offer. Only a
+        // question about the conversation itself ("what did I ask you earlier?") may use them.
+        let about_conversation = chat::asks_about_the_conversation(text);
         let best = selected
             .items
             .iter()
-            .find(|e| !(fresh_question && e.domain == Domain::VoiceInteraction as i32))
+            .find(|e| about_conversation || e.domain != Domain::VoiceInteraction as i32)
             .map(|e| e.score);
         let decision = router::route(&RouteInput {
             text,

@@ -643,6 +643,31 @@ pub fn personal_fact_statement(text: &str) -> bool {
     false
 }
 
+/// True when the question is about the conversation itself ("what did I ask you earlier?",
+/// "you said ..."), so the assistant's own past turns are the evidence it needs.
+#[must_use]
+pub fn asks_about_the_conversation(text: &str) -> bool {
+    let norm = router::normalise(text);
+    [
+        "did i ask",
+        "i asked",
+        "did you say",
+        "you said",
+        "you told me",
+        "we talked",
+        "we discussed",
+        "our conversation",
+        "our chat",
+        "last time",
+        "earlier",
+        "previously",
+        "you answered",
+        "what did you answer",
+    ]
+    .iter()
+    .any(|p| norm.contains(p))
+}
+
 /// Appends [`LOOKUP_OFFER`] to `answer` when `fresh` is true; otherwise returns `answer` unchanged.
 ///
 /// Idempotent: applying multiple times does not duplicate the offer.
