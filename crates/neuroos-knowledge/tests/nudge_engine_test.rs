@@ -322,6 +322,7 @@ impl Stack {
                 generation: Duration::from_secs(5),
                 control: Duration::from_millis(250),
                 dispatch: Duration::from_secs(5),
+                web_ingest: Duration::from_millis(600),
             },
             metrics,
             nudge.clone(),

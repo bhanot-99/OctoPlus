@@ -97,8 +97,14 @@ impl Handler for FakeStorage {
             tokio::time::sleep(self.delay).await;
         }
         match req.body {
-            Body::QueryHybrid(_) => Ok(Body::HybridResult(HybridResult {
-                evidence: self.evidence.clone(),
+            // Like C3: a query naming domains gets only evidence from those domains.
+            Body::QueryHybrid(q) => Ok(Body::HybridResult(HybridResult {
+                evidence: self
+                    .evidence
+                    .iter()
+                    .filter(|e| q.domains.is_empty() || q.domains.contains(&e.domain))
+                    .cloned()
+                    .collect(),
                 stale_index: self.stale,
             })),
             Body::QueryFocusHistory(q) => {
@@ -356,6 +362,7 @@ impl Stack {
                 generation: Duration::from_secs(5),
                 control: Duration::from_millis(250),
                 dispatch: Duration::from_secs(5),
+                web_ingest: Duration::from_millis(600),
             },
             metrics,
             nudge,
@@ -890,10 +897,37 @@ async fn no_answer_path_hands_back_a_taint_below_the_users_own_words() {
 
 // ---- offers: lookup and remembering ----------------------------------------------------------------
 
+const TWO_PAGES: &str = r#"{"spool_files":["search_1_0.json","search_1_1.json"],"requests":3}"#;
+
+fn web_ev(id: u64, text: &str) -> Evidence {
+    Evidence {
+        chunk_id: id,
+        domain: Domain::ExternalDocuments as i32,
+        text: text.to_string(),
+        score: 0.31,
+        taint: Some(Taint { flags: EXTERNAL }),
+        // Fresh: stored after the lookup began.
+        at_ns: u64::MAX / 2,
+        source: "c7".into(),
+    }
+}
+
+/// UJ-3 / FR-CHT-04 / FR-CHT-06: after "yes" the drafted query (only what the search needs)
+/// goes to C6, and the original question is answered from the fetched pages: wrapped as
+/// untrusted, introduced as coming from the web, flagged `used_web`, tainted.
 #[tokio::test]
-async fn a_fresh_question_gets_the_lookup_offer_and_yes_is_answered_honestly() {
+async fn an_accepted_lookup_is_answered_from_the_fetched_pages() {
     let s = Stack::start(Opts {
-        result_json: r#"{"spool_files":["/var/spool/neuroos-fetcher/1.json","/var/spool/neuroos-fetcher/2.json"]}"#.into(),
+        result_json: TWO_PAGES.into(),
+        evidence: vec![
+            web_ev(1, "Rust 1.99 was released on 2026-10-30."),
+            // Pages stored before this lookup are not used for its answer.
+            Evidence {
+                at_ns: 1,
+                ..web_ev(3, "Rust 1.10 is the newest release.")
+            },
+        ],
+        answer: vec!["Rust 1.99 is the newest.".to_string()],
         ..Opts::default()
     })
     .await;
@@ -902,21 +936,71 @@ async fn a_fresh_question_gets_the_lookup_offer_and_yes_is_answered_honestly() {
         said.ends_with(neuroos_knowledge::chat::LOOKUP_OFFER),
         "{said}"
     );
-    let (said, _done) = s.ask("yes").await;
-    assert_eq!(said, "I searched the web and found 2 relevant pages.");
+    let (said, done) = s.ask("yes").await;
     assert_eq!(
-        s.rec().dispatches,
+        said,
+        format!(
+            "{}Rust 1.99 is the newest.",
+            neuroos_knowledge::chat::WEB_ANSWER_LEAD
+        )
+    );
+    assert!(done.used_web);
+    assert_ne!(
+        done.taint.unwrap().flags & EXTERNAL,
+        0,
+        "web content taints the turn"
+    );
+    let rec = s.rec();
+    assert_eq!(
+        rec.dispatches,
         vec![(
             "web.search".into(),
-            r#"{"query":"what is the latest version of rust"}"#.into(),
+            r#"{"query":"latest version of rust"}"#.into(),
             USER | MODEL
         )]
     );
     assert_eq!(
+        rec.prompts.len(),
+        2,
+        "the answer is generated from the pages"
+    );
+    let p = body(&rec.prompts[1]);
+    assert!(p.contains("Rust 1.99 was released"), "{p}");
+    assert!(!p.contains("Rust 1.10"), "stale pages are not used: {p}");
+    assert!(p.contains("what is the latest version of rust"), "{p}");
+}
+
+/// When C3 has not made the pages searchable in time, the user is told so honestly and
+/// nothing is invented (FR-CHT-02).
+#[tokio::test]
+async fn pages_that_never_arrive_get_an_honest_line() {
+    let s = Stack::start(Opts {
+        result_json: TWO_PAGES.into(),
+        ..Opts::default()
+    })
+    .await;
+    let _ = s.ask("what is the latest version of rust").await;
+    let (said, done) = s.ask("yes").await;
+    assert_eq!(said, neuroos_knowledge::chat::LOOKUP_UNREAD);
+    assert!(!done.used_web);
+    assert_eq!(
         s.rec().prompts.len(),
         1,
-        "no second generation for the answer to an offer"
+        "no answer is generated without pages"
     );
+}
+
+/// A search that stored nothing keeps the plain outcome line.
+#[tokio::test]
+async fn a_search_with_no_pages_says_so() {
+    let s = Stack::start(Opts {
+        result_json: r#"{"spool_files":[],"requests":1}"#.into(),
+        ..Opts::default()
+    })
+    .await;
+    let _ = s.ask("what is the latest version of rust").await;
+    let (said, _) = s.ask("yes").await;
+    assert_eq!(said, "I searched the web but didn't find any results.");
 }
 
 #[tokio::test]

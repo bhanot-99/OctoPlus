@@ -22,6 +22,47 @@ pub const LOOKUP_OFFER: &str = "Would you like me to look that up for you?";
 /// Plain speech, ends with '?'.
 pub const REMEMBER_OFFER: &str = "Want me to remember that?";
 
+/// How an answer from looked-up pages begins (FR-CHT-06: "From the pages I looked up…").
+pub const WEB_ANSWER_LEAD: &str = "From the pages I looked up: ";
+
+/// Said when a search stored pages but they could not be read back in time.
+pub const LOOKUP_UNREAD: &str =
+    "I looked it up, but I couldn't read the pages in time. Please ask again in a moment.";
+
+/// Words a search never needs (FR-CHT-04): question words, helpers and the user's own
+/// pronouns, so "which shampoo should I buy? I have a dry scalp" sends
+/// "shampoo buy dry scalp". The user can still edit the text in the dialog.
+const QUERY_DROP: &[&str] = &[
+    "a", "am", "an", "and", "are", "be", "been", "can", "could", "did", "do", "does", "had", "has",
+    "have", "hey", "how", "i", "i'd", "i'm", "i've", "is", "it", "me", "mine", "my", "myself",
+    "our", "please", "should", "that", "the", "this", "to", "us", "was", "we", "were", "what",
+    "which", "who", "will", "would", "you", "your",
+];
+
+/// Longest search query drafted from a question, in words.
+const QUERY_MAX_WORDS: usize = 10;
+
+/// Drafts the search text for `question` (FR-CHT-04): lower case, punctuation removed, the
+/// words in [`QUERY_DROP`] left out, at most [`QUERY_MAX_WORDS`] words. A question made only
+/// of such words is sent as the user wrote it, trimmed.
+#[must_use]
+pub fn search_query(question: &str) -> String {
+    let words: Vec<String> = question
+        .split(|c: char| !(c.is_alphanumeric() || c == '\'' || c == '-'))
+        .map(|w| {
+            w.trim_matches(|c: char| c == '\'' || c == '-')
+                .to_lowercase()
+        })
+        .filter(|w| !w.is_empty() && !QUERY_DROP.contains(&w.as_str()))
+        .take(QUERY_MAX_WORDS)
+        .collect();
+    if words.is_empty() {
+        question.trim().to_string()
+    } else {
+        words.join(" ")
+    }
+}
+
 /// Keywords and phrases indicating a question depends on fresh or specific real-world facts.
 const FRESHNESS_PATTERNS: &[&str] = &[
     "latest",
@@ -555,5 +596,25 @@ pub fn with_offer(answer: &str, fresh: bool) -> String {
         format!("{answer}{LOOKUP_OFFER}")
     } else {
         format!("{answer} {LOOKUP_OFFER}")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn search_query_keeps_only_what_the_search_needs() {
+        assert_eq!(
+            search_query("Hey, which shampoo should I buy? I have a dry scalp."),
+            "shampoo buy dry scalp"
+        );
+        assert_eq!(
+            search_query("What's the latest Rust version?"),
+            "what's latest rust version"
+        );
+        assert_eq!(search_query("  is it?  "), "is it?");
+        let long = "one two three four five six seven eight nine ten eleven twelve";
+        assert_eq!(search_query(long).split(' ').count(), 10);
     }
 }

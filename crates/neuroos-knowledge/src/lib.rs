@@ -102,6 +102,10 @@ pub fn init(ctx: &mut neuroos_health::ServiceContext) -> Result<(), neuroos_heal
         generation: Duration::from_millis(d.generation_ms),
         control: d.control(),
         dispatch: Duration::from_millis(d.kernel_dispatch_ms),
+        // C3 picks up spool files every `spool_poll_s` and then embeds them: three poll
+        // cycles plus the embedding time before a looked-up page counts as unreadable.
+        web_ingest: Duration::from_secs(ctx.config.storage.spool_poll_s.saturating_mul(3))
+            + Duration::from_secs(2),
     };
     let h = &ctx.health;
     let metrics = turn::Metrics {

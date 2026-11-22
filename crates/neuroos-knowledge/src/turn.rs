@@ -23,10 +23,10 @@ use neuroos_health::LatencyHistogram;
 use neuroos_ipc::{Handler, HandlerError, ReconnectingClient, Request, StreamSink};
 use neuroos_proto::v1::envelope::Body;
 use neuroos_proto::v1::{
-    Ack, AnswerChunk, AnswerDone, AskRequest, DispatchRequest, DispatchStatus, ErrorCode,
-    EvaluateRequest, Evidence, GenerateRequest, NudgeList, Origin, PreambleKind, PreambleRequest,
-    ProfileListRequest, QueryFocusHistory, QueryHybrid, Route, SpeakChunk, StoreInteraction, Taint,
-    VoiceCommand,
+    Ack, AnswerChunk, AnswerDone, AskRequest, DispatchRequest, DispatchResult, DispatchStatus,
+    Domain, ErrorCode, EvaluateRequest, Evidence, GenerateRequest, NudgeList, Origin, PreambleKind,
+    PreambleRequest, ProfileListRequest, QueryFocusHistory, QueryHybrid, Route, SpeakChunk,
+    StoreInteraction, Taint, VoiceCommand,
 };
 use neuroos_taint::TaintFlags;
 use tracing::warn;
@@ -49,6 +49,10 @@ use crate::status::{self, NO_LOOKUP_YET, Need};
 pub const MAX_QUESTION_BYTES: usize = 4096;
 /// Most answer text kept for the session and the stored summary.
 const MAX_KEPT_ANSWER_BYTES: usize = 4096;
+/// How often C3 is asked whether the pages have arrived.
+const WEB_INGEST_POLL: Duration = Duration::from_millis(250);
+/// C3's source tag for documents that came through C7's spool.
+const WEB_SOURCE: &str = "c7";
 /// Most characters of the answer stored in C3 as the turn summary.
 const SUMMARY_CHARS: usize = 240;
 /// Longest action answer asked of C4, in tokens.
@@ -80,6 +84,8 @@ pub struct Timing {
     pub control: Duration,
     /// C6 dispatch (includes the user's approval time).
     pub dispatch: Duration,
+    /// Longest wait for C3 to ingest the pages of an approved search.
+    pub web_ingest: Duration,
 }
 
 /// Counters and histograms reported through the health socket.
@@ -136,6 +142,18 @@ struct Call<'a> {
     /// What the user said, kept in the session for follow-ups (not stored in C3: C6 audits actions).
     question: &'a str,
     at_ns: u64,
+}
+
+/// What an approved search brought back for one question.
+struct WebFound<'a> {
+    /// The question the lookup was offered for.
+    question: &'a str,
+    /// Fresh evidence from the stored pages.
+    evidence: evidence::Selected,
+    /// Context taint joined with the search result's.
+    taint: TaintFlags,
+    /// When the lookup turn began (first-token metric).
+    started: Instant,
 }
 
 /// What identifies the turn being handled.
@@ -427,22 +445,10 @@ impl KnowledgeHandler {
         let pending = self.with_state(|s| std::mem::replace(&mut s.pending, Pending::None));
         match pending {
             Pending::None => Ok(None),
-            Pending::Lookup(query) => {
+            Pending::Lookup(question) => {
                 if chat::accepts_lookup(text) {
-                    let args = serde_json::json!({ "query": query }).to_string();
-                    let ctx = self.base_taint();
                     let done = self
-                        .dispatch(
-                            Call {
-                                skill: "web.search",
-                                args_json: &args,
-                                taint: ctx,
-                                origin,
-                                question: text,
-                                at_ns: now,
-                            },
-                            sink,
-                        )
+                        .lookup_turn(&question, Turn { text, origin, now }, sink)
                         .await?;
                     return Ok(Some(done));
                 }
@@ -695,31 +701,50 @@ impl KnowledgeHandler {
 
     /// Sends one skill call to C6 and speaks the outcome.
     async fn dispatch(&self, call: Call<'_>, sink: &StreamSink) -> Result<Body, HandlerError> {
-        let Call {
-            skill,
-            args_json,
-            taint,
-            origin,
-            question,
-            at_ns,
-        } = call;
+        let Some((result, out_taint)) = self.send_dispatch(&call).await else {
+            return self.status_turn(status::Part::Kernel, sink).await;
+        };
+        self.finish_dispatch(call, &result, out_taint, sink).await
+    }
+
+    /// Sends one dispatch to C6; `None` when C6 did not answer. The returned taint is the
+    /// context's joined with the result's (a missing result taint counts as untrusted, R0-4).
+    async fn send_dispatch(&self, call: &Call<'_>) -> Option<(DispatchResult, TaintFlags)> {
         let req = Body::DispatchRequest(DispatchRequest {
-            skill: skill.to_string(),
-            args_json: args_json.to_string(),
-            context_taint: Some(taint_msg(taint)),
-            origin: origin as i32,
+            skill: call.skill.to_string(),
+            args_json: call.args_json.to_string(),
+            context_taint: Some(taint_msg(call.taint)),
+            origin: call.origin as i32,
         });
         let result = match self.peers.kernel.call(req, self.timing.dispatch).await {
             Ok(Body::DispatchResult(r)) => r,
-            Ok(_) | Err(_) => return self.status_turn(status::Part::Kernel, sink).await,
+            Ok(_) | Err(_) => return None,
         };
-        let out_taint = taint.merge(
+        let out_taint = call.taint.merge(
             result
                 .result_taint
                 .as_ref()
                 .and_then(|t| TaintFlags::decode(Some(t.flags)).ok())
                 .unwrap_or(TaintFlags::EXTERNAL_UNTRUSTED),
         );
+        Some((result, out_taint))
+    }
+
+    /// Speaks a dispatch's outcome and records the turn.
+    async fn finish_dispatch(
+        &self,
+        call: Call<'_>,
+        result: &DispatchResult,
+        out_taint: TaintFlags,
+        sink: &StreamSink,
+    ) -> Result<Body, HandlerError> {
+        let Call {
+            skill,
+            args_json,
+            question,
+            at_ns,
+            ..
+        } = call;
         let line = match DispatchStatus::try_from(result.status) {
             Ok(DispatchStatus::Executed) => action::speak_result(skill, &result.result_json),
             Ok(DispatchStatus::Rejected) => {
@@ -752,6 +777,151 @@ impl KnowledgeHandler {
         });
         self.metrics.completed.fetch_add(1, Ordering::Relaxed);
         Ok(Self::done(Route::Action, out_taint))
+    }
+
+    // ---- web lookup (FR-CHT-04, FR-CHT-06, UJ-3) ---------------------------------------------
+
+    /// The user accepted the lookup offer for `question`: one approved `web.search`, then an
+    /// answer to the original question from the pages it stored. When nothing was stored (or
+    /// the search was refused, failed or expired) the outcome line is spoken as before.
+    async fn lookup_turn(
+        &self,
+        question: &str,
+        turn: Turn<'_>,
+        sink: &StreamSink,
+    ) -> Result<Body, HandlerError> {
+        let started = Instant::now();
+        let since_ns = neuroos_common::time::now_ns().unwrap_or(turn.now);
+        let args = serde_json::json!({ "query": chat::search_query(question) }).to_string();
+        let call = Call {
+            skill: "web.search",
+            args_json: &args,
+            taint: self.base_taint(),
+            origin: turn.origin,
+            question: turn.text,
+            at_ns: turn.now,
+        };
+        let Some((result, out_taint)) = self.send_dispatch(&call).await else {
+            return self.status_turn(status::Part::Kernel, sink).await;
+        };
+        let executed = DispatchStatus::try_from(result.status) == Ok(DispatchStatus::Executed);
+        if !executed || action::stored_pages(&result.result_json) == 0 {
+            return self.finish_dispatch(call, &result, out_taint, sink).await;
+        }
+        let evidence = self.web_evidence(question, since_ns).await;
+        if evidence.items.is_empty() {
+            Self::say(sink, chat::LOOKUP_UNREAD).await?;
+            self.with_state(|s| {
+                s.session
+                    .push(turn.text, chat::LOOKUP_UNREAD, out_taint, turn.now)
+            });
+            return Ok(Self::done(Route::Action, out_taint));
+        }
+        let found = WebFound {
+            question,
+            evidence,
+            taint: out_taint,
+            started,
+        };
+        self.web_answer(found, turn, sink).await
+    }
+
+    /// Fresh evidence from the pages C7 just stored, once C3 has ingested them (its spool
+    /// poll runs every few seconds, so this waits up to `timing.web_ingest`).
+    async fn web_evidence(&self, question: &str, since_ns: u64) -> evidence::Selected {
+        let deadline = Instant::now() + self.timing.web_ingest;
+        loop {
+            let q = Body::QueryHybrid(QueryHybrid {
+                text: question.to_string(),
+                top_k: self.cfg.evidence_top_k,
+                min_score: 0.0,
+                domains: vec![Domain::ExternalDocuments as i32],
+            });
+            if let Ok(Body::HybridResult(r)) =
+                self.peers.storage.call(q, self.timing.storage_query).await
+            {
+                let fresh: Vec<Evidence> = r
+                    .evidence
+                    .into_iter()
+                    .filter(|e| e.source == WEB_SOURCE && e.at_ns >= since_ns)
+                    .collect();
+                if !fresh.is_empty() {
+                    // The pages were fetched for this very question, so no relevance cut-off
+                    // applies; the top-k bound and de-duplication still do.
+                    return evidence::select(fresh, 0.0, self.cfg.evidence_top_k as usize);
+                }
+            }
+            if Instant::now() >= deadline {
+                return evidence::select(Vec::new(), 0.0, 0);
+            }
+            tokio::time::sleep(WEB_INGEST_POLL).await;
+        }
+    }
+
+    /// Answers `question` from web evidence: wrapped as untrusted, tainted, introduced with
+    /// FR-CHT-06's wording, flagged `used_web`, and followed by our own remember offer (UJ-3).
+    async fn web_answer(
+        &self,
+        found: WebFound<'_>,
+        turn: Turn<'_>,
+        sink: &StreamSink,
+    ) -> Result<Body, HandlerError> {
+        let WebFound {
+            question,
+            evidence: ev,
+            taint: out_taint,
+            started,
+        } = found;
+        let (history, history_taint) =
+            self.with_state(|s| s.session.render(self.cfg.history_tokens));
+        // Evidence from the web is untrusted whatever C3 says (R0-4: never lowered).
+        let ev_taint = ev.taint.merge(TaintFlags::EXTERNAL_UNTRUSTED);
+        let prompt = prompt::assemble(
+            &PromptInput {
+                facts: &[],
+                facts_taint: TaintFlags::empty(),
+                focus: None,
+                focus_taint: TaintFlags::empty(),
+                history: &history,
+                history_taint: history_taint.merge(out_taint),
+                evidence: &ev.items,
+                evidence_taint: ev_taint,
+                question,
+            },
+            &self.budgets(),
+        );
+        if !self.kernel_allows(prompt.taint).await? {
+            return Err(HandlerError::new(
+                ErrorCode::PermissionDenied,
+                "action rejected by safety kernel",
+                false,
+            ));
+        }
+        Self::say(sink, chat::WEB_ANSWER_LEAD).await?;
+        let Some(answer) = self.stream_answer(&prompt, started, sink).await? else {
+            return self.c4_down(sink).await;
+        };
+        let mut shown = format!("{}{answer}", chat::WEB_ANSWER_LEAD);
+        let mut pending = Pending::None;
+        if chat::personal_fact_statement(question) {
+            let offer = format!(" {}", chat::REMEMBER_OFFER);
+            Self::say(sink, &offer).await?;
+            shown.push_str(&offer);
+            pending = Pending::Remember(question.to_string());
+        }
+        let turn_taint = prompt.taint.merge(TaintFlags::MODEL_GENERATED);
+        self.with_state(|s| {
+            s.session.push(turn.text, &shown, turn_taint, turn.now);
+            s.pending = pending;
+        });
+        self.metrics.completed.fetch_add(1, Ordering::Relaxed);
+        Ok(Body::AnswerDone(AnswerDone {
+            route: Route::GeneralChat as i32,
+            taint: Some(taint_msg(turn_taint)),
+            used_web: true,
+            status_only: false,
+            degraded: false,
+        }))
     }
 
     // ---- desktop / general route ----------------------------------------------------------

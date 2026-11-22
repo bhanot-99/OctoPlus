@@ -577,6 +577,15 @@ fn describe(skill: &str, v: &Value) -> Option<String> {
     }
 }
 
+/// How many pages a `web.search` / `web.fetch` result stored (0 when unknown).
+#[must_use]
+pub fn stored_pages(result_json: &str) -> usize {
+    serde_json::from_str::<Value>(result_json)
+        .ok()
+        .and_then(|v| v.get("spool_files").and_then(Value::as_array).map(Vec::len))
+        .unwrap_or(0)
+}
+
 /// The sentence for an executed skill. Write skills get a fixed line; read-only skills get
 /// a plain description of their result, or failing that the result flattened to words. Either
 /// way it is neutralised, because the result is data the kernel returned, not our own template
