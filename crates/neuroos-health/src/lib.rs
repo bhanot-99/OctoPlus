@@ -23,8 +23,11 @@ use neuroos_proto::v1::{
 };
 
 /// Upper bounds of the latency buckets, in nanoseconds. Spans the PRD §6.1
-/// targets from sub-millisecond IPC to the 30 s generation deadline.
-pub const BUCKETS_NS: [u64; 16] = [
+/// targets from sub-millisecond IPC to the 30 s generation deadline, with an edge at each
+/// budget a histogram has to decide: 150 ms (NFR-PERF-09), 3.0 s (NFR-PERF-03), 4.5 s and
+/// 6.0 s (NFR-PERF-02). Without them a 2.5-10 s bucket could not tell a pass from a miss
+/// (audit A-21). Must match `kHealthBucketsNs` in `cpp/libneuroos`.
+pub const BUCKETS_NS: [u64; 20] = [
     100_000,
     250_000,
     500_000,
@@ -35,10 +38,14 @@ pub const BUCKETS_NS: [u64; 16] = [
     25_000_000,
     50_000_000,
     100_000_000,
+    150_000_000,
     250_000_000,
     500_000_000,
     1_000_000_000,
     2_500_000_000,
+    3_000_000_000,
+    4_500_000_000,
+    6_000_000_000,
     10_000_000_000,
     30_000_000_000,
 ];
@@ -405,5 +412,16 @@ mod tests {
                 prop_assert!(w.counts[i] > 0);
             }
         }
+    }
+
+    #[test]
+    fn bucket_edges_sit_on_the_budgets_they_decide() {
+        for budget in [150_000_000, 3_000_000_000, 4_500_000_000, 6_000_000_000] {
+            assert!(BUCKETS_NS.contains(&budget), "{budget}");
+        }
+        assert!(
+            BUCKETS_NS.windows(2).all(|w| w[0] < w[1]),
+            "strictly increasing"
+        );
     }
 }

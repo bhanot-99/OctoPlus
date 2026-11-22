@@ -139,16 +139,27 @@ for c in status.get("components", []):
     for h in c.get("histograms", []):
         hist[(c["name"], h["name"])] = h
 
-def from_hist(part, name):
+def from_hist(part, name, q=0.99):
+    """Upper bound (ms) of the bucket holding quantile q, from the bucket counts."""
     h = hist.get((part, name))
     if not h or h.get("sample_count", 0) == 0:
         return None, f"no samples in {part}/{name} during this run"
-    return h["p99_ns"] / 1e6, f"{part}/{name} histogram, {h['sample_count']} samples, p99 bucket upper bound"
+    bounds, counts, n = h["upper_bounds_ns"], h["counts"], h["sample_count"]
+    need, seen = q * n, 0
+    for i, c in enumerate(counts):
+        seen += c
+        if seen >= need:
+            bound = bounds[i] / 1e6 if i < len(bounds) else float("inf")
+            return bound, f"{part}/{name} histogram, {n} samples, p{round(q * 100)} bucket upper bound"
+    return float("inf"), f"{part}/{name} histogram, {n} samples"
 
 def item(name, budget_ms, measured_ms, how, stat="p99"):
     if measured_ms is None:
         return {"name": name, "budget_ms": budget_ms, "statistic": stat, "measured_ms": None,
                 "status": "not measured", "reason": how}
+    if measured_ms == float("inf"):
+        return {"name": name, "budget_ms": budget_ms, "statistic": stat, "measured_ms": None,
+                "status": "FAIL", "how": how + ", above the last bucket (30 s)"}
     ok = measured_ms <= budget_ms
     return {"name": name, "budget_ms": budget_ms, "statistic": stat, "measured_ms": round(measured_ms, 3),
             "status": "pass" if ok else "FAIL", "how": how}
@@ -159,11 +170,18 @@ try:
 except OSError:
     pass
 m = {}
-m["NFR-PERF-01"] = item("Preamble request to first audio", 50.0, *from_hist("neuroos-voice", "preamble_to_audio"))
+m["NFR-PERF-01"] = item("Preamble request to first audio", 50.0, *from_hist("neuroos-voice", "preamble_to_audio", 0.95), "p95")
 # command_to_audio stops at the cached preamble, so it is not this item; the answer's own first
 # audio is command_to_answer_audio (from end-of-utterance detection, so the VAD's end-silence
 # wait comes on top of the figure).
-m["NFR-PERF-02"] = item("End of speech to first answer audio", 4500.0, *from_hist("neuroos-voice", "command_to_answer_audio"))
+m["NFR-PERF-02"] = item("End of speech to first answer audio", 4500.0,
+                        *from_hist("neuroos-voice", "command_to_answer_audio", 0.50), "p50")
+p95, _ = from_hist("neuroos-voice", "command_to_answer_audio", 0.95)
+if p95 is not None:
+    m["NFR-PERF-02"]["p95_bucket_ms"] = p95
+    m["NFR-PERF-02"]["p95_budget_ms"] = 6000.0
+    if p95 > 6000.0:
+        m["NFR-PERF-02"]["status"] = "FAIL"
 m["NFR-PERF-03"] = item("Typed question to first answer chunk", 3000.0, t["p50_ms"],
                         f"client side, {t['n']} questions, {t['failures']} failed", "p50")
 m["NFR-PERF-03"]["p95_ms"] = t["p95_ms"]

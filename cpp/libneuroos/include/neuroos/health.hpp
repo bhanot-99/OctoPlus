@@ -20,11 +20,13 @@
 
 namespace neuroos {
 
-// Upper bounds in ns; identical to neuroos_health::BUCKETS_NS.
-inline constexpr std::array<std::uint64_t, 16> kHealthBucketsNs = {
-    100'000,       250'000,       500'000,        1'000'000,     2'500'000,   5'000'000,
-    10'000'000,    25'000'000,    50'000'000,     100'000'000,   250'000'000, 500'000'000,
-    1'000'000'000, 2'500'000'000, 10'000'000'000, 30'000'000'000};
+// Upper bounds in ns; identical to neuroos_health::BUCKETS_NS. Edges sit on the budgets a
+// histogram decides: 150 ms (NFR-PERF-09), 3.0 s (NFR-PERF-03), 4.5 and 6.0 s (NFR-PERF-02).
+inline constexpr std::array<std::uint64_t, 20> kHealthBucketsNs = {
+    100'000,       250'000,       500'000,       1'000'000,      2'500'000,
+    5'000'000,     10'000'000,    25'000'000,    50'000'000,     100'000'000,
+    150'000'000,   250'000'000,   500'000'000,   1'000'000'000,  2'500'000'000,
+    3'000'000'000, 4'500'000'000, 6'000'000'000, 10'000'000'000, 30'000'000'000};
 
 class LatencyHistogram {
  public:

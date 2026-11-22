@@ -3,9 +3,12 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <string_view>
+#include <unordered_map>
 
 #include "neuroos/voice/knowledge_link.hpp"
 #include "neuroos/voice/real_engines.hpp"
@@ -102,6 +105,25 @@ Error Fail(const std::string& what) {
   return Error{.message = what, .retryable = false, .code = 7};
 }
 
+// The pipeline's timing hook: each metric name to its health histogram (preamble_to_audio
+// NFR-PERF-01, flush NFR-PERF-08, transcribe NFR-PERF-09, command_to_audio, and
+// command_to_answer_audio NFR-PERF-02). Unknown names are ignored.
+std::function<void(std::string_view, std::uint64_t)> MetricRecorder(neuroos::Health& health) {
+  auto table = std::make_shared<
+      std::unordered_map<std::string, std::shared_ptr<neuroos::LatencyHistogram>>>();
+  (*table)["preamble_to_audio"] = health.Histogram("preamble_to_audio");
+  (*table)["flush"] = health.Histogram("barge_in_flush");
+  (*table)["transcribe"] = health.Histogram("transcribe");
+  (*table)["command_to_audio"] = health.Histogram("command_to_audio");
+  (*table)["command_to_answer_audio"] = health.Histogram("command_to_answer_audio");
+  return [table](std::string_view name, std::uint64_t ns) {
+    const auto it = table->find(std::string(name));
+    if (it != table->end()) {
+      it->second->Record(std::chrono::nanoseconds(static_cast<std::int64_t>(ns)));
+    }
+  };
+}
+
 }  // namespace
 
 Result<std::unique_ptr<VoiceRuntime>> BuildVoiceRuntime(const RuntimeOptions& o) {
@@ -194,26 +216,7 @@ Result<std::unique_ptr<VoiceRuntime>> BuildVoiceRuntime(const RuntimeOptions& o)
   d.mono_ns = MonoNs;
   d.wall_ns = WallNs;
   if (health) {
-    auto preamble = health->Histogram("preamble_to_audio");
-    auto flush = health->Histogram("barge_in_flush");
-    auto transcribe = health->Histogram("transcribe");
-    auto first = health->Histogram("command_to_audio");
-    auto answer = health->Histogram("command_to_answer_audio");
-    d.on_metric = [preamble, flush, transcribe, first, answer](std::string_view name,
-                                                               std::uint64_t ns) {
-      const auto dur = std::chrono::nanoseconds(static_cast<std::int64_t>(ns));
-      if (name == "preamble_to_audio") {
-        preamble->Record(dur);
-      } else if (name == "flush") {
-        flush->Record(dur);
-      } else if (name == "transcribe") {
-        transcribe->Record(dur);
-      } else if (name == "command_to_audio") {
-        first->Record(dur);
-      } else if (name == "command_to_answer_audio") {
-        answer->Record(dur);
-      }
-    };
+    d.on_metric = MetricRecorder(*health);
   }
   // NOLINTNEXTLINE(concurrency-mt-unsafe) - read once while the service builds its runtime
   if (std::getenv("NEUROOS_VOICE_TRACE") != nullptr) {
