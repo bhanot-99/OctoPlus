@@ -978,6 +978,42 @@ async fn an_empty_activity_range_is_stated() {
     assert!(body(&rec.prompts[0]).contains("nothing was recorded"));
 }
 
+/// Live: "what the weather of Delhi today" matched the stored answer to an earlier weather
+/// question at 0.80, so it took the desktop route, offered no lookup and repeated the old
+/// "I don't have real-time data". Our own past turns must not decide that route.
+#[tokio::test]
+async fn an_earlier_answer_to_the_same_words_does_not_hide_the_lookup_offer() {
+    let past_turn = Evidence {
+        domain: Domain::VoiceInteraction as i32,
+        ..ev(
+            1,
+            "Asked: tell me the weather of delhi today Answered: I don't have real-time weather data.",
+            0.80,
+            USER | MODEL,
+        )
+    };
+    let s = Stack::start(Opts {
+        evidence: vec![past_turn],
+        answer: vec!["I can't see live weather.".into()],
+        ..Opts::default()
+    })
+    .await;
+    let (said, done) = s.ask("what the weather of Delhi today").await;
+    assert_eq!(route(&done), Route::GeneralChat);
+    assert!(
+        said.ends_with("Would you like me to look that up for you?"),
+        "{said}"
+    );
+    // The same evidence about a plain question still counts as desktop evidence.
+    let s = Stack::start(Opts {
+        evidence: vec![ev(1, "Editing docs/adr/0009.md", 0.9, EXTERNAL)],
+        ..Opts::default()
+    })
+    .await;
+    let (_, done) = s.ask("what was I working on today").await;
+    assert_eq!(route(&done), Route::DesktopAnswer);
+}
+
 const TWO_PAGES: &str = r#"{"spool_files":["search_1_0.json","search_1_1.json"],"requests":3}"#;
 
 fn web_ev(id: u64, text: &str) -> Evidence {

@@ -54,6 +54,9 @@ const WEB_INGEST_POLL: Duration = Duration::from_millis(250);
 /// C3's source tag for documents that came through C7's spool.
 const WEB_SOURCE: &str = "c7";
 
+/// Put before the question of a web answer.
+const WEB_TASK: &str = "Answer from the documents above, not from memory: give the figure or fact they state, with its year. If they do not say, say so. Question: ";
+
 /// Chunks asked of C3 when looking for the pages a search just stored (C3's own maximum).
 const WEB_QUERY_TOP_K: u32 = 20;
 
@@ -948,6 +951,10 @@ impl KnowledgeHandler {
         excerpts.sort_by_key(|e| std::cmp::Reverse(evidence::answer_score(&e.text, question)));
         let mut budgets = self.budgets();
         budgets.evidence = budgets.evidence.max(WEB_EVIDENCE_TOKENS);
+        // The standing instructions say to answer general questions from memory; for a lookup
+        // the task is the opposite, so it is stated next to the question (live: the model
+        // answered "about $3.7 trillion in 2023" with the 2026 figure in front of it).
+        let framed = format!("{WEB_TASK}{question}");
         let prompt = prompt::assemble(
             &PromptInput {
                 facts: &[],
@@ -958,7 +965,7 @@ impl KnowledgeHandler {
                 history_taint: history_taint.merge(out_taint),
                 evidence: &excerpts,
                 evidence_taint: ev_taint,
-                question,
+                question: &framed,
             },
             &budgets,
         );
@@ -1024,7 +1031,15 @@ impl KnowledgeHandler {
         self.metrics
             .evidence_no_taint
             .fetch_add(u64::from(selected.dropped_no_taint), Ordering::Relaxed);
-        let best = selected.items.first().map(|e| e.score);
+        // A question about something that changes (weather, news, prices) is not about the
+        // user's desktop: our own earlier answers to the same words must not pull it there, or
+        // no lookup is offered and the old "I don't have real-time data" is repeated.
+        let fresh_question = chat::freshness_cue(text);
+        let best = selected
+            .items
+            .iter()
+            .find(|e| !(fresh_question && e.domain == Domain::VoiceInteraction as i32))
+            .map(|e| e.score);
         let decision = router::route(&RouteInput {
             text,
             nudge_window_open: false,
