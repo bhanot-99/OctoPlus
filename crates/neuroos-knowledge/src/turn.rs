@@ -450,7 +450,12 @@ impl KnowledgeHandler {
             Pending::Lookup(question) => {
                 if chat::accepts_lookup(text) {
                     let done = self
-                        .lookup_turn(&question, Turn { text, origin, now }, sink)
+                        .lookup_turn(
+                            &question,
+                            &chat::search_query(&question),
+                            Turn { text, origin, now },
+                            sink,
+                        )
                         .await?;
                     return Ok(Some(done));
                 }
@@ -599,6 +604,13 @@ impl KnowledgeHandler {
                 "action rejected by safety kernel",
                 false,
             ));
+        }
+        // A direct "search the web for ..." takes the same path as an accepted offer: C6
+        // shows the approval dialog, C7 fetches, and the answer comes from the pages.
+        if hint == ActionHint::Search {
+            return self
+                .lookup_turn(text, &chat::search_request_query(text), turn, sink)
+                .await;
         }
         // Only the skills this request's intent allows can ever be called (review F1).
         let allowed = action::allowed_for(hint);
@@ -789,12 +801,13 @@ impl KnowledgeHandler {
     async fn lookup_turn(
         &self,
         question: &str,
+        query: &str,
         turn: Turn<'_>,
         sink: &StreamSink,
     ) -> Result<Body, HandlerError> {
         let started = Instant::now();
         let since_ns = neuroos_common::time::now_ns().unwrap_or(turn.now);
-        let args = serde_json::json!({ "query": chat::search_query(question) }).to_string();
+        let args = serde_json::json!({ "query": query }).to_string();
         let call = Call {
             skill: "web.search",
             args_json: &args,

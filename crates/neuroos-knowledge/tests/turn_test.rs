@@ -852,10 +852,9 @@ async fn an_exact_user_fact_is_saved_by_the_action_route() {
 
 #[tokio::test]
 async fn requests_that_cannot_be_done_yet_never_reach_the_model() {
-    for typed in [
-        "clean up my disk",
-        "search the web for cheap flights online",
-    ] {
+    // A web search used to be here; since Phase 8 it is done (through the approval dialog),
+    // see `a_direct_web_search_request_searches_for_the_topic`. Opening a link still is not.
+    for typed in ["clean up my disk", "open the link https://example.com"] {
         let s = Stack::start(Opts::default()).await;
         let (said, done) = s.ask(typed).await;
         assert_eq!(route(&done), Route::Action, "{typed}");
@@ -1661,4 +1660,80 @@ async fn a_barge_in_message_is_acknowledged_and_counted() {
         .unwrap();
     assert!(matches!(reply, Body::Ack(_)));
     assert_eq!(s.barge_ins.load(Ordering::Relaxed), 1);
+}
+
+/// Owner, 2026-11-22: after the lookup offer, "ye" and "you check it on internet" were not
+/// taken as a yes, and the model then claimed to have no internet access.
+#[tokio::test]
+async fn short_or_loose_replies_accept_the_lookup_offer() {
+    for reply in [
+        "ye",
+        "you check it on internet",
+        "check it online",
+        "go for it",
+    ] {
+        let s = Stack::start(Opts {
+            result_json: r#"{"spool_files":[],"requests":1}"#.into(),
+            ..Opts::default()
+        })
+        .await;
+        let (said, _) = s.ask("what is the weather in delhi today").await;
+        assert!(
+            said.ends_with(neuroos_knowledge::chat::LOOKUP_OFFER),
+            "{said}"
+        );
+        let (said, _) = s.ask(reply).await;
+        assert_eq!(
+            said, "I searched the web but didn't find any results.",
+            "{reply}"
+        );
+        assert_eq!(s.rec().dispatches.len(), 1, "{reply}");
+        assert_eq!(s.rec().dispatches[0].0, "web.search", "{reply}");
+    }
+}
+
+/// A refusal is never read as a yes, however it is worded.
+#[tokio::test]
+async fn a_loose_refusal_does_not_accept_the_lookup_offer() {
+    for reply in ["no don't check it", "dont search it", "not online"] {
+        let s = Stack::start(Opts::default()).await;
+        let _ = s.ask("what is the weather in delhi today").await;
+        let _ = s.ask(reply).await;
+        assert!(s.rec().dispatches.is_empty(), "{reply}");
+    }
+}
+
+/// Owner, 2026-11-22: asking for a web search directly answered "I can't look things up
+/// yet." A direct request goes to `web.search` (through C6's dialog) with only the topic.
+#[tokio::test]
+async fn a_direct_web_search_request_searches_for_the_topic() {
+    for (ask, query) in [
+        ("search the web for delhi weather", "delhi weather"),
+        ("check the weather in delhi online", "weather in delhi"),
+        (
+            "look up the rust 1.99 changelog online",
+            "rust 1 99 changelog",
+        ),
+    ] {
+        let s = Stack::start(Opts {
+            result_json: r#"{"spool_files":[],"requests":1}"#.into(),
+            ..Opts::default()
+        })
+        .await;
+        let (said, _) = s.ask(ask).await;
+        assert_eq!(
+            said, "I searched the web but didn't find any results.",
+            "{ask}"
+        );
+        assert_eq!(
+            s.rec().dispatches,
+            vec![(
+                "web.search".into(),
+                format!(r#"{{"query":"{query}"}}"#),
+                // Only the user's own words: no model answer came before it.
+                USER
+            )],
+            "{ask}"
+        );
+    }
 }

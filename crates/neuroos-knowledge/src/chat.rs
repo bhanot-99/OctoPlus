@@ -347,7 +347,11 @@ const NO_PHRASES: &[&str] = &[
 /// Phrases indicating acceptance of a lookup offer.
 const LOOKUP_ACCEPT_PHRASES: &[&str] = &[
     "yes",
+    "ye",
+    "ya",
+    "yea",
     "yeah",
+    "go for it",
     "yep",
     "yup",
     "sure",
@@ -426,6 +430,48 @@ pub fn professional_topic(text: &str) -> Option<Topic> {
     None
 }
 
+/// Words that make a reply a refusal, whatever else it says ("don't" normalises to "don t").
+const REFUSAL_WORDS: &[&str] = &[
+    "no", "not", "don", "dont", "never", "nope", "nah", "stop", "cancel",
+];
+
+/// Verbs and targets of a loose acceptance: "check it", "search online", "google that".
+const LOOKUP_VERBS: &[&str] = &["check", "search", "google", "look", "find"];
+const LOOKUP_TARGETS: &[&str] = &["it", "that", "online", "internet", "web"];
+
+/// The search text of a direct request ("search the web for delhi weather", "check the
+/// weather in delhi online"): the request words are taken out, then [`search_query`] drafts
+/// the rest. "up" goes only after "look", "for" only after a request word, and "on" only
+/// before "the web" or "internet", so a topic like "news on rust" keeps its words.
+#[must_use]
+pub fn search_request_query(text: &str) -> String {
+    const REQUEST: &[&str] = &["search", "google", "lookup", "look", "check", "find"];
+    const PLACES: &[&str] = &["online", "web", "internet"];
+    let words: Vec<String> = text
+        .split(|c: char| !(c.is_alphanumeric() || c == '\'' || c == '-'))
+        .map(str::to_lowercase)
+        .filter(|w| !w.is_empty())
+        .collect();
+    let mut kept: Vec<&str> = Vec::with_capacity(words.len());
+    for (i, w) in words.iter().enumerate() {
+        let prev = i.checked_sub(1).map(|j| words[j].as_str());
+        let next = words.get(i + 1).map(String::as_str);
+        let next2 = words.get(i + 2).map(String::as_str);
+        let drop = REQUEST.contains(&w.as_str())
+            || PLACES.contains(&w.as_str())
+            || (w == "up" && prev == Some("look"))
+            || (w == "for"
+                && prev.is_some_and(|p| REQUEST.contains(&p) || PLACES.contains(&p) || p == "up"))
+            || (w == "on"
+                && (next.is_some_and(|n| PLACES.contains(&n))
+                    || (next == Some("the") && next2.is_some_and(|n| PLACES.contains(&n)))));
+        if !drop {
+            kept.push(w);
+        }
+    }
+    search_query(&kept.join(" "))
+}
+
 /// True when the user's turn accepts a lookup offer.
 ///
 /// Handles short affirmations and explicit lookup acceptance phrases.
@@ -443,8 +489,16 @@ pub fn accepts_lookup(text: &str) -> bool {
 
     // Check if it starts with an affirmative or request and contains a lookup phrase without introducing a new question
     let words: Vec<&str> = norm.split_whitespace().collect();
+    // "no, don't check it" names the lookup too: any refusal word wins.
+    if words.iter().any(|w| REFUSAL_WORDS.contains(w)) {
+        return false;
+    }
     if words.len() <= 7 {
-        let has_lookup_verb = router::contains_word(&norm, "look it up")
+        // "you check it on internet", "search online": a lookup verb aimed at the offer.
+        let loose = words.iter().any(|w| LOOKUP_VERBS.contains(w))
+            && words.iter().any(|w| LOOKUP_TARGETS.contains(w));
+        let has_lookup_verb = loose
+            || router::contains_word(&norm, "look it up")
             || router::contains_word(&norm, "look that up")
             || router::contains_word(&norm, "search for it")
             || router::contains_word(&norm, "search it")
