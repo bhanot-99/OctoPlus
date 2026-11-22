@@ -104,7 +104,12 @@ async fn local_e2e_ask_and_cancel() {
     println!("\n=== E2E Cancel Latency Measurement ===");
     // C4's cancel count before this cancel: the check below needs a new sample,
     // not one left over from an earlier run of C4.
-    let cancels_before = c4_histograms().await.map_or(0, |(c, _)| c.sample_count);
+    // Its sum is kept too: C4 averages over its whole life, and one slow cancel from an earlier
+    // run on a busy machine would fail this check for as long as C4 stays up. Only the samples
+    // added by this run are judged.
+    let (cancels_before, sum_before) = c4_histograms()
+        .await
+        .map_or((0, 0), |(c, _)| (c.sample_count, c.sum_ns));
 
     // A long answer, so generation is still running when the cancel arrives
     // (a short prompt can finish in one chunk and leave nothing to cancel).
@@ -176,11 +181,11 @@ async fn local_e2e_ask_and_cancel() {
         );
         tokio::time::sleep(Duration::from_millis(250)).await;
     };
-    let cancel_ms = cancel.sum_ns as f64 / cancel.sample_count as f64 / 1e6;
+    let new_samples = cancel.sample_count - cancels_before;
+    let cancel_ms = (cancel.sum_ns - sum_before) as f64 / new_samples as f64 / 1e6;
     let step_ms = step.sum_ns as f64 / step.sample_count.max(1) as f64 / 1e6;
     println!(
-        "C4 cancel_to_idle mean {cancel_ms:.1} ms over {} sample(s); mean decode step {step_ms:.1} ms",
-        cancel.sample_count
+        "C4 cancel_to_idle mean {cancel_ms:.1} ms over {new_samples} new sample(s); mean decode step {step_ms:.1} ms"
     );
     assert!(step.sample_count > 0, "C4 reported no decode_step samples");
     assert!(
