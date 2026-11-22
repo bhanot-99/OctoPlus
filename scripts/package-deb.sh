@@ -130,6 +130,15 @@ if [[ -d "$root/deploy/systemd/user" ]]; then
   # Files 0644, drop-in folders 0755 (audit A-17).
   find "$staging/usr/lib/systemd/user" -type f -exec chmod 0644 {} +
   find "$staging/usr/lib/systemd/user" -mindepth 1 -type d -exec chmod 0755 {} +
+  # The units in deploy/ are written for the developer install (~/.local/opt/neuroos). The
+  # package puts the programs and models under /opt/neuroos, so point the units there.
+  # Without this a clean machine had 11 services whose programs do not exist (BUG-128).
+  find "$staging/usr/lib/systemd/user" -type f \( -name '*.service' -o -name '*.conf' \) \
+    -exec sed -i 's|%h/\.local/opt/neuroos|/opt/neuroos|g' {} +
+  if grep -rn '\.local/opt/neuroos' "$staging/usr/lib/systemd/user"; then
+    echo "error: a packaged unit still points at the developer install" >&2
+    exit 1
+  fi
 fi
 
 # Fetcher system unit

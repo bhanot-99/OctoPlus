@@ -26,6 +26,22 @@ case "$1" in
       chown root:neuroos /etc/neuroos/fetch.key 2>/dev/null || true
     fi
 
+    # 4b. The fetcher only answers one user: the person who installed (sudo), or else the first
+    #     human account. The unit ships with @OWNER_UID@ for this (BUG-128).
+    owner="${SUDO_USER:-}"
+    if [[ -z "$owner" || "$owner" == "root" ]]; then
+      owner="$(awk -F: '$3 >= 1000 && $3 < 60000 { print $1; exit }' /etc/passwd)"
+    fi
+    owner_uid=""
+    if [[ -n "$owner" ]]; then
+      owner_uid="$(id -u "$owner" 2>/dev/null || true)"
+    fi
+    if [[ -n "$owner_uid" && -f /lib/systemd/system/neuroos-fetcher.service ]]; then
+      sed -i "s/@OWNER_UID@/${owner_uid}/g" /lib/systemd/system/neuroos-fetcher.service
+    else
+      echo "warning: could not tell which user may use the fetcher; edit /lib/systemd/system/neuroos-fetcher.service (@OWNER_UID@)" >&2
+    fi
+
     # 5. Reload systemd daemon
     if command -v systemctl >/dev/null 2>&1; then
       systemctl daemon-reload || true
