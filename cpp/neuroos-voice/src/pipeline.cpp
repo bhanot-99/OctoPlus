@@ -165,12 +165,24 @@ PipelineStatus VoicePipeline::status() const {
     s.follow_up_open = machine_.follow_up_open();
     s.wake_words = stats_.wake_words;
     switch (machine_.state()) {
-      case TurnState::kIdle: s.phase = 0; break;
-      case TurnState::kCapturing: s.phase = 1; break;
-      case TurnState::kTranscribing: s.phase = 2; break;
-      case TurnState::kAwaitingAnswer: s.phase = 3; break;
-      case TurnState::kSpeaking: s.phase = 4; break;
-      case TurnState::kFollowUp: s.phase = 5; break;
+      case TurnState::kIdle:
+        s.phase = 0;
+        break;
+      case TurnState::kCapturing:
+        s.phase = 1;
+        break;
+      case TurnState::kTranscribing:
+        s.phase = 2;
+        break;
+      case TurnState::kAwaitingAnswer:
+        s.phase = 3;
+        break;
+      case TurnState::kSpeaking:
+        s.phase = 4;
+        break;
+      case TurnState::kFollowUp:
+        s.phase = 5;
+        break;
     }
   }
   s.capture_running = running_ && d_.source->running();
