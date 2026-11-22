@@ -49,6 +49,9 @@ pub enum ActionHint {
     NotesSearch,
     CalendarRead,
     DiskReport,
+    /// A command to change the computer (create or delete a file, install, send, shut down)
+    /// that no skill does: answered by a fixed line, never by the model.
+    Unsupported,
 }
 
 /// Input parameters for turn routing.
@@ -637,6 +640,18 @@ const HISTORY_WORDS: &[&str] = &[
 
 /// "forget that", "wipe my history from today", "remove the fact that I live in Pune".
 fn forget_intent(text: &str) -> Option<ActionHint> {
+    // Deleting a file, folder or message is not forgetting a memory: it is a command on the
+    // computer (`unsupported_command`). Without this, "delete the file sample.txt" was taken
+    // for "forget that fact".
+    if ["delete", "erase", "wipe", "remove"].iter().any(|v| {
+        strip_prefix_word(text, v).is_some_and(|rest| {
+            rest.split(' ')
+                .take(OBJECT_WINDOW)
+                .any(|w| FILE_OBJECTS.contains(&w))
+        })
+    }) {
+        return None;
+    }
     let (rest, strong) = FORGET_STRONG
         .iter()
         .find_map(|v| strip_prefix_word(text, v))
@@ -729,6 +744,12 @@ pub fn detect_action(norm: &str) -> Option<ActionHint> {
         }
     }
 
+    // 4b. A command to change the computer that no skill can do. Without this the model, asked
+    //     to "create a file on the desktop", answered "I've created sample.txt" and did nothing.
+    if unsupported_command(text) {
+        return Some(ActionHint::Unsupported);
+    }
+
     // 5. A bare "my schedule", and questions that name a calendar or the disk.
     if ["my calendar", "my schedule", "my agenda"].contains(&text)
         || ["my calendar", "my schedule", "my agenda"].iter().any(|c| {
@@ -815,6 +836,116 @@ pub fn detect_action(norm: &str) -> Option<ActionHint> {
     }
 
     None
+}
+
+/// Commands to act on the computer. None of them has a skill yet, so none may reach the model.
+const COMMAND_VERBS: &[&str] = &[
+    "create",
+    "make",
+    "delete",
+    "remove",
+    "erase",
+    "rename",
+    "move",
+    "copy",
+    "save",
+    "write",
+    "edit",
+    "modify",
+    "download",
+    "upload",
+    "send",
+    "email",
+    "launch",
+    "open",
+    "close",
+    "start",
+    "run",
+    "execute",
+    "kill",
+    "shut down",
+    "restart",
+    "reboot",
+    "turn off",
+    "power off",
+    "zip",
+    "unzip",
+    "compress",
+];
+
+/// Things stored on the computer: deleting one is a command, not forgetting a memory.
+const FILE_OBJECTS: &[&str] = &[
+    "file",
+    "files",
+    "folder",
+    "folders",
+    "directory",
+    "directories",
+    "document",
+    "documents",
+    "txt",
+    "email",
+    "emails",
+    "message",
+    "messages",
+];
+
+/// What those verbs act on. It must come within the first words after the verb, so "write a
+/// function that deletes a file" (a coding question) is not mistaken for the command.
+const COMMAND_OBJECTS: &[&str] = &[
+    "file",
+    "files",
+    "folder",
+    "folders",
+    "directory",
+    "directories",
+    "document",
+    "documents",
+    "txt",
+    "email",
+    "emails",
+    "message",
+    "messages",
+    "computer",
+    "laptop",
+    "pc",
+    "machine",
+    "system",
+    "app",
+    "apps",
+    "application",
+    "program",
+    "programs",
+    "browser",
+    "terminal",
+    "settings",
+    "package",
+    "process",
+    "command",
+    "desktop",
+    "downloads",
+];
+
+/// Verbs that are a command with nothing after them ("install firefox", "shut down").
+const COMMAND_ALONE: &[&str] = &["install", "uninstall", "shut down", "shutdown", "reboot"];
+
+/// How many words after the verb may hold the object.
+const OBJECT_WINDOW: usize = 4;
+
+fn unsupported_command(text: &str) -> bool {
+    if COMMAND_ALONE
+        .iter()
+        .any(|v| strip_prefix_word(text, v).is_some())
+    {
+        return true;
+    }
+    COMMAND_VERBS.iter().any(|v| {
+        strip_prefix_word(text, v).is_some_and(|rest| {
+            rest.split(' ')
+                .take(OBJECT_WINDOW)
+                .any(|w| COMMAND_OBJECTS.contains(&w))
+        })
+    })
 }
 
 /// One skill intent recognised by a leading verb phrase and, when given, an object word

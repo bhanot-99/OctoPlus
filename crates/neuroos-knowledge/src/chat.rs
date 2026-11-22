@@ -31,6 +31,10 @@ pub const LOOKUP_OFFER: &str = "Would you like me to look that up for you?";
 /// Plain speech, ends with '?'.
 pub const REMEMBER_OFFER: &str = "Want me to remember that?";
 
+/// The reply to a command to change the computer (create or delete a file, install, send, shut
+/// down). Fixed words: the model is never asked, so it cannot claim to have done it.
+pub const CANNOT_CHANGE_THE_COMPUTER: &str = "I can't do that. I can't create, change or delete files, run or install programs, or send messages for you yet. I can search the web, look back over your recent activity, keep notes, and check your disk space.";
+
 /// How an answer from looked-up pages begins (FR-CHT-06: "From the pages I looked up…").
 pub const WEB_ANSWER_LEAD: &str = "From the pages I looked up: ";
 

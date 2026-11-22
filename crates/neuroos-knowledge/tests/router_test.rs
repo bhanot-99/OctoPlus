@@ -156,6 +156,55 @@ fn test_all_action_hints() {
     }
 }
 
+/// Live: "create a file on the desktop" reached the model, which said "I've created a file named
+/// sample.txt on your desktop" while nothing was created. A command to change the computer has no
+/// skill yet, so it must be recognised and answered by a fixed line, never by the model.
+#[test]
+fn commands_to_change_the_computer_are_recognised_but_questions_about_them_are_not() {
+    let is_command = |text: &str| {
+        let d = route(&RouteInput {
+            text,
+            nudge_window_open: false,
+            retrieval_best_score: None,
+            cutoff: 0.7,
+        });
+        d.action_hint == Some(ActionHint::Unsupported)
+    };
+    for text in [
+        "create a file on the desktop",
+        "Create a file on the desktop.",
+        "please create a new text file",
+        "make a new folder called work",
+        "delete the file sample.txt",
+        "can you delete my files",
+        "rename this file",
+        "send an email to john",
+        "install firefox",
+        "shut down my computer",
+        "restart the computer",
+        "open the calculator app",
+    ] {
+        assert!(
+            is_command(text),
+            "{text:?} should be a command nobody can do yet"
+        );
+    }
+    for text in [
+        "how do I create a file in linux",
+        "what is a file system",
+        "write a function that deletes a file",
+        "create a story about a dragon",
+        "make me a poem about autumn",
+        "write an essay about my computer",
+        "run a marathon next year",
+        "send me a joke",
+        "what is the capital of France",
+        "explain how to install rust",
+    ] {
+        assert!(!is_command(text), "{text:?} is an ordinary question");
+    }
+}
+
 #[test]
 fn test_normalise_edge_cases() {
     // Empty

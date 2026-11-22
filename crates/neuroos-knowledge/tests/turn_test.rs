@@ -861,7 +861,13 @@ async fn an_exact_user_fact_is_saved_by_the_action_route() {
 async fn requests_that_cannot_be_done_yet_never_reach_the_model() {
     // A web search used to be here; since Phase 8 it is done (through the approval dialog),
     // see `a_direct_web_search_request_searches_for_the_topic`. Opening a link still is not.
-    for typed in ["clean up my disk", "open the link https://example.com"] {
+    for typed in [
+        "clean up my disk",
+        "open the link https://example.com",
+        // Live: the model answered "I've created a file named sample.txt on your desktop".
+        "create a file on the desktop",
+        "delete the file sample.txt",
+    ] {
         let s = Stack::start(Opts::default()).await;
         let (said, done) = s.ask(typed).await;
         assert_eq!(route(&done), Route::Action, "{typed}");

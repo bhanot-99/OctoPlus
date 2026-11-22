@@ -40,7 +40,7 @@ pub const fn allowed_for(hint: crate::router::ActionHint) -> &'static [&'static 
         H::CalendarRead => &["calendar.read"],
         H::DiskReport => &["system.disk_report"],
         // Their arguments are paths or links the model must not choose, or they need Phase 8.
-        H::Cleanup | H::Search | H::Fetch => &[],
+        H::Cleanup | H::Search | H::Fetch | H::Unsupported => &[],
     }
 }
 

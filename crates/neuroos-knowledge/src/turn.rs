@@ -630,6 +630,8 @@ impl KnowledgeHandler {
         if allowed.is_empty() {
             let line = if hint == ActionHint::Search || hint == ActionHint::Fetch {
                 NO_LOOKUP_YET
+            } else if hint == ActionHint::Unsupported {
+                chat::CANNOT_CHANGE_THE_COMPUTER
             } else {
                 "I can't do that one yet."
             };
