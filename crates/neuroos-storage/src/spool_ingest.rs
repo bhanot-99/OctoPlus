@@ -23,6 +23,10 @@ use crate::store::Store;
 const SOURCE: &str = "c7";
 /// Longest chunk of a document, in characters (a few sentences; keeps one embedding meaningful).
 pub const CHUNK_CHARS: usize = 1200;
+/// Chunks kept from one page: its lead (about 12,000 characters). The answer uses only the
+/// best few chunks, and embedding a whole long page (a 215 kB Wikipedia text took over a
+/// minute) made the answer give up and kept the next page waiting (owner, 2026-11-22).
+pub const WEB_PAGE_MAX_CHUNKS: usize = 10;
 /// Files handled per poll, so a flood cannot starve everything else.
 const PER_POLL: usize = 32;
 
@@ -56,6 +60,7 @@ pub fn document_items(doc: &SpoolDoc, now_ns: u64) -> Vec<Output> {
     let at = doc.fetched_at_ns.min(now_ns);
     spool::chunk_text(&doc.text, CHUNK_CHARS)
         .into_iter()
+        .take(WEB_PAGE_MAX_CHUNKS)
         .enumerate()
         .map(|(i, chunk)| {
             let text = if i == 0 && !doc.title.is_empty() {

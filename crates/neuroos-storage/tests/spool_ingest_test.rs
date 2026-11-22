@@ -220,3 +220,28 @@ async fn the_poller_picks_files_up_by_itself() {
     assert_eq!(n, 1);
     assert_eq!(std::fs::read_dir(spool.path()).unwrap().count(), 0);
 }
+
+/// Owner, 2026-11-22: a 2.1 MB Wikipedia page (215 kB of text, ~180 chunks) took over a
+/// minute to embed, so the answer gave up and the next page waited behind it. Only the
+/// lead of a page is stored: its first `WEB_PAGE_MAX_CHUNKS` chunks.
+#[test]
+fn only_the_lead_of_a_long_page_is_stored() {
+    use neuroos_storage::spool::SpoolDoc;
+    use neuroos_storage::spool_ingest::{CHUNK_CHARS, WEB_PAGE_MAX_CHUNKS, document_items};
+    let sentence = "India's GDP grew strongly this year according to the figures. ";
+    let doc = SpoolDoc {
+        url: "https://en.wikipedia.org/wiki/Economy_of_India".into(),
+        title: "Economy of India".into(),
+        fetched_at_ns: 5,
+        text: sentence.repeat(200_000 / sentence.len()),
+    };
+    let items = document_items(&doc, 10);
+    assert_eq!(items.len(), WEB_PAGE_MAX_CHUNKS);
+    assert!(WEB_PAGE_MAX_CHUNKS * CHUNK_CHARS <= 12_000);
+    // A short page is stored whole.
+    let short = SpoolDoc {
+        text: sentence.repeat(3),
+        ..doc
+    };
+    assert_eq!(document_items(&short, 10).len(), 1);
+}
