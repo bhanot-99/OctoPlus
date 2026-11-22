@@ -33,10 +33,10 @@ pub const LOOKUP_UNREAD: &str =
 /// pronouns, so "which shampoo should I buy? I have a dry scalp" sends
 /// "shampoo buy dry scalp". The user can still edit the text in the dialog.
 const QUERY_DROP: &[&str] = &[
-    "a", "am", "an", "and", "are", "be", "been", "can", "could", "did", "do", "does", "had", "has",
-    "have", "hey", "how", "i", "i'd", "i'm", "i've", "is", "it", "me", "mine", "my", "myself",
-    "our", "please", "should", "that", "the", "this", "to", "us", "was", "we", "were", "what",
-    "which", "who", "will", "would", "you", "your",
+    "a", "am", "an", "and", "are", "be", "been", "can", "could", "did", "do", "does", "give",
+    "had", "has", "have", "hey", "how", "i", "i'd", "i'm", "i've", "is", "it", "me", "mine", "my",
+    "myself", "our", "please", "should", "show", "tell", "that", "the", "this", "to", "us", "was",
+    "we", "were", "what", "which", "who", "will", "would", "you", "your",
 ];
 
 /// Longest search query drafted from a question, in words.
@@ -667,6 +667,12 @@ mod tests {
             search_query("What's the latest Rust version?"),
             "what's latest rust version"
         );
+        // Owner, 2026-11-22: "tell" reached the search provider.
+        assert_eq!(
+            search_query("tell me the weather of delhi today"),
+            "weather of delhi today"
+        );
+        assert_eq!(search_query("can you show me rust news"), "rust news");
         assert_eq!(search_query("  is it?  "), "is it?");
         let long = "one two three four five six seven eight nine ten eleven twelve";
         assert_eq!(search_query(long).split(' ').count(), 10);

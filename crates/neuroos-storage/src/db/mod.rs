@@ -61,6 +61,10 @@ impl DbError {
 /// Pragmas every connection gets (Architecture §7.2).
 fn base_pragmas(conn: &Connection) -> Result<(), DbError> {
     conn.pragma_update(None, "foreign_keys", true)?;
+    // Temporary tables and sort spills stay in memory: C3's sandbox grants no temp folder
+    // (a temp file failed every web page, BUG-119), and personal text never lands in an
+    // unencrypted file.
+    conn.pragma_update(None, "temp_store", "MEMORY")?;
     conn.busy_timeout(std::time::Duration::from_secs(5))?;
     Ok(())
 }

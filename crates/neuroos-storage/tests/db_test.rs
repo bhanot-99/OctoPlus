@@ -293,3 +293,25 @@ async fn ten_thousand_chunks_from_many_tasks_while_readers_query_stay_consistent
         "every reader connection was returned"
     );
 }
+
+/// BUG-119: every connection keeps SQLite's temporary data in memory. C3's Landlock policy
+/// grants no temp folder, so a temp file ("unable to open database file") made every web
+/// page fail to store; it would also put personal text in an unencrypted file.
+#[test]
+fn every_connection_keeps_temporary_data_in_memory() {
+    let dir = tempfile::tempdir().unwrap();
+    let (db, _) = open(&dir);
+    let read: i64 = db
+        .read(|c| Ok(c.query_row("PRAGMA temp_store", [], |r| r.get(0))?))
+        .unwrap();
+    assert_eq!(read, 2, "reader: temp_store = MEMORY");
+    let seen = Arc::new(Mutex::new(0_i64));
+    let out = Arc::clone(&seen);
+    db.writer()
+        .exec_blocking(move |c| {
+            *out.lock().unwrap() = c.query_row("PRAGMA temp_store", [], |r| r.get(0))?;
+            Ok(vec![])
+        })
+        .unwrap();
+    assert_eq!(*seen.lock().unwrap(), 2, "writer: temp_store = MEMORY");
+}

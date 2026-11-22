@@ -83,6 +83,8 @@ pub async fn ingest_file(store: &Arc<Store>, path: &Path, now_ns: u64) -> Verdic
         .file_name()
         .and_then(|n| n.to_str())
         .is_some_and(spool::valid_name);
+    // Why a file was refused is logged (never its text or URL, R0-10): a silent refusal hid
+    // that no fetched page was ever stored (BUG-119).
     let verdict = match (name_ok, read_limited(path, max)) {
         (true, Some(bytes)) => match spool::parse_spool(&bytes, max) {
             Ok(doc) => match store
@@ -90,11 +92,24 @@ pub async fn ingest_file(store: &Arc<Store>, path: &Path, now_ns: u64) -> Verdic
                 .await
             {
                 Ok(_) => Verdict::Ingested,
-                Err(_) => Verdict::Rejected,
+                Err(e) => {
+                    tracing::warn!(reason = %e, "spool file not stored");
+                    Verdict::Rejected
+                }
             },
-            Err(_) => Verdict::Rejected,
+            Err(e) => {
+                tracing::warn!(reason = ?e, "spool file refused");
+                Verdict::Rejected
+            }
         },
-        _ => Verdict::Rejected,
+        (false, _) => {
+            tracing::warn!("spool file refused: bad name");
+            Verdict::Rejected
+        }
+        (true, None) => {
+            tracing::warn!("spool file refused: unreadable or too large");
+            Verdict::Rejected
+        }
     };
     // A symlink is removed as a link, never followed; a directory is left alone.
     if std::fs::symlink_metadata(path).is_ok_and(|m| !m.file_type().is_dir()) {
