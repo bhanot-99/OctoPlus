@@ -156,7 +156,9 @@ class VoicePipeline final : public ReplyReceiver {
     std::function<std::uint64_t()> wall_ns;  // wall clock (what C5 stores)
     // Optional timing hook for the health histograms: preamble_to_audio (a preamble request to
     // its first sample at the speaker, NFR-PERF-01), flush (NFR-PERF-08), transcribe
-    // (NFR-PERF-09), command_to_audio (command sent to the first audio of the reply).
+    // (NFR-PERF-09), command_to_audio (command sent to the first audio of the reply, usually the
+    // cached preamble), command_to_answer_audio (command sent to the first synthesised sentence
+    // of the answer, NFR-PERF-02 measured from end-of-utterance detection).
     std::function<void(std::string_view name, std::uint64_t ns)> on_metric;
     // Optional trace of what the pipeline is doing (event names only, never text or audio): wake,
     // speech_started, speech_ended, transcribed, empty_transcript, command_sent, reply_audio.
@@ -211,6 +213,7 @@ class VoicePipeline final : public ReplyReceiver {
   void FinishQueue(std::uint64_t epoch);
   void SayVoiceTrouble(std::uint64_t epoch);
   void NoteAudioQueued(bool nudge, std::uint64_t epoch);
+  void NoteAnswerAudio(bool nudge, std::uint64_t epoch);
   std::vector<TurnAction> Post(TurnEvent e);  // takes the lock, steps the machine
 
   Deps d_;
@@ -235,6 +238,7 @@ class VoicePipeline final : public ReplyReceiver {
   std::size_t tts_pending_ = 0;
   std::uint64_t last_trouble_ns_ = 0;  // the last time the voice-trouble line was queued
   std::uint64_t command_sent_ns_ = 0;  // for command_to_audio; 0 once the first audio played
+  std::uint64_t answer_since_ns_ = 0;  // for command_to_answer_audio; 0 once the answer played
   std::atomic<bool> running_{false};
   std::unordered_map<std::string, Clip> clips_;
   PipelineStats stats_;

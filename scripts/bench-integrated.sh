@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Integrated performance measurement for Phase 9 (phases.md §12.1, PRD §6.1, rules.md §9).
 #
-#   scripts/bench-integrated.sh [--asks N] [--out DIR]
+#   scripts/bench-integrated.sh [--asks N] [--voice N] [--out DIR]
 #
 # Measures on the installed, running stack (release binaries in their sandboxed units):
 # - NFR-PERF-03  typed question -> first answer chunk, client side, over N questions (p50/p95)
@@ -10,7 +10,9 @@
 # - Every other NFR-PERF item that the running parts record in their own latency histograms
 #   (C1 capture, C5 compute, C2 preamble / flush / transcription / command-to-audio). A
 #   histogram gives the upper bound of the bucket holding the p99, and is used only when it
-#   has samples.
+#   has samples. With --voice N, N spoken questions (synthetic voice) go through two
+#   pw-loopback virtual devices first, so C2's histograms have samples; nothing is audible
+#   and voice.conf is restored afterwards.
 #
 # Nothing is copied from earlier reports: an item with no fresh measurement is written as
 # "not measured" with the reason, and "passed" is computed from the numbers, never assumed.
@@ -18,13 +20,15 @@
 set -euo pipefail
 
 asks=20
+voice=0
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 out_dir="$root/reports/bench"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --asks) asks="$2"; shift 2 ;;
+    --voice) voice="$2"; shift 2 ;;
     --out) out_dir="$2"; shift 2 ;;
-    *) echo "usage: $0 [--asks N] [--out DIR]" >&2; exit 2 ;;
+    *) echo "usage: $0 [--asks N] [--voice N] [--out DIR]" >&2; exit 2 ;;
   esac
 done
 
@@ -81,7 +85,47 @@ json.dump({"n": len(samples), "failures": failures, "p50_ms": pct(50), "p95_ms":
            "max_ms": samples[-1] if samples else None}, open(out, "w"))
 PY
 
-"$ctl" status --json > "$work/status.json"
+if (( voice > 0 )); then
+  echo "== Spoken questions through virtual devices, $voice questions"
+  say="$root/cpp/build/voice-release/neuroos-voice/neuroos-voice-say"
+  [[ -x "$say" ]] || { echo "build neuroos-voice-say first" >&2; exit 2; }
+  conf="$HOME/.config/neuroos/voice.conf"
+  had_conf=0
+  if [[ -f "$conf" ]]; then had_conf=1; cp "$conf" "$work/voice.conf.orig"; fi
+  tag="bench$$"
+  mic="neuroos-test-mic-$tag"; sink="neuroos-test-sink-$tag"
+  out_sink="neuroos-test-out-$tag"; out_mic="neuroos-test-outmic-$tag"
+  pids=()
+  restore_voice() {
+    local p
+    for p in "${pids[@]}"; do kill "$p" 2>/dev/null || true; done
+    if [[ "$had_conf" == 1 ]]; then cp "$work/voice.conf.orig" "$conf"; else rm -f "$conf"; fi
+    systemctl --user restart neuroos-voice || true
+  }
+  # Restore the user's voice settings even if a step below fails.
+  trap 'restore_voice; rm -rf "$work"' EXIT
+  pw-loopback -c 1 -m '[ MONO ]' --capture-props="media.class=Audio/Sink node.name=$sink" \
+    --playback-props="media.class=Audio/Source node.name=$mic" & pids+=("$!")
+  pw-loopback -c 1 -m '[ MONO ]' --capture-props="media.class=Audio/Sink node.name=$out_sink" \
+    --playback-props="media.class=Audio/Source node.name=$out_mic" & pids+=("$!")
+  sleep 2
+  printf 'capture_node = %s\nplayback_node = %s\n' "$mic" "$out_sink" > "$conf"
+  systemctl --user restart neuroos-voice
+  for _ in $(seq 1 90); do "$ctl" voice status >/dev/null 2>&1 && break; sleep 1; done
+  spoken=("what is two plus two" "name a colour" "what is the capital of Japan"
+          "how many legs does a spider have" "what is the opposite of hot")
+  for i in $(seq 1 "$voice"); do
+    q="Hey Jarvis, ${spoken[$(( (i - 1) % ${#spoken[@]} ))]}?"
+    "$say" "$HOME/.local/opt/neuroos/models/voice" am_michael "$work/q.wav" "$q" >/dev/null 2>&1
+    pw-play --target "$sink" "$work/q.wav"
+    sleep 20
+  done
+  "$ctl" status --json > "$work/status.json"
+  restore_voice
+  trap 'rm -rf "$work"' EXIT
+else
+  "$ctl" status --json > "$work/status.json"
+fi
 
 python3 - "$work" "$out_dir/p9-perf-integrated-$stamp.json" "$stamp" "$(git -C "$root" rev-parse --short HEAD)" <<'PY'
 import json, os, platform, sys
@@ -116,7 +160,10 @@ except OSError:
     pass
 m = {}
 m["NFR-PERF-01"] = item("Preamble request to first audio", 50.0, *from_hist("neuroos-voice", "preamble_to_audio"))
-m["NFR-PERF-02"] = item("End of speech to first answer audio", 4500.0, *from_hist("neuroos-voice", "command_to_audio"))
+# command_to_audio stops at the cached preamble, so it is not this item; the answer's own first
+# audio is command_to_answer_audio (from end-of-utterance detection, so the VAD's end-silence
+# wait comes on top of the figure).
+m["NFR-PERF-02"] = item("End of speech to first answer audio", 4500.0, *from_hist("neuroos-voice", "command_to_answer_audio"))
 m["NFR-PERF-03"] = item("Typed question to first answer chunk", 3000.0, t["p50_ms"],
                         f"client side, {t['n']} questions, {t['failures']} failed", "p50")
 m["NFR-PERF-03"]["p95_ms"] = t["p95_ms"]

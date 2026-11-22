@@ -198,7 +198,9 @@ Result<std::unique_ptr<VoiceRuntime>> BuildVoiceRuntime(const RuntimeOptions& o)
     auto flush = health->Histogram("barge_in_flush");
     auto transcribe = health->Histogram("transcribe");
     auto first = health->Histogram("command_to_audio");
-    d.on_metric = [preamble, flush, transcribe, first](std::string_view name, std::uint64_t ns) {
+    auto answer = health->Histogram("command_to_answer_audio");
+    d.on_metric = [preamble, flush, transcribe, first, answer](std::string_view name,
+                                                               std::uint64_t ns) {
       const auto dur = std::chrono::nanoseconds(static_cast<std::int64_t>(ns));
       if (name == "preamble_to_audio") {
         preamble->Record(dur);
@@ -208,6 +210,8 @@ Result<std::unique_ptr<VoiceRuntime>> BuildVoiceRuntime(const RuntimeOptions& o)
         transcribe->Record(dur);
       } else if (name == "command_to_audio") {
         first->Record(dur);
+      } else if (name == "command_to_answer_audio") {
+        answer->Record(dur);
       }
     };
   }

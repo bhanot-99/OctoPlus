@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -269,6 +270,79 @@ TEST(VoicePipeline, ReplyIsSpokenAsItStreamsInOneVoiceThenAFollowUpOpens) {
   r.Frames(0, 2);
   EXPECT_TRUE(r.p->status().follow_up_open);
   EXPECT_FALSE(r.p->status().turn_in_progress);
+}
+
+// NFR-PERF-02 (audit A-19): the time to the first audio of the answer itself is recorded once,
+// when the first synthesised sentence plays; the cached preamble only stops command_to_audio.
+TEST(VoicePipeline, TheFirstAnswerSentenceRecordsCommandToAnswerAudioOnce) {
+  std::vector<std::pair<std::string, std::uint64_t>> metrics;
+  std::uint64_t now = 1'000'000'000;
+  FakeSource source;
+  FakeSink sink;
+  FakeVad vad;
+  FakeWake wake;
+  FakeStt stt;
+  FakeTts tts;
+  FakeLink link;
+  FakeProbe probe;
+  ManualExecutor stt_exec;
+  ManualExecutor tts_exec;
+  VoicePipeline::Deps d;
+  d.source = &source;
+  d.sink = &sink;
+  d.vad = &vad;
+  d.wake = &wake;
+  d.stt = &stt;
+  d.tts = &tts;
+  d.link = &link;
+  d.mic_probe = &probe;
+  d.stt_exec = &stt_exec;
+  d.tts_exec = &tts_exec;
+  d.mono_ns = [&now] { return now; };
+  d.wall_ns = [&now] { return 1'700'000'000'000'000'000ULL + now; };
+  d.on_metric = [&metrics](std::string_view name, std::uint64_t ns) {
+    metrics.emplace_back(std::string(name), ns);
+  };
+  VoicePipeline p(d, PipelineConfig{});
+  ASSERT_TRUE(p.Start().ok());
+  p.PreloadClips();
+  auto frames = [&](std::int16_t marker, int n) {
+    for (int i = 0; i < n; ++i) {
+      now += kFrameNs;
+      source.Deliver(marker);
+    }
+  };
+  auto settle = [&] {
+    while (stt_exec.RunAll() + tts_exec.RunAll() > 0) {
+    }
+  };
+  frames(0, 3);
+  frames(2000, 6);
+  frames(1000, 30);
+  frames(0, 25);
+  settle();
+  ASSERT_EQ(link.commands.size(), 1U);
+  const std::uint64_t sent = now;
+  auto count = [&](const char* name) {
+    return std::count_if(metrics.begin(), metrics.end(),
+                         [name](const auto& m) { return m.first == name; });
+  };
+  now += 100'000'000;  // the preamble 0.1 s later
+  link.receiver->OnPreamble(1);
+  settle();
+  EXPECT_EQ(count("command_to_audio"), 1);
+  EXPECT_EQ(count("command_to_answer_audio"), 0) << "a preamble is not the answer";
+  now += 2'000'000'000;  // the first sentence 2.1 s after the command
+  link.receiver->OnSpeak("It is noon.");
+  settle();
+  link.receiver->OnSpeak("Lunch time.");
+  link.receiver->OnFinished(true);
+  settle();
+  ASSERT_EQ(count("command_to_answer_audio"), 1);
+  const auto it = std::find_if(metrics.begin(), metrics.end(),
+                               [](const auto& m) { return m.first == "command_to_answer_audio"; });
+  EXPECT_EQ(it->second, 2'100'000'000ULL);
+  EXPECT_GE(now, sent);
 }
 
 TEST(VoicePipeline, FollowUpNeedsNoWakeWordAndIsMarkedAsSuch) {

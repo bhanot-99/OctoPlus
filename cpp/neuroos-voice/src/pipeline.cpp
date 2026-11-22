@@ -252,6 +252,7 @@ void VoicePipeline::Run(const std::vector<TurnAction>& actions) {
         {
           const std::lock_guard<std::mutex> lock(mu_);
           command_sent_ns_ = d_.mono_ns();
+          answer_since_ns_ = command_sent_ns_;
         }
         d_.link->SendCommand(cmd, this);
         break;
@@ -528,8 +529,28 @@ void VoicePipeline::QueueSpeech(const std::string& text, bool nudge, std::uint64
         d_.on_trace("audio_written");
       }
       NoteAudioQueued(nudge, epoch);
+      NoteAnswerAudio(nudge, epoch);
     }
   });
+}
+
+// The first synthesised sentence of an answer (not a cached clip, not a nudge): NFR-PERF-02.
+void VoicePipeline::NoteAnswerAudio(bool nudge, std::uint64_t epoch) {
+  if (nudge) {
+    return;
+  }
+  std::uint64_t since = 0;
+  {
+    const std::lock_guard<std::mutex> lock(mu_);
+    if (epoch != epoch_ || answer_since_ns_ == 0) {
+      return;
+    }
+    since = answer_since_ns_;
+    answer_since_ns_ = 0;
+  }
+  if (d_.on_metric) {
+    d_.on_metric("command_to_answer_audio", d_.mono_ns() - since);
+  }
 }
 
 // The speech engine failed: say so once in the cached voice instead of going quiet, never in
