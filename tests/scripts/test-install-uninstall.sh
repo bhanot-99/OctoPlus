@@ -8,8 +8,20 @@ trap 'rm -rf "$test_dir"' EXIT
 
 echo "Testing install.sh into staging directory: $test_dir"
 
+# 0. A drop-in folder from an earlier install (neuroos-gen-units writes these).
+dropin="$test_dir$HOME/.config/systemd/user/neuroos-kernel.service.d"
+mkdir -p "$dropin"
+echo "[Service]" > "$dropin/cleanup-folders.conf"
+
 # 1. Execute installation into staging dir
 "$root/scripts/install.sh" --destdir "$test_dir" --system --user
+
+# Regression (audit A-17): installing must not take the search bit off drop-in folders.
+mode=$(stat -c '%a' "$dropin")
+if [[ "$mode" != 755 ]]; then
+  echo "FAILED: drop-in folder mode is $mode, expected 755" >&2
+  exit 1
+fi
 
 # 2. Check installed files
 echo "Verifying installed system & user files..."

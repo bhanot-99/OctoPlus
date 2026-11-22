@@ -127,7 +127,9 @@ install -d -m 0755 "$staging/usr/share/doc/semantic-neuroos"
 # User units & timers
 if [[ -d "$root/deploy/systemd/user" ]]; then
   cp -a "$root/deploy/systemd/user/". "$staging/usr/lib/systemd/user/"
-  chmod 0644 "$staging/usr/lib/systemd/user/"*
+  # Files 0644, drop-in folders 0755 (audit A-17).
+  find "$staging/usr/lib/systemd/user" -type f -exec chmod 0644 {} +
+  find "$staging/usr/lib/systemd/user" -mindepth 1 -type d -exec chmod 0755 {} +
 fi
 
 # Fetcher system unit

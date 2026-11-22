@@ -268,7 +268,11 @@ if [[ "$mode" == "all" || "$mode" == "user" ]]; then
   echo "=== [User] 2. Installing user systemd units ==="
   if [[ -d "$root/deploy/systemd/user" ]]; then
     cp -a "$root/deploy/systemd/user/". "$u_units/"
-    chmod 0644 "$u_units/neuroos"*
+    # Files 0644, drop-in folders 0755: a plain `chmod 0644 neuroos*` also hit the
+    # *.service.d folders and took their search bit away, so systemd ignored the
+    # drop-ins (audit A-17).
+    find "$u_units" -maxdepth 2 -path "$u_units/neuroos*" -type f -exec chmod 0644 {} +
+    find "$u_units" -maxdepth 1 -name 'neuroos*.d' -type d -exec chmod 0755 {} +
   fi
 
   # Link models if available
