@@ -87,6 +87,7 @@ async fn main() {
                     skip_models,
                     yes,
                     config_dir,
+                    system_fetch_key: None,
                 },
                 styler,
             )

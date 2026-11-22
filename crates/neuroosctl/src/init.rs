@@ -9,13 +9,22 @@ use std::process::Command;
 
 use crate::style::Styler;
 
+/// Where the installer puts the fetcher's approval key (C7 reads it; C6 needs the same bytes).
+pub const SYSTEM_FETCH_KEY: &str = "/etc/neuroos/fetch.key";
+
 /// Options for `neuroosctl init`.
 #[derive(Debug, Clone)]
 pub struct InitOptions {
+    /// Replace existing keys and configuration files.
     pub force: bool,
+    /// Do not hash-check the model files.
     pub skip_models: bool,
+    /// Enable the services without asking.
     pub yes: bool,
+    /// Configuration folder; `~/.config/neuroos` when not set.
     pub config_dir: Option<PathBuf>,
+    /// The system fetch key; [`SYSTEM_FETCH_KEY`] when not set.
+    pub system_fetch_key: Option<PathBuf>,
 }
 
 pub async fn run_init(opts: InitOptions, s: Styler) -> i32 {
@@ -43,7 +52,11 @@ pub async fn run_init(opts: InitOptions, s: Styler) -> i32 {
 
     // 1. Cryptographic Keys
     println!("\n{}", s.bold("1. Provisioning Cryptographic Keys..."));
-    if let Err(e) = provision_keys(&config_dir, opts.force) {
+    let sys_fetch = opts
+        .system_fetch_key
+        .clone()
+        .unwrap_or_else(|| PathBuf::from(SYSTEM_FETCH_KEY));
+    if let Err(e) = provision_keys(&config_dir, opts.force, &sys_fetch) {
         eprintln!("error: key provisioning failed: {e}");
         return 1;
     }
@@ -85,39 +98,109 @@ pub async fn run_init(opts: InitOptions, s: Styler) -> i32 {
     0
 }
 
-fn provision_keys(config_dir: &Path, force: bool) -> Result<(), String> {
+/// Writes a secret file that is mode 0600 from the moment it exists (audit A-15: writing
+/// then chmod-ing left each new key world-readable for a moment).
+fn write_secret(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    use std::io::Write;
+    use std::os::unix::fs::OpenOptionsExt;
+    if path.exists() {
+        fs::remove_file(path).map_err(|e| format!("replacing {}: {e}", path.display()))?;
+    }
+    let mut f = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(path)
+        .map_err(|e| format!("creating {}: {e}", path.display()))?;
+    f.write_all(bytes)
+        .and_then(|()| f.sync_all())
+        .map_err(|e| format!("writing {}: {e}", path.display()))
+}
+
+fn random_key() -> Result<[u8; 32], String> {
+    let mut key = [0u8; 32];
+    getrandom::fill(&mut key).map_err(|e| format!("getrandom failed: {e}"))?;
+    Ok(key)
+}
+
+/// The command that installs this user's fetch key for C7, printed when they differ.
+fn install_key_hint(fetch_path: &Path, sys_fetch: &Path) -> String {
+    format!(
+        "sudo install -m 0640 -o root -g neuroos {} {} && sudo systemctl restart neuroos-fetcher",
+        fetch_path.display(),
+        sys_fetch.display()
+    )
+}
+
+/// Provisions `hmac.key` and `fetch.key`. C6 signs fetch approvals with the user's
+/// `fetch.key` and C7 verifies them with the system one, so they must hold the same bytes:
+/// the system key is copied when it is readable; init fails (instead of inventing a key
+/// that can never match) when it exists but is not readable; and it warns with the fix
+/// when there is no system key yet or the two differ (audit A-15).
+fn provision_keys(config_dir: &Path, force: bool, sys_fetch: &Path) -> Result<(), String> {
     let hmac_path = config_dir.join("hmac.key");
     if !hmac_path.exists() || force {
-        let mut key = [0u8; 32];
-        getrandom::fill(&mut key).map_err(|e| format!("getrandom failed: {e}"))?;
-        fs::write(&hmac_path, key).map_err(|e| format!("writing {}: {e}", hmac_path.display()))?;
-        fs::set_permissions(&hmac_path, fs::Permissions::from_mode(0o600))
-            .map_err(|e| format!("setting permissions on {}: {e}", hmac_path.display()))?;
+        write_secret(&hmac_path, &random_key()?)?;
         println!("  Generated {} (mode 0600)", hmac_path.display());
     } else {
         println!("  Existing {} found (retained)", hmac_path.display());
     }
 
     let fetch_path = config_dir.join("fetch.key");
+    let system_key = if sys_fetch.exists() {
+        match fs::read(sys_fetch) {
+            Ok(bytes) if bytes.len() == 32 => Some(bytes),
+            Ok(bytes) => {
+                return Err(format!(
+                    "{} has {} bytes, expected 32",
+                    sys_fetch.display(),
+                    bytes.len()
+                ));
+            }
+            Err(e) => {
+                return Err(format!(
+                    "cannot read {}: {e}. Add yourself to the 'neuroos' group \
+                     (sudo usermod -aG neuroos $USER), log in again, then rerun init.",
+                    sys_fetch.display()
+                ));
+            }
+        }
+    } else {
+        None
+    };
+
     if !fetch_path.exists() || force {
-        let sys_fetch = Path::new("/etc/neuroos/fetch.key");
-        if sys_fetch.exists() && fs::read(sys_fetch).is_ok() {
-            let _ = fs::copy(sys_fetch, &fetch_path);
-            let _ = fs::set_permissions(&fetch_path, fs::Permissions::from_mode(0o600));
-            println!("  Copied system fetch.key into {}", fetch_path.display());
+        if let Some(bytes) = &system_key {
+            write_secret(&fetch_path, bytes)?;
+            println!(
+                "  Copied the system fetch key into {}",
+                fetch_path.display()
+            );
         } else {
-            let mut key = [0u8; 32];
-            getrandom::fill(&mut key).map_err(|e| format!("getrandom failed: {e}"))?;
-            fs::write(&fetch_path, key)
-                .map_err(|e| format!("writing {}: {e}", fetch_path.display()))?;
-            fs::set_permissions(&fetch_path, fs::Permissions::from_mode(0o600))
-                .map_err(|e| format!("setting permissions on {}: {e}", fetch_path.display()))?;
+            write_secret(&fetch_path, &random_key()?)?;
             println!("  Generated {} (mode 0600)", fetch_path.display());
         }
     } else {
         println!("  Existing {} found (retained)", fetch_path.display());
     }
 
+    let user_key =
+        fs::read(&fetch_path).map_err(|e| format!("reading {}: {e}", fetch_path.display()))?;
+    match &system_key {
+        None => println!(
+            "  warning: {} is missing, so web lookups stay off until it is installed:\n    {}",
+            sys_fetch.display(),
+            install_key_hint(&fetch_path, sys_fetch)
+        ),
+        Some(sys) if *sys != user_key => println!(
+            "  warning: {} and {} differ, so every web lookup would be refused. Rerun \
+             'neuroosctl init --force' to copy the system key, or install yours:\n    {}",
+            fetch_path.display(),
+            sys_fetch.display(),
+            install_key_hint(&fetch_path, sys_fetch)
+        ),
+        Some(_) => println!("  The fetch key matches the fetcher's."),
+    }
     Ok(())
 }
 
