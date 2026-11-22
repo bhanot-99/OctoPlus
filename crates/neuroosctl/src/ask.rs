@@ -129,6 +129,36 @@ async fn ctrl_c() {
     }
 }
 
+/// `line` without terminal escape codes (arrow keys, Home, function keys) and other control
+/// characters.
+#[must_use]
+pub fn typed_text(line: &str) -> String {
+    let mut out = String::with_capacity(line.len());
+    let mut chars = line.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\u{1b}' {
+            match chars.next() {
+                // CSI: ESC [ parameters... final byte in '@'..='~'.
+                Some('[') => {
+                    for f in chars.by_ref() {
+                        if ('@'..='~').contains(&f) {
+                            break;
+                        }
+                    }
+                }
+                // SS3 (ESC O A) and two-character sequences.
+                Some('O') => {
+                    chars.next();
+                }
+                _ => {}
+            }
+        } else if !c.is_control() || c == '\t' {
+            out.push(c);
+        }
+    }
+    out
+}
+
 /// The interactive session: reads one line at a time from `input` and asks it, until an end
 /// word, end of input (exit 0) or `quit` firing while waiting at the prompt (exit 130).
 /// Ctrl+C during an answer cancels only that answer (FR-CLI-02).
@@ -165,8 +195,14 @@ where
                 return 0;
             }
         };
-        let trimmed = line.trim();
+        // Arrow and other editing keys arrive as escape codes ("^[[A"); they are not words
+        // and must not reach the model (owner, 2026-11-22).
+        let typed = typed_text(&line);
+        let trimmed = typed.trim();
         if trimmed.is_empty() {
+            if line.contains('\u{1b}') {
+                println!("(Arrow keys don't work here yet: please type your message.)");
+            }
             continue;
         }
         if SESSION_END_WORDS
@@ -340,5 +376,19 @@ mod tests {
         assert_eq!(taint_names(0), "none");
         assert_eq!(taint_names(0b0110), "user_provided | model_generated");
         assert_eq!(taint_names(0b1001), "external_untrusted | stale_index");
+    }
+}
+
+#[cfg(test)]
+mod typed_text_tests {
+    use super::typed_text;
+
+    #[test]
+    fn escape_codes_from_editing_keys_are_not_text() {
+        assert_eq!(typed_text("\u{1b}[A"), "");
+        assert_eq!(typed_text("\u{1b}[A\u{1b}[B\u{1b}OC"), "");
+        assert_eq!(typed_text("\u{1b}[1;5Dhello"), "hello");
+        assert_eq!(typed_text("what is 2+2?"), "what is 2+2?");
+        assert_eq!(typed_text("Delhi मौसम \u{1b}[3~"), "Delhi मौसम ");
     }
 }

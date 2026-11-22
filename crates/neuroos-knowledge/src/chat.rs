@@ -14,6 +14,15 @@ pub enum Topic {
     Money,
 }
 
+/// Spoken when C6 refuses a confirmation because the user said no to the same request a few
+/// minutes ago, or asked for too many in a minute (NFR-SEC-09).
+pub const APPROVAL_TOO_SOON: &str =
+    "You said no to this a moment ago, so I won't ask again for a few minutes.";
+
+/// Spoken when another confirmation window is already open.
+pub const APPROVAL_BUSY: &str =
+    "Another approval window is already open. Please answer that one first.";
+
 /// The fixed offer sentence appended to a general answer whose question depends on fresh or specific facts (FR-CHT-03).
 /// Plain speech, no markup, < 100 bytes, ends with a question mark.
 pub const LOOKUP_OFFER: &str = "Would you like me to look that up for you?";

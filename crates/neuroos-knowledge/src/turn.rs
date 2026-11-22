@@ -715,15 +715,35 @@ impl KnowledgeHandler {
 
     /// Sends one skill call to C6 and speaks the outcome.
     async fn dispatch(&self, call: Call<'_>, sink: &StreamSink) -> Result<Body, HandlerError> {
-        let Some((result, out_taint)) = self.send_dispatch(&call).await else {
-            return self.status_turn(status::Part::Kernel, sink).await;
+        let (result, out_taint) = match self.send_dispatch(&call).await {
+            Ok(sent) => sent,
+            Err(refusal) => return self.refusal_turn(refusal, sink).await,
         };
         self.finish_dispatch(call, &result, out_taint, sink).await
     }
 
-    /// Sends one dispatch to C6; `None` when C6 did not answer. The returned taint is the
-    /// context's joined with the result's (a missing result taint counts as untrusted, R0-4).
-    async fn send_dispatch(&self, call: &Call<'_>) -> Option<(DispatchResult, TaintFlags)> {
+    /// Speaks why C6 refused before any dialog: the denial cooldown and the one-dialog rule
+    /// have their own lines; only an unreachable C6 gives the status line (BUG-120).
+    async fn refusal_turn(
+        &self,
+        refusal: Refusal,
+        sink: &StreamSink,
+    ) -> Result<Body, HandlerError> {
+        let line = match refusal {
+            Refusal::Down => return self.status_turn(status::Part::Kernel, sink).await,
+            Refusal::TooSoon => chat::APPROVAL_TOO_SOON,
+            Refusal::Busy => chat::APPROVAL_BUSY,
+        };
+        Self::say(sink, line).await?;
+        Ok(Self::done(Route::Action, self.base_taint()))
+    }
+
+    /// Sends one dispatch to C6. The returned taint is the context's joined with the
+    /// result's (a missing result taint counts as untrusted, R0-4).
+    async fn send_dispatch(
+        &self,
+        call: &Call<'_>,
+    ) -> Result<(DispatchResult, TaintFlags), Refusal> {
         let req = Body::DispatchRequest(DispatchRequest {
             skill: call.skill.to_string(),
             args_json: call.args_json.to_string(),
@@ -732,7 +752,15 @@ impl KnowledgeHandler {
         });
         let result = match self.peers.kernel.call(req, self.timing.dispatch).await {
             Ok(Body::DispatchResult(r)) => r,
-            Ok(_) | Err(_) => return None,
+            Err(neuroos_ipc::IpcError::Remote {
+                code: ErrorCode::ResourceExhausted,
+                ..
+            }) => return Err(Refusal::TooSoon),
+            Err(neuroos_ipc::IpcError::Remote {
+                code: ErrorCode::Busy,
+                ..
+            }) => return Err(Refusal::Busy),
+            Ok(_) | Err(_) => return Err(Refusal::Down),
         };
         let out_taint = call.taint.merge(
             result
@@ -741,7 +769,7 @@ impl KnowledgeHandler {
                 .and_then(|t| TaintFlags::decode(Some(t.flags)).ok())
                 .unwrap_or(TaintFlags::EXTERNAL_UNTRUSTED),
         );
-        Some((result, out_taint))
+        Ok((result, out_taint))
     }
 
     /// Speaks a dispatch's outcome and records the turn.
@@ -816,8 +844,9 @@ impl KnowledgeHandler {
             question: turn.text,
             at_ns: turn.now,
         };
-        let Some((result, out_taint)) = self.send_dispatch(&call).await else {
-            return self.status_turn(status::Part::Kernel, sink).await;
+        let (result, out_taint) = match self.send_dispatch(&call).await {
+            Ok(sent) => sent,
+            Err(refusal) => return self.refusal_turn(refusal, sink).await,
         };
         let executed = DispatchStatus::try_from(result.status) == Ok(DispatchStatus::Executed);
         if !executed || action::stored_pages(&result.result_json) == 0 {
@@ -1422,4 +1451,15 @@ impl Handler for KnowledgeHandler {
             _ => Err(invalid("expected AskRequest on knowledge socket")),
         }
     }
+}
+
+/// Why C6 did not run a dispatch.
+#[derive(Debug, Clone, Copy)]
+enum Refusal {
+    /// C6 did not answer.
+    Down,
+    /// The denial cooldown or the review rate limit (C6 `RESOURCE_EXHAUSTED`).
+    TooSoon,
+    /// Another confirmation dialog is open (C6 `BUSY`).
+    Busy,
 }

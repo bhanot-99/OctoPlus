@@ -50,6 +50,7 @@ struct FakeKernel {
     allow: bool,
     dispatch_status: DispatchStatus,
     result_json: String,
+    dispatch_error: Option<ErrorCode>,
 }
 
 impl Handler for FakeKernel {
@@ -72,6 +73,9 @@ impl Handler for FakeKernel {
                     d.args_json,
                     d.context_taint.map_or(u32::MAX, |t| t.flags),
                 ));
+                if let Some(code) = self.dispatch_error {
+                    return Err(HandlerError::new(code, "refused", false));
+                }
                 Ok(Body::DispatchResult(DispatchResult {
                     status: self.dispatch_status as i32,
                     result_json: self.result_json.clone(),
@@ -218,6 +222,7 @@ struct Opts {
     dispatch_status: DispatchStatus,
     result_json: String,
     token_delay: Duration,
+    dispatch_error: Option<ErrorCode>,
 }
 
 impl Default for Opts {
@@ -238,6 +243,7 @@ impl Default for Opts {
             dispatch_status: DispatchStatus::Executed,
             result_json: "{}".to_string(),
             token_delay: Duration::ZERO,
+            dispatch_error: None,
         }
     }
 }
@@ -288,6 +294,7 @@ impl Stack {
                     allow: o.allow,
                     dispatch_status: o.dispatch_status,
                     result_json: o.result_json.clone(),
+                    dispatch_error: o.dispatch_error,
                 },
                 &stop,
             )
@@ -1735,5 +1742,28 @@ async fn a_direct_web_search_request_searches_for_the_topic() {
             )],
             "{ask}"
         );
+    }
+}
+
+/// Owner, 2026-11-22: after a "no" in the dialog, C6's five-minute denial cooldown (and its
+/// one-dialog-at-a-time rule) were spoken as "a part is not running". Each now says what
+/// really happened; only an unreachable kernel gives the status line.
+#[tokio::test]
+async fn a_refused_approval_says_why_and_not_that_a_part_is_down() {
+    for (code, expected) in [
+        (
+            ErrorCode::ResourceExhausted,
+            neuroos_knowledge::chat::APPROVAL_TOO_SOON,
+        ),
+        (ErrorCode::Busy, neuroos_knowledge::chat::APPROVAL_BUSY),
+    ] {
+        let s = Stack::start(Opts {
+            dispatch_error: Some(code),
+            ..Opts::default()
+        })
+        .await;
+        let (said, done) = s.ask("search the web for weather in delhi today").await;
+        assert_eq!(said, expected, "{code:?}");
+        assert_eq!(route(&done), Route::Action, "{code:?}");
     }
 }
