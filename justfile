@@ -55,6 +55,7 @@ test: build
     tests/scripts/fetch-models-test.sh
     # C7's real HTTPS transport against a local server in a private network namespace (rules.md §8.4).
     tests/scripts/fetcher-netns-test.sh
+    tests/scripts/fetcher-firewall-test.sh
 
 # Hosted CI subset: skips `local_*` tests that need a user session (rules.md §8.6).
 test-hosted: build

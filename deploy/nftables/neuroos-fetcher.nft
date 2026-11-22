@@ -1,0 +1,24 @@
+#!/usr/sbin/nft -f
+# FR-FET-10 / BUG-110: the network fetcher (C7) may send only HTTPS (TCP 443) and DNS.
+# Second layer behind C7's own Landlock rule (TCP connect to 443 only, BUG-118). Applies to
+# packets from sockets owned by the fetcher's system user; every other program is untouched.
+# Installed by scripts/install-fetcher.sh and loaded by neuroos-fetcher-firewall.service.
+# Tested in a private network namespace by tests/scripts/fetcher-firewall-test.sh.
+
+define FETCHER_USER = "neuroos-fetcher"
+
+table inet neuroos_fetcher
+delete table inet neuroos_fetcher
+
+table inet neuroos_fetcher {
+    chain output {
+        type filter hook output priority filter; policy accept;
+        # Packets of a connection that was already allowed (replies, the rest of a stream).
+        meta skuid $FETCHER_USER ct state established,related accept
+        meta skuid $FETCHER_USER tcp dport 443 accept
+        # Name lookups: the local stub (127.0.0.53) or the configured servers.
+        meta skuid $FETCHER_USER udp dport 53 accept
+        meta skuid $FETCHER_USER tcp dport 53 accept
+        meta skuid $FETCHER_USER counter reject with icmpx admin-prohibited
+    }
+}

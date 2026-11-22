@@ -844,3 +844,27 @@ fn the_voice_unit_binds_its_settings_keeps_the_hardening_except_realtime_and_nam
         assert!(other.contains("RestrictRealtime=true"), "{name}");
     }
 }
+
+/// FR-FET-10 / BUG-110: C7's unit loads the TCP 443 + DNS packet rule before it starts,
+/// with full privileges, and refuses to start when an installed rule cannot be loaded.
+#[test]
+fn fetcher_loads_its_port_rule_before_starting() {
+    let unit = neuroos_deploy::generate_fetcher_system_service();
+    let lines: Vec<&str> = unit.lines().collect();
+    let pre = lines
+        .iter()
+        .position(|l| {
+            l.starts_with("ExecStartPre=+")
+                && l.contains("/usr/sbin/nft -f /etc/neuroos/neuroos-fetcher.nft")
+        })
+        .expect("ExecStartPre loads the rule");
+    let start = lines
+        .iter()
+        .position(|l| l.starts_with("ExecStart="))
+        .unwrap();
+    assert!(pre < start);
+    assert!(
+        !lines[pre].starts_with("ExecStartPre=-"),
+        "a failed load must stop the start"
+    );
+}

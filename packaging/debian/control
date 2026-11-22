@@ -3,7 +3,7 @@ Version: 1.0.0
 Section: utils
 Priority: optional
 Architecture: amd64
-Depends: libgtk-4-1, libpipewire-0.3-0, libssl3, espeak-ng, systemd
+Depends: libgtk-4-1, libpipewire-0.3-0, libssl3, espeak-ng, systemd, nftables
 Maintainer: Semantic-NeuroOS Team <neuroos@local>
 Description: Local-first semantic operating system buddy
  Semantic-NeuroOS is an on-device semantic operating system daemon suite

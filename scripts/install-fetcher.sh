@@ -55,8 +55,19 @@ else
   echo "note: target/release/neuroos-fetcher not found (built in later tasks), skipping binary copy"
 fi
 
-echo "=== 4.5. Ensuring /etc/neuroos/fetch.key exists ==="
+echo "=== 4.4. Installing the fetcher's port rule (FR-FET-10: TCP 443 and DNS only) ==="
 install -d -m 0755 /etc/neuroos
+install -m 0644 "$root/deploy/nftables/neuroos-fetcher.nft" /etc/neuroos/neuroos-fetcher.nft
+if command -v nft >/dev/null 2>&1; then
+  nft -f /etc/neuroos/neuroos-fetcher.nft
+  echo "Loaded the nftables rule (table inet neuroos_fetcher)"
+else
+  echo "error: nft is not installed; the fetcher will not start with the rule file present" >&2
+  echo "       install it with: sudo apt install nftables" >&2
+  exit 1
+fi
+
+echo "=== 4.5. Ensuring /etc/neuroos/fetch.key exists ==="
 if [[ ! -f /etc/neuroos/fetch.key ]]; then
   dd if=/dev/urandom of=/etc/neuroos/fetch.key bs=32 count=1 status=none
   chmod 0640 /etc/neuroos/fetch.key

@@ -137,6 +137,10 @@ if [[ -f "$root/deploy/systemd/system/neuroos-fetcher.service" ]]; then
   install -m 0644 "$root/deploy/systemd/system/neuroos-fetcher.service" "$staging/lib/systemd/system/neuroos-fetcher.service"
 fi
 
+# FR-FET-10: the fetcher's port rule, loaded by its unit before it starts.
+install -d -m 0755 "$staging/etc/neuroos"
+install -m 0644 "$root/deploy/nftables/neuroos-fetcher.nft" "$staging/etc/neuroos/neuroos-fetcher.nft"
+
 # Sysusers & tmpfiles
 if [[ -f "$root/deploy/sysusers.d/neuroos.conf" ]]; then
   install -m 0644 "$root/deploy/sysusers.d/neuroos.conf" "$staging/usr/lib/sysusers.d/neuroos.conf"

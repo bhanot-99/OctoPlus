@@ -107,6 +107,10 @@ fi
 # System units & config (if root or destdir set)
 if [[ -n "$destdir" || "${EUID}" -eq 0 ]]; then
   rm -f "$destdir/etc/systemd/system/neuroos-fetcher.service"
+  rm -f "$destdir/etc/neuroos/neuroos-fetcher.nft"
+  if [[ -z "$destdir" ]] && command -v nft >/dev/null 2>&1; then
+    nft delete table inet neuroos_fetcher 2>/dev/null || true
+  fi
   rm -f "$destdir/etc/sysusers.d/neuroos.conf"
   rm -f "$destdir/etc/tmpfiles.d/neuroos-fetcher.conf"
   rm -f "$destdir/etc/pipewire/pipewire.conf.d/neuroos-echo-cancel.conf"

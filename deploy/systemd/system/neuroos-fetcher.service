@@ -33,6 +33,7 @@ UMask=0027
 MemoryMax=48M
 Restart=on-failure
 RestartSec=2s
+ExecStartPre=+/bin/sh -c 'test ! -e /etc/neuroos/neuroos-fetcher.nft || /usr/sbin/nft -f /etc/neuroos/neuroos-fetcher.nft'
 ExecStart=/opt/neuroos/bin/neuroos-fetcher --allow-uid @OWNER_UID@
 
 [Install]

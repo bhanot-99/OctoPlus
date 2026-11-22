@@ -694,6 +694,11 @@ pub fn generate_fetcher_system_service() -> String {
     out.push_str(&format!("MemoryMax={MEMORY_MAX_FETCHER}\n"));
     out.push_str("Restart=on-failure\n");
     out.push_str("RestartSec=2s\n");
+    // FR-FET-10: load the TCP 443 + DNS packet rule first, with full privileges ("+"). When
+    // the rule file is installed and cannot be loaded, C7 does not start (fail closed).
+    out.push_str(
+        "ExecStartPre=+/bin/sh -c 'test ! -e /etc/neuroos/neuroos-fetcher.nft || /usr/sbin/nft -f /etc/neuroos/neuroos-fetcher.nft'\n",
+    );
     out.push_str("ExecStart=/opt/neuroos/bin/neuroos-fetcher --allow-uid @OWNER_UID@\n\n");
 
     out.push_str("[Install]\n");
