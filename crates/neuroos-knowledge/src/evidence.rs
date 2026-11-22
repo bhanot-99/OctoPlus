@@ -129,6 +129,90 @@ const STOP_WORDS: &[&str] = &[
     "please", "check", "internet", "online", "web", "search", "look", "tell", "give", "find",
 ];
 
+/// The lines of `text`, each split into sentences (a `.`, `!` or `?` followed by a space, so
+/// "4.06" stays whole).
+fn sentences(text: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    for line in text.lines().map(str::trim).filter(|l| !l.is_empty()) {
+        let bytes = line.as_bytes();
+        let mut start = 0;
+        for (i, &b) in bytes.iter().enumerate() {
+            if matches!(b, b'.' | b'!' | b'?') && bytes.get(i + 1) == Some(&b' ') {
+                let piece = line[start..=i].trim();
+                if !piece.is_empty() {
+                    out.push(piece);
+                }
+                start = i + 1;
+            }
+        }
+        let tail = line[start..].trim();
+        if !tail.is_empty() {
+            out.push(tail);
+        }
+    }
+    out
+}
+
+/// What the question is made of: its content words and its adjacent word pairs.
+struct QuestionTerms {
+    words: HashSet<String>,
+    /// Adjacent pairs ("of india") where at least one word is a content word.
+    pairs: HashSet<String>,
+}
+
+fn tokens(text: &str) -> Vec<String> {
+    text.split(|c: char| !c.is_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .map(str::to_lowercase)
+        .collect()
+}
+
+fn is_content(w: &str) -> bool {
+    w.chars().count() >= 3 && !STOP_WORDS.contains(&w)
+}
+
+fn question_words(question: &str) -> QuestionTerms {
+    let all = tokens(question);
+    let words = all.iter().filter(|w| is_content(w)).cloned().collect();
+    let pairs = all
+        .windows(2)
+        .filter(|p| is_content(&p[0]) || is_content(&p[1]))
+        .map(|p| format!("{} {}", p[0], p[1]))
+        .collect();
+    QuestionTerms { words, pairs }
+}
+
+/// Distinct question words a line holds (two points each), two more for each adjacent question
+/// word pair it keeps together ("gdp of india"), plus one when it also has a digit.
+fn line_score(line: &str, q: &QuestionTerms) -> usize {
+    let lower = line.to_lowercase();
+    let hits = q
+        .words
+        .iter()
+        .filter(|w| lower.contains(w.as_str()))
+        .count();
+    if hits == 0 {
+        return 0;
+    }
+    let toks = tokens(line);
+    let pairs = toks
+        .windows(2)
+        .filter(|p| q.pairs.contains(&format!("{} {}", p[0], p[1])))
+        .count();
+    hits * 2 + pairs * 2 + usize::from(line.bytes().any(|b| b.is_ascii_digit()))
+}
+
+/// How well the best line of `text` answers `question`; 0 when no line mentions it.
+#[must_use]
+pub fn answer_score(text: &str, question: &str) -> usize {
+    let words = question_words(question);
+    sentences(text)
+        .into_iter()
+        .map(|l| line_score(l, &words))
+        .max()
+        .unwrap_or(0)
+}
+
 /// Cuts a long page chunk down to the lines that answer `question` (web answers only).
 ///
 /// A stored page chunk often starts with menus and language lists; the prompt keeps only the
@@ -141,29 +225,22 @@ pub fn excerpt_for_question(text: &str, question: &str, max_bytes: usize) -> Str
     if text.len() <= max_bytes {
         return text.trim().to_string();
     }
-    let words: HashSet<String> = question
-        .split(|c: char| !c.is_alphanumeric())
-        .map(str::to_lowercase)
-        .filter(|w| w.chars().count() >= 3 && !STOP_WORDS.contains(&w.as_str()))
-        .collect();
-    let mut scored: Vec<(usize, usize, &str)> = text
-        .lines()
-        .map(str::trim)
-        .filter(|l| !l.is_empty())
+    let words = question_words(question);
+    let mut scored: Vec<(usize, usize, &str)> = sentences(text)
+        .into_iter()
         .enumerate()
-        .map(|(i, l)| {
-            let lower = l.to_lowercase();
-            let hits = words.iter().filter(|w| lower.contains(w.as_str())).count();
-            let digit = usize::from(hits > 0 && l.bytes().any(|b| b.is_ascii_digit()));
-            (hits * 2 + digit, i, l)
-        })
+        .map(|(i, l)| (line_score(l, &words), i, l))
         .filter(|(score, _, _)| *score > 0)
         .collect();
     if scored.is_empty() {
         return truncate_at_char(text.trim(), max_bytes).to_string();
     }
-    // Best first; earlier lines win ties.
-    scored.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
+    // Best first; among equals a fuller sentence beats a short heading, then the earlier wins.
+    scored.sort_by(|a, b| {
+        b.0.cmp(&a.0)
+            .then(b.2.len().cmp(&a.2.len()))
+            .then(a.1.cmp(&b.1))
+    });
     let mut kept: Vec<(usize, &str)> = Vec::new();
     let mut used = 0;
     for (_, i, l) in scored {
@@ -191,7 +268,16 @@ fn truncate_at_char(s: &str, max_bytes: usize) -> &str {
 
 #[cfg(test)]
 mod excerpt_tests {
-    use super::excerpt_for_question;
+    use super::{answer_score, excerpt_for_question};
+
+    #[test]
+    fn a_line_with_more_of_the_question_and_a_number_scores_higher() {
+        let q = "what is the GDP of india";
+        let figure = "Gross Domestic Product (GDP) of India is $4.06 trillion as of 2026.";
+        let growth = "GDP growth 7.0% (2026, projected)";
+        assert!(answer_score(figure, q) > answer_score(growth, q));
+        assert_eq!(answer_score("Main menu and navigation", q), 0);
+    }
 
     #[test]
     fn the_line_with_the_figure_survives_menus_before_it() {
@@ -216,6 +302,14 @@ mod excerpt_tests {
         assert!(got.len() <= 300);
         assert!(got.contains("$4.06 trillion"), "{got}");
         assert!(!got.contains("Deutsch"));
+    }
+
+    #[test]
+    fn the_answer_sentence_beats_short_headings_that_tie_with_it() {
+        let page = "India GDP (2026) - Worldometer\nGDP of India\nIMF (2026) Nominal Gross Domestic Product (GDP) of India is $4.06 trillion ($4,060,207,000,000) as of 2026, according to the International Monetary Fund. The growth rate in 2026 is 7.0%, according to the IMF. Another sentence about population and other things that goes on for a while so the whole line is long.";
+        let got = excerpt_for_question(page, "check on internet, what is the GDP of india", 300);
+        assert!(got.contains("$4.06 trillion"), "{got}");
+        assert!(got.len() <= 300);
     }
 
     #[test]

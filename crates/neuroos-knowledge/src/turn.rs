@@ -61,8 +61,8 @@ const WEB_QUERY_TOP_K: u32 = 20;
 const WEB_EXCERPT_BYTES: usize = 300;
 
 /// Evidence budget (tokens) for a web answer: a few question-matching excerpts rather than the
-/// 128-token head of one chunk. About 2 s more prefill than the default, once per lookup.
-const WEB_EVIDENCE_TOKENS: u32 = 320;
+/// 128-token head of one chunk. About 5 s more prefill than the default, once per lookup (context is 2048 tokens).
+const WEB_EVIDENCE_TOKENS: u32 = 600;
 /// Most characters of the answer stored in C3 as the turn summary.
 const SUMMARY_CHARS: usize = 240;
 /// Longest action answer asked of C4, in tokens.
@@ -935,7 +935,7 @@ impl KnowledgeHandler {
         // A stored page chunk opens with menus and language lists, and the prompt keeps only the
         // head of each item: keep the lines that answer the question instead, so the figure asked
         // for is not cut off (live: the GDP chunk held it at byte 611 of a 384-byte budget).
-        let excerpts: Vec<Evidence> = ev
+        let mut excerpts: Vec<Evidence> = ev
             .items
             .iter()
             .map(|e| Evidence {
@@ -943,6 +943,9 @@ impl KnowledgeHandler {
                 ..e.clone()
             })
             .collect();
+        // The excerpt that matches the question best goes first (a stable sort keeps C3's order
+        // among equals), so it is never the one the budget cuts.
+        excerpts.sort_by_key(|e| std::cmp::Reverse(evidence::answer_score(&e.text, question)));
         let mut budgets = self.budgets();
         budgets.evidence = budgets.evidence.max(WEB_EVIDENCE_TOKENS);
         let prompt = prompt::assemble(
