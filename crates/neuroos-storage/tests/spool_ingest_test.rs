@@ -236,12 +236,42 @@ fn only_the_lead_of_a_long_page_is_stored() {
         text: sentence.repeat(200_000 / sentence.len()),
     };
     let items = document_items(&doc, 10);
-    assert_eq!(items.len(), WEB_PAGE_MAX_CHUNKS);
+    // The first output forgets the page's older chunks; the rest are its lead.
+    assert_eq!(items.len(), 1 + WEB_PAGE_MAX_CHUNKS);
     const { assert!(WEB_PAGE_MAX_CHUNKS * CHUNK_CHARS <= 12_000) };
     // A short page is stored whole.
     let short = SpoolDoc {
         text: sentence.repeat(3),
         ..doc
     };
-    assert_eq!(document_items(&short, 10).len(), 1);
+    assert_eq!(document_items(&short, 10).len(), 2);
+}
+
+#[tokio::test]
+async fn a_refetched_page_replaces_its_old_chunks_and_leaves_other_pages_alone() {
+    let d = tempfile::tempdir().unwrap();
+    let spool = tempfile::tempdir().unwrap();
+    let s = store(d.path(), StorageConfig::default()).await;
+    let f = put(
+        spool.path(),
+        "a.json",
+        &doc("https://e.org/a", "", "Old badly extracted text."),
+    );
+    ingest_file(&s, &f, 9).await;
+    let f = put(
+        spool.path(),
+        "b.json",
+        &doc("https://e.org/b", "", "Another page."),
+    );
+    ingest_file(&s, &f, 9).await;
+    let f = put(
+        spool.path(),
+        "c.json",
+        &doc("https://e.org/a", "", "New clean text."),
+    );
+    ingest_file(&s, &f, 9).await;
+    let texts: Vec<String> = rows(&s).await.into_iter().map(|(t, _)| t).collect();
+    assert!(texts.iter().any(|t| t == "New clean text."), "{texts:?}");
+    assert!(texts.iter().any(|t| t == "Another page."), "{texts:?}");
+    assert!(!texts.iter().any(|t| t.contains("Old badly")), "{texts:?}");
 }

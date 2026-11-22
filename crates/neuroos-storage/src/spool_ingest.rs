@@ -58,26 +58,36 @@ fn read_limited(path: &Path, max: u64) -> Option<Vec<u8>> {
 #[must_use]
 pub fn document_items(doc: &SpoolDoc, now_ns: u64) -> Vec<Output> {
     let at = doc.fetched_at_ns.min(now_ns);
-    spool::chunk_text(&doc.text, CHUNK_CHARS)
-        .into_iter()
-        .take(WEB_PAGE_MAX_CHUNKS)
-        .enumerate()
-        .map(|(i, chunk)| {
-            let text = if i == 0 && !doc.title.is_empty() {
-                format!("{} — {chunk}", doc.title)
-            } else {
-                chunk
-            };
-            Output::Promote(Item {
-                domain: Domain::ExternalDocuments,
-                kind: "document".into(),
-                label: doc.url.clone(),
-                app_id: String::new(),
-                text,
-                taint: TaintFlags::EXTERNAL_UNTRUSTED,
-                at_ns: at,
-            })
-        })
+    // A fetched page replaces what was stored for the same address: its text may have changed
+    // (or have been extracted badly before), and old copies would compete with the new ones.
+    let forget_old = Output::SourceGone {
+        domain: Domain::ExternalDocuments,
+        kind: "document".into(),
+        label: doc.url.clone(),
+    };
+    std::iter::once(forget_old)
+        .chain(
+            spool::chunk_text(&doc.text, CHUNK_CHARS)
+                .into_iter()
+                .take(WEB_PAGE_MAX_CHUNKS)
+                .enumerate()
+                .map(|(i, chunk)| {
+                    let text = if i == 0 && !doc.title.is_empty() {
+                        format!("{} — {chunk}", doc.title)
+                    } else {
+                        chunk
+                    };
+                    Output::Promote(Item {
+                        domain: Domain::ExternalDocuments,
+                        kind: "document".into(),
+                        label: doc.url.clone(),
+                        app_id: String::new(),
+                        text,
+                        taint: TaintFlags::EXTERNAL_UNTRUSTED,
+                        at_ns: at,
+                    })
+                }),
+        )
         .collect()
 }
 
