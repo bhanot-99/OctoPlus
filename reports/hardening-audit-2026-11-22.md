@@ -23,14 +23,14 @@ Status: PASS = met with evidence now · PARTIAL = part met, gap stated · FAIL /
 | 5 | KPI-2/13, injection corpora, perf | PARTIAL | Corpora pass (216 tests). **P5-S02 was unmet**: activity questions could not be answered (BUG-106, fixed). KPI-1/12 grading still the owner's. |
 | 6 | Rules fire, KPI-10, isolation | PASS | Live: nudge correctly held when nobody is at the keyboard ("Away"). Owner trial still open. |
 | 7 | Voice perf, KPI-3/4/5, UJ-1/2 by voice, no audio persisted | PARTIAL | 5/5 spoken exchanges live; voice SC checks pass; NFR-PERF-02/-09 see §4.4; KPI-3/4/5 on the owner's recordings still open; spoken nudge needs the owner present. |
-| 8 | SSRF corpus + fuzzing | PARTIAL | Corpus, parser-gap cases, 8 real-transport netns tests, 200k-case property test. **No coverage fuzzing** (cargo-fuzz not installed). |
+| 8 | SSRF corpus + fuzzing | PASS | Corpus, parser-gap cases, 8 real-transport netns tests, 200k-case property test. **Coverage fuzzing (owner approval D-46): `ssrf_parse` 5,670,863 runs and `ssrf_redirect` 6,256,970 runs, 3601 s each on cargo-fuzz (nightly), 0 crashes, 0 artifacts** (2026-11-22). |
 | 8 | Fetched content tainted; SAFE escalates | PARTIAL | Unit/integration level yes; not yet with a real page on the installed stack (needs sudo deploy). |
 | 8 | Ledger equals capture | PARTIAL | Ledger = what the server received, in the netns test. No packet capture on the installed stack. |
 | 8 | Injection corpus with fetched pages | PASS | Evidence-slot corpus in `turn_test`. |
 | 8 | Owner sign-off | NOT DONE | The real transport did not exist when Phase 8 was accepted. |
 | 9 | Journeys 3 consecutive runs | PARTIAL | `e2e-journeys.sh` 3/3, but it checks pieces named after the journeys; UJ-3 needs a dialog click, UJ-2 by voice needs you present. |
 | 9 | KPI-6 / KPI-11 | PARTIAL | Isolated units sent nothing (`check-egress.sh`); KPI-6 capture not done. |
-| 9 | security.md §8 green | PARTIAL | Open: SSRF fuzz ≥ 1 h; FR-FET-10 port limit (BUG-110). |
+| 9 | security.md §8 green | PARTIAL | Open: nothing in §8 (SSRF fuzz ≥ 1 h done, 0 crashes; FR-FET-10 nftables rule loaded and read back by the owner). |
 | 9 | 24 h soak | NOT DONE | Script fixed; the run needs your approval (§5). |
 | 9 | Every NFR-PERF measured | PARTIAL | 9 of 11 measured live (§4.4); NFR-PERF-10/-11 not re-measured. |
 | 9 | KPI-9/10 owner trial | NOT DONE | Replay fixtures are not the trial. |
