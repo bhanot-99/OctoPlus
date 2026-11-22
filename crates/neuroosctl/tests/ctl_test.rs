@@ -14,7 +14,7 @@ use neuroos_proto::v1::{
     AnswerChunk, AnswerDone, ErrorCode, HealthResponse, HealthStatus, Histogram, PartStatus, Route,
     StatusReport,
 };
-use neuroosctl::ask::{AskOptions, run_ask, run_ask_internal};
+use neuroosctl::ask::{AskOptions, conversation_loop, run_ask, run_ask_internal};
 use neuroosctl::status::{extract_p99_ns, format_p99, format_uptime, run_status};
 use neuroosctl::style::{ColorChoice, Styler};
 use tempfile::tempdir;
@@ -893,4 +893,62 @@ fn storage_jobs_are_named_and_purge_is_not_one_of_them() {
     for bad in ["purge", "", "GC", "gc ", "forget"] {
         assert_eq!(job_from_name(bad), None, "{bad:?}");
     }
+}
+
+/// Interactive `ask`: lines are answered in turn, blank lines skipped, and "bye" ends the session.
+#[tokio::test]
+async fn conversation_loop_answers_lines_until_bye() {
+    let tmp = tempdir().unwrap();
+    let root = tmp.path().join("conv");
+    let stop = start_mock_knowledge(root.clone(), MockKnowledgeBehavior::Normal).await;
+    let input: &[u8] = b"first question\n\n   \nsecond\nBYE\nnever asked\n";
+    let code = conversation_loop(
+        &root,
+        tokio::io::BufReader::new(input),
+        AskOptions::default(),
+        Styler::new(ColorChoice::Never),
+        std::future::pending::<()>(),
+    )
+    .await;
+    assert_eq!(code, 0);
+    let _ = stop.send(());
+}
+
+/// Regression: Ctrl+C at the prompt must end the session (it used to be swallowed while the
+/// prompt blocked on stdin, so only "bye" or Ctrl+D could leave).
+#[tokio::test]
+async fn conversation_loop_quits_on_signal_while_waiting_for_input() {
+    let tmp = tempdir().unwrap();
+    // The writer half stays open, so the reader never sees input or EOF.
+    let (_writer, reader) = tokio::io::duplex(64);
+    let quit = tokio::time::sleep(Duration::from_millis(50));
+    let code = tokio::time::timeout(
+        Duration::from_secs(5),
+        conversation_loop(
+            tmp.path(),
+            tokio::io::BufReader::new(reader),
+            AskOptions::default(),
+            Styler::new(ColorChoice::Never),
+            quit,
+        ),
+    )
+    .await
+    .expect("the session must end when the quit signal fires");
+    assert_eq!(code, 130);
+}
+
+/// End of input (Ctrl+D) ends the session cleanly.
+#[tokio::test]
+async fn conversation_loop_ends_on_eof() {
+    let tmp = tempdir().unwrap();
+    let input: &[u8] = b"";
+    let code = conversation_loop(
+        tmp.path(),
+        tokio::io::BufReader::new(input),
+        AskOptions::default(),
+        Styler::new(ColorChoice::Never),
+        std::future::pending::<()>(),
+    )
+    .await;
+    assert_eq!(code, 0);
 }

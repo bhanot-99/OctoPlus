@@ -75,6 +75,9 @@ pub fn taint_names(flags: u32) -> String {
     }
 }
 
+/// Words that end an interactive session.
+const SESSION_END_WORDS: [&str; 5] = ["bye", "quit", "exit", "/bye", "/exit"];
+
 /// Runs the `ask` command, streaming response chunks to stdout.
 /// If running in an interactive terminal without `--once` or `--json`, continues into
 /// a multi-turn conversation session until the user types 'bye', 'exit', or 'quit'.
@@ -85,15 +88,12 @@ pub async fn run_ask(
     styler: Styler,
 ) -> i32 {
     if !question.trim().is_empty() {
-        let cancel = async {
-            let _ = tokio::signal::ctrl_c().await;
-        };
-        tokio::pin!(cancel);
+        let cancel = std::pin::pin!(ctrl_c());
         let code = run_ask_internal(
             runtime_root,
             question.trim().to_string(),
             opts,
-            styler.clone(),
+            styler,
             cancel,
         )
         .await;
@@ -107,55 +107,78 @@ pub async fn run_ask(
         );
         return 1;
     } else {
-        println!("{}", styler.bold("=== Semantic-NeuroOS Conversation Session ==="));
+        println!(
+            "{}",
+            styler.bold("=== Semantic-NeuroOS Conversation Session ===")
+        );
         println!(
             "{}",
             styler.dim("Type your message and press Enter. Say 'bye' to finish.\n")
         );
     }
 
-    // Interactive conversation session
+    let stdin = tokio::io::BufReader::new(tokio::io::stdin());
+    conversation_loop(runtime_root, stdin, opts, styler, ctrl_c()).await
+}
+
+/// Resolves on Ctrl+C. If the handler cannot be installed it never resolves, so the
+/// session still ends on "bye" or end of input.
+async fn ctrl_c() {
+    if tokio::signal::ctrl_c().await.is_err() {
+        std::future::pending::<()>().await;
+    }
+}
+
+/// The interactive session: reads one line at a time from `input` and asks it, until an end
+/// word, end of input (exit 0) or `quit` firing while waiting at the prompt (exit 130).
+/// Ctrl+C during an answer cancels only that answer (FR-CLI-02).
+pub async fn conversation_loop<R, Q>(
+    runtime_root: &Path,
+    input: R,
+    opts: AskOptions,
+    styler: Styler,
+    quit: Q,
+) -> i32
+where
+    R: tokio::io::AsyncBufRead + Unpin,
+    Q: Future<Output = ()>,
+{
+    use tokio::io::AsyncBufReadExt;
+
+    let mut lines = input.lines();
+    let mut quit = std::pin::pin!(quit);
     loop {
         print!("{}", styler.bold("> "));
         let _ = std::io::stdout().flush();
-        let mut line = String::new();
-        match std::io::stdin().read_line(&mut line) {
-            Ok(0) => {
-                // EOF (Ctrl+D)
+        let line = tokio::select! {
+            () = &mut quit => {
                 println!();
-                break;
+                return 130;
             }
-            Ok(_) => {
-                let trimmed = line.trim();
-                if trimmed.is_empty() {
-                    continue;
-                }
-                if trimmed.eq_ignore_ascii_case("bye")
-                    || trimmed.eq_ignore_ascii_case("quit")
-                    || trimmed.eq_ignore_ascii_case("exit")
-                    || trimmed.eq_ignore_ascii_case("/bye")
-                    || trimmed.eq_ignore_ascii_case("/exit")
-                {
-                    println!("Goodbye!");
-                    break;
-                }
-                let cancel = async {
-                    let _ = tokio::signal::ctrl_c().await;
-                };
-                tokio::pin!(cancel);
-                run_ask_internal(
-                    runtime_root,
-                    trimmed.to_string(),
-                    opts,
-                    styler.clone(),
-                    cancel,
-                )
-                .await;
+            line = lines.next_line() => line,
+        };
+        let line = match line {
+            Ok(Some(line)) => line,
+            // End of input (Ctrl+D) or an unreadable terminal ends the session.
+            Ok(None) | Err(_) => {
+                println!();
+                return 0;
             }
-            Err(_) => break,
+        };
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
         }
+        if SESSION_END_WORDS
+            .iter()
+            .any(|w| trimmed.eq_ignore_ascii_case(w))
+        {
+            println!("Goodbye!");
+            return 0;
+        }
+        let cancel = std::pin::pin!(ctrl_c());
+        run_ask_internal(runtime_root, trimmed.to_string(), opts, styler, cancel).await;
     }
-    0
 }
 
 /// Internal implementation of `ask` with generic cancellation signal.

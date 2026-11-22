@@ -40,7 +40,8 @@ async fn main() {
         } => {
             use std::io::IsTerminal;
             let question_text = question.join(" ");
-            let interactive = !once && !json && std::io::stdin().is_terminal() && std::io::stdout().is_terminal();
+            let interactive =
+                !once && !json && std::io::stdin().is_terminal() && std::io::stdout().is_terminal();
             run_ask(
                 &runtime_root,
                 question_text,

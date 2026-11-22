@@ -16,7 +16,7 @@ getrandom = { workspace = true }
 jiff = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-tokio = { workspace = true, features = ["signal"] }
+tokio = { workspace = true, features = ["signal", "io-std"] }
 
 neuroos-common = { path = "../neuroos-common" }
 neuroos-proto = { path = "../neuroos-proto" }
