@@ -6,6 +6,11 @@
 /// Longest piece sent to C2 in one frame (C2 may split further for the speech engine).
 pub const MAX_PIECE_CHARS: usize = 220;
 
+/// The first spoken piece of an answer may end at a clause mark (comma, semicolon, colon) once it
+/// holds at least this many characters, so speech starts before the first whole sentence is
+/// generated (NFR-PERF-02, owner decision D-47). Later pieces are whole sentences.
+pub const FIRST_CLAUSE_MIN_CHARS: usize = 40;
+
 /// Most text kept while waiting for a sentence to end.
 const MAX_BUFFERED_BYTES: usize = 4096;
 
@@ -122,6 +127,28 @@ fn split_complete(text: &str) -> (Vec<String>, String) {
     (done, text[start..].trim_start().to_string())
 }
 
+/// The first clause of `text` for an early start: ends at a `,` `;` or `:` that is followed by
+/// whitespace (so "1,000" and "10:30" stay whole) and sits at least `FIRST_CLAUSE_MIN_CHARS`
+/// in. Returns it and the remainder.
+fn first_clause(text: &str) -> Option<(String, String)> {
+    let mut chars = 0;
+    let mut iter = text.char_indices().peekable();
+    while let Some((i, c)) = iter.next() {
+        chars += 1;
+        if chars >= FIRST_CLAUSE_MIN_CHARS
+            && matches!(c, ',' | ';' | ':')
+            && iter.peek().is_some_and(|(_, n)| n.is_whitespace())
+        {
+            let end = i + c.len_utf8();
+            return Some((
+                text[..end].trim().to_string(),
+                text[end..].trim_start().to_string(),
+            ));
+        }
+    }
+    None
+}
+
 /// Splits an over-long piece at a comma, then a space, never inside a character.
 fn cap(piece: String, max_chars: usize) -> Vec<String> {
     let max = max_chars.max(1);
@@ -177,6 +204,8 @@ fn split_fences(raw: &str) -> (String, String) {
 #[derive(Debug, Default)]
 pub struct SentenceStream {
     buf: String,
+    /// True once this answer has produced a piece; the early clause cut applies only before.
+    spoke: bool,
 }
 
 impl SentenceStream {
@@ -202,6 +231,14 @@ impl SentenceStream {
             .into_iter()
             .flat_map(|p| cap(p, MAX_PIECE_CHARS))
             .collect();
+        // Start speaking early: no sentence is done yet, so give the first clause.
+        if !self.spoke
+            && out.is_empty()
+            && let Some((clause, remainder)) = first_clause(&rest)
+        {
+            out.extend(cap(clause, MAX_PIECE_CHARS));
+            rest = remainder;
+        }
         // A model that never ends a sentence must not grow this buffer without bound: past the
         // cap, what is waiting is spoken as pieces (cut at a space) instead (review F5).
         if rest.len() > MAX_BUFFERED_BYTES {
@@ -215,6 +252,7 @@ impl SentenceStream {
             pending
         };
         self.buf = format!("{rest}{pending}");
+        self.spoke |= !out.is_empty();
         out
     }
 
@@ -222,6 +260,7 @@ impl SentenceStream {
     pub fn flush(&mut self) -> Vec<String> {
         // An unclosed code fence is dropped with everything after it.
         let raw = std::mem::take(&mut self.buf);
+        self.spoke = false;
         let (workable, _) = split_fences(&raw);
         let rest = clean_for_speech(&workable);
         cap(rest.trim().to_string(), MAX_PIECE_CHARS)
@@ -318,5 +357,42 @@ mod tests {
         let mut s = SentenceStream::new();
         assert!(s.feed("   ").is_empty());
         assert!(s.flush().is_empty());
+    }
+
+    #[test]
+    fn the_first_piece_may_end_at_a_clause_but_later_ones_are_whole_sentences() {
+        let text = "The gross domestic product of India is about four trillion dollars, which makes it large, and it grows. Next sentence, with a comma, ends here. ";
+        let mut s = SentenceStream::new();
+        // Streamed word by word, as the model produces it.
+        let got: Vec<String> = text.split_inclusive(' ').flat_map(|w| s.feed(w)).collect();
+        assert_eq!(
+            got[0],
+            "The gross domestic product of India is about four trillion dollars,"
+        );
+        assert_eq!(got[1], "which makes it large, and it grows.");
+        assert_eq!(got[2], "Next sentence, with a comma, ends here.");
+    }
+
+    #[test]
+    fn a_short_clause_numbers_and_times_do_not_trigger_the_early_cut() {
+        let mut s = SentenceStream::new();
+        assert!(
+            s.feed("Yes, it is 10:30 and costs 1,000 rupees today ")
+                .is_empty()
+        );
+        assert_eq!(
+            s.flush().concat(),
+            "Yes, it is 10:30 and costs 1,000 rupees today"
+        );
+    }
+
+    #[test]
+    fn the_early_cut_applies_once_per_answer_and_resets_on_flush() {
+        let long = "This is a fairly long opening clause for the answer, and then more words follow here, and more ";
+        let mut s = SentenceStream::new();
+        assert_eq!(s.feed(long).len(), 1);
+        assert!(s.feed("again and again, ").is_empty());
+        let _ = s.flush();
+        assert_eq!(s.feed(long).len(), 1);
     }
 }
