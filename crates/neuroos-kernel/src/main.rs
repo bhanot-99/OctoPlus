@@ -3,7 +3,7 @@
 //! C6's Landlock policy is the union of what it and its children need
 //! (ADR-0010 decision 3); each child then narrows itself further:
 //! - read-only: system files for the GTK dialog (`/usr`, `/etc`), its own
-//!   binaries folder (the dialog and skill programs), `hmac.key`;
+//!   binaries folder (the dialog and skill programs), `hmac.key` and `fetch.key`;
 //! - read-write: `audit/`, the cleanup roots, the trash and the notes folders (skill children);
 //!   calendar folders are read-only.
 
@@ -86,9 +86,9 @@ fn main() -> Result<(), ServiceError> {
             PathBuf::from("/usr"),
             PathBuf::from("/etc"),
             PathBuf::from("/var/cache/fontconfig"),
-            config_dir.join("hmac.key"),
         ]
         .into_iter()
+        .chain(neuroos_kernel::key_files(&config_dir))
         .chain(bin_dir)
         .chain(calendars),
     );

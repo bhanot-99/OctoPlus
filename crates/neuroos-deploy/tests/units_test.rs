@@ -551,6 +551,8 @@ fn kernel_paths_per_adr_0010() {
         .content;
     for line in [
         "BindReadOnlyPaths=%h/.config/neuroos/hmac.key",
+        // BUG-114: without it C6 cannot sign fetch requests (optional: web skills stay off).
+        "BindReadOnlyPaths=-%h/.config/neuroos/fetch.key",
         "BindPaths=%h/.local/share/neuroos/audit",
         "BindPaths=-%t/wayland-1",
         "BindPaths=-%t/bus",
@@ -574,6 +576,7 @@ fn kernel_paths_per_adr_0010() {
         let is_monitor = f.rel_path == Path::new("systemd/user/neuroos-monitor.service");
         for secret in [
             "hmac.key",
+            "fetch.key",
             "neuroos/audit",
             "%h/.cache",
             "Trash",

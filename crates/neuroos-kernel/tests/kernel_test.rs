@@ -632,3 +632,13 @@ async fn test_kernel_notify_request_handling() {
     let _ = stop_tx.send(true);
     let _ = handle.await;
 }
+
+/// BUG-114: the Landlock read list must hold both keys C6 loads at start, or a key that
+/// exists cannot be opened and C6 exits.
+#[test]
+fn landlock_reads_both_keys_c6_loads() {
+    let dir = std::path::Path::new("/home/u/.config/neuroos");
+    let keys = neuroos_kernel::key_files(dir);
+    assert!(keys.contains(&dir.join("hmac.key")));
+    assert!(keys.contains(&dir.join("fetch.key")));
+}

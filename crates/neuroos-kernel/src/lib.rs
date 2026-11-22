@@ -473,17 +473,13 @@ pub fn init_with(
     });
 
     let fetch_key_path = kpaths.config_dir.join("fetch.key");
-    let etc_key_path = std::path::Path::new("/etc/neuroos/fetch.key");
     // No built-in fallback (audit A-03): a fixed key is public, so anyone reaching C7 could
     // forge approvals. Without a key the kernel still runs; only the web skills are off.
+    // Only the user's copy is read: `/etc/neuroos/fetch.key` belongs to root, so the owner
+    // check would refuse it and C6 would never start (BUG-114). `neuroosctl init` copies it.
     let fetch_key = if fetch_key_path.exists() {
         Some(
             keys::load(&fetch_key_path)
-                .map_err(|e| neuroos_health::ServiceError::Custom(format!("fetch.key: {e}")))?,
-        )
-    } else if etc_key_path.exists() {
-        Some(
-            keys::load(etc_key_path)
                 .map_err(|e| neuroos_health::ServiceError::Custom(format!("fetch.key: {e}")))?,
         )
     } else {
@@ -540,6 +536,13 @@ const DIALOG_ENV: [&str; 6] = [
     "LANG",
     "XDG_DATA_DIRS",
 ];
+
+/// The key files C6 loads from `config_dir` at start: the audit `hmac.key` and the
+/// `fetch.key` it shares with C7. Its Landlock policy must let it read both (BUG-114).
+#[must_use]
+pub fn key_files(config_dir: &std::path::Path) -> [std::path::PathBuf; 2] {
+    [config_dir.join("hmac.key"), config_dir.join("fetch.key")]
+}
 
 /// Paths of the C6 child binaries: next to `neuroos-kernel` itself.
 ///

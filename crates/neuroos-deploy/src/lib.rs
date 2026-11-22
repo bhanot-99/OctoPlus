@@ -152,6 +152,8 @@ fn part_description(part: Part) -> &'static str {
 /// ([`generate_kernel_cleanup_dropin`]), since they come from the user's config.
 fn push_kernel_paths(out: &mut String) {
     out.push_str("BindReadOnlyPaths=%h/.config/neuroos/hmac.key\n");
+    // The approval key it shares with C7; optional, since without it only the web skills are off.
+    out.push_str("BindReadOnlyPaths=-%h/.config/neuroos/fetch.key\n");
     out.push_str("BindPaths=%h/.local/share/neuroos/audit\n");
     // neuroos-confirm (GTK4, cairo renderer): the compositor socket; the name
     // comes from WAYLAND_DISPLAY in the user manager's environment.

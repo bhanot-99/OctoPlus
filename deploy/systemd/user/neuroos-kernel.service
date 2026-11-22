@@ -14,6 +14,7 @@ ProtectHome=tmpfs
 BindReadOnlyPaths=%h/.local/opt/neuroos
 BindReadOnlyPaths=-%h/.config/neuroos/config.toml
 BindReadOnlyPaths=%h/.config/neuroos/hmac.key
+BindReadOnlyPaths=-%h/.config/neuroos/fetch.key
 BindPaths=%h/.local/share/neuroos/audit
 BindPaths=-%t/wayland-0
 BindPaths=-%t/wayland-1
