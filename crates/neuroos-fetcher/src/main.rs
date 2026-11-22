@@ -33,5 +33,8 @@ fn main() -> Result<(), ServiceError> {
     ServiceBuilder::new(Part::Fetcher, "neuroos-fetcher", env!("CARGO_PKG_VERSION"))
         .extra_read_only(extra_ro)
         .extra_read_write(extra_rw)
+        // HTTPS only (FR-FET-10). Without it Landlock denies every connect (BUG-118). DNS to
+        // the local stub is UDP, which Landlock does not filter.
+        .connect_tcp(vec![neuroos_fetcher::HTTPS_PORT])
         .run(neuroos_fetcher::init)
 }

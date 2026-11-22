@@ -48,6 +48,7 @@ fn run_child_case(case: &str) {
             let report = restrict(&Policy {
                 read_only: vec![ro],
                 read_write: vec![rw],
+                connect_tcp: Vec::new(),
             })
             .unwrap();
             check("report-scoped", report.scoped);
@@ -60,6 +61,7 @@ fn run_child_case(case: &str) {
             let report = restrict(&Policy {
                 read_only: vec![ro.clone()],
                 read_write: vec![rw.clone()],
+                connect_tcp: Vec::new(),
             })
             .unwrap();
             check("report-full", report.fs_and_tcp && report.no_new_privs);
@@ -92,6 +94,7 @@ fn run_child_case(case: &str) {
             let r = restrict(&Policy {
                 read_only: vec![ro.join("does-not-exist")],
                 read_write: vec![],
+                connect_tcp: Vec::new(),
             });
             check(
                 "missing-path-error",
@@ -106,10 +109,34 @@ fn run_child_case(case: &str) {
             let report = restrict(&Policy {
                 read_only: vec![ro],
                 read_write: vec![rw],
+                connect_tcp: Vec::new(),
             })
             .unwrap();
             check("report-full", report.fs_and_tcp);
             check("outside-read-denied-after", denied(std::fs::read(&outside)));
+        }
+        "connect-port" => {
+            // BUG-118: C7 must reach TCP 443 and nothing else; every other part none.
+            let port: u16 = std::env::var("PORT").unwrap().parse().unwrap();
+            let report = restrict(&Policy {
+                read_only: vec![ro],
+                read_write: vec![rw],
+                connect_tcp: vec![port],
+            })
+            .unwrap();
+            check("report-full", report.fs_and_tcp);
+            check(
+                "tcp-connect-allowed-port",
+                std::net::TcpStream::connect(("127.0.0.1", port)).is_ok(),
+            );
+            check(
+                "tcp-connect-other-port-denied",
+                denied(std::net::TcpStream::connect("127.0.0.1:9")),
+            );
+            check(
+                "tcp-bind-denied",
+                denied(std::net::TcpListener::bind("127.0.0.1:0")),
+            );
         }
         other => panic!("unknown case {other}"),
     }
@@ -255,4 +282,43 @@ fn coverage_helper() {
     let roots = vec![PathBuf::from("/a/b")];
     assert!(covered(&PathBuf::from("/a/b/c"), &roots));
     assert!(!covered(&PathBuf::from("/a/bc"), &roots));
+}
+
+/// BUG-118: a policy may open exactly the TCP ports it lists for connecting (C7: 443), and
+/// still nothing else: no other port, no listening.
+#[test]
+fn an_allowed_port_can_be_reached_and_no_other() {
+    if let Ok(case) = std::env::var(CASE) {
+        return run_child_case(&case);
+    }
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let dir = tempfile::tempdir().unwrap();
+    let (ro, rw) = (dir.path().join("ro"), dir.path().join("rw"));
+    std::fs::create_dir_all(&ro).unwrap();
+    std::fs::create_dir_all(&rw).unwrap();
+    let out = Command::new(std::env::current_exe().unwrap())
+        .args([
+            "an_allowed_port_can_be_reached_and_no_other",
+            "--exact",
+            "--nocapture",
+            "--test-threads=1",
+        ])
+        .env(CASE, "connect-port")
+        .env("RO", &ro)
+        .env("RW", &rw)
+        .env("PORT", port.to_string())
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
+    assert!(out.status.success(), "child failed: {stdout}");
+    assert_all_pass(
+        &stdout,
+        &[
+            "report-full",
+            "tcp-connect-allowed-port",
+            "tcp-connect-other-port-denied",
+            "tcp-bind-denied",
+        ],
+    );
 }

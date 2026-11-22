@@ -95,6 +95,7 @@ pub fn lock_down(inv: &Invocation) -> Result<(), neuroos_sandbox::SandboxError> 
     neuroos_sandbox::restrict(&neuroos_sandbox::Policy {
         read_only: inv.read_only.clone(),
         read_write: inv.read_write.clone(),
+        connect_tcp: Vec::new(),
     })?;
     neuroos_sandbox::child::apply_seccomp(inv.profile)
 }

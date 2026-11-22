@@ -47,6 +47,7 @@ fn main() -> Result<()> {
     let report = restrict(&Policy {
         read_only: vec![PathBuf::from("/proc/self")],
         read_write: vec![dir.clone()],
+        connect_tcp: Vec::new(),
     })
     .context("landlock")?;
     tracing::info!(scoped = report.scoped, "sandbox applied");

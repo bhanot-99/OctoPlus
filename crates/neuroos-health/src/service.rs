@@ -188,6 +188,7 @@ pub struct ServiceBuilder {
     version: &'static str,
     extra_read_only: Vec<PathBuf>,
     extra_read_write: Vec<PathBuf>,
+    connect_tcp: Vec<u16>,
     skip_restrict: bool,
     args: Option<CommonArgs>,
     external_stop: Option<tokio::sync::oneshot::Receiver<()>>,
@@ -203,6 +204,7 @@ impl ServiceBuilder {
             version,
             extra_read_only: Vec::new(),
             extra_read_write: Vec::new(),
+            connect_tcp: Vec::new(),
             skip_restrict: false,
             args: None,
             external_stop: None,
@@ -220,6 +222,13 @@ impl ServiceBuilder {
     #[must_use]
     pub fn extra_read_write(mut self, paths: Vec<PathBuf>) -> Self {
         self.extra_read_write.extend(paths);
+        self
+    }
+
+    /// TCP ports this part may connect to (Landlock). Only C7 sets one: 443 (FR-FET-10).
+    #[must_use]
+    pub fn connect_tcp(mut self, ports: Vec<u16>) -> Self {
+        self.connect_tcp.extend(ports);
         self
     }
 
@@ -321,6 +330,7 @@ impl ServiceBuilder {
             let policy = Policy {
                 read_only,
                 read_write,
+                connect_tcp: self.connect_tcp.clone(),
             };
 
             let report = restrict(&policy)?;

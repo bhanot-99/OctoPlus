@@ -35,6 +35,9 @@ use crate::ssrf::SafeUrl;
 use crate::token::{Approval, NonceTracker, SecretKey, Verdict};
 use crate::transport::{Attempt, HttpsTransport, MockTransport, SystemResolver, Transport};
 
+/// The only TCP port C7 may connect to (FR-FET-10), enforced by its Landlock policy.
+pub const HTTPS_PORT: u16 = 443;
+
 /// Where the installer puts the key C6 signs fetch approvals with.
 pub const FETCH_KEY_PATH: &str = "/etc/neuroos/fetch.key";
 

@@ -2,7 +2,8 @@
 //!
 //! Each part calls [`restrict`] before it reads any input. The second layer
 //! behind the systemd unit: even inside its unit, a part can then touch only
-//! its declared paths, cannot make or accept TCP connections, and (where the
+//! its declared paths, cannot accept TCP connections or make them (except to the ports
+//! its policy lists: C7's 443), and (where the
 //! kernel supports it) cannot reach abstract Unix sockets or signal processes
 //! outside its own sandbox.
 //!
@@ -16,7 +17,7 @@ pub mod child;
 use std::path::{Path, PathBuf};
 
 use landlock::{
-    ABI, Access, AccessFs, AccessNet, CompatLevel, Compatible, Ruleset, RulesetAttr,
+    ABI, Access, AccessFs, AccessNet, CompatLevel, Compatible, NetPort, Ruleset, RulesetAttr,
     RulesetCreatedAttr, RulesetStatus, Scope, path_beneath_rules,
 };
 
@@ -46,6 +47,9 @@ pub struct Policy {
     pub read_only: Vec<PathBuf>,
     /// Readable and writable trees.
     pub read_write: Vec<PathBuf>,
+    /// TCP ports the part may connect to. Empty for every part but C7, which needs 443
+    /// (FR-FET-10); listening is never allowed.
+    pub connect_tcp: Vec<u16>,
 }
 
 /// What was enforced.
@@ -101,8 +105,16 @@ pub fn restrict(policy: &Policy) -> Result<Report, SandboxError> {
             &policy.read_write,
             AccessFs::from_all(REQUIRED_ABI),
         ))
+        .map_err(unsupported)?
+        // Only the listed ports, connect only; with none listed every TCP bind and connect
+        // is denied (R0-1).
+        .add_rules(
+            policy
+                .connect_tcp
+                .iter()
+                .map(|&port| Ok(NetPort::new(port, AccessNet::ConnectTcp))),
+        )
         .map_err(unsupported)?;
-    // No NetPort rule is added: every TCP bind and connect is denied (R0-1).
     let status = created.restrict_self().map_err(unsupported)?;
     match status.ruleset {
         RulesetStatus::FullyEnforced => Ok(Report {
