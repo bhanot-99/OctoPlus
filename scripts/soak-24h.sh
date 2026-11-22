@@ -185,7 +185,7 @@ PROBE
     curr_pid=$(systemctl --user show -p MainPID --value "$u.service" 2>/dev/null || echo "0")
     rss=0
     if [[ "$curr_pid" != "0" && -d "/proc/$curr_pid" ]]; then
-      rss=$(awk '/VmRSS/ {print int($2/1024)}' "/proc/$curr_pid/status" 2>/dev/null || echo "0")
+      rss=$(awk '/VmRSS/ {printf "%.2f", $2/1024}' "/proc/$curr_pid/status" 2>/dev/null || echo "0")
     fi
     restarts=$(systemctl --user show -p NRestarts --value "$u.service" 2>/dev/null || echo 0)
     restarts=$(( restarts - ${initial_restarts[$u]:-0} ))
@@ -216,7 +216,7 @@ probe = []
 with open(csv_path) as f:
     for row in csv.DictReader(f):
         by_unit.setdefault(row["unit"], []).append(
-            {"elapsed": int(row["elapsed_secs"]), "rss": int(row["rss_mib"]),
+            {"elapsed": int(row["elapsed_secs"]), "rss": float(row["rss_mib"]),
              "restarts": int(row["restarts"])})
         if row["unit"] == "neuroos-healthd":  # one probe value per iteration
             probe.append((int(row["elapsed_secs"]), float(row["probe_first_chunk_ms"])))
