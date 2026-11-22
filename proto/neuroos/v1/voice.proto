@@ -64,4 +64,18 @@ message VoiceStatus {
   bool follow_up_open = 3;
   bool mic_in_use_by_other = 4;
   bool capture_running = 5;
+  // The exact stage of the turn, for a live indicator (`neuroosctl voice watch`).
+  TurnPhase phase = 6;
+  // Wake phrases heard since the service started: a wake that led nowhere still counts.
+  uint64 wake_words = 7;
+}
+
+// Where a turn is. Matches the turn machine's states (IDLE = nothing happening).
+enum TurnPhase {
+  TURN_PHASE_IDLE = 0;
+  TURN_PHASE_CAPTURING = 1;       // the wake phrase was heard; the question is being recorded
+  TURN_PHASE_TRANSCRIBING = 2;    // speech is being turned into text
+  TURN_PHASE_AWAITING_ANSWER = 3; // C5 and C4 are working on the answer
+  TURN_PHASE_SPEAKING = 4;
+  TURN_PHASE_FOLLOW_UP = 5;       // the follow-up window is open
 }
