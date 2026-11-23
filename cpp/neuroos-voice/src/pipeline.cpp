@@ -526,19 +526,13 @@ void VoicePipeline::QueueSpeech(const std::string& text, bool nudge, std::uint64
       ok = epoch == epoch_;
     }
     if (ok) {
-      if (d_.on_trace) {
-        d_.on_trace("synth_start");
-      }
+      Trace("synth_start");
       auto r = d_.tts->Synthesize(text);
       if (r.ok()) {
         pcm = std::move(r).value();
-        if (d_.on_trace) {
-          d_.on_trace(pcm.empty() ? "synth_empty" : "synth_ok");
-        }
+        Trace(pcm.empty() ? "synth_empty" : "synth_ok");
       } else {
-        if (d_.on_trace) {
-          d_.on_trace("synth_failed");
-        }
+        Trace("synth_failed");
         SayVoiceTrouble(epoch);
         const std::lock_guard<std::mutex> lock(mu_);
         ++stats_.synth_failures;
@@ -556,14 +550,12 @@ void VoicePipeline::QueueSpeech(const std::string& text, bool nudge, std::uint64
         ++stats_.sentences_spoken;
       }
     }
-    if (d_.on_trace && ok && !still) {
-      d_.on_trace("synth_dropped_stale");
+    if (ok && !still) {
+      Trace("synth_dropped_stale");
     }
     if (still && !pcm.empty()) {
       d_.sink->Write(pcm);
-      if (d_.on_trace) {
-        d_.on_trace("audio_written");
-      }
+      Trace("audio_written");
       NoteAudioQueued(nudge, epoch);
       NoteAnswerAudio(nudge, epoch);
     }
@@ -672,9 +664,7 @@ void VoicePipeline::OnSpeak(std::string_view text) {
     const std::lock_guard<std::mutex> lock(mu_);
     epoch = epoch_;
   }
-  if (d_.on_trace) {
-    d_.on_trace("speak_received");
-  }
+  Trace("speak_received");
   std::vector<std::string> pieces = SplitForSpeech(text, cfg_.max_piece_chars);
   bool first = false;
   {

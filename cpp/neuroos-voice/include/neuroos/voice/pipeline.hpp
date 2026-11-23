@@ -243,6 +243,13 @@ class VoicePipeline final : public ReplyReceiver {
   bool pending_follow_up_ = false;
   bool capture_after_wake_ = false;  // the utterance began at a wake word
 
+  // Prints a pipeline event name when tracing is on (NEUROOS_VOICE_TRACE); a no-op otherwise.
+  void Trace(std::string_view event) const {
+    if (d_.on_trace) {
+      d_.on_trace(event);
+    }
+  }
+
   bool reply_audio_started_ = false;
   bool first_piece_pending_ = false;  // the next spoken text is the first piece of an answer
   std::size_t clip_rotation_ = 0;
