@@ -1,0 +1,214 @@
+{
+ "turns": [
+  {
+   "stt": 0.06,
+   "to_command": 0.0,
+   "model_first": 0.959,
+   "split_wait": 0.0,
+   "synth": 1.155,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 2.175
+  },
+  {
+   "stt": 0.038,
+   "to_command": 0.0,
+   "model_first": 2.843,
+   "split_wait": 0.001,
+   "synth": 1.175,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 4.056
+  },
+  {
+   "stt": 0.046,
+   "to_command": 0.0,
+   "model_first": 1.557,
+   "split_wait": 0.001,
+   "synth": 3.933,
+   "to_speaker": 0.001,
+   "preamble": null,
+   "first_sound": 5.538
+  },
+  {
+   "stt": 0.032,
+   "to_command": 0.0,
+   "model_first": 0.407,
+   "split_wait": 0.0,
+   "synth": 1.08,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 1.519
+  },
+  {
+   "stt": 0.035,
+   "to_command": 0.0,
+   "model_first": 0.668,
+   "split_wait": 0.0,
+   "synth": 1.267,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 1.969
+  },
+  {
+   "stt": 0.051,
+   "to_command": 0.0,
+   "model_first": 1.072,
+   "split_wait": 0.001,
+   "synth": 1.681,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 2.805
+  },
+  {
+   "stt": 0.048,
+   "to_command": 0.0,
+   "model_first": 0.997,
+   "split_wait": 0.001,
+   "synth": 1.582,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 2.628
+  },
+  {
+   "stt": 0.058,
+   "to_command": 0.0,
+   "model_first": 2.128,
+   "split_wait": 0.001,
+   "synth": 1.702,
+   "to_speaker": 0.001,
+   "preamble": null,
+   "first_sound": 3.889
+  },
+  {
+   "stt": 0.052,
+   "to_command": 0.0,
+   "model_first": 4.077,
+   "split_wait": 0.001,
+   "synth": 2.729,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 6.859
+  },
+  {
+   "stt": 0.048,
+   "to_command": 0.0,
+   "model_first": 0.946,
+   "split_wait": 0.0,
+   "synth": 1.726,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 2.721
+  },
+  {
+   "stt": 0.059,
+   "to_command": 0.0,
+   "model_first": 3.167,
+   "split_wait": 0.001,
+   "synth": 1.988,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 5.215
+  },
+  {
+   "stt": 0.061,
+   "to_command": 0.0,
+   "model_first": 2.713,
+   "split_wait": 0.001,
+   "synth": 2.556,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 5.33
+  },
+  {
+   "stt": 0.06,
+   "to_command": 0.0,
+   "model_first": 1.55,
+   "split_wait": 0.001,
+   "synth": 2.931,
+   "to_speaker": 0.002,
+   "preamble": null,
+   "first_sound": 4.544
+  },
+  {
+   "stt": 0.068,
+   "to_command": 0.0,
+   "model_first": 1.397,
+   "split_wait": 0.001,
+   "synth": 2.478,
+   "to_speaker": 0.001,
+   "preamble": null,
+   "first_sound": 3.945
+  },
+  {
+   "stt": 0.075,
+   "to_command": 0.0,
+   "model_first": 1.24,
+   "split_wait": 0.001,
+   "synth": 3.36,
+   "to_speaker": 0.001,
+   "preamble": null,
+   "first_sound": 4.677
+  },
+  {
+   "stt": 0.057,
+   "to_command": 0.0,
+   "model_first": 1.566,
+   "split_wait": 0.0,
+   "synth": 2.467,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 4.09
+  },
+  {
+   "stt": 0.068,
+   "to_command": 0.0,
+   "model_first": 1.159,
+   "split_wait": 0.001,
+   "synth": 2.88,
+   "to_speaker": 0.001,
+   "preamble": null,
+   "first_sound": 4.109
+  },
+  {
+   "stt": 0.095,
+   "to_command": 0.0,
+   "model_first": 1.169,
+   "split_wait": 0.001,
+   "synth": 2.267,
+   "to_speaker": 0.001,
+   "preamble": null,
+   "first_sound": 3.534
+  },
+  {
+   "stt": 0.065,
+   "to_command": 0.0,
+   "model_first": 0.968,
+   "split_wait": 0.001,
+   "synth": 3.035,
+   "to_speaker": 0.001,
+   "preamble": null,
+   "first_sound": 4.07
+  },
+  {
+   "stt": 0.071,
+   "to_command": 0.0,
+   "model_first": 0.93,
+   "split_wait": 0.0,
+   "synth": 1.062,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 2.064
+  }
+ ],
+ "median": {
+  "stt": 0.058499999999999996,
+  "to_command": 0.0,
+  "model_first": 1.2045,
+  "split_wait": 0.001,
+  "synth": 2.1275,
+  "to_speaker": 0.0,
+  "preamble": null,
+  "first_sound": 4.0005
+ }
+}

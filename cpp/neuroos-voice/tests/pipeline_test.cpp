@@ -347,6 +347,41 @@ TEST(VoicePipeline, TheFirstAnswerSentenceRecordsCommandToAnswerAudioOnce) {
   EXPECT_GE(now, sent);
 }
 
+// Voice upgrade: the voice engine's time grows with the length of a piece, so the first piece of
+// an answer is cut short (at a comma when there is one) and the rest of the sentence follows.
+TEST(VoicePipeline, TheFirstPieceOfAnAnswerIsShortAndNothingIsLost) {
+  Rig r;
+  r.p->PreloadClips();
+  r.AskByVoice();
+  const std::size_t before = r.tts.spoken.size();  // the cached clips were voiced already
+  r.link.receiver->OnSpeak("Your laptop fan may run loudly when the processor is busy, for example.");
+  r.link.receiver->OnSpeak("Try closing heavy programs and see if it quiets down.");
+  r.link.receiver->OnFinished(true);
+  r.Settle();
+  const std::vector<std::string> said(r.tts.spoken.begin() + static_cast<std::ptrdiff_t>(before),
+                                      r.tts.spoken.end());
+  ASSERT_EQ(said.size(), 4U);
+  EXPECT_LE(said[0].size(), 28U) << said[0];
+  // Nothing is lost: the pieces put back together are the sentence (it is over 60 characters, so
+  // it was always going to be two pieces; the first of them is now cut shorter still).
+  EXPECT_EQ(said[0] + " " + said[1] + " " + said[2],
+            "Your laptop fan may run loudly when the processor is busy, for example.");
+  // The second chunk of the same answer is not cut short again.
+  EXPECT_EQ(said[3], "Try closing heavy programs and see if it quiets down.");
+}
+
+TEST(VoicePipeline, ASentenceThatIsAlreadyShortIsNotSplit) {
+  Rig r;
+  r.p->PreloadClips();
+  r.AskByVoice();
+  const std::size_t before = r.tts.spoken.size();
+  r.link.receiver->OnSpeak("Two plus two is four.");
+  r.link.receiver->OnFinished(true);
+  r.Settle();
+  ASSERT_EQ(r.tts.spoken.size(), before + 1);
+  EXPECT_EQ(r.tts.spoken.back(), "Two plus two is four.");
+}
+
 TEST(VoicePipeline, FollowUpNeedsNoWakeWordAndIsMarkedAsSuch) {
   Rig r;
   r.p->PreloadClips();

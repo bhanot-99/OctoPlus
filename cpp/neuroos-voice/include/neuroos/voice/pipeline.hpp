@@ -116,6 +116,10 @@ struct PipelineConfig {
   bool barge_in_by_speech = true;
   TurnConfig turn;
   std::size_t max_piece_chars = 60;
+  // The first piece of an answer is cut short (at a comma if there is one, else a space) so the
+  // voice engine, whose time grows with the length of a piece (about 0.05 s per character), starts
+  // sooner. 0 switches this off. Voice upgrade, Step 3.
+  std::size_t first_piece_chars = 28;
   std::uint64_t backlog_ns =
       400'000'000;  // audio kept from before a speech start (barge-in, follow-up)
   std::uint64_t wake_lookback_ns = 600'000'000;  // audio kept from before a wake word was reported
@@ -240,6 +244,7 @@ class VoicePipeline final : public ReplyReceiver {
   bool capture_after_wake_ = false;  // the utterance began at a wake word
 
   bool reply_audio_started_ = false;
+  bool first_piece_pending_ = false;  // the next spoken text is the first piece of an answer
   std::size_t clip_rotation_ = 0;
   std::size_t tts_pending_ = 0;
   std::uint64_t last_trouble_ns_ = 0;  // the last time the voice-trouble line was queued

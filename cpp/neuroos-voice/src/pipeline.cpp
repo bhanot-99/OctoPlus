@@ -285,6 +285,7 @@ void VoicePipeline::Run(const std::vector<TurnAction>& actions) {
           const std::lock_guard<std::mutex> lock(mu_);
           command_sent_ns_ = d_.mono_ns();
           answer_since_ns_ = command_sent_ns_;
+          first_piece_pending_ = true;
         }
         d_.link->SendCommand(cmd, this);
         break;
@@ -674,7 +675,40 @@ void VoicePipeline::OnSpeak(std::string_view text) {
   if (d_.on_trace) {
     d_.on_trace("speak_received");
   }
-  for (const auto& piece : SplitForSpeech(text, cfg_.max_piece_chars)) {
+  std::vector<std::string> pieces = SplitForSpeech(text, cfg_.max_piece_chars);
+  bool first = false;
+  {
+    const std::lock_guard<std::mutex> lock(mu_);
+    first = first_piece_pending_ && !pieces.empty();
+    if (first) {
+      first_piece_pending_ = false;
+    }
+  }
+  // The first piece of an answer is cut short so the voice starts sooner; the rest of that
+  // sentence follows as one piece.
+  if (first && cfg_.first_piece_chars != 0 && pieces[0].size() > cfg_.first_piece_chars) {
+    const std::vector<std::string> head = SplitForSpeech(pieces[0], cfg_.first_piece_chars);
+    const std::size_t cut = head.empty() ? 0 : head[0].size();
+    if (head.size() > 1 && cut > 0 && cut < pieces[0].size()) {
+      std::size_t from = cut;
+      while (from < pieces[0].size() && pieces[0][from] == ' ') {
+        ++from;
+      }
+      const std::string rest = pieces[0].substr(from);
+      std::vector<std::string> out;
+      out.push_back(head[0]);
+      if (!rest.empty()) {
+        for (auto& piece : SplitForSpeech(rest, cfg_.max_piece_chars)) {
+          out.push_back(std::move(piece));
+        }
+      }
+      for (std::size_t i = 1; i < pieces.size(); ++i) {
+        out.push_back(std::move(pieces[i]));
+      }
+      pieces = std::move(out);
+    }
+  }
+  for (const auto& piece : pieces) {
     QueueSpeech(piece, false, epoch);
   }
 }
