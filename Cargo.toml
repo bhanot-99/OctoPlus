@@ -11,6 +11,8 @@ members = [
     "crates/neuroos-kernel",
     "crates/neuroos-knowledge",
     "crates/neuroos-monitor",
+    "crates/neuroos-octopit",
+    "crates/neuroos-octopit-core",
     "crates/neuroos-proto",
     "crates/neuroos-sandbox",
     "crates/neuroos-skill",
