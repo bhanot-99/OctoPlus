@@ -42,7 +42,11 @@ pw-loopback -c 1 -m '[ MONO ]' --capture-props="media.class=Audio/Sink node.name
 pw-loopback -c 1 -m '[ MONO ]' --capture-props="media.class=Audio/Sink node.name=$out_sink" \
   --playback-props="media.class=Audio/Source node.name=$out_mic" & pids+=("$!")
 sleep 2
-printf 'capture_node = %s\nplayback_node = %s\n' "$mic" "$out_sink" > "$conf"
+# Keep the owner's other settings (for example tts_engine): only the two nodes are replaced.
+{
+  if [[ "$had_conf" == 1 ]]; then grep -v -E '^[[:space:]]*(capture_node|playback_node)[[:space:]]*=' "$work/voice.conf.orig" || true; fi
+  printf 'capture_node = %s\nplayback_node = %s\n' "$mic" "$out_sink"
+} > "$conf"
 systemctl --user restart neuroos-voice
 for _ in $(seq 1 90); do
   rc=0; "$ctl" voice status >/dev/null 2>&1 || rc=$?

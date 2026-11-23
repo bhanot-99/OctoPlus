@@ -11,6 +11,7 @@
 #include <unordered_map>
 
 #include "neuroos/voice/knowledge_link.hpp"
+#include "neuroos/voice/pocket_tts.hpp"
 #include "neuroos/voice/real_engines.hpp"
 #include "neuroos/voice/runtime.hpp"
 
@@ -33,8 +34,9 @@ std::uint64_t WallNs() {
 // fresh engine; the voice, speed and phonemes are the same, so the voice never changes.
 class RestartingTts final : public Tts {
  public:
-  RestartingTts(std::unique_ptr<Tts> engine, KokoroPaths paths)
-      : rate_(engine->sample_rate()), engine_(std::move(engine)), paths_(std::move(paths)) {}
+  using Factory = std::function<Result<std::unique_ptr<Tts>>()>;
+  RestartingTts(std::unique_ptr<Tts> engine, Factory make)
+      : rate_(engine->sample_rate()), engine_(std::move(engine)), make_(std::move(make)) {}
   [[nodiscard]] int sample_rate() const override { return rate_; }
   Result<std::vector<std::int16_t>> Synthesize(std::string_view text) override {
     if (engine_) {
@@ -46,7 +48,7 @@ class RestartingTts final : public Tts {
       // double the model memory and risk the unit's memory limit (the review's F4).
       engine_.reset();
     }
-    auto fresh = MakeKokoroTts(paths_);
+    auto fresh = make_();
     if (!fresh.ok()) {
       return fresh.error();  // no engine now; the next call tries again
     }
@@ -59,7 +61,7 @@ class RestartingTts final : public Tts {
  private:
   int rate_;
   std::unique_ptr<Tts> engine_;
-  KokoroPaths paths_;
+  Factory make_;
   int restarts_ = 0;
 };
 
@@ -164,17 +166,26 @@ Result<std::unique_ptr<VoiceRuntime>> BuildVoiceRuntime(const RuntimeOptions& o)
   }
   rt->stt = std::move(stt).value();
 
-  KokoroPaths k;
-  k.model = (m / "kokoro-v1.0-fp32.onnx").string();
-  k.tokenizer = (m / "kokoro-tokenizer.json").string();
-  k.voice = (m / "voices" / (o.config.voice + ".bin")).string();
-  k.speed = static_cast<float>(o.config.speed_milli) / 1000.0F;
-  auto tts = MakeKokoroTts(k);
+  // The one voice. Kokoro runs inside C2; "pocket" is the separate helper unit reached through its
+  // unix socket (owner exception D-54, temporary). The helper's absence is not a start-up error: each
+  // sentence that cannot be voiced is reported and spoken as the cached trouble line.
+  const RestartingTts::Factory make_tts = [&o, m]() -> Result<std::unique_ptr<Tts>> {
+    if (o.config.tts_engine == TtsEngine::kPocket) {
+      return MakePocketTts(o.tts_socket.string());
+    }
+    KokoroPaths k;
+    k.model = (m / "kokoro-v1.0-fp32.onnx").string();
+    k.tokenizer = (m / "kokoro-tokenizer.json").string();
+    k.voice = (m / "voices" / (o.config.voice + ".bin")).string();
+    k.speed = static_cast<float>(o.config.speed_milli) / 1000.0F;
+    return MakeKokoroTts(k);
+  };
+  auto tts = make_tts();
   mark("tts", tts.ok(), tts.ok() ? "" : tts.error().message);
   if (!tts.ok()) {
     return Fail("speech model: " + tts.error().message);
   }
-  rt->tts = std::make_unique<RestartingTts>(std::move(tts).value(), k);
+  rt->tts = std::make_unique<RestartingTts>(std::move(tts).value(), make_tts);
 
   PipeWireOptions po;
   po.capture_node_name = o.config.capture_node;

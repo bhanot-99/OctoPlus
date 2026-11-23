@@ -26,6 +26,21 @@ TEST(VoiceConfig, BargeInCanBeSwitchedToAnySpeech) {
   EXPECT_FALSE(ParseVoiceConfig("barge_in = sometimes\n").ok());
 }
 
+// Voice upgrade (D-54): the speech engine is a setting; Kokoro stays the default.
+TEST(VoiceConfig, TheSpeechEngineIsKokoroUnlessThePocketHelperIsChosen) {
+  const auto d = ParseVoiceConfig("");
+  ASSERT_TRUE(d.ok());
+  EXPECT_EQ(d.value().tts_engine, TtsEngine::kKokoro);
+  const auto p = ParseVoiceConfig("tts_engine = pocket\n");
+  ASSERT_TRUE(p.ok());
+  EXPECT_EQ(p.value().tts_engine, TtsEngine::kPocket);
+  const auto k = ParseVoiceConfig("tts_engine = kokoro\n");
+  ASSERT_TRUE(k.ok());
+  EXPECT_EQ(k.value().tts_engine, TtsEngine::kKokoro);
+  EXPECT_FALSE(ParseVoiceConfig("tts_engine = piper\n").ok());
+  EXPECT_FALSE(ParseVoiceConfig("tts_engine =\n").ok());
+}
+
 TEST(VoiceConfig, KeysOverrideTheDefaults) {
   const auto c = ParseVoiceConfig(
       "# my setup\ncapture_node = \"alsa_input.usb-mic\"\nvoice = af_bella  # nicer\n"

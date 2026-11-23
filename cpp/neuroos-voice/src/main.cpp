@@ -87,6 +87,19 @@ int main(int argc, char* argv[]) {
     }
   }
 
+  // The speech helper's socket folder, only when the Pocket engine is chosen (owner exception D-54):
+  // the one extra socket this part may connect to.
+  std::filesystem::path tts_socket;
+  if (voice_cfg_values.tts_engine == neuroos::voice::TtsEngine::kPocket) {
+    // NOLINTNEXTLINE(concurrency-mt-unsafe) - read once, before any thread
+    if (const char* rt = std::getenv("XDG_RUNTIME_DIR")) {
+      tts_socket = std::filesystem::path(rt) / "neuroos" / "tts" / "tts.sock";
+      if (std::filesystem::exists(tts_socket.parent_path())) {
+        sandbox_policy.read_write.push_back(tts_socket.parent_path());
+      }
+    }
+  }
+
   // Create socket folders and add to read_write list
   for (const auto& sp : cfg.sockets) {
     auto dir = sp.path.parent_path();
@@ -145,6 +158,7 @@ int main(int argc, char* argv[]) {
           neuroos::voice::RuntimeOptions ro;
           ro.config = voice_cfg_values;
           ro.models_dir = cfg.models_dir;
+          ro.tts_socket = tts_socket;
           ro.knowledge = knowledge_client;
           ro.health = health;
           auto built = neuroos::voice::BuildVoiceRuntime(ro);

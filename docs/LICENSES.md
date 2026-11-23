@@ -12,6 +12,7 @@ This document records license classifications and compliance obligations for all
 | **whisper.cpp** | Speech-to-text (C2) | MIT | Permissive; pinned upstream submodule with copyright retained. |
 | **Silero VAD** | Voice activity detection | MIT | Permissive ONNX model. |
 | **Kokoro-82M** | Speech synthesis (TTS) | Apache-2.0 | Permissive neural voice weights. |
+| **Pocket TTS 18M** (Kyutai) | Speech synthesis helper (first voice, D-54) | CC-BY-4.0 (weights); MIT (code) | **Credit required:** speech by Kyutai Pocket TTS. **Open:** the licence of the built-in voice 'michael' (https://huggingface.co/kyutai/tts-voices) must be checked before any release. Kokoro stays the fallback voice. |
 | **bge-small-en-v1.5** | Local text embeddings | MIT | Permissive ONNX model. |
 | **openWakeWord** (stock weights) | Wake-phrase detection | Apache-2.0 (code); Non-commercial (stock weights) | **Risk R-06**: Stock pre-trained model is restricted to non-commercial / personal use. Compliant under OQ-06 Personal Use disposition. |
 | **espeak-ng** | TTS phonemization library | GPL-3.0 | **Risk R-07**: dynamically linked system library (`libespeak-ng.so.1`, checked with `ldd` on 2026-11-22). Dynamic linking alone does not settle GPL obligations for the combined program. |

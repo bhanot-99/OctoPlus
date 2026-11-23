@@ -116,6 +116,14 @@ Result<VoiceConfig> ParseVoiceConfig(std::string_view text) {
       } else {
         return Bad(where + ": wake or speech");
       }
+    } else if (key == "tts_engine") {
+      if (value == "kokoro") {
+        cfg.tts_engine = TtsEngine::kKokoro;
+      } else if (value == "pocket") {
+        cfg.tts_engine = TtsEngine::kPocket;
+      } else {
+        return Bad(where + ": kokoro or pocket");
+      }
     } else if (key == "stt_threads") {
       if (!ParseUint(value, 1, 16, &cfg.stt_threads)) {
         return Bad(where + ": 1 to 16");

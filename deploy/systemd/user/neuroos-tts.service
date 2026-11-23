@@ -1,0 +1,39 @@
+[Unit]
+Description=Semantic-NeuroOS speech helper (Pocket TTS 18M, temporary exception D-54)
+PartOf=neuroos.target
+Requires=neuroos-tts.socket
+After=neuroos-tts.socket
+
+[Service]
+# Its own private network: only a loopback inside it. Pocket TTS and the relay that passes the unix
+# socket's connections on (systemd-socket-proxyd) both run here, so nothing is ever reachable from
+# the host network. Offline: the model files are local.
+PrivateNetwork=true
+PrivateTmp=true
+PrivateDevices=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=tmpfs
+BindReadOnlyPaths=%h/.local/opt/neuroos
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_INET AF_UNIX
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+CapabilityBoundingSet=
+AmbientCapabilities=
+LimitCORE=0
+UMask=0077
+MemoryMax=450M
+Environment=HF_HUB_OFFLINE=1
+Restart=on-failure
+RestartSec=2s
+ExecStart=%h/.local/opt/neuroos/bin/neuroos-tts-run

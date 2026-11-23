@@ -1,0 +1,214 @@
+{
+ "turns": [
+  {
+   "stt": 0.066,
+   "to_command": 0.0,
+   "model_first": 1.022,
+   "split_wait": 0.0,
+   "synth": 0.103,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 1.193
+  },
+  {
+   "stt": 0.047,
+   "to_command": 0.0,
+   "model_first": 3.042,
+   "split_wait": 0.001,
+   "synth": 0.137,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 3.227
+  },
+  {
+   "stt": 0.051,
+   "to_command": 0.0,
+   "model_first": 1.644,
+   "split_wait": 0.001,
+   "synth": 0.498,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 2.194
+  },
+  {
+   "stt": 0.03,
+   "to_command": 0.0,
+   "model_first": 0.424,
+   "split_wait": 0.0,
+   "synth": 0.273,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 0.727
+  },
+  {
+   "stt": 0.036,
+   "to_command": 0.0,
+   "model_first": 0.704,
+   "split_wait": 0.0,
+   "synth": 0.318,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 1.058
+  },
+  {
+   "stt": 0.056,
+   "to_command": 0.0,
+   "model_first": 1.141,
+   "split_wait": 0.001,
+   "synth": 0.273,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 1.471
+  },
+  {
+   "stt": 0.049,
+   "to_command": 0.0,
+   "model_first": 1.053,
+   "split_wait": 0.001,
+   "synth": 0.277,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 1.38
+  },
+  {
+   "stt": 0.061,
+   "to_command": 0.0,
+   "model_first": 1.732,
+   "split_wait": 0.001,
+   "synth": 0.186,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 1.979
+  },
+  {
+   "stt": 0.06,
+   "to_command": 0.0,
+   "model_first": 4.606,
+   "split_wait": 0.001,
+   "synth": 0.333,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 4.999
+  },
+  {
+   "stt": 0.053,
+   "to_command": 0.0,
+   "model_first": 0.964,
+   "split_wait": 0.001,
+   "synth": 0.224,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 1.241
+  },
+  {
+   "stt": 0.063,
+   "to_command": 0.0,
+   "model_first": 3.355,
+   "split_wait": 0.001,
+   "synth": 0.334,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 3.754
+  },
+  {
+   "stt": 0.07,
+   "to_command": 0.0,
+   "model_first": 1.002,
+   "split_wait": 0.0,
+   "synth": 0.077,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 1.15
+  },
+  {
+   "stt": 0.064,
+   "to_command": 0.0,
+   "model_first": 1.639,
+   "split_wait": 0.001,
+   "synth": 0.334,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 2.038
+  },
+  {
+   "stt": 0.072,
+   "to_command": 0.0,
+   "model_first": 1.472,
+   "split_wait": 0.001,
+   "synth": 0.351,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 1.896
+  },
+  {
+   "stt": 0.08,
+   "to_command": 0.0,
+   "model_first": 1.317,
+   "split_wait": 0.001,
+   "synth": 0.395,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 1.793
+  },
+  {
+   "stt": 0.069,
+   "to_command": 0.0,
+   "model_first": 1.665,
+   "split_wait": 0.001,
+   "synth": 0.269,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 2.004
+  },
+  {
+   "stt": 0.074,
+   "to_command": 0.0,
+   "model_first": 1.232,
+   "split_wait": 0.001,
+   "synth": 0.358,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 1.665
+  },
+  {
+   "stt": 0.093,
+   "to_command": 0.0,
+   "model_first": 1.41,
+   "split_wait": 0.001,
+   "synth": 0.295,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 1.799
+  },
+  {
+   "stt": 0.07,
+   "to_command": 0.0,
+   "model_first": 0.979,
+   "split_wait": 0.001,
+   "synth": 0.427,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 1.477
+  },
+  {
+   "stt": 0.08,
+   "to_command": 0.0,
+   "model_first": 0.994,
+   "split_wait": 0.001,
+   "synth": 0.09,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 1.164
+  }
+ ],
+ "median": {
+  "stt": 0.0635,
+  "to_command": 0.0,
+  "model_first": 1.2745,
+  "split_wait": 0.001,
+  "synth": 0.28600000000000003,
+  "to_speaker": 0.0,
+  "preamble": null,
+  "first_sound": 1.729
+ }
+}

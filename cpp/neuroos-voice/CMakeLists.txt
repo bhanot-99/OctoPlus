@@ -3,6 +3,7 @@ add_library(neuroos_voice_core STATIC
   src/audio_ring.cpp
   src/knowledge_link.cpp
   src/pipeline.cpp
+  src/pocket_tts.cpp
   src/service.cpp
   src/voice_config.cpp
   $<$<NOT:$<BOOL:${NEUROOS_WITH_VOICE_ENGINES}>>:src/runtime_stub.cpp>
@@ -31,6 +32,7 @@ add_executable(neuroos_voice_tests
   tests/audio_ring_test.cpp
   tests/knowledge_link_test.cpp
   tests/pipeline_test.cpp
+  tests/pocket_tts_test.cpp
   tests/speech_split_test.cpp
   tests/spoken_lines_test.cpp
   tests/transcript_test.cpp
