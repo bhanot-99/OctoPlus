@@ -7,7 +7,8 @@ microsecond timestamps and prints, for every question, how long each stage took:
   stt           speech_ended   -> transcribed
   to_command    transcribed    -> command_sent
   model_first   command_sent   -> speak_received   (C5 retrieval + the model's first words)
-  tts_first     speak_received -> synth_ok         (voicing the first piece)
+  split_wait    speak_received -> synth_start      (waiting in line before voicing starts)
+  synth         synth_start    -> synth_ok         (the voice engine making the first piece)
   to_speaker    synth_ok       -> audio_written
   preamble      speech_ended   -> the cached "let me check" clip reaching the speaker
   first_sound   speech_ended   -> the answer's first synthesised sound at the speaker
@@ -57,7 +58,7 @@ def turns(events):
                 cur.setdefault("preamble", ts)
             else:
                 cur.setdefault("audio_written", ts)
-        elif name in ("transcribed", "command_sent", "speak_received", "synth_ok"):
+        elif name in ("transcribed", "command_sent", "speak_received", "synth_start", "synth_ok"):
             cur.setdefault(name, ts)
     if cur:
         yield cur
@@ -72,7 +73,8 @@ def breakdown(t):
         "stt": gap(t, "speech_ended", "transcribed"),
         "to_command": gap(t, "transcribed", "command_sent"),
         "model_first": gap(t, "command_sent", "speak_received"),
-        "tts_first": gap(t, "speak_received", "synth_ok"),
+        "split_wait": gap(t, "speak_received", "synth_start"),
+        "synth": gap(t, "synth_start", "synth_ok"),
         "to_speaker": gap(t, "synth_ok", "audio_written"),
         "preamble": gap(t, "speech_ended", "preamble"),
         "first_sound": gap(t, "speech_ended", "audio_written"),
