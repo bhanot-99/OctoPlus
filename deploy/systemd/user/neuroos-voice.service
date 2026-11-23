@@ -2,8 +2,7 @@
 Description=Semantic-NeuroOS Voice Interface
 PartOf=neuroos.target
 Requires=neuroos-runtime.service
-Wants=neuroos-tts.socket
-After=neuroos-tts.socket neuroos-runtime.service neuroos-healthd.service neuroos-storage.service neuroos-inference.service neuroos-monitor.service neuroos-kernel.service neuroos-knowledge.service
+After=neuroos-runtime.service neuroos-healthd.service neuroos-storage.service neuroos-inference.service neuroos-monitor.service neuroos-kernel.service neuroos-knowledge.service
 
 [Service]
 PrivateNetwork=true
@@ -20,9 +19,6 @@ InaccessiblePaths=-/run/neuroos-fetcher
 TemporaryFileSystem=%t/neuroos
 BindPaths=%t/neuroos/voice
 BindPaths=%t/neuroos/knowledge/knowledge
-# The speech helper's socket (config tts_engine = pocket, owner exception D-54): the one extra
-# socket this part can reach; absent when the helper is not installed.
-BindPaths=-%t/neuroos/tts
 PrivateTmp=true
 # C2: audio runs through the PipeWire socket in the runtime folder (no device files),
 # so PrivateDevices stays on; only real-time scheduling is exempt (Architecture §8.1).

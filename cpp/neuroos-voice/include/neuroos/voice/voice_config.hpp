@@ -11,10 +11,6 @@
 
 namespace neuroos::voice {
 
-// Which speech engine says the answers. Kokoro runs inside C2. Pocket is the separate helper unit
-// reached through a unix socket (owner exception D-54, temporary).
-enum class TtsEngine { kKokoro, kPocket };
-
 struct VoiceConfig {
   // The microphone and speaker by PipeWire node name. Empty means the system default, resolved
   // to an exact node before any stream is created (FR-VOI-03).
@@ -22,7 +18,6 @@ struct VoiceConfig {
   std::string playback_node;
   // The one voice (FR-VOI-09, OQ-04): a Kokoro voice file name without ".bin".
   std::string voice = "af_heart";
-  TtsEngine tts_engine = TtsEngine::kKokoro;  // config key: tts_engine = kokoro | pocket
   std::uint32_t speed_milli = 1000;              // 1000 = normal speed
   float wake_threshold = 0.5F;                   // openWakeWord score that counts as the phrase
   std::uint32_t end_silence_ms = 600;            // FR-VOI-04

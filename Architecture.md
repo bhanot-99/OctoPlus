@@ -143,7 +143,6 @@ Runtime root: `$XDG_RUNTIME_DIR/neuroos/` (mode 0700). **Every socket has its ow
 | `kernel/kernel/kernel.sock` | C6 | C5, `neuroosctl` |
 | `healthd/healthd/healthd.sock` | healthd | `neuroosctl` |
 | `<part>/health/health.sock` | every part | healthd |
-| `tts/tts.sock` (**exception D-54, temporary; not in the generated map**) | `neuroos-tts.service` (Pocket TTS 18M and a relay in one private network) | C2 only (owner 0600; set by `neuroos-tts.socket`) |
 | `/run/neuroos-fetcher/fetch/fetch.sock` | C7 | C6 only (group `neuroos`, 0660) |
 | `/run/neuroos-fetcher/health/health.sock` | C7 | healthd |
 

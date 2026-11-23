@@ -49,3 +49,20 @@ Owner's listening result: Kokoro best, Pocket TTS 18M second (D-52).
 Reading: with the fp32 model Kokoro needs about 1.5 s even for a 28-character piece (a short piece with
 digits was slowest), so shortening the first piece has reached its floor. Under 1 s needs either a
 faster Kokoro (quantized model, settings), ready-made audio for easy answers, or a faster engine.
+
+## What happened next (D-53, D-54, D-55)
+
+The owner chose Pocket TTS 18M as the first voice. It was built in through a helper unit and a unix
+socket (a temporary exception to R0-1 and AB-7), measured as run 4, and then **reverted by the owner**
+and never merged. Run 4, same 20 questions, first sound after the end-of-speech decision (the silence
+wait comes on top):
+
+| | Run 3 (Kokoro, 28-char first piece) | Run 4 (Pocket TTS 18M) |
+| :--- | :--- | :--- |
+| Median, all 20 | 4.00 s | 1.73 s |
+| Easy (1-10) / hard (11-20) | 2.76 / 4.10 s | 1.43 / 1.80 s |
+| Slowest three | 5.3, 5.5, 6.9 s | 3.2, 3.8, 5.0 s |
+| First voice piece | 2.13 s | 0.29 s |
+
+Raw data: `reports/bench/voice-baseline-2026-11-23-1311.json`. The code is in the git history of the
+`voice-upgrade` branch (commit 512c1cf and the revert after it), not in the merged tree.

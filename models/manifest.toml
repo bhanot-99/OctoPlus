@@ -177,35 +177,3 @@ url = "https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad
 sha256 = "1d1f21dd8da39c30705cd4c75d039d265e9bc4a2a93ed09bc9e1b1225eb95ba1"
 size_bytes = 522240
 license = "Apache-2.0"
-
-# Speech helper: Pocket TTS 18M (Kyutai), the first voice since D-54 (owner exception, temporary).
-# Weights CC-BY-4.0: credit Kyutai. The voice licence is listed at https://huggingface.co/kyutai/tts-voices
-# (to be checked for 'michael' before any release). The helper program comes from the GitHub release
-# kyutai-labs/pocket-tts (checksum file SHA256SUMS), not from this list.
-
-[[model]]
-id = "tts-pocket-18m-model"
-role = "tts"
-file = "pocket/model.safetensors"
-url = "https://huggingface.co/kyutai/pocket-tts-without-voice-cloning/resolve/a7056f505a4a8ca72d8b5fb1440071d6f1a35739/languages/english_18m_2026-10/model.safetensors"
-sha256 = "599329dcea2f2a8d17b575e1c6e11b78822453c9073040d55c26faadf4883188"
-size_bytes = 111728528
-license = "CC-BY-4.0"
-
-[[model]]
-id = "tts-pocket-18m-tokenizer"
-role = "tts"
-file = "pocket/tokenizer.model"
-url = "https://huggingface.co/kyutai/pocket-tts-without-voice-cloning/resolve/08ffc58775e62aad9409511b9591c9af626270f3/languages/english_18m_2026-10/tokenizer.model"
-sha256 = "d461765ae179566678c93091c5fa6f2984c31bbe990bf1aa62d92c64d91bc3f6"
-size_bytes = 59339
-license = "CC-BY-4.0"
-
-[[model]]
-id = "tts-pocket-18m-voice-michael"
-role = "tts"
-file = "pocket/voice-michael.safetensors"
-url = "https://huggingface.co/kyutai/pocket-tts-without-voice-cloning/resolve/a3055dcb533cf2ec90458008a01e7cef550bae2a/languages/english_18m_2026-10/embeddings/michael.safetensors"
-sha256 = "cce7a2bb1e25eee5f857fcb2e4cfeb8a82be8cbb0ec686043230dff2cebbee29"
-size_bytes = 4753816
-license = "CC-BY-4.0"

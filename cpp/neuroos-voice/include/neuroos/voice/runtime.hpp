@@ -17,8 +17,6 @@ namespace neuroos::voice {
 struct RuntimeOptions {
   VoiceConfig config;
   std::filesystem::path models_dir;
-  // The speech helper's unix socket (config tts_engine = pocket, owner exception D-54).
-  std::filesystem::path tts_socket;
   std::shared_ptr<ipc::ReconnectingClient> knowledge;
   std::shared_ptr<Health> health;
 };
