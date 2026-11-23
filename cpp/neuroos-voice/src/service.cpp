@@ -112,12 +112,49 @@ ipc::Handler VoiceService::GetControlHandler() {
     if (req.envelope.has_voice_status_request()) {
       return HandleStatus(req, reply);
     }
+    if (req.envelope.has_voice_control()) {
+      return HandleControl(req.envelope.voice_control().action(), reply);
+    }
     return Error{
         .message = "unsupported request in voice service (control.sock)",
         .retryable = false,
         .code = static_cast<int>(v1::ERROR_CODE_INVALID_REQUEST),
     };
   };
+}
+
+Status VoiceService::HandleControl(v1::VoiceControlAction action, v1::Envelope* reply) {
+  VoicePipeline* pipeline = nullptr;
+  {
+    const std::lock_guard<std::mutex> lock(mu_);
+    pipeline = pipeline_;
+  }
+  if (pipeline == nullptr) {
+    return Error{.message = "voice is not running",
+                 .retryable = true,
+                 .code = static_cast<int>(v1::ERROR_CODE_UNAVAILABLE)};
+  }
+  Status s = ok_status();
+  switch (action) {
+    case v1::VOICE_CONTROL_ACTION_START_LISTENING:
+      s = pipeline->StartListening();
+      break;
+    case v1::VOICE_CONTROL_ACTION_STOP_LISTENING:
+      s = pipeline->StopListening();
+      break;
+    case v1::VOICE_CONTROL_ACTION_CANCEL:
+      s = pipeline->CancelTurn();
+      break;
+    default:
+      return Error{.message = "unknown voice control action",
+                   .retryable = false,
+                   .code = static_cast<int>(v1::ERROR_CODE_INVALID_REQUEST)};
+  }
+  if (!s.ok()) {
+    return s;
+  }
+  reply->mutable_ack();
+  return ok_status();
 }
 
 Status VoiceService::HandleStatus(const ipc::Request& /*req*/, v1::Envelope* reply) {
@@ -136,6 +173,7 @@ Status VoiceService::HandleStatus(const ipc::Request& /*req*/, v1::Envelope* rep
   status->set_capture_running(st.capture_running);
   status->set_phase(static_cast<v1::TurnPhase>(st.phase));
   status->set_wake_words(st.wake_words);
+  status->set_input_level_permille(st.input_level_permille);
   return ok_status();
 }
 

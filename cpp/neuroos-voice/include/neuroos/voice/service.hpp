@@ -26,6 +26,8 @@ class VoiceService {
   // Handler for voice/control.sock
   [[nodiscard]] ipc::Handler GetControlHandler();
 
+  // Handle VoiceControl from the mic button: start, stop or cancel a turn (needs the pipeline)
+  Status HandleControl(v1::VoiceControlAction action, v1::Envelope* reply);
   // Handle VoiceStatusRequest (reports the pipeline when there is one, idle otherwise)
   Status HandleStatus(const ipc::Request& req, v1::Envelope* reply);
 

@@ -99,6 +99,23 @@ TEST_F(VoiceTest, ControlSocketReturnsVoiceStatus) {
   ASSERT_TRUE(env.has_voice_status());
 }
 
+TEST_F(VoiceTest, VoiceControlNeedsARunningPipelineAndIsOnlyOnTheControlSocket) {
+  v1::Envelope req;
+  req.mutable_voice_control()->set_action(v1::VOICE_CONTROL_ACTION_START_LISTENING);
+  {
+    auto client = ipc::Client::Connect(control_sock_, 1024 * 1024).value();
+    auto reply = client->Call(v1::Envelope(req), std::chrono::milliseconds(1000));
+    EXPECT_FALSE(reply.ok()) << "no pipeline: the microphone is not running";
+    EXPECT_EQ(reply.error().code, static_cast<int>(v1::ERROR_CODE_UNAVAILABLE));
+  }
+  {
+    auto client = ipc::Client::Connect(voice_sock_, 1024 * 1024).value();
+    auto reply = client->Call(std::move(req), std::chrono::milliseconds(1000));
+    EXPECT_FALSE(reply.ok()) << "C5's socket never takes the mic button";
+    EXPECT_EQ(reply.error().code, static_cast<int>(v1::ERROR_CODE_INVALID_REQUEST));
+  }
+}
+
 TEST_F(VoiceTest, UnsupportedRequestReturnsInvalidRequest) {
   auto client = ipc::Client::Connect(voice_sock_, 1024 * 1024).value();
 

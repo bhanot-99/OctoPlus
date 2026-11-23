@@ -1774,6 +1774,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "neuroos-octopit"
+version = "0.1.0"
+dependencies = [
+ "gtk4",
+ "neuroos-common",
+ "neuroos-octopit-core",
+ "neuroos-proto",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "neuroos-octopit-core"
+version = "0.1.0"
+dependencies = [
+ "neuroos-common",
+ "neuroos-ipc",
+ "neuroos-proto",
+ "proptest",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "neuroos-proto"
 version = "0.1.0"
 dependencies = [

@@ -386,4 +386,30 @@ mod tests {
         assert!(allowed_client_units(healthd).is_empty());
         assert!(allows_ctl(healthd));
     }
+
+    #[test]
+    fn octopit_is_listed_only_on_the_sockets_its_pages_need() {
+        let listed: HashSet<(Part, &str)> = SOCKET_MAP
+            .iter()
+            .filter(|e| e.allows_octopit())
+            .map(|e| (e.server, e.socket))
+            .collect();
+        let expected: HashSet<(Part, &str)> = [
+            (Part::Healthd, "healthd"),
+            (Part::Knowledge, "knowledge"),
+            (Part::Voice, "control"),
+            (Part::Kernel, "kernel"),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(listed, expected);
+        // OctoPit is admitted by user id, never by unit, and never on a health socket.
+        assert_eq!(Client::OctoPit.unit_name(), None);
+        assert!(
+            SOCKET_MAP
+                .iter()
+                .filter(|e| e.socket == "health")
+                .all(|e| !e.allows_octopit())
+        );
+    }
 }

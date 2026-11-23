@@ -9,7 +9,12 @@ TurnMachine::TurnMachine(TurnConfig cfg) : cfg_(cfg) {}
 
 // Branchy by nature (cognitive complexity): the conversation state machine: state by event.
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& e) {
+std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& event) {
+  // A cancel by the user ends the turn the same way a lost device does: discard, flush, cancel.
+  TurnEvent e = event;
+  if (e.kind == TurnEventKind::kUserCancel) {
+    e.kind = TurnEventKind::kDeviceLost;
+  }
   switch (state_) {
     case TurnState::kIdle: {
       if (e.kind == TurnEventKind::kWakeWord) {

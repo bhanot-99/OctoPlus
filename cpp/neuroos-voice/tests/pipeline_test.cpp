@@ -37,6 +37,11 @@ class FakeSource final : public AudioSource {
     f[0] = marker;
     cb_(f);
   }
+  // A whole frame at one amplitude (for the level meter); the first sample doubles as the marker.
+  void DeliverTone(std::int16_t amplitude) {
+    std::vector<std::int16_t> f(kFrameSamples, amplitude);
+    cb_(f);
+  }
   bool fail = false;
 
  private:
@@ -747,3 +752,86 @@ TEST(VoicePipeline, RealWorkerThreadsGiveTheSameResult) {
 TEST(PipelineConfigTest, SpeechPiecesStayShortEnoughForTheVoiceMemoryLimit) {
   EXPECT_LE(neuroos::voice::PipelineConfig{}.max_piece_chars, 60U);
 }
+
+namespace neuroos::voice {
+namespace {
+
+// The mic button (ADR-0017): it posts the same events a wake phrase and a lost device post.
+TEST(VoicePipeline, TheMicButtonStartsACaptureWithoutTheWakePhrase) {
+  Rig r;
+  ASSERT_TRUE(r.p->StartListening().ok());
+  r.Frames(0, 2);
+  EXPECT_EQ(r.p->status().phase, 1U) << "capturing";
+  r.stt.text = "what time is it";
+  r.Frames(1000, 30);
+  r.Frames(0, 25);
+  r.Settle();
+  ASSERT_EQ(r.link.commands.size(), 1U);
+  EXPECT_EQ(r.link.commands[0].text, "what time is it");
+  EXPECT_EQ(r.p->stats().wake_words, 0U) << "a button press is not a heard wake phrase";
+}
+
+TEST(VoicePipeline, StopListeningEndsTheCaptureAndAnswersWhatWasSaid) {
+  Rig r;
+  ASSERT_TRUE(r.p->StartListening().ok());
+  r.Frames(0, 2);
+  r.stt.text = "remind me to stretch";
+  r.Frames(1000, 20);
+  ASSERT_TRUE(r.p->StopListening().ok());
+  r.Frames(1000, 1);
+  r.Settle();
+  ASSERT_EQ(r.link.commands.size(), 1U);
+  EXPECT_EQ(r.link.commands[0].text, "remind me to stretch");
+}
+
+TEST(VoicePipeline, CancelDuringACaptureDropsItAndSendsNothing) {
+  Rig r;
+  ASSERT_TRUE(r.p->StartListening().ok());
+  r.Frames(0, 2);
+  r.Frames(1000, 10);
+  ASSERT_TRUE(r.p->CancelTurn().ok());
+  r.Frames(0, 2);
+  r.Settle();
+  EXPECT_EQ(r.p->status().phase, 0U) << "idle again";
+  EXPECT_TRUE(r.link.commands.empty());
+}
+
+TEST(VoicePipeline, CancelWhileSpeakingStopsTheVoiceAndCancelsTheRequest) {
+  Rig r;
+  r.p->PreloadClips();
+  r.AskByVoice();
+  r.link.receiver->OnSpeak("First sentence. Second sentence. Third sentence.");
+  r.Settle();
+  ASSERT_TRUE(r.p->status().speaking);
+  ASSERT_TRUE(r.p->CancelTurn().ok());
+  r.Frames(0, 1);
+  EXPECT_EQ(r.sink.flushes, 1);
+  EXPECT_EQ(r.link.cancels, 1);
+  EXPECT_FALSE(r.p->status().speaking);
+  EXPECT_FALSE(r.p->status().turn_in_progress);
+}
+
+TEST(VoicePipeline, ASecondPressDuringATurnChangesNothing) {
+  Rig r;
+  ASSERT_TRUE(r.p->StartListening().ok());
+  r.Frames(0, 2);
+  ASSERT_TRUE(r.p->StartListening().ok());
+  r.Frames(0, 2);
+  EXPECT_EQ(r.p->status().phase, 1U);
+  EXPECT_EQ(r.sink.flushes, 0);
+}
+
+TEST(VoicePipeline, TheInputLevelFollowsTheMicrophoneLoudness) {
+  Rig r;
+  r.Frames(0, 2);
+  EXPECT_EQ(r.p->status().input_level_permille, 0U);
+  r.source.DeliverTone(3000);
+  EXPECT_EQ(r.p->status().input_level_permille, 500U) << "3000 of the 6000 full scale";
+  r.source.DeliverTone(30000);
+  EXPECT_EQ(r.p->status().input_level_permille, 1000U) << "clamped";
+  r.source.DeliverTone(0);
+  EXPECT_EQ(r.p->status().input_level_permille, 0U);
+}
+
+}  // namespace
+}  // namespace neuroos::voice

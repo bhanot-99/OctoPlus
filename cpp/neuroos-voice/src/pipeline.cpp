@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <condition_variable>
 #include <utility>
 
@@ -175,6 +176,7 @@ PipelineStatus VoicePipeline::status() const {
     s.speaking = machine_.speaking();
     s.follow_up_open = machine_.follow_up_open();
     s.wake_words = stats_.wake_words;
+    s.input_level_permille = level_permille_;
     switch (machine_.state()) {
       case TurnState::kIdle:
         s.phase = 0;
@@ -389,6 +391,16 @@ void VoicePipeline::OnAudio(std::span<const std::int16_t> samples) {
 
 void VoicePipeline::ProcessFrame(std::span<const std::int16_t> frame) {
   const std::uint64_t now = d_.mono_ns();
+  // The loudness of this frame for the level meter: a number between 0 and 1000, never audio.
+  double energy = 0.0;
+  for (const std::int16_t s : frame) {
+    energy += static_cast<double>(s) * static_cast<double>(s);
+  }
+  const double rms = frame.empty() ? 0.0 : std::sqrt(energy / static_cast<double>(frame.size()));
+  level_permille_ = static_cast<std::uint32_t>(std::min(1000.0, rms * 1000.0 / 6000.0));
+  if (const int control = pending_control_.exchange(0); control != 0) {
+    ApplyControl(control, now);
+  }
   const float prob = d_.vad->Process(frame);
   const VadEvent main = gate_.Update(prob, now);
   const VadEvent barge = barge_gate_.Update(prob, now);
@@ -719,6 +731,83 @@ void VoicePipeline::OnFinished(bool ok) {
 }
 
 void VoicePipeline::PlayPreamble(int kind) { OnPreamble(kind); }
+
+namespace {
+constexpr int kControlStart = 1;
+constexpr int kControlStop = 2;
+constexpr int kControlCancel = 3;
+constexpr int kUnavailable = 3;  // ErrorCode UNAVAILABLE (common.proto)
+}  // namespace
+
+Status VoicePipeline::StartListening() {
+  if (!running_ || !d_.source->running()) {
+    return Error{
+        .message = "the microphone is not capturing", .retryable = true, .code = kUnavailable};
+  }
+  pending_control_ = kControlStart;
+  return ok_status();
+}
+
+Status VoicePipeline::StopListening() {
+  if (!running_) {
+    return Error{.message = "voice is not running", .retryable = true, .code = kUnavailable};
+  }
+  pending_control_ = kControlStop;
+  return ok_status();
+}
+
+Status VoicePipeline::CancelTurn() {
+  if (!running_) {
+    return Error{.message = "voice is not running", .retryable = true, .code = kUnavailable};
+  }
+  pending_control_ = kControlCancel;
+  return ok_status();
+}
+
+// Runs on the audio thread, which owns the gates: the same steps as a heard wake phrase, or the
+// same as a lost device for a cancel. Nothing here touches audio data.
+void VoicePipeline::ApplyControl(int control, std::uint64_t now) {
+  TurnState state = TurnState::kIdle;
+  {
+    const std::lock_guard<std::mutex> lock(mu_);
+    state = machine_.state();
+  }
+  TurnEvent e;
+  e.now_ns = now;
+  if (control == kControlStart) {
+    if (state != TurnState::kIdle && state != TurnState::kFollowUp &&
+        state != TurnState::kSpeaking) {
+      return;  // already in a turn: a second press changes nothing
+    }
+    Trace("mic_button_start");
+    e.kind = TurnEventKind::kWakeWord;
+    const auto actions = Post(e);
+    gate_.Reset();
+    barge_gate_.Reset();
+    d_.vad->Reset();
+    d_.wake->Reset();
+    Run(actions);
+    return;
+  }
+  if (control == kControlStop && state == TurnState::kCapturing) {
+    Trace("mic_button_stop");
+    {
+      const std::lock_guard<std::mutex> lock(mu_);
+      speech_end_idx_ = ring_.total_pushed();
+    }
+    e.kind = TurnEventKind::kSpeechEnded;
+    Run(Post(e));
+    return;
+  }
+  if (control == kControlStop || control == kControlCancel) {
+    if (state == TurnState::kIdle) {
+      return;
+    }
+    Trace("mic_button_cancel");
+    e.kind = TurnEventKind::kUserCancel;
+    Run(Post(e));
+  }
+}
 
 void VoicePipeline::PlayStatus(int line) {
   std::uint64_t epoch = 0;

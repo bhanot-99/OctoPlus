@@ -49,6 +49,7 @@ message Envelope {
     BargeIn barge_in = 45;
     VoiceStatusRequest voice_status_request = 46;
     VoiceStatus voice_status = 47;
+    VoiceControl voice_control = 48;
 
     // C3 storage 60–99
     QueryFocusHistory query_focus_history = 60;

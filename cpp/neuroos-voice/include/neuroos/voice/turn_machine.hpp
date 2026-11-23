@@ -18,6 +18,7 @@ enum class TurnEventKind {
   kReplyFinished,  // C5's stream ended (nothing more will be queued for this reply)
   kPlaybackIdle,   // the speaker finished everything queued
   kDeviceLost,     // the microphone or speaker went away
+  kUserCancel,     // the user dropped the turn (OctoPit's mic button); handled like kDeviceLost
   kTick,           // time passed; used for timeouts
 };
 

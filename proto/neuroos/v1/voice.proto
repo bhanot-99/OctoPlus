@@ -57,6 +57,22 @@ message BargeIn {
 
 message VoiceStatusRequest {}
 
+// A user-run client (OctoPit's mic button, ADR-0017) opens or closes the same capture the wake
+// word opens. It carries no audio and no text; C2 owns every sample.
+enum VoiceControlAction {
+  VOICE_CONTROL_ACTION_UNSPECIFIED = 0;
+  // Start capturing a command now, as if the wake phrase had just been heard.
+  VOICE_CONTROL_ACTION_START_LISTENING = 1;
+  // Stop capturing and answer what was said so far.
+  VOICE_CONTROL_ACTION_STOP_LISTENING = 2;
+  // Drop the turn: discard the capture, stop speaking, cancel the request.
+  VOICE_CONTROL_ACTION_CANCEL = 3;
+}
+
+message VoiceControl {
+  VoiceControlAction action = 1;
+}
+
 // FR-VOI-10.
 message VoiceStatus {
   bool turn_in_progress = 1;
@@ -68,6 +84,8 @@ message VoiceStatus {
   TurnPhase phase = 6;
   // Wake phrases heard since the service started: a wake that led nowhere still counts.
   uint64 wake_words = 7;
+  // How loud the microphone is right now, 0..1000, for a level meter. Only a number: no audio.
+  uint32 input_level_permille = 8;
 }
 
 // Where a turn is. Matches the turn machine's states (IDLE = nothing happening).

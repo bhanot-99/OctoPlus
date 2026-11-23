@@ -137,6 +137,8 @@ struct PipelineStatus {
   // The turn machine's state, as the TurnPhase numbers in voice.proto.
   std::uint32_t phase = 0;
   std::uint64_t wake_words = 0;
+  // Microphone level, 0..1000 (the last frame's loudness). A number only.
+  std::uint32_t input_level_permille = 0;
 };
 
 struct PipelineStats {
@@ -199,6 +201,12 @@ class VoicePipeline final : public ReplyReceiver {
   void PlayPreamble(int kind);
   void PlayStatus(int line);
 
+  // The user's mic button (OctoPit, ADR-0017). They post the same events the wake word and a
+  // lost device post, so every rule of the turn machine still applies.
+  Status StartListening();  // like the wake phrase; interrupts a spoken reply
+  Status StopListening();   // ends the capture and answers what was said (or cancels the turn)
+  Status CancelTurn();      // drops the turn whatever it is doing
+
   [[nodiscard]] PipelineStatus status() const;
   [[nodiscard]] PipelineStats stats() const;
   [[nodiscard]] std::size_t cached_clips() const;
@@ -214,6 +222,7 @@ class VoicePipeline final : public ReplyReceiver {
   };
 
   void ProcessFrame(std::span<const std::int16_t> frame);
+  void ApplyControl(int control, std::uint64_t now);
   void Feed(const TurnEvent& e);                     // lock held by the caller via FeedLocked
   void Run(const std::vector<TurnAction>& actions);  // no lock held
   void BeginUtterance(bool with_backlog);
@@ -258,6 +267,9 @@ class VoicePipeline final : public ReplyReceiver {
   std::uint64_t command_sent_ns_ = 0;  // for command_to_audio; 0 once the first audio played
   std::uint64_t answer_since_ns_ = 0;  // for command_to_answer_audio; 0 once the answer played
   std::atomic<bool> running_{false};
+  std::atomic<std::uint32_t> level_permille_{0};
+  // A request from the mic button, handled on the audio thread (which owns the gates).
+  std::atomic<int> pending_control_{0};
   std::unordered_map<std::string, Clip> clips_;
   PipelineStats stats_;
 };

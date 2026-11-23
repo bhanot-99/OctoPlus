@@ -539,5 +539,42 @@ TEST(TurnMachineWakeOnly, AWakePhraseAloneKeepsListeningForTheCommand) {
   EXPECT_EQ(m.state(), TurnState::kIdle);
 }
 
+// The mic button's cancel ends the turn from every busy state, like a lost device.
+TEST(TurnMachineTest, UserCancelEndsTheTurnFromEveryBusyState) {
+  const auto cancel = [](TurnMachine& m, std::uint64_t t) {
+    return m.OnEvent(TurnEvent{.kind = TurnEventKind::kUserCancel, .now_ns = t});
+  };
+  {
+    TurnMachine m;
+    m.OnEvent(TurnEvent{.kind = TurnEventKind::kWakeWord, .now_ns = 1});
+    ASSERT_EQ(m.state(), TurnState::kCapturing);
+    cancel(m, 2);
+    EXPECT_EQ(m.state(), TurnState::kIdle);
+  }
+  {
+    TurnMachine m;
+    m.OnEvent(TurnEvent{.kind = TurnEventKind::kWakeWord, .now_ns = 1});
+    m.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = 2});
+    ASSERT_EQ(m.state(), TurnState::kTranscribing);
+    cancel(m, 3);
+    EXPECT_EQ(m.state(), TurnState::kIdle);
+  }
+  {
+    TurnMachine m;
+    m.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = 1, .nudge = true});
+    ASSERT_EQ(m.state(), TurnState::kSpeaking);
+    const auto acts = cancel(m, 2);
+    EXPECT_EQ(m.state(), TurnState::kIdle);
+    ASSERT_EQ(acts.size(), 2U);
+    EXPECT_EQ(acts[0].kind, TurnActionKind::kFlushOutput);
+    EXPECT_EQ(acts[1].kind, TurnActionKind::kCancelReply);
+  }
+  {
+    TurnMachine m;
+    EXPECT_TRUE(cancel(m, 1).empty()) << "nothing to cancel when idle";
+    EXPECT_EQ(m.state(), TurnState::kIdle);
+  }
+}
+
 }  // namespace
 }  // namespace neuroos::voice
