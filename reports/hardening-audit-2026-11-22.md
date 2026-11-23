@@ -1,5 +1,8 @@
 # Hardening Audit — 2026-11-22
 
+> **Status update 2026-11-23.** Written after the audit's own list below: the C7 deploy and its key were done by the owner (2026-11-22), the nftables port rule is loaded (FR-FET-10 is now enforced by the kernel), the licence is decided (GPL-3.0-only, D-44), `hardening-audit` is merged into `main`, and a fresh working copy and install exist (`reports/clean-install-2026-11-23.md`). Sections 5 and 6 below are as of 2026-11-22. What is still open is in `memory.md` (owner items) and the 2026-11-23 cleanup (D-56).
+
+
 **Branch:** `hardening-audit` (from `main` 61ba5b8, not pushed, not merged) · **Built and checked by:** Claude (agy was not used; an independent review is still owed, rules.md §2.6) · **Directive:** owner, 2026-11-22 (D-43)
 
 ## 1. Plain-language summary

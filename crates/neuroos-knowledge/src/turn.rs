@@ -42,7 +42,7 @@ use crate::prompt::{self, Budgets, PromptInput};
 use crate::router::{self, ActionHint, RouteInput, RouteKind};
 use crate::sanitize::neutralise;
 use crate::session::{Session, SessionConfig};
-use crate::speech::SentenceStream;
+use crate::speech::{SentenceStream, strip_pictographs};
 use crate::status::{self, NO_LOOKUP_YET, Need};
 
 /// Longest question accepted, in bytes (the prompt cuts it further to its token cap).
@@ -1404,7 +1404,10 @@ impl KnowledgeHandler {
             at_ns: at,
             taint,
         } = rec;
-        let summary: String = answer.chars().take(SUMMARY_CHARS).collect();
+        let summary: String = strip_pictographs(answer)
+            .chars()
+            .take(SUMMARY_CHARS)
+            .collect();
         let body = Body::StoreInteraction(StoreInteraction {
             question: question.to_string(),
             answer_summary: summary,

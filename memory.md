@@ -11,12 +11,12 @@
 | Field | Value |
 | :--- | :--- |
 | Last updated | 2026-11-23 |
-| Project stage | **Hardening audit** (2026-11-22, branch `hardening-audit`): Phases 0-7 hold; Phases 8-10 reopened — their evidence did not hold up (`reports/hardening-audit-2026-11-22.md`). |
-| Current phase | Phases 8-10 back in gate review |
-| Current story | Audit fixes A-01..A-21 done on the branch; owner items left |
-| Overall progress | 8 / 11 phases signed off on real evidence (0-7); 8-10 need owner steps and sign-off |
-| Health | 🟨 Code gate green on the branch; 24 h soak, owner trial, sudo deploy of C7 and licence decision open |
-| Next milestone | Owner: deploy C7 + key (sudo), live lookup, 24 h soak, licence decision, merge `hardening-audit` |
+| Project stage | **Post-hardening cleanup** (2026-11-23): Phases 0-7 hold; the hardening audit and the voice upgrade (D-55) are merged into `main`; Phases 8-10 stay in gate review until the owner steps are done. |
+| Current phase | Phases 8-10 in gate review; cleanup branch `cleanup` |
+| Current story | Cleanup of `main`: the 12 fixable audit items (section A of the 2026-11-23 audit) |
+| Overall progress | 8 / 11 phases signed off on real evidence (0-7); 8-10 need owner steps (24 h soak, two-week trial, `.deb` install, fresh-VM proof) and sign-off |
+| Health | 🟨 Local gate green on `main` (2026-11-23); 24 h soak not run (stopped by the owner for the voice upgrade); owner trial and sign-offs open |
+| Next milestone | Restart the 24 h soak on the final code, then the GUI Cockpit (branch `cockpit`, not started: it needs an ADR and rule changes first) |
 
 ---
 
@@ -24,11 +24,11 @@
 
 | Field | Value |
 | :--- | :--- |
-| Story | Hardening audit (owner directive 2026-11-22, D-43) |
-| Builder / Checker | Claude / Claude (agy not used: owner did not ask for it this session) — an independent review is still owed |
-| Branch | `hardening-audit` (from `main` 61ba5b8; not pushed, not merged) |
-| Files being changed | see `reports/hardening-audit-2026-11-22.md` §2 |
-| Next concrete step | Owner list in the audit report §5 (sudo deploy of C7 and its key first). |
+| Story | Cleanup of `main` (owner directive 2026-11-23): fix the 12 audit items of section A |
+| Builder / Checker | Claude / Claude (agy not used) — an independent review is still owed |
+| Branch | `cleanup` (from `main` a64d1c0); merged and pushed only after a full `just ci` |
+| Files being changed | `justfile`, `scripts/check-reproducible.sh`, `scripts/package-deb.sh`, `scripts/repro-env.sh`, documents, the emoji filter |
+| Next concrete step | Full gate, merge, push, prune; then the owner items and the 24 h soak |
 
 ---
 
@@ -84,7 +84,7 @@ One line each. Older entries archived to `docs/history/decisions-pre-phase-3.md`
 | 2026-11-23 | D-50 | Owner stopped the 24 h soak (run cut short, not a result) to do the **voice upgrade** on branch `voice-upgrade` (shared folder, no worktree: owner said skip it). Baseline run 2 (`reports/bench/voice-baseline-2026-11-23-1046.json`): real answer's first sound 5.3 s median after end of speech (model first words 1.5 s, first voice piece 3.4 s), plus 0.6 s silence wait. Order: 0 baseline, 1 find the cause (4 guesses: splitter waits for text, first piece too long, CPU/memory fight with the model, cold engine), 2 instant answers for easy questions, 3 fix voice delay (gentle: threads, pinning, priority; never pause the model), 4 model start, 5 smarter silence wait. **Pass marks (owner approved):** easy questions real-answer first sound under 1 s; hard questions median at or under 3.5 s (lower is a bonus); slowest few no worse than today; people cut off no more than today; owner listens once, not choppy; KPI-13 routing sets not worse. Measure the cached "let me check" clip and the real answer separately. Restart the soak when the owner says. | 0015 |
 | 2026-11-23 | D-49 | Owner directive (before sleep): keep the fresh re-installed version, remove older files only if it works, then start the 24 h soak. Done: fresh working copy `~/Semantic-NeuroOS`, fresh user-level install from it, all checks green (`reports/clean-install-2026-11-23.md`), old build caches deleted (25 GB), old source folder kept because another Claude session uses it, 24 h soak started 2026-11-23 10:13:53 (ends about 10:14 on the 24th). The system-wide `.deb` install and the fresh-VM proof still need the owner's `sudo`. | — |
 | 2026-11-22 | D-48 | Owner approved the voice system (C2) **for now as the base version**, with room to upgrade later, after a live test of the wake phrase, a spoken turn, the new `neuroosctl voice watch` signal and the echo-loop fix (BUG-126). Known limits accepted: no echo cancellation (only the wake phrase interrupts a spoken answer; `barge_in = speech` for headphones), quiet voice at the microphone needs a sensible capture gain (mic boost was +20 dB, capture +30 dB: lowered to +10 dB and about +13 dB), the speech recogniser can hallucinate on noise, NFR-PERF-02 not re-measured after D-47, KPI-3/4/5 not run on the owner's voice, the spoken nudge (UJ-2) not yet checked. | 0015 |
-| 2026-11-22 | D-47 | Owner asked to start speech before the first whole sentence (NFR-PERF-02). The first spoken piece of an answer may end at a comma, semicolon or colon after 40 characters; later pieces stay whole sentences. Not yet measured live. | — |
+| 2026-11-22 | D-47 | **[SUPERSEDED 2026-11-23: the first piece is cut at 28 characters, ADR-0015 addendum 2]** Owner asked to start speech before the first whole sentence (NFR-PERF-02). The first spoken piece of an answer may end at a comma, semicolon or colon after 40 characters; later pieces stay whole sentences. Not yet measured live. | — |
 | 2026-11-22 | D-46 | Owner approved coverage fuzzing of the URL gate (nightly toolchain + `cargo-fuzz`), the nftables port rule for C7 (FR-FET-10: TCP 443 and DNS only), and the coverage and sanitizer runs. | — |
 | 2026-11-22 | D-45 | Owner: C2 voice budget 800 MiB while speaking, `MemoryMax` 960 MiB (was 620 / 768; measured peak 766 MiB with 60-character speech pieces). | 0015 |
 | 2026-11-22 | D-44 | Owner: the project is licensed **GPL-3.0-only** (statically linked GPL-3.0-only `cosmic-protocols`, GPL-3.0 `espeak-ng`). R-07 closed. | — |
@@ -131,7 +131,7 @@ One line each. Older entries archived to `docs/history/decisions-pre-phase-3.md`
 | 2026-11-22 | Blocker | Reference machine: system fetcher was the old mock binary and `/etc/neuroos/fetch.key` was missing (BUG-111). Deployed by the owner 2026-11-22; real searches work (egress ledger). | Owner | Closed |
 | 2026-11-22 | Gap | FR-FET-10: C7 limited to TCP 443 by Landlock (BUG-118) and an nftables rule (BUG-110). Rule loaded 2026-11-22 (owner ran `sudo scripts/install-fetcher.sh`; `nft list ruleset` shows `meta skuid 983 tcp dport 443 accept`, DNS 53, reject counter 0). | Owner | Closed |
 | 2026-11-22 | Decision | Licence: GPL-3.0-only (D-44). | Owner | Closed |
-| 2026-11-22 | Watch | Memory headroom: C4 used 2724 / 2800 MiB and C2 590 / 620 MiB on the live stack. | Claude | Watching |
+| 2026-11-22 | Watch | Memory headroom: C4 peaked at 2,813 MiB under mixed load (13 MiB over its 2,800 MiB budget; its unit cap is 3,220 MiB) and C2 at 766 / 800 MiB while speaking. The 24 h soak re-checks both. | Claude | Watching |
 | 2026-11-21 | Watch | R0-1 / NFR-SEC-03: C7 is the only network door. `deny.toml` now allows the HTTP/DNS crates only under `neuroos-fetcher` (`wrappers`); `scripts/check-netban.sh` proves the ban still fires elsewhere. | Claude | Open |
 | 2026-11-21 | Watch | rules.md §8.4: Zero test traffic leaves the machine. All Phase 8 tests must use private network namespaces (`ip netns`). | Claude | Open |
 | 2026-11-16 | Risk | C6 memory with dialog open: MemoryMax is 128 MiB (D-24). Monitor GTK dialog memory during search form. | Claude | Watching |

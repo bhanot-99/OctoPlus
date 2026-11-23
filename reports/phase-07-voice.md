@@ -59,6 +59,10 @@ No audio on disk (`voice-sc-checks.sh`: no audio file appears, no writable descr
 - **A real defect found by that evening (fixed as BUG-088):** with the voice service live and the TV on, one false wake started a chain: after any spoken reply the 8 s follow-up window treats every sound as a command, so film dialogue kept the buddy answering (25 turns, speech breaking up as it was interrupted). Fixed: `TurnConfig.max_consecutive_follow_ups` (default 1) and `consecutive_follow_ups_` counter in `TurnMachine` that automatically returns the state machine to `kIdle` once the cap is reached, `in_follow_up = true` on `kBeginUtterance`, and `max_consecutive_follow_ups` added to `voice.conf`.
 - Flaky tests BUG-086 and BUG-087 fixed; echo cancellation available (`scripts/voice-echo-cancel.sh`), not enabled.
 
+## 7c. Voice upgrade, 2026-11-23
+
+Speed work after the base version was approved (D-48): the first spoken piece is cut at 28 characters, a per-question trace and a 20-question baseline were added, and Pocket TTS 18M was tried and reverted. Median end of speech to first answer sound: 5.27 s → 4.00 s (NFR-PERF-02 CPU targets met on one run of 20 questions). Details, numbers and the open items are in the ADR-0015 addendum of 2026-11-23, `reports/voice-engine-comparison-2026-11-23.md` and `memory.md` (D-55).
+
 ## 8. Owner to do
 1. ~~**Choose the voice** (OQ-04)~~ Done 2026-11-18: `af_heart` (D-37). Original step: `scripts/voice-listening-test.sh`, then `voice = <name>` in `~/.config/neuroos/voice.conf`.
 2. ~~**Confirm the wake phrase** (OQ-01)~~ Done 2026-11-18: "hey jarvis", stock model (D-37). Original step: "hey jarvis" with the stock model, or name another stock phrase.

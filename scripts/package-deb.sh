@@ -7,6 +7,8 @@ set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 skip_build=0
+# A fixed build date (the last commit) so the same source gives the same package.
+export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git -C "$root" log -1 --format=%ct 2>/dev/null || echo 1700000000)}"
 
 for arg in "$@"; do
   case "$arg" in
@@ -32,6 +34,10 @@ for tool in dpkg-deb install cp tar gzip; do
 done
 
 if [[ "$skip_build" -eq 0 ]]; then
+  # Build folder, cargo folder and sysroot paths are mapped out of the programs (reproducible build).
+  # shellcheck source=scripts/repro-env.sh
+  source "$root/scripts/repro-env.sh"
+  repro_env "$root/target"
   echo "=== 1. Building Rust release binaries ==="
   cargo build --release --workspace --locked
 
@@ -188,14 +194,16 @@ chmod 0644 "$staging/usr/share/doc/semantic-neuroos/copyright"
 
 echo "=== 6. Building Debian package ==="
 deb_file="$dist/semantic-neuroos_1.0.0_amd64.deb"
-dpkg-deb --build --root-owner-group "$staging" "$deb_file"
+# Same bytes for the same inputs: every file and link gets the fixed date, and the archive is xz.
+find "$staging" -print0 | xargs -0 touch -h -d "@$SOURCE_DATE_EPOCH"
+dpkg-deb --build --root-owner-group -Zxz "$staging" "$deb_file"
 
 echo "=== 7. Package Verification ==="
 dpkg-deb -I "$deb_file"
 echo ""
 total_files=$(dpkg-deb -c "$deb_file" | wc -l)
 set +e +o pipefail
-dpkg-deb -c "$deb_file" | head -n 30
+dpkg-deb -c "$deb_file" 2>/dev/null | head -n 30
 set -euo pipefail
 echo "... (total $total_files files packaged)"
 

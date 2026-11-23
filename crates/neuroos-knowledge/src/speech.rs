@@ -18,10 +18,38 @@ const ABBREVIATIONS: &[&str] = &[
     "dr", "mr", "mrs", "ms", "prof", "st", "vs", "e.g", "i.e", "etc",
 ];
 
-/// Removes what must never be read aloud: code fences, URLs, markdown marks and list markers;
-/// folds whitespace. Dashes become commas so the voice pauses.
+/// True for emoji and other pictographs, and for the invisible marks that build them (joiner,
+/// emoji presentation selector, keycap). Letters, digits, accents and currency or legal signs are
+/// not pictographs (BUG-112: a spoken and stored answer ended with an orange).
+fn is_pictograph(c: char) -> bool {
+    matches!(
+        u32::from(c),
+        0x1F000..=0x1FAFF // cards, emoticons, symbols, flags, skin tones
+            | 0x2600..=0x27BF // miscellaneous symbols and dingbats
+            | 0x231A..=0x231B
+            | 0x23E9..=0x23F3
+            | 0x23F8..=0x23FA
+            | 0x2B1B..=0x2B1C
+            | 0x2B50
+            | 0x2B55
+            | 0x200D // zero width joiner
+            | 0xFE0F // emoji presentation selector
+            | 0x20E3 // combining keycap
+    )
+}
+
+/// The text without emoji and pictographs. Used for speech and for what is stored of an answer.
+#[must_use]
+pub fn strip_pictographs(text: &str) -> String {
+    text.chars().filter(|c| !is_pictograph(*c)).collect()
+}
+
+/// Removes what must never be read aloud: code fences, URLs, markdown marks, list markers and
+/// emoji; folds whitespace. Dashes become commas so the voice pauses.
 #[must_use]
 pub fn clean_for_speech(text: &str) -> String {
+    let text = strip_pictographs(text);
+    let text = text.as_str();
     // Drop fenced code blocks.
     let mut kept = String::with_capacity(text.len());
     let mut in_fence = false;
@@ -280,6 +308,47 @@ mod tests {
         }
         out.extend(s.flush());
         out
+    }
+
+    #[test]
+    fn emoji_and_pictographs_are_never_read_aloud() {
+        assert_eq!(
+            clean_for_speech("An orange is a yellow fruit. \u{1F34A}"),
+            "An orange is a yellow fruit."
+        );
+        assert_eq!(
+            clean_for_speech("Nice work \u{1F44D}\u{1F3FD} team \u{2764}\u{FE0F} done \u{2714}"),
+            "Nice work team done"
+        );
+        assert_eq!(
+            clean_for_speech("Keycap 1\u{FE0F}\u{20E3} stays a digit"),
+            "Keycap 1 stays a digit"
+        );
+        assert_eq!(
+            clean_for_speech("Family \u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467} trip"),
+            "Family trip"
+        );
+    }
+
+    #[test]
+    fn real_symbols_and_accents_are_kept() {
+        let text = "Price is 5 \u{20AC} for caf\u{E9} \u{2122} \u{A9} 100%";
+        assert_eq!(clean_for_speech(text), text);
+    }
+
+    #[test]
+    fn a_sentence_that_is_only_an_emoji_makes_no_spoken_piece() {
+        assert_eq!(all("It is sunny. \u{1F34A}", 1000), vec!["It is sunny."]);
+        assert_eq!(all("\u{1F34A}\u{1F34B}", 3), Vec::<String>::new());
+    }
+
+    #[test]
+    fn stored_text_loses_its_pictographs_too() {
+        assert_eq!(
+            strip_pictographs("An orange is yellow. \u{1F34A}"),
+            "An orange is yellow. "
+        );
+        assert_eq!(strip_pictographs("plain text"), "plain text");
     }
 
     #[test]

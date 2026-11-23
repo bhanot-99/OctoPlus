@@ -334,7 +334,7 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | ID | Metric | Value | Label |
 | :--- | :--- | :--- | :--- |
 | NFR-PERF-01 | Preamble: request → first audio | ≤ 50 ms p95 | T (P: 9.7 ms) |
-| NFR-PERF-02 | End of speech → first answer audio | CPU: ≤ 4.5 s p50, ≤ 6.0 s p95 · GPU-path goal: ≤ 3.0 s p50, ≤ 5.0 s p95 | T — computed from rates measured in S-02 (prefill ≈ 11.5 ms/token, decode ≈ 86 ms/token, ADR-0005); end-to-end measurement in Phase 2. GPU path: ≈ 1.3 s computed from S-02 GPU rates (prefill ≈ 1 ms/token, decode ≈ 20 ms/token; ADR-0008 addendum) |
+| NFR-PERF-02 | End of speech → first answer audio | CPU: ≤ 4.5 s p50, ≤ 6.0 s p95 · GPU-path goal: ≤ 3.0 s p50, ≤ 5.0 s p95 | T — computed from rates measured in S-02 (prefill ≈ 11.5 ms/token, decode ≈ 86 ms/token, ADR-0005); end-to-end measurement in Phase 2. GPU path: ≈ 1.3 s computed from S-02 GPU rates (prefill ≈ 1 ms/token, decode ≈ 20 ms/token; ADR-0008 addendum) **M (2026-11-23, CPU, 20 questions, one run):** p50 4.0 s, p95 5.5 s from the end-of-speech decision, with the first piece cut at 28 characters (ADR-0015 addendum 2); met on this run, to be re-checked in the soak. |
 | NFR-PERF-03 | Typed question → first token | CPU: ≤ 3.0 s p50 · GPU-path goal: ≤ 2.0 s p50 | T — computed from S-02 rates (ADR-0005); GPU path ≈ 0.3 s (TTFT measured 295 ms on a 268-token prompt, ADR-0008); measured end to end in Phase 2 |
 | NFR-PERF-04 | C3 hybrid query at the chunk cap | ≤ 25 ms p50, ≤ 50 ms p99 | M (Phase 4, release build, the real embedding model included in every figure, 30,000 chunks): p50 19.3 ms / p99 22.0 ms warm; first queries after a 2,000-chunk burst p99 21.9 ms; with a writer committing continuously p50 20.1 ms / p99 23.1 ms; the embedding call alone p50 4.7 ms (`reports/bench/p4-search-*.json`). Scan alone: spike S-01, ADR-0004 |
 | NFR-PERF-05 | C5 own compute on the hot path | < 5 ms p99 | T |
@@ -354,7 +354,7 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | C1 monitor | 30 MiB | 48 MiB | T (P: 9 MiB) |
 | C2 voice | 800 MiB while speaking (about 460–480 MiB at rest) | 960 MiB | M: 766 MiB peak over six spoken answers with speech pieces of at most 60 characters (2026-11-22, ADR-0015 addendum); owner decision D-45 raised it from 620 / 768 MiB. Re-checked by the 24 h soak |
 | C3 storage | 320 MiB | 400 MiB | M: 309 MiB process RSS with the real embedding model (bge-small-en-v1.5, about 234 MiB before any data) and the full 30,000-chunk matrix and index, 4 s of queries (Phase 4, `reports/bench/p4-search-*.json`, ADR-0012 item 10); restated from ADR-0004 |
-| C4 inference | 2,800 MiB | 3,220 MiB | M: 2,770 MiB peak for one turn, Qwen3-4B Q4_K_M, `-c 2048`, weight repacking off (S-02, ADR-0005); 2,734 MiB with the 8-bit K cache, 2026-11-22 (ADR-0005 addendum) |
+| C4 inference | 2,800 MiB | 3,220 MiB | M: 2,770 MiB peak for one turn, Qwen3-4B Q4_K_M, `-c 2048`, weight repacking off (S-02, ADR-0005); 2,734 MiB with the 8-bit K cache, 2026-11-22 (ADR-0005 addendum) 2026-11-22 soak smoke run: 2,813 MiB peak under mixed load, 13 MiB over the budget; the unit's `MemoryMax` (3,220 MiB) left headroom. The 24 h soak re-checks it. |
 | C4 VRAM (GPU path only) | 3,100 MiB | checked before load: less free → CPU path | M: 3,010 MiB peak, one turn, `-c 2048`, RTX 3050 4 GB (S-02, ADR-0008 addendum) |
 | C5 knowledge | 60 MiB | 96 MiB | T |
 | C6 kernel | 15 MiB (+ 55 MiB while a dialog is open) | 128 MiB | M: dialog RSS 49.8 MiB, cgroup hit the old 64 MiB limit (Phase 2 gate; ADR-0010 item 13) |

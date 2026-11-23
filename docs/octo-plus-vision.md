@@ -3,7 +3,7 @@
 **Document Type:** Vision, Architecture & Master Roadmap RFC  
 **System Designation:** `Octo+` (Next-Generation AI Operating System)  
 **File Location:** `docs/octo-plus-vision.md`  
-**Status:** Approved Vision & Architectural Specification  
+**Status:** Vision, not approved scope (2026-11-23). Several items conflict with the PRD scope and with rules R0-1, R0-7 and AB-4 and each needs its own decision record (ADR) before any work starts.  
 
 ---
 
