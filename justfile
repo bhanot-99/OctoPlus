@@ -67,6 +67,7 @@ test-hosted: build
 deny:
     cargo deny check
     scripts/check-netban.sh
+    scripts/check-octopit.sh
 
 # Coverage gates, NFR-QA-01: Rust lines >= 80 %, C++ lines >= 70 %. Clean builds only.
 cov: build

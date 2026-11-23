@@ -120,10 +120,10 @@ fn extras(w: Rc<Window>, dir: String, app: gtk::Application) {
     glib::timeout_add_local_once(Duration::from_millis(800), move || {
         save_other_windows(&w, &format!("{dir}/palette.png"));
         for t in gtk::Window::list_toplevels() {
-            if let Some(win) = t.downcast_ref::<gtk::Window>() {
-                if win.title().as_deref() == Some("Command palette") {
-                    win.close();
-                }
+            if let Some(win) = t.downcast_ref::<gtk::Window>()
+                && win.title().as_deref() == Some("Command palette")
+            {
+                win.close();
             }
         }
         crate::welcome::show(&w.window, Box::new(|| {}));

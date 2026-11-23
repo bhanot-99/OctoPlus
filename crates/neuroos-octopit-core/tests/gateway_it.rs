@@ -49,7 +49,10 @@ impl Handler for Mock {
                 ..VoiceStatus::default()
             })),
             Body::VoiceControl(c) => {
-                self.seen.lock().unwrap().push(format!("voice:{}", c.action));
+                self.seen
+                    .lock()
+                    .unwrap()
+                    .push(format!("voice:{}", c.action));
                 if c.action == VoiceControlAction::StartListening as i32 {
                     Ok(Body::Ack(Ack {}))
                 } else {
@@ -62,9 +65,11 @@ impl Handler for Mock {
             }
             Body::AskRequest(a) => {
                 self.seen.lock().unwrap().push(format!("ask:{}", a.text));
-                sink.send(Body::AnswerChunk(AnswerChunk { text: "Four".into() }))
-                    .await
-                    .ok();
+                sink.send(Body::AnswerChunk(AnswerChunk {
+                    text: "Four".into(),
+                }))
+                .await
+                .ok();
                 if self.slow_answer {
                     tokio::time::sleep(Duration::from_secs(30)).await;
                 }
@@ -129,9 +134,17 @@ async fn snapshot_voice_and_the_mic_button_reach_the_parts() {
 
     let snap = gw.snapshot().await;
     assert_eq!(snap.overall, PartState::Ok);
-    let inf = snap.parts.iter().find(|p| p.part == Part::Inference).unwrap();
+    let inf = snap
+        .parts
+        .iter()
+        .find(|p| p.part == Part::Inference)
+        .unwrap();
     assert_eq!(inf.state, PartState::Ok);
-    assert_eq!(snap.parts.len(), 8, "every part is shown, missing ones are down");
+    assert_eq!(
+        snap.parts.len(),
+        8,
+        "every part is shown, missing ones are down"
+    );
     let storage = snap.parts.iter().find(|p| p.part == Part::Storage).unwrap();
     assert_eq!(storage.state, PartState::Down);
 
@@ -142,7 +155,11 @@ async fn snapshot_voice_and_the_mic_button_reach_the_parts() {
     assert_eq!(gw.mic(MicAction::Start).await, Ok(()));
     let refused = gw.mic(MicAction::Cancel).await;
     assert_eq!(refused, Err("the microphone is not capturing".to_owned()));
-    assert_eq!(gw.mic(MicAction::None).await, Ok(()), "a dead button sends nothing");
+    assert_eq!(
+        gw.mic(MicAction::None).await,
+        Ok(()),
+        "a dead button sends nothing"
+    );
     let seen = r.mock.seen.lock().unwrap().clone();
     assert_eq!(
         seen,
@@ -173,7 +190,9 @@ async fn missing_parts_become_plain_values_never_hangs_or_panics() {
     gw.ask("hello".into(), tx, cancel).await;
     assert_eq!(
         rx.recv().await,
-        Some(ChatEvent::Failed("The assistant is not running.".to_owned()))
+        Some(ChatEvent::Failed(
+            "The assistant is not running.".to_owned()
+        ))
     );
     assert_eq!(rx.recv().await, None, "exactly one final event");
 }
@@ -199,7 +218,10 @@ async fn an_answer_streams_chunks_then_done_with_its_flags() {
         other => panic!("expected Done, got {other:?}"),
     }
     assert_eq!(events.len(), 3);
-    assert_eq!(r.mock.seen.lock().unwrap().clone(), vec!["ask:What is 2+2?".to_owned()]);
+    assert_eq!(
+        r.mock.seen.lock().unwrap().clone(),
+        vec!["ask:What is 2+2?".to_owned()]
+    );
     let _ = r.stop.send(true);
 }
 
