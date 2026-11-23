@@ -77,6 +77,7 @@ candidates=(
   "neuroos-voice"
   "neuroos-fetcher"
   "neuroosctl"
+  "neuroos-octopit"
   "neuroos-s04-probe"
 )
 
@@ -101,6 +102,21 @@ for bin in "${candidates[@]}"; do
     echo "note: $bin not found (built in later tasks), skipping"
   fi
 done
+
+# OctoPit, the dashboard (ADR-0017): command on the path, launcher entry and icons (user scope).
+if [[ -f "$dev_bin/neuroos-octopit" ]]; then
+  install -d -m 0755 "$HOME/.local/bin" "$HOME/.local/share/applications" \
+    "$HOME/.local/share/icons/hicolor/scalable/apps" "$HOME/.local/share/icons/hicolor/symbolic/apps"
+  ln -sf "$dev_bin/neuroos-octopit" "$HOME/.local/bin/neuroos-octopit"
+  sed "s|^Exec=.*|Exec=$dev_bin/neuroos-octopit|" "$root/deploy/desktop/neuroos-octopit.desktop" \
+    > "$HOME/.local/share/applications/neuroos-octopit.desktop"
+  chmod 0644 "$HOME/.local/share/applications/neuroos-octopit.desktop"
+  install -m 0644 "$root/crates/neuroos-octopit/assets/icons/hicolor/scalable/apps/neuroos-octopit.svg" \
+    "$HOME/.local/share/icons/hicolor/scalable/apps/neuroos-octopit.svg"
+  install -m 0644 "$root/crates/neuroos-octopit/assets/icons/hicolor/symbolic/apps/neuroos-octopit-symbolic.svg" \
+    "$HOME/.local/share/icons/hicolor/symbolic/apps/neuroos-octopit-symbolic.svg"
+  echo "Installed OctoPit launcher entry and icons"
+fi
 
 if [[ -d "$root/cpp/build/release" ]]; then
   cp -P --remove-destination "$root"/cpp/build/release/bin/*.so* "$dev_lib/" 2>/dev/null || true
