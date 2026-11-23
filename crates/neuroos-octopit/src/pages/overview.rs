@@ -58,6 +58,8 @@ fn tile(card_data: &PartCard) -> Tile {
     root.append(&head);
     let role = label(card_data.role, &["caption"]);
     role.set_wrap(true);
+    role.set_max_width_chars(30);
+    root.set_size_request(190, -1);
     root.append(&role);
     let state = label("", &["caption"]);
     root.append(&state);

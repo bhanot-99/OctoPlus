@@ -599,7 +599,25 @@ flowchart LR
 
 ---
 
-## 14. After v1.0 (not scheduled)
+## 14. Phase 11 — OctoPit, the desktop dashboard (v1.1)
+
+**Goal:** a professional desktop face for NeuroOS: health, chat, a mic button, models and GPU, activity and privacy. A client only; it can never approve anything.
+**Direction:** owner, 2026-11-23 (D-57). **Plan:** `docs/plans/phase-11-octopit-plan.md` · **Design:** `docs/design/octopit-ux.md` · **ADR:** 0017 · **Report:** `reports/phase-11-octopit.md`
+
+| Story | What |
+| :--- | :--- |
+| P11-S01 | Decision record, rule changes, `Client::OctoPit` in the socket map |
+| P11-S02 | `neuroos-octopit-core` (state, sockets, chat, voice, GPU) and the window shell, themes, icons, Overview |
+| P11-S03 | Chat with the plain-text rule |
+| P11-S04 | Mic button: C2 control messages and level, the voice dock |
+| P11-S05 | Backends and GPU |
+| P11-S06 | Activity and Privacy |
+| P11-S07 | Settings, command palette, welcome, responsive layout, accessibility |
+| P11-S08 | Packaging, runbook, report, full gate |
+
+---
+
+## 15. After v1.0 (not scheduled)
 
 | Item | Note |
 | :--- | :--- |

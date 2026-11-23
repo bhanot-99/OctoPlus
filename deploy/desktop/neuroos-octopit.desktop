@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.1
+Name=OctoPit
+GenericName=NeuroOS Dashboard
+Comment=See and talk to Semantic-NeuroOS: health, chat, voice, models and privacy
+Exec=neuroos-octopit
+Icon=neuroos-octopit
+Terminal=false
+Categories=System;Monitor;
+Keywords=NeuroOS;assistant;voice;dashboard;privacy;
+StartupNotify=true
+StartupWMClass=org.neuroos.OctoPit

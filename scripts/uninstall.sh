@@ -114,13 +114,15 @@ if [[ -n "$destdir" || "${EUID}" -eq 0 ]]; then
   rm -f "$destdir/etc/sysusers.d/neuroos.conf"
   rm -f "$destdir/etc/tmpfiles.d/neuroos-fetcher.conf"
   rm -f "$destdir/etc/pipewire/pipewire.conf.d/neuroos-echo-cancel.conf"
-  rm -f "$destdir/usr/local/bin/neuroosctl"
+  rm -f "$destdir/usr/local/bin/neuroosctl" "$destdir/usr/local/bin/neuroos-octopit"
+  rm -f "$destdir/usr/share/applications/neuroos-octopit.desktop" "$destdir/usr/share/icons/hicolor/scalable/apps/neuroos-octopit.svg" "$destdir/usr/share/icons/hicolor/symbolic/apps/neuroos-octopit-symbolic.svg"
   rm -rf "$destdir$prefix"
 fi
 
 # User installed binaries
 rm -rf "${target_home}/.local/opt/neuroos"
-rm -f "${target_home}/.local/bin/neuroosctl"
+rm -f "${target_home}/.local/bin/neuroosctl" "${target_home}/.local/bin/neuroos-octopit"
+rm -f "${target_home}/.local/share/applications/neuroos-octopit.desktop" "${target_home}/.local/share/icons/hicolor/scalable/apps/neuroos-octopit.svg" "${target_home}/.local/share/icons/hicolor/symbolic/apps/neuroos-octopit-symbolic.svg"
 
 # Reload daemons
 if [[ -z "$destdir" ]] && command -v systemctl >/dev/null 2>&1; then

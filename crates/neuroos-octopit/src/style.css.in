@@ -6,6 +6,11 @@ window.octopit {
   color: @text_primary;
 }
 
+/* The desktop's own theme sets text colours on some containers: take them back so light and dark
+   both read from our tokens. */
+.card, .pill, .sidebar, .voice-dock, .status-strip, .toast, .bubble.assistant, .composer,
+headerbar.octopit-header, headerbar.octopit-header label { color: @text_primary; }
+
 /* ---- type ---- */
 .num { font-feature-settings: "tnum" 1, "lnum" 1; }
 .caption { font-size: 0.857em; color: @text_secondary; }

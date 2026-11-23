@@ -138,6 +138,7 @@ if [[ "$mode" == "all" || "$mode" == "system" ]]; then
     "neuroos-voice"
     "neuroos-fetcher"
     "neuroosctl"
+    "neuroos-octopit"
     "neuroos-gen-units"
   )
 
@@ -168,6 +169,15 @@ if [[ "$mode" == "all" || "$mode" == "system" ]]; then
   # Symlink neuroosctl to /usr/local/bin
   if [[ -f "$destdir$prefix/bin/neuroosctl" ]]; then
     ln -sf "$prefix/bin/neuroosctl" "$destdir/usr/local/bin/neuroosctl"
+  fi
+
+  # OctoPit, the dashboard (ADR-0017): launcher entry, icons, and a command on the path.
+  if [[ -f "$destdir$prefix/bin/neuroos-octopit" ]]; then
+    ln -sf "$prefix/bin/neuroos-octopit" "$destdir/usr/local/bin/neuroos-octopit"
+    install -d -m 0755 "$destdir/usr/share/applications" "$destdir/usr/share/icons/hicolor/scalable/apps" "$destdir/usr/share/icons/hicolor/symbolic/apps"
+    install -m 0644 "$root/deploy/desktop/neuroos-octopit.desktop" "$destdir/usr/share/applications/neuroos-octopit.desktop"
+    install -m 0644 "$root/crates/neuroos-octopit/assets/icons/hicolor/scalable/apps/neuroos-octopit.svg" "$destdir/usr/share/icons/hicolor/scalable/apps/neuroos-octopit.svg"
+    install -m 0644 "$root/crates/neuroos-octopit/assets/icons/hicolor/symbolic/apps/neuroos-octopit-symbolic.svg" "$destdir/usr/share/icons/hicolor/symbolic/apps/neuroos-octopit-symbolic.svg"
   fi
 
   echo "=== [System] 2b. Installing shared libraries to $destdir$prefix/lib ==="
@@ -238,6 +248,7 @@ if [[ "$mode" == "all" || "$mode" == "user" ]]; then
     "neuroos-voice"
     "neuroos-fetcher"
     "neuroosctl"
+    "neuroos-octopit"
     "neuroos-gen-units"
   )
   for bin in "${candidates[@]}"; do
@@ -284,6 +295,14 @@ if [[ "$mode" == "all" || "$mode" == "user" ]]; then
   install -d -m 0755 "$target_home/.local/bin"
   if [[ -f "$u_opt/bin/neuroosctl" ]]; then
     ln -sf "$u_opt/bin/neuroosctl" "$target_home/.local/bin/neuroosctl"
+  fi
+  if [[ -f "$u_opt/bin/neuroos-octopit" ]]; then
+    ln -sf "$u_opt/bin/neuroos-octopit" "$target_home/.local/bin/neuroos-octopit"
+    install -d -m 0755 "$target_home/.local/share/applications" "$target_home/.local/share/icons/hicolor/scalable/apps" "$target_home/.local/share/icons/hicolor/symbolic/apps"
+    sed "s|^Exec=.*|Exec=$u_opt/bin/neuroos-octopit|" "$root/deploy/desktop/neuroos-octopit.desktop" > "$target_home/.local/share/applications/neuroos-octopit.desktop"
+    chmod 0644 "$target_home/.local/share/applications/neuroos-octopit.desktop"
+    install -m 0644 "$root/crates/neuroos-octopit/assets/icons/hicolor/scalable/apps/neuroos-octopit.svg" "$target_home/.local/share/icons/hicolor/scalable/apps/neuroos-octopit.svg"
+    install -m 0644 "$root/crates/neuroos-octopit/assets/icons/hicolor/symbolic/apps/neuroos-octopit-symbolic.svg" "$target_home/.local/share/icons/hicolor/symbolic/apps/neuroos-octopit-symbolic.svg"
   fi
 
   if [[ -z "$destdir" && "${EUID}" -ne 0 ]] && command -v systemctl >/dev/null 2>&1; then

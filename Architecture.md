@@ -136,17 +136,17 @@ Runtime root: `$XDG_RUNTIME_DIR/neuroos/` (mode 0700). **Every socket has its ow
 | `monitor/stream/stream.sock` | C1 | C3 |
 | `monitor/control/control.sock` | C1 | C6, `neuroosctl` |
 | `voice/voice/voice.sock` | C2 | C5 |
-| `voice/control/control.sock` | C2 | C6, `neuroosctl` |
+| `voice/control/control.sock` | C2 | C6, `neuroosctl`, OctoPit (status, start/stop/cancel listening) |
 | `storage/storage/storage.sock` | C3 | C5, C6, `neuroosctl` |
 | `inference/inference/inference.sock` | C4 | C5 |
-| `knowledge/knowledge/knowledge.sock` | C5 | C2, `neuroosctl` |
-| `kernel/kernel/kernel.sock` | C6 | C5, `neuroosctl` |
-| `healthd/healthd/healthd.sock` | healthd | `neuroosctl` |
+| `knowledge/knowledge/knowledge.sock` | C5 | C2, `neuroosctl`, OctoPit (typed questions) |
+| `kernel/kernel/kernel.sock` | C6 | C5, `neuroosctl`, OctoPit (read the audit and egress records) |
+| `healthd/healthd/healthd.sock` | healthd | `neuroosctl`, OctoPit |
 | `<part>/health/health.sock` | every part | healthd |
 | `/run/neuroos-fetcher/fetch/fetch.sock` | C7 | C6 only (group `neuroos`, 0660) |
 | `/run/neuroos-fetcher/health/health.sock` | C7 | healthd |
 
-`neuroosctl` is an ordinary user program, so anything it can do, any program run by the user can do. Therefore every destructive or outward operation reachable from it goes through C6 and the dialog.
+OctoPit (`neuroos-octopit`, ADR-0017) is a second user-run client, the desktop dashboard. It is listed as `Client::OctoPit` in the socket map on exactly the four sockets above, never on a health socket, and it has no approval control. `neuroosctl` and OctoPit are ordinary user programs, so anything they can do, any program run by the user can do. Therefore every destructive or outward operation reachable from it goes through C6 and the dialog.
 
 ### 5.3 Envelope (`proto/neuroos/v1/envelope.proto`)
 

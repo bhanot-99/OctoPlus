@@ -81,6 +81,7 @@ candidates=(
   "neuroos-voice"
   "neuroos-fetcher"
   "neuroosctl"
+  "neuroos-octopit"
   "neuroos-gen-units"
 )
 
@@ -111,6 +112,15 @@ done
 
 # Create convenient CLI symlink in /usr/bin/neuroosctl
 ln -sf /opt/neuroos/bin/neuroosctl "$staging/usr/bin/neuroosctl"
+
+# OctoPit, the dashboard (ADR-0017): command, launcher entry and icons.
+if [[ -f "$staging/opt/neuroos/bin/neuroos-octopit" ]]; then
+  ln -sf /opt/neuroos/bin/neuroos-octopit "$staging/usr/bin/neuroos-octopit"
+  install -d -m 0755 "$staging/usr/share/applications" "$staging/usr/share/icons/hicolor/scalable/apps" "$staging/usr/share/icons/hicolor/symbolic/apps"
+  install -m 0644 "$root/deploy/desktop/neuroos-octopit.desktop" "$staging/usr/share/applications/neuroos-octopit.desktop"
+  install -m 0644 "$root/crates/neuroos-octopit/assets/icons/hicolor/scalable/apps/neuroos-octopit.svg" "$staging/usr/share/icons/hicolor/scalable/apps/neuroos-octopit.svg"
+  install -m 0644 "$root/crates/neuroos-octopit/assets/icons/hicolor/symbolic/apps/neuroos-octopit-symbolic.svg" "$staging/usr/share/icons/hicolor/symbolic/apps/neuroos-octopit-symbolic.svg"
+fi
 
 echo "=== 4b. Staging shared libraries ==="
 install -d -m 0755 "$staging/opt/neuroos/lib"
