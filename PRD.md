@@ -71,7 +71,7 @@ Semantic-NeuroOS is a **private laptop buddy for Linux**. It runs entirely on yo
 - Approving anything by voice. Approval is always given in the dialog.
 - Screen capture, OCR, keystroke logging, or recording audio outside a conversation.
 - Professional advice. Health, legal and money answers are general information only.
-- A graphical app. v1.0 is voice, desktop notifications, one confirmation dialog and a CLI.
+- A graphical app in v1.0. v1.0 is voice, desktop notifications, one confirmation dialog and a CLI. **v1.1 adds OctoPit**, a desktop dashboard (health, chat, mic button, backends and GPU, activity, privacy) that is a client only and can never approve anything (D-57, ADR-0017).
 - Requiring a GPU. GPU offload is an optional speed-up for inference only (FR-INF-08, ADR-0008); everything must work on the CPU alone.
 - Windows, macOS, mobile, X11; multi-user installs.
 - Knowledge graph learning and graph view, HUD overlay, model-written nudges (all post-v1.0).

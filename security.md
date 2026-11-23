@@ -225,6 +225,7 @@ Stated plainly so nobody relies on a protection that is not there.
 | RR-8 | The wake word can be triggered by other audio | Only SAFE skills run hands-free; nothing is approved by voice. |
 | RR-9 | Third-party model and audio runtimes are large C++ code bases | Contained by sandboxing, no network, memory limits; pinned and hash-checked. |
 | RR-11 | Window titles, app ids and media tags are personal and are sent raw on C1's stream to C3 (C1 never filters, AB-5) | Only the storage unit may subscribe (peer-unit check). Excluded apps and paused periods never leave C1. Recordings are anonymised before they touch disk. Lock state is not observable on COSMIC inside C1's allowed surface (ADR-0011), so it is reported as unknown and the nudge policy holds |
+| RR-12 | OctoPit is a window like any other; same-user malware can imitate it | OctoPit has no approval control and says so on screen; approvals happen only in C6's own dialog, so a look-alike OctoPit gains nothing. It holds no keys, opens no network, records no audio. |
 | RR-10 | With optional GPU offload on, C4 talks to a large proprietary GPU kernel driver | Only C4, only when enabled (off by default); C4 has no network, no home access and no user data on disk; device access limited to an allowlist (ADR-0008). Not present on the CPU path. |
 
 ---

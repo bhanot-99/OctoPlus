@@ -72,7 +72,7 @@
 | AB-1 | Parts MUST NOT link each other's crates. Shared code lives only in `neuroos-common`, `-proto`, `-ipc`, `-taint`, `-health`, `-sandbox` (Rust) and `cpp/libneuroos` (C++). A dev-dependency on another part, used only by a test that drives the real thing, is allowed with a comment naming the test. |
 | AB-2 | C3 is the only writer of persistent user data and the only loader of the embedding model. Inside C3, one writer thread owns the only read-write connection. |
 | AB-3 | C4 is the only loader of the language model, and C5 is its only client. |
-| AB-4 | C6 is the only holder of the keys, the only writer of the audit log and egress ledger, the only part that talks to C7, and the only part that shows anything on screen. |
+| AB-4 | C6 is the only holder of the keys, the only writer of the audit log and egress ledger, the only part that talks to C7, and the only part that shows approvals and notifications on screen. OctoPit (ADR-0017) is a client, not a part: it may show status and chat, never an approval control. |
 | AB-5 | C1 emits raw events. Its only filtering is pause and the exclusion list. |
 | AB-6 | Sockets are filesystem paths in the server's own runtime folder. Abstract sockets, loopback TCP/UDP and shared memory are forbidden. |
 | AB-7 | A unit's visible sockets are exactly its row in Architecture §5.2. Adding a connection means changing that table, the unit file and the test that proves the others are unreachable — in one change. |
@@ -107,7 +107,7 @@
 | Storage | parameterised SQL; migrations in one folder | string-built SQL; schema changes outside migrations |
 | Config | one `config.toml` plus `nudges.toml`, validated at start, unknown keys are fatal | environment variables for behaviour (only `NEUROOS_LOG`, `NEUROOS_CONFIG`) |
 | Crypto | `hmac`, `sha2`, `subtle`, `getrandom`, `zeroize` | hand-rolled crypto; `==` on MACs |
-| UI | GTK4 dialog; notifications from templates | any remote asset; rendering free text from another part |
+| UI | GTK4 dialog; notifications from templates | any remote asset; rendering free text from another part (exception: OctoPit chat answers, as plain text only, ADR-0017) |
 | Tests | `nextest`, `proptest`, `insta`, GoogleTest | tests that need the internet; sleeping instead of waiting on an event |
 
 ---

@@ -14,15 +14,18 @@ pub enum Client {
     Part(Part),
     /// The user CLI tool (`neuroosctl`).
     Ctl,
+    /// The OctoPit desktop dashboard (ADR-0017). A user-run client like `neuroosctl`: it is
+    /// admitted by user id, never by unit, and is listed only on the sockets a page needs.
+    OctoPit,
 }
 
 impl Client {
-    /// Returns the systemd unit name for a part client, or `None` for `Ctl`.
+    /// Returns the systemd unit name for a part client, or `None` for the user-run clients.
     #[must_use]
     pub fn unit_name(self) -> Option<String> {
         match self {
             Self::Part(p) => Some(p.unit()),
-            Self::Ctl => None,
+            Self::Ctl | Self::OctoPit => None,
         }
     }
 }
@@ -74,6 +77,21 @@ impl SocketEntry {
             .iter()
             .any(|c| matches!(c, Client::Ctl))
     }
+
+    /// Returns `true` if OctoPit is allowed to connect to this socket.
+    #[must_use]
+    pub fn allows_octopit(&self) -> bool {
+        self.allowed_clients
+            .iter()
+            .any(|c| matches!(c, Client::OctoPit))
+    }
+
+    /// Returns `true` if a user-run client (`neuroosctl` or OctoPit) may connect: the server
+    /// admits any peer of the right user id and looks up its unit.
+    #[must_use]
+    pub fn allows_user_client(&self) -> bool {
+        self.allows_ctl() || self.allows_octopit()
+    }
 }
 
 /// Every IPC socket entry in Semantic-NeuroOS (Architecture §5.2).
@@ -99,7 +117,7 @@ pub const SOCKET_MAP: &[SocketEntry] = &[
     SocketEntry {
         server: Part::Voice,
         socket: "control",
-        allowed_clients: &[Client::Part(Part::Kernel), Client::Ctl],
+        allowed_clients: &[Client::Part(Part::Kernel), Client::Ctl, Client::OctoPit],
     },
     // C3 storage
     SocketEntry {
@@ -121,19 +139,19 @@ pub const SOCKET_MAP: &[SocketEntry] = &[
     SocketEntry {
         server: Part::Knowledge,
         socket: "knowledge",
-        allowed_clients: &[Client::Part(Part::Voice), Client::Ctl],
+        allowed_clients: &[Client::Part(Part::Voice), Client::Ctl, Client::OctoPit],
     },
     // C6 kernel
     SocketEntry {
         server: Part::Kernel,
         socket: "kernel",
-        allowed_clients: &[Client::Part(Part::Knowledge), Client::Ctl],
+        allowed_clients: &[Client::Part(Part::Knowledge), Client::Ctl, Client::OctoPit],
     },
     // D healthd
     SocketEntry {
         server: Part::Healthd,
         socket: "healthd",
-        allowed_clients: &[Client::Ctl],
+        allowed_clients: &[Client::Ctl, Client::OctoPit],
     },
     // C7 fetcher
     SocketEntry {
