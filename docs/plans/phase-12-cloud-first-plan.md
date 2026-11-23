@@ -1,6 +1,6 @@
 # Phase 12 strategy — Cloud-first answers, local model as the offline fallback, private by construction
 
-**Status:** PROPOSAL for the owner. Nothing here is built. It changes rules R0-1/R0-2 in a controlled way, so it needs the owner's decisions in §10 and ADR-0018 (Proposed) before any code.
+**Status:** PLANNED, NOT STARTED. The owner answered the decisions in §10 on 2026-11-23 and said: plan everything, wait for the start instruction. No code until the owner says start. It changes rules R0-1/R0-2 in a controlled way (ADR-0018, Proposed).
 **Origin:** owner, 2026-11-23: "make NeuroOS completely depend on free cloud AI like Claude, agy or Perplexity, keep the local LLM only for when the laptop is offline, and be confident about privacy." Personal use only; no business goals.
 **Branch:** `cloud-strategy` (docs only).
 
@@ -33,6 +33,19 @@ The cloud model **never gets access to storage**. It only sees the one request t
 | **agy (Antigravity CLI)** | Free with your Google account, but it is a coding-agent tool, not a documented stable API | Consumer product terms | **Not a backend.** Automating a consumer CLI is fragile and may breach its terms. Use the Gemini API for the Google route instead |
 
 Honest consequence: **"free" and "private" pull in opposite directions.** The free Gemini tier is the one that may train on and show your text to reviewers. So the design below uses free cloud only for questions that carry no personal context, and a no-training provider (paid, but cheap at your volume) for anything personal. Sources: [Gemini terms](https://ai.google.dev/gemini-api/terms), [Perplexity pricing and FAQ](https://docs.perplexity.ai/getting-started/pricing), [third-party Claude credit summary](https://apidog.com/blog/claude-api-credits/) (unofficial: verify).
+
+### 1a. Free tiers with a big context window (searched 2026-11-23; numbers come from comparison sites that disagree: verify on each provider's own page before building)
+
+| Provider (free tier) | Context window reported | Limits reported | Trains on or shows your text? | Use here |
+| :--- | :--- | :--- | :--- | :--- |
+| **Gemini API** (Flash / Flash-Lite line) | about 1,000,000 tokens | per-project limits shown in AI Studio (no fixed public numbers) | **Yes** (unpaid tier may be used to improve products; humans may read) | **P0 public only**, and big-document questions after the owner's own non-personal files are chosen |
+| **Groq** (for example gpt-oss-120b) | about 131,000 tokens | about 30 requests/min, 1,000/day, 200,000 tokens/day | One listing says **no training** on the free plan (verify) | First choice for **P1 redacted** questions if its terms confirm no training |
+| **Mistral** (Experiment plan) | about 128,000 tokens | large monthly quota, numbers only in the console | **Yes**, requires opting in to training | P0 public only |
+| **Cerebras** | about 128,000 tokens | reports conflict (daily tokens vs a 30-day $5 credit) | verify | optional extra for P0 |
+| **OpenRouter free models** | varies by model | 20 requests/min, 50/day for new accounts | **some providers train** | P0 only, as a last-resort fallback |
+| Cloudflare Workers AI, Cohere, SambaNova, NVIDIA catalogue | smaller | small free quotas | verify | optional |
+
+Reading of this table: the only free tier with a **really large** window (Gemini, about 1M tokens) is also the one that may train on and show your text, so it is **public-class only**. For anything with personal context the free choice with the best privacy record is Groq (about 131K tokens, enough for a long conversation or a few long documents), and the paid choice is Claude or Perplexity. Any cloud model is expected to beat the small local model on quality, but this must be **measured** on your own questions in the owner trial before the local model is removed from the default path (§8, 12-S06).
 
 ## 2. Privacy model: three classes of question
 
@@ -115,14 +128,16 @@ What we can claim honestly: *we control and can prove what leaves your laptop; w
 - **Prompt injection through answers** is real; the taint rules and C6 tiers stay in force.
 - **Using agy as a backend** is rejected for now (fragile, unclear terms).
 
-## 10. Decisions needed from the owner
+## 10. Owner decisions (answered 2026-11-23)
 
-1. **Providers:** Gemini free (P0 only), Perplexity (web facts) and Claude (quality), or fewer? Are you willing to pay a small monthly amount for the no-training providers? Set a monthly cap (suggest 5 USD to start).
-2. **P1 behaviour:** show the redacted text every time, once per session, or never (trust the gate)?
-3. **P2 when offline model is off:** refuse, or allow the local model to load for those questions? (Recommended: allow local.)
-4. **Encryption unlock:** TPM only (no prompt), or TPM plus passphrase at login?
-5. **Tags:** do you want a way to mark a note, file or topic as "never leaves"? (Recommended: yes.)
-6. **Order:** start with encrypted storage (independent and useful now), or with the cloud route?
+| # | Question | Answer |
+| :--- | :--- | :--- |
+| 1 | Providers and money | Use any free tier with a big context window; any cloud model is preferred over the local model. (Plan: Gemini free for public questions, Groq free for redacted personal questions if its terms hold, Claude and Perplexity only if the owner later adds a paid cap.) No paid spend until the owner sets a cap. |
+| 2 | Personal-light (P1) behaviour | **Trust the gate**: no dialog; every request is logged in the ledger and shown on the Privacy page. Because the gate then has no human check, P1 is limited to providers with a no-training record, the redaction corpus must be strict, and an unsure question is rounded up to a stricter class. |
+| 3 | Stay-local (P2) when the local model is off | Recommended option accepted: the local model loads on demand for these questions. |
+| 4 | Encryption unlock | **TPM only** (no passphrase). Consequence to accept: if the laptop's board or TPM is replaced or reset, the encrypted data cannot be opened. A sealed backup recovery key, stored offline by the owner, is therefore part of S01. |
+| 5 | "Never leaves" tags | Recommended option accepted: yes, a tag marks a note, file or topic as P2. Kept simple for now. |
+| 6 | When to start | **Plan only. Wait for the owner's instruction before any work.** |
 
 ## 11. What does not change
 
