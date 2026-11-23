@@ -80,7 +80,9 @@ cov: build
     trap restore EXIT
     cargo llvm-cov clean --workspace
     # Benchmark harnesses in bench/ are measuring tools, not product code: excluded from the gate.
-    cargo llvm-cov nextest --workspace --exclude neuroos-bench-ipc-stream --exclude neuroos-bench-storage-scan --exclude neuroos-bench-kernel-check --locked --fail-under-lines 80
+    # `neuroos-octopit` is the GTK drawing layer (ADR-0017): it needs a display, so it is checked by the
+    # screenshot review and scripts/check-octopit.sh; every rule it follows lives in `neuroos-octopit-core`, which is covered.
+    cargo llvm-cov nextest --workspace --exclude neuroos-octopit --exclude neuroos-bench-ipc-stream --exclude neuroos-bench-storage-scan --exclude neuroos-bench-kernel-check --locked --fail-under-lines 80
     # Child processes started with a cleared environment write default-named profiles into the crate folders.
     find crates -name '*.profraw' -delete
     rm -rf cpp/build/coverage

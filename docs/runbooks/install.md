@@ -22,11 +22,11 @@ This runbook covers clean, production installation of Semantic-NeuroOS v1.0.0 on
 1. Build or download the release `.deb`:
    ```bash
    just deb
-   # Output placed in dist/semantic-neuroos_1.0.0_amd64.deb
+   # Output placed in dist/semantic-neuroos_1.1.0_amd64.deb
    ```
 2. Install the package using `apt` or `dpkg`:
    ```bash
-   sudo apt install -y ./dist/semantic-neuroos_1.0.0_amd64.deb
+   sudo apt install -y ./dist/semantic-neuroos_1.1.0_amd64.deb
    ```
 3. Verify installed binaries and system units:
    ```bash

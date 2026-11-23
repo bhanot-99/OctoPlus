@@ -203,7 +203,7 @@ EOF
 chmod 0644 "$staging/usr/share/doc/semantic-neuroos/copyright"
 
 echo "=== 6. Building Debian package ==="
-deb_file="$dist/semantic-neuroos_1.0.0_amd64.deb"
+deb_file="$dist/semantic-neuroos_1.1.0_amd64.deb"
 # Same bytes for the same inputs: every file and link gets the fixed date, and the archive is xz.
 find "$staging" -print0 | xargs -0 touch -h -d "@$SOURCE_DATE_EPOCH"
 dpkg-deb --build --root-owner-group -Zxz "$staging" "$deb_file"

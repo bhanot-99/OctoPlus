@@ -1775,7 +1775,7 @@ dependencies = [
 
 [[package]]
 name = "neuroos-octopit"
-version = "0.1.0"
+version = "1.1.0"
 dependencies = [
  "gtk4",
  "neuroos-common",
@@ -1789,7 +1789,7 @@ dependencies = [
 
 [[package]]
 name = "neuroos-octopit-core"
-version = "0.1.0"
+version = "1.1.0"
 dependencies = [
  "neuroos-common",
  "neuroos-ipc",

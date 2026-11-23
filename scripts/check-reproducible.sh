@@ -89,7 +89,7 @@ fi
 echo "Verified: the fetcher service restricts address families."
 
 echo "=== 5. The .deb assembled twice from the same inputs ==="
-deb="$root/dist/semantic-neuroos_1.0.0_amd64.deb"
+deb="$root/dist/semantic-neuroos_1.1.0_amd64.deb"
 sums=()
 for _ in 1 2; do
   "$root/scripts/package-deb.sh" --skip-build >/dev/null
