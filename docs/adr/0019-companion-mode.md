@@ -16,7 +16,8 @@ The owner wants a companion: it talks a few times an hour, chats and jokes, and 
 3. Open-microphone **sessions** (wake word, mic button, or the companion's own opening) continue without the wake word, with visible state, earcons, timeouts, stop phrases, a guest mode and a directedness check. Audio is never stored.
 4. A **Pulse scheduler** starts talks (target 2 to 4 an hour) under hard caps and quiet rules, and learns from the owner's reactions.
 5. Casual talk uses a fast banter route; first-sound target for casual replies is about 1.5 s at p50.
-6. Facts about the owner follow R0-8 unless the owner chooses the recommended "ask once, then remember".
+6. Facts about the owner are saved on an explicit "remember" always, and otherwise by a chance rule (about 40-50%, weighted by how personal it sounds) with fixed exclusions (secrets, health, money, ambient or other people's speech); fully transparent (list, forget, markers), seeded and testable. R0-8 is reworded accordingly.
+6a. Language: English first; Hinglish after a spike on the owner's own recordings (the models for fluent Hinglish speech and text are the weak point).
 7. Everything is voice-only in conversation; OctoPit shows state and controls.
 
 ## Consequences

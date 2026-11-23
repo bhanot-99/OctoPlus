@@ -15,7 +15,11 @@
 | 5 | Name and personality | **To be given by the owner later** (the persona file is built so these drop in) |
 | 6 | Where it talks | **Voice only** (OctoPit only shows status and controls, no chat for this) |
 
-Still open, to be answered before the stories that need them: language (English only, or Hindi and Hinglish? see §9), quiet hours, topics to avoid, whether to relax "personal facts only on your word" (R0-8) to "ask once, then remember" (recommended, §6).
+Answered later the same day:
+- **Language:** the owner prefers **Hinglish**, and doubts that good fluent options exist. See §9a: the plan is English first, Hinglish as a language pack after a short test (a spike) on the owner's own voice.
+- **Memory:** *remember on explicit request: always; otherwise remember by chance, about 40-50% of the time, so it feels natural* (no "ask once"). See §6.
+
+Still open: quiet hours and topics to avoid (the owner will give them with the persona).
 
 ## 2. What "alive" means here (the target)
 
@@ -86,9 +90,14 @@ Decides **when** to start a talk. Target 2 to 4 talks an hour while the owner is
 - The companion's "feelings" about you (preferences, rhythm) are small numbers and counters, no content.
 - With the optional cloud plan (Phase 12, on hold) none of this changes: the privacy gate would classify companion text too.
 
-## 6. Memory of you (decision needed before S05)
+## 6. Memory of you (owner decision 2026-11-23)
 
-Today personal facts are saved only on your word (R0-8). A friend that remembers needs less ceremony. **Recommended:** keep R0-8 but change the word from "explicit command" to *"ask once, then remember"*: when you tell it something that sounds like a lasting fact ("my sister's name is Riya", "I work at night"), it says "want me to remember that?"; a yes saves it, a no is remembered as "don't ask about this". Nothing is saved from ambient speech. The owner decides; the plan works either way.
+- **When the owner says "remember ..." (or equivalent): always saved**, and it says so.
+- **Otherwise it remembers by chance, about 40-50% of the time**, so it feels like a friend (some things stick, some do not). It does not ask. The chance is weighted by how personal or memorable the thing sounds (a name, a plan, a feeling count more than small talk) and averages the owner's 40-50% target; the target is one setting the owner can change.
+- **Never auto-remembered, ever:** passwords and keys, card or account numbers, health details, anything said by someone other than the owner or heard from a TV or call (ambient speech), anything about other people's private matters, and anything in a topic the owner marked sensitive. These need an explicit "remember".
+- **Transparent, so randomness never hides anything:** "what do you remember?" lists it; "forget that" and "forget everything about X" work at once; OctoPit gets a Memory list (read, search, delete) and shows which memories were saved by request and which by chance; it sometimes says "got it" when it keeps something.
+- **Testable:** the chance uses a seeded random generator whose seed and decisions are logged (counts only, no content), so tests can prove the average stays between 40% and 50% over many events, that exclusions are never saved, and that explicit requests are always saved.
+- **Rule change:** R0-8 ("personal facts are saved only on the user's word") becomes "personal facts are saved on the user's word, or by the companion's chance rule within the exclusions above". Recorded in ADR-0019 when work starts.
 
 ## 7. Stories (build order; each ends with tests, a gate run, a report; builder and checker as in the project; each starts only when the owner names it)
 
@@ -103,6 +112,7 @@ Today personal facts are saved only on your word (R0-8). A friend that remembers
 | C-S06 | OctoPit: session indicator, companion card, settings, today's talks, feedback buttons | S02, S03 | Screenshots in both themes; controls work live |
 | C-S07 | Speed work: warm engine, streaming pieces, latency to target | S01 | p50 first sound about 1.5 s on casual replies, measured with the baseline script |
 | C-S08 | Safety verification: actions guard (companion speech cannot dispatch), open-mic privacy checks (no audio written), injection tests, log scan | all | Security report; gate green |
+| C-S10 | Hinglish spike and language pack (see §9a): record, compare speech-to-text and text-to-speech candidates on the owner's voice, decide, then build the pack with transliteration for speech | S01, S02 and the Mac memory budget | Owner-rated comparison on own recordings; a written decision; then a pack the owner can talk to for 10 minutes without repeats |
 | C-S09 | Soak and trial: 24 h soak in companion mode, then the owner's one-week "aliveness" trial with daily ratings | all | Report with the measured numbers and the owner's ratings |
 
 Rough size: a few weeks of focused work in total; S01 to S03 are the core. The Mac port comes after (or instead of redoing Linux-only parts).
@@ -119,9 +129,18 @@ Rough size: a few weeks of focused work in total; S01 to S03 are the core. The M
 - **Annoyance** is the main product risk: mitigated by the caps, the quiet rules and the learning, and by the owner's "not now".
 - **Open-mic false triggers and others' speech:** limited by directedness, the actions guard, guest mode and not storing audio. Guests should be told.
 - **CPU and battery:** always-on VAD already exists; sessions add speech to text only while active. Measure on battery.
-- **Language:** the current speech-to-text model is English only. If the owner wants Hindi or Hinglish, S02 needs a multilingual model and voice. **Please say which language(s).**
+- **Language:** the current speech-to-text model is English only; Hinglish is handled in §9a and story C-S10.
 - **Attachment and manners:** the persona rules keep it honest and non-manipulative.
 - **Quality of "who is speaking":** no voice-print identification is planned (it would be biometric data); revisit only if the owner asks.
+
+## 9a. Hinglish (owner prefers it; research 2026-11-23, sources self-reported, no neutral benchmark found)
+
+The honest picture: **good Hinglish conversation is the hardest part of this plan.** A fluent friend in Hinglish needs three things to work together, and today only the third is close.
+1. **Hearing it (speech to text).** The current model (whisper-tiny, English only) cannot. Candidates: Whisper fine-tunes for Hinglish ([Trelis whisper-hinglish-preview](https://huggingface.co/Trelis/whisper-hinglish-preview), Shunya Labs hinglish-whisper-medium) and Indian speech APIs such as Sarvam. The fine-tunes are medium or large models (about 1.5 GB or more), so they do not fit the voice memory budget (800 MiB) on this laptop; on the MacBook's shared memory they should.
+2. **Saying it (text to speech).** Kokoro (the current voice) has a Hindi mode of unproven quality. Candidates: Dhvani TTS (one voice, accepts Roman and Devanagari mixed text), an IndicF5-based Hinglish pipeline, Indic Parler-TTS. Mixed Roman Hinglish text sounds wrong in an English voice, so the pipeline must turn the Hindi words into Devanagari (transliteration) before speaking.
+3. **Thinking in it (the language model).** The small local model writes weak Hinglish. Cloud models (Gemini, Claude) write good Hinglish. This is one more argument for the optional cloud plan (Phase 12) or a larger Mac model.
+
+**Plan:** ship English first. Then run a one-day **Hinglish spike** (story C-S10): the owner records about 30 minutes of normal Hinglish speech and sample lines; we compare the candidate speech-to-text and text-to-speech models on those recordings (accuracy, speed, memory) and write the result down; only then decide the Hinglish language pack. Until then the companion can already speak Hinglish-flavoured English (it mixes in a few Hindi words in the persona) without needing new models.
 
 ## 10. What does not change
 
