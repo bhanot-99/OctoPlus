@@ -116,6 +116,20 @@ if [[ -f "$dev_bin/neuroos-octopit" ]]; then
   install -m 0644 "$root/crates/neuroos-octopit/assets/icons/hicolor/symbolic/apps/neuroos-octopit-symbolic.svg" \
     "$HOME/.local/share/icons/hicolor/symbolic/apps/neuroos-octopit-symbolic.svg"
   echo "Installed OctoPit launcher entry and icons"
+
+  # Keyboard shortcut Super+Shift+O (COSMIC only). Added once; never replaces a binding the user already has.
+  cosmic_custom="$HOME/.config/cosmic/com.system76.CosmicSettings.Shortcuts/v1/custom"
+  octopit_key='(modifiers: [Super, Shift], key: "o")'
+  if [[ -f "$cosmic_custom" ]]; then
+    if grep -qF "$octopit_key" "$cosmic_custom"; then
+      echo "OctoPit shortcut (Super+Shift+O) already set, left as is"
+    else
+      cp "$cosmic_custom" "$cosmic_custom.bak-octopit"
+      sed -i '$ d' "$cosmic_custom"
+      printf '    %s: Spawn("%s"),\n}\n' "$octopit_key" "$HOME/.local/bin/neuroos-octopit" >> "$cosmic_custom"
+      echo "Added OctoPit shortcut Super+Shift+O (backup: $cosmic_custom.bak-octopit)"
+    fi
+  fi
 fi
 
 if [[ -d "$root/cpp/build/release" ]]; then

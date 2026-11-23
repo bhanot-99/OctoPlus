@@ -47,7 +47,8 @@ case "$1" in
       systemctl daemon-reload || true
     fi
 
-    echo "Semantic-NeuroOS 1.0.0 installed successfully."
+    version="$(dpkg-query -W -f='${Version}' semantic-neuroos 2>/dev/null || true)"
+    echo "Semantic-NeuroOS${version:+ $version} installed successfully."
     echo "To complete user setup, run: neuroosctl init"
     ;;
   abort-upgrade|abort-remove|abort-deconfigure)
