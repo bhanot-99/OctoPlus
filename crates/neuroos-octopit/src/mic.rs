@@ -46,6 +46,7 @@ const fn glyph_for(v: &VoiceView) -> &'static str {
 }
 
 /// What to say under the button for each state.
+#[allow(dead_code)] // used by the v2 Overview page
 const fn hint_for(s: VoiceState) -> &'static str {
     match s {
         VoiceState::Idle | VoiceState::FollowUp => {
@@ -163,7 +164,8 @@ impl MicFab {
         self.mic.refresh(v);
         self.pill.set_text(v.label());
         // The state word is shown only when something is happening or wrong, to stay calm.
-        self.pill.set_visible(!matches!(v.state, VoiceState::Idle | VoiceState::FollowUp));
+        self.pill
+            .set_visible(!matches!(v.state, VoiceState::Idle | VoiceState::FollowUp));
     }
 
     /// Shows or hides the whole button (hidden on Overview, which has the voice card).
@@ -173,6 +175,7 @@ impl MicFab {
 }
 
 /// The big gradient voice card for Overview: the mic, its state in words, a level meter.
+#[allow(dead_code)] // used by the v2 Overview page
 pub struct VoiceCard {
     root: gtk::Box,
     mic: MicButton,
@@ -181,6 +184,7 @@ pub struct VoiceCard {
     level: gtk::ProgressBar,
 }
 
+#[allow(dead_code)] // used by the v2 Overview page
 impl VoiceCard {
     /// Builds the card.
     #[must_use]

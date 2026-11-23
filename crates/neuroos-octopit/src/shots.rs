@@ -106,7 +106,11 @@ fn next(w: Rc<Window>, steps: Steps, dir: String, app: gtk::Application) {
     glib::timeout_add_local_once(Duration::from_millis(wait), move || {
         let name = format!(
             "{dir}/{}-{}.png",
-            if theme == Theme::Dark { "dark" } else { "light" },
+            if theme == Theme::Dark {
+                "dark"
+            } else {
+                "light"
+            },
             page.key()
         );
         let w2 = Rc::clone(&w);
@@ -120,7 +124,12 @@ fn next(w: Rc<Window>, steps: Steps, dir: String, app: gtk::Application) {
                     let w3 = Rc::clone(&w2);
                     glib::timeout_add_local_once(Duration::from_millis(600), move || {
                         let w4 = Rc::clone(&w3);
-                        save_retry(&w3, end_name, Box::new(move || next(w4, steps, dir, app)), 4);
+                        save_retry(
+                            &w3,
+                            end_name,
+                            Box::new(move || next(w4, steps, dir, app)),
+                            4,
+                        );
                     });
                 } else {
                     next(w2, steps, dir, app);

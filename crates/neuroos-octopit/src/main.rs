@@ -6,11 +6,15 @@
 #![allow(clippy::print_stdout, clippy::print_stderr)] // a command line program: --version, --help and the screenshot tool print
 
 mod app;
+mod charts;
 mod mic;
 mod pages;
 mod palette;
 mod shots;
 mod theme;
+mod tokens {
+    include!(concat!(env!("OUT_DIR"), "/tokens.rs"));
+}
 mod welcome;
 mod widgets;
 

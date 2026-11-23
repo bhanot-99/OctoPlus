@@ -68,7 +68,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let series = tokens["octopit"]["series"]
         .as_array()
         .ok_or("tokens octopit.series missing")?;
-    let mut rs = String::from("/// Chart series colours from `ui/tokens/tokens.json`.\npub const SERIES: [&str; 8] = [\n");
+    let mut rs = String::from(
+        "/// Chart series colours from `ui/tokens/tokens.json`.\npub const SERIES: [&str; 8] = [\n",
+    );
     for c in series.iter().take(8) {
         let c = c.as_str().ok_or("series colour is not a string")?;
         writeln!(rs, "    \"{c}\",")?;

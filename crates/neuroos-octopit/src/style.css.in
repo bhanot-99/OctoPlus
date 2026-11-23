@@ -49,7 +49,8 @@ headerbar.octopit-header {
 }
 .tab:hover { color: @oct_text; border-color: @oct_border; }
 .tab.active { background: @oct_ink; color: @oct_ink_fg; }
-.tab.active image { color: @oct_ink_fg; }
+.tab label { color: inherit; }
+.tab.active image, .tab.active label { color: @oct_ink_fg; }
 .tab:focus-visible, .rail-btn:focus-visible, .search-pill:focus-visible { outline: 2px solid @oct_a; outline-offset: 2px; }
 .search-pill {
   border-radius: 999px;
@@ -107,6 +108,7 @@ headerbar.octopit-header {
 }
 .rail-btn:hover { background: @oct_surface_soft; color: @oct_text; }
 .rail-btn.active { background: @oct_ink; color: @oct_ink_fg; }
+.rail-btn.active image { color: @oct_ink_fg; }
 
 /* ---- surfaces ---- */
 .page { padding: 8px 28px 28px 8px; }
@@ -323,3 +325,14 @@ window.compact .title-page { font-size: 1.7em; }
 window.compact .card { padding: 14px 14px; }
 window.compact .hero { padding: 14px 14px; }
 window.compact .tab { padding: 6px 10px; }
+
+/* ---- charts (agy) ---- */
+.series-0 { background-color: @oct_a; }
+.series-1 { background-color: @oct_b; }
+.series-2 { background-color: @oct_c; }
+.series-3 { background-color: @oct_d; }
+.series-4 { background-color: @oct_ok; }
+.series-5 { background-color: @oct_ok; }
+.series-6 { background-color: @oct_warn; }
+.series-7 { background-color: @oct_text3; }
+

@@ -38,6 +38,8 @@ pub struct Window {
     nav_labels: Vec<gtk::Label>,
     rail_btns: Vec<(PageId, gtk::Button)>,
     search_label: gtk::Label,
+    brand_label: gtk::Label,
+    narrow: Cell<bool>,
     compact: Cell<bool>,
     pages: Vec<(PageId, Box<dyn Page>)>,
     pill_dot: gtk::Box,
@@ -143,10 +145,19 @@ impl Window {
                 w.show_toast(t);
             }
         });
+        let ask_cell: Rc<RefCell<Option<Rc<Window>>>> = Rc::clone(&nav_cell);
+        let ask: Rc<dyn Fn(&str)> = Rc::new(move |q| {
+            let win = ask_cell.borrow().clone();
+            if let Some(w) = win {
+                w.show_page(PageId::Chat);
+                w.ask(q);
+            }
+        });
         let ctx = Ctx {
             controller: controller.clone(),
             navigate,
             toast,
+            ask,
             state: Rc::clone(&state),
         };
 
@@ -188,9 +199,9 @@ impl Window {
         header.set_show_title_buttons(true);
         let brand = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         brand.append(&icon("neuroos-octopit", 28));
-        brand.append(&label("OctoPit", &["brand"]));
+        let brand_label = label("OctoPit", &["brand"]);
+        brand.append(&brand_label);
         brand.set_margin_end(12);
-        header.pack_start(&brand);
 
         let tabs = gtk::Box::new(gtk::Orientation::Horizontal, 6);
         let mut nav = Vec::new();
@@ -209,14 +220,12 @@ impl Window {
             tabs.append(&b);
             nav.push((id, b));
         }
-        header.set_title_widget(Some(&tabs));
 
         let avatar = gtk::Button::new();
         avatar.add_css_class("avatar");
         avatar.set_child(Some(&icon("neuroos-octopit-symbolic", 18)));
         avatar.set_tooltip_text(Some("Settings"));
         avatar.update_property(&[gtk::accessible::Property::Label("Settings")]);
-        header.pack_end(&avatar);
         let pill = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         pill.add_css_class("pill");
         pill.add_css_class("loading");
@@ -224,7 +233,6 @@ impl Window {
         let pill_text = label("Connecting\u{2026}", &[]);
         pill.append(&pill_dot);
         pill.append(&pill_text);
-        header.pack_end(&pill);
         let search = gtk::Button::new();
         search.add_css_class("search-pill");
         let search_row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
@@ -234,7 +242,21 @@ impl Window {
         search.set_child(Some(&search_row));
         search.set_tooltip_text(Some("Search commands (Ctrl+K)"));
         search.update_property(&[gtk::accessible::Property::Label("Search commands")]);
-        header.pack_end(&search);
+        // One full-width row so nothing overlaps: brand | tabs | search, status, settings.
+        let row = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+        row.set_hexpand(true);
+        row.append(&brand);
+        let grow_l = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        grow_l.set_hexpand(true);
+        row.append(&grow_l);
+        row.append(&tabs);
+        let grow_r = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        grow_r.set_hexpand(true);
+        row.append(&grow_r);
+        row.append(&search);
+        row.append(&pill);
+        row.append(&avatar);
+        header.set_title_widget(Some(&row));
         window.set_titlebar(Some(&header));
 
         // Left rail: a vertical pill of round icon buttons.
@@ -257,7 +279,13 @@ impl Window {
         let rail_privacy = rail_button(PageId::Privacy.icon(), "Privacy");
         let rail_settings = rail_button(PageId::Settings.icon(), "Settings");
         let rail_theme = rail_button("octopit-theme-symbolic", "Switch light and dark");
-        for b in [&rail_overview, &rail_search, &rail_privacy, &rail_settings, &rail_theme] {
+        for b in [
+            &rail_overview,
+            &rail_search,
+            &rail_privacy,
+            &rail_settings,
+            &rail_theme,
+        ] {
             rail.append(b);
         }
         rail_btns.push((PageId::Overview, rail_overview.clone()));
@@ -311,6 +339,8 @@ impl Window {
             nav_labels,
             rail_btns,
             search_label,
+            brand_label,
+            narrow: Cell::new(false),
             compact: Cell::new(false),
             pages,
             pill_dot,
@@ -393,7 +423,8 @@ impl Window {
             let w = Rc::downgrade(&win);
             win.window.add_tick_callback(move |window, _| {
                 if let Some(w) = w.upgrade() {
-                    w.set_compact(window.width() < 1000);
+                    w.set_compact(window.width() < 1200);
+                    w.set_narrow(window.width() < 820);
                 }
                 glib::ControlFlow::Continue
             });
@@ -459,6 +490,16 @@ impl Window {
             "<Ctrl><Shift>l",
             Box::new(move || w.set_theme(Theme::Light)),
         );
+    }
+
+    /// Very narrow windows: the brand name and the status words go, the dots and icons stay.
+    fn set_narrow(&self, narrow: bool) {
+        if self.narrow.get() == narrow {
+            return;
+        }
+        self.narrow.set(narrow);
+        self.brand_label.set_visible(!narrow);
+        self.pill_text.set_visible(!narrow);
     }
 
     fn set_compact(&self, compact: bool) {
@@ -619,7 +660,11 @@ impl Window {
     fn toggle_theme(&self) {
         let mut s = self.settings.borrow().clone();
         let dark_now = self.window.has_css_class("dark");
-        s.theme = if dark_now { ThemeChoice::Light } else { ThemeChoice::Dark };
+        s.theme = if dark_now {
+            ThemeChoice::Light
+        } else {
+            ThemeChoice::Dark
+        };
         self.apply_settings(&s);
         self.save_settings(&s);
     }
@@ -651,7 +696,8 @@ impl Window {
                 b.remove_css_class("active");
             }
         }
-        self.mic.set_visible(!(id == PageId::Overview && OVERVIEW_HAS_VOICE_CARD));
+        self.mic
+            .set_visible(!(id == PageId::Overview && OVERVIEW_HAS_VOICE_CARD));
         if let Some((_, p)) = self.pages.iter().find(|(pid, _)| *pid == id) {
             p.shown();
         }
