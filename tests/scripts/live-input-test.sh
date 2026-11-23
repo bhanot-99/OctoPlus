@@ -96,9 +96,14 @@ check "6 questions at once all finish with a done frame" concurrent
 
 echo "== cancel"
 cancel() {
-  "$ctl" ask --once "Write a very long story about a lighthouse keeper." >/dev/null 2>&1 &
+  "$ctl" ask --once "Write a detailed essay of at least 1500 words on the history of the Roman Empire." >"$work/cancel.out" 2>&1 &
   local pid=$!
-  sleep 2
+  # Interrupt as soon as the first words arrive (up to 20 s), not after a fixed wait: the small
+  # model sometimes gives a one-line reply, which a fixed 2 s wait would let finish by itself.
+  for _ in $(seq 1 200); do
+    [[ -s "$work/cancel.out" ]] && break
+    sleep 0.1
+  done
   kill -INT "$pid"
   local rc=0
   wait "$pid" || rc=$?
