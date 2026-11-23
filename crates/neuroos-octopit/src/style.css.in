@@ -235,3 +235,17 @@ window.octopit:not(.reduce-motion) .mic-button.thinking { animation: octopit-bre
 }
 .composer textview:focus-within, .composer textview:focus { outline: none; }
 
+/* ---- backends (agy) ---- */
+.backend-card {
+  min-height: 140px;
+}
+.gpu-gauges {
+  margin: 12px 0;
+}
+.gpu-gauge-col {
+  padding: 8px;
+}
+.gpu-spark-row {
+  margin-top: 12px;
+}
+

@@ -90,6 +90,18 @@ fn next(w: Rc<Window>, steps: Steps, dir: String, app: gtk::Application) {
             Ok(()) => println!("saved {name}"),
             Err(e) => eprintln!("screenshot {name}: {e}"),
         }
-        next(w, steps, dir, app);
+        // A page taller than the window gets a second shot of its end.
+        if w.scroll_to_end() {
+            let end_name = name.replace(".png", "-end.png");
+            glib::timeout_add_local_once(Duration::from_millis(500), move || {
+                match save(&w.window, &end_name) {
+                    Ok(()) => println!("saved {end_name}"),
+                    Err(e) => eprintln!("screenshot {end_name}: {e}"),
+                }
+                next(w, steps, dir, app);
+            });
+        } else {
+            next(w, steps, dir, app);
+        }
     });
 }

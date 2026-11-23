@@ -358,6 +358,24 @@ impl Window {
         }
     }
 
+    /// Scrolls the visible page to its end; returns whether it could scroll at all.
+    pub fn scroll_to_end(&self) -> bool {
+        let Some(child) = self.stack.visible_child() else {
+            return false;
+        };
+        let Some(sw) = child.downcast_ref::<gtk::ScrolledWindow>() else {
+            return false;
+        };
+        let adj = sw.vadjustment();
+        let end = adj.upper() - adj.page_size();
+        if end > 1.0 {
+            adj.set_value(end);
+            true
+        } else {
+            false
+        }
+    }
+
     /// Switches the theme.
     pub fn set_theme(&self, theme: Theme) {
         theme::apply(&self.provider, theme);
