@@ -268,7 +268,8 @@ class VoicePipeline final : public ReplyReceiver {
   std::uint64_t answer_since_ns_ = 0;  // for command_to_answer_audio; 0 once the answer played
   std::atomic<bool> running_{false};
   std::atomic<std::uint32_t> level_permille_{0};
-  // A request from the mic button, handled on the audio thread (which owns the gates).
+  // A start request from the mic button, handled on the audio thread (which owns the gates). Only
+  // start waits here; stop and cancel act at once.
   std::atomic<int> pending_control_{0};
   std::unordered_map<std::string, Clip> clips_;
   PipelineStats stats_;

@@ -73,6 +73,8 @@ pub fn sanitize_model_text(raw: &str) -> String {
             continue;
         }
         let c = match c {
+            // A CRLF pair is one line break, not two.
+            '\r' if chars.peek() == Some(&'\n') => continue,
             '\r' => '\n',
             other => other,
         };
@@ -292,7 +294,9 @@ mod tests {
     fn real_text_survives() {
         let s = "Delhi \u{092E}\u{094C}\u{0938}\u{092E}: 21\u{00B0}C \u{1F31E}\n\tline two";
         assert_eq!(sanitize_model_text(s), s);
-        assert_eq!(sanitize_model_text("a\r\nb"), "a\n\nb");
+        assert_eq!(sanitize_model_text("a\r\nb"), "a\nb");
+        assert_eq!(sanitize_model_text("a\rb"), "a\nb");
+        assert_eq!(sanitize_model_text("l1\r\nl2\r\nl3"), "l1\nl2\nl3");
     }
 
     #[test]

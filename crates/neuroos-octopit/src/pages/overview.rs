@@ -1,6 +1,7 @@
 //! Overview: is everything healthy, and what is each part doing (docs/design/octopit-ux.md §4.1).
 
-use std::cell::RefCell;
+use std::cell::Cell;
+use std::rc::Rc;
 
 use gtk::prelude::*;
 use gtk4 as gtk;
@@ -35,7 +36,7 @@ pub struct OverviewPage {
     key_memory: gtk::Label,
     key_egress: gtk::Label,
     key_gpu: gtk::Label,
-    attention: RefCell<Option<Part>>,
+    attention: Rc<Cell<Option<Part>>>,
 }
 
 fn key_number(title: &str, value: &gtk::Label) -> gtk::Box {
@@ -145,8 +146,16 @@ impl OverviewPage {
         content.append(&flow);
 
         let navigate = ctx.navigate.clone();
-        let attention: RefCell<Option<Part>> = RefCell::new(None);
-        hero_button.connect_clicked(move |_| navigate(PageId::Backends));
+        let attention_cell: Rc<Cell<Option<Part>>> = Rc::new(Cell::new(None));
+        let target = Rc::clone(&attention_cell);
+        hero_button.connect_clicked(move |_| {
+            // Models and voice are on Backends; everything else is easier to follow on Activity.
+            let page = match target.get() {
+                Some(Part::Inference | Part::Voice | Part::Storage) => PageId::Backends,
+                _ => PageId::Activity,
+            };
+            navigate(page);
+        });
 
         let root = gtk::ScrolledWindow::new();
         root.set_child(Some(&content));
@@ -163,7 +172,7 @@ impl OverviewPage {
             key_memory,
             key_egress,
             key_gpu,
-            attention,
+            attention: attention_cell,
         }
     }
 
@@ -198,12 +207,12 @@ impl OverviewPage {
         } else {
             "Reading the state of every part".to_owned()
         });
-        *self.attention.borrow_mut() = match snap.headline() {
+        self.attention.set(match snap.headline() {
             Headline::Attention { part, .. } if st.have_snapshot => Some(part),
             _ => None,
-        };
+        });
         self.hero_button
-            .set_visible(self.attention.borrow().is_some());
+            .set_visible(self.attention.get().is_some());
 
         for (part, t) in &self.tiles {
             let Some(c) = snap.parts.iter().find(|p| p.part == *part) else {

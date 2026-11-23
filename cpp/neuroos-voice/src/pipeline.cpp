@@ -752,7 +752,9 @@ Status VoicePipeline::StopListening() {
   if (!running_) {
     return Error{.message = "voice is not running", .retryable = true, .code = kUnavailable};
   }
-  pending_control_ = kControlStop;
+  // Stop and cancel touch only the turn machine and the output, as NotifyDeviceLost does, so they
+  // run now on this thread: they must work even when no microphone frame arrives (review F1).
+  ApplyControl(kControlStop, d_.mono_ns());
   return ok_status();
 }
 
@@ -760,12 +762,13 @@ Status VoicePipeline::CancelTurn() {
   if (!running_) {
     return Error{.message = "voice is not running", .retryable = true, .code = kUnavailable};
   }
-  pending_control_ = kControlCancel;
+  ApplyControl(kControlCancel, d_.mono_ns());
   return ok_status();
 }
 
-// Runs on the audio thread, which owns the gates: the same steps as a heard wake phrase, or the
-// same as a lost device for a cancel. Nothing here touches audio data.
+// Start runs on the audio thread, which owns the gates: the same steps as a heard wake phrase.
+// Stop and cancel run on any thread: the same steps as a lost device. Nothing here touches audio
+// data.
 void VoicePipeline::ApplyControl(int control, std::uint64_t now) {
   TurnState state = TurnState::kIdle;
   {

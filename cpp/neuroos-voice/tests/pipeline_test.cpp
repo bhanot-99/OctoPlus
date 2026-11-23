@@ -811,6 +811,32 @@ TEST(VoicePipeline, CancelWhileSpeakingStopsTheVoiceAndCancelsTheRequest) {
   EXPECT_FALSE(r.p->status().turn_in_progress);
 }
 
+// Review F1: cancel and stop must work with no microphone frame arriving at all.
+TEST(VoicePipeline, CancelWhileSpeakingWorksWithoutAnyNewMicrophoneFrame) {
+  Rig r;
+  r.p->PreloadClips();
+  r.AskByVoice();
+  r.link.receiver->OnSpeak("First sentence. Second sentence. Third sentence.");
+  r.Settle();
+  ASSERT_TRUE(r.p->status().speaking);
+  ASSERT_TRUE(r.p->CancelTurn().ok());
+  EXPECT_EQ(r.sink.flushes, 1) << "flushed at once, no Frames() call";
+  EXPECT_EQ(r.link.cancels, 1);
+  EXPECT_FALSE(r.p->status().speaking);
+}
+
+TEST(VoicePipeline, StopListeningAnswersWithoutAnyNewMicrophoneFrame) {
+  Rig r;
+  ASSERT_TRUE(r.p->StartListening().ok());
+  r.Frames(0, 2);
+  r.stt.text = "remind me to stretch";
+  r.Frames(1000, 20);
+  ASSERT_TRUE(r.p->StopListening().ok());
+  r.Settle();
+  ASSERT_EQ(r.link.commands.size(), 1U);
+  EXPECT_EQ(r.link.commands[0].text, "remind me to stretch");
+}
+
 TEST(VoicePipeline, ASecondPressDuringATurnChangesNothing) {
   Rig r;
   ASSERT_TRUE(r.p->StartListening().ok());
