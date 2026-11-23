@@ -70,14 +70,21 @@ deny:
 
 # Coverage gates, NFR-QA-01: Rust lines >= 80 %, C++ lines >= 70 %. Clean builds only.
 cov: build
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # The Rust tests stop and start the real units; leave NeuroOS the way it was found (as `test` does).
+    was_active=0
+    systemctl --user is-active --quiet neuroos.target && was_active=1
+    restore() { if [[ $was_active == 1 ]]; then systemctl --user start neuroos.target || true; fi; }
+    trap restore EXIT
     cargo llvm-cov clean --workspace
     # Benchmark harnesses in bench/ are measuring tools, not product code: excluded from the gate.
     cargo llvm-cov nextest --workspace --exclude neuroos-bench-ipc-stream --exclude neuroos-bench-storage-scan --exclude neuroos-bench-kernel-check --locked --fail-under-lines 80
     # Child processes started with a cleared environment write default-named profiles into the crate folders.
     find crates -name '*.profraw' -delete
     rm -rf cpp/build/coverage
-    cd cpp && cmake --preset coverage && cmake --build --preset coverage --parallel
-    cd cpp && ctest --preset coverage --no-tests=error
+    (cd cpp && cmake --preset coverage && cmake --build --preset coverage --parallel)
+    (cd cpp && ctest --preset coverage --no-tests=error)
     gcovr --root cpp --filter 'cpp/libneuroos/src/' --filter 'cpp/neuroos-inference/src/' --filter 'cpp/neuroos-voice/src/' --object-directory cpp/build/coverage \
         --gcov-ignore-parse-errors=negative_hits.warn --fail-under-line 70 --print-summary
 
@@ -145,7 +152,24 @@ check-reproducible:
 
 # Run the three security proofs and check egress isolation (P1-S01..S04).
 sc:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # The proofs stop the real units. The egress check needs them running, so start them again
+    # first, and leave NeuroOS the way it was found at the end (as `test` does).
+    was_active=0
+    systemctl --user is-active --quiet neuroos.target && was_active=1
+    restore() { if [[ $was_active == 1 ]]; then systemctl --user start neuroos.target || true; fi; }
+    trap restore EXIT
     cargo nextest run -p neuroos-testkit --test local_sc_proof_1_net --test local_sc_proof_2_socket_map --test local_sc_proof_3_landlock
+    systemctl --user start neuroos.target
+    for _ in $(seq 1 90); do
+      all=1
+      for u in healthd storage inference knowledge kernel monitor voice; do
+        systemctl --user is-active --quiet "neuroos-$u.service" || all=0
+      done
+      [[ $all == 1 ]] && break
+      sleep 1
+    done
     scripts/check-egress.sh
 
 # Free disk: remove build output.
