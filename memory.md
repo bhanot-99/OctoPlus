@@ -13,7 +13,7 @@
 | Last updated | 2026-11-23 |
 | Project stage | **Post-cleanup** (2026-11-23): Phases 0-7 hold; the hardening audit, the voice upgrade (D-55) and the cleanup (D-56) are merged into `main` and pushed (`3eb7a27`); hosted CI is green for the first time. Phases 8-10 stay in gate review until the owner steps are done. |
 | Current phase | Phases 8-10 in gate review |
-| Current story | None on `main`. The GUI Cockpit (OctoPit, D-57) is built by another session on branch `cockpit` in its own worktree |
+| Current story | None on `main`. OctoPit (D-57, the GUI dashboard) is built on branch `cockpit` (worktree `Semantic-NeuroOS-cockpit`), ready to merge: run `just ci` on `main` after the merge |
 | Overall progress | 8 / 11 phases signed off on real evidence (0-7); 8-10 need owner steps (24 h soak, two-week trial, `.deb` install, fresh-VM proof) and sign-off |
 | Health | 🟩 Local gate (`just ci`, 16:21-16:55) and hosted CI green on `3eb7a27`; 🟨 24 h soak not run (stopped by the owner for the voice upgrade); owner trial and sign-offs open |
 | Next milestone | Restart the 24 h soak on the final code (after the OctoPit changes to C1 and the proto, if any, are merged); the owner items listed in D-56 |

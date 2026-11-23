@@ -1,7 +1,5 @@
 //! Chart and decoration widgets for the OctoPit v2 visual language (docs/design/octopit-ux.md §10).
 
-#![allow(dead_code)] // used by the v2 pages
-
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::time::{Duration, Instant};

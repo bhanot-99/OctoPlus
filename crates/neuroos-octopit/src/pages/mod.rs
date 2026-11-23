@@ -92,7 +92,6 @@ pub struct Ctx {
     /// Shows a short notice.
     pub toast: Rc<dyn Fn(&str)>,
     /// Opens Chat and asks a question as if it had been typed.
-    #[allow(dead_code)] // used by v2 Overview quick questions
     pub ask: Rc<dyn Fn(&str)>,
     /// The shared state (read it in `refresh`; the window owns writes).
     pub state: Rc<RefCell<AppState>>,

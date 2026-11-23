@@ -1,7 +1,5 @@
 //! The First-Run Welcome window (docs/design/octopit-ux.md §4.7).
 
-#![allow(dead_code)]
-
 use std::cell::Cell;
 use std::rc::Rc;
 

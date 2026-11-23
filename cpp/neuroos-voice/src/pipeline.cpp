@@ -389,15 +389,19 @@ void VoicePipeline::OnAudio(std::span<const std::int16_t> samples) {
   }
 }
 
-void VoicePipeline::ProcessFrame(std::span<const std::int16_t> frame) {
-  const std::uint64_t now = d_.mono_ns();
-  // The loudness of this frame for the level meter: a number between 0 and 1000, never audio.
+// The loudness of one frame for the level meter: a number between 0 and 1000, never audio.
+void VoicePipeline::UpdateLevel(std::span<const std::int16_t> frame) {
   double energy = 0.0;
   for (const std::int16_t s : frame) {
     energy += static_cast<double>(s) * static_cast<double>(s);
   }
   const double rms = frame.empty() ? 0.0 : std::sqrt(energy / static_cast<double>(frame.size()));
   level_permille_ = static_cast<std::uint32_t>(std::min(1000.0, rms * 1000.0 / 6000.0));
+}
+
+void VoicePipeline::ProcessFrame(std::span<const std::int16_t> frame) {
+  const std::uint64_t now = d_.mono_ns();
+  UpdateLevel(frame);
   if (const int control = pending_control_.exchange(0); control != 0) {
     ApplyControl(control, now);
   }

@@ -222,6 +222,7 @@ class VoicePipeline final : public ReplyReceiver {
   };
 
   void ProcessFrame(std::span<const std::int16_t> frame);
+  void UpdateLevel(std::span<const std::int16_t> frame);
   void ApplyControl(int control, std::uint64_t now);
   void Feed(const TurnEvent& e);                     // lock held by the caller via FeedLocked
   void Run(const std::vector<TurnAction>& actions);  // no lock held

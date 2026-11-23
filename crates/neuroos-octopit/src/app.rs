@@ -550,25 +550,6 @@ impl Window {
         true
     }
 
-    /// Scrolls the visible page to its end; returns whether it could scroll at all.
-    #[allow(dead_code)]
-    pub fn scroll_to_end(&self) -> bool {
-        let Some(child) = self.stack.visible_child() else {
-            return false;
-        };
-        let Some(sw) = child.downcast_ref::<gtk::ScrolledWindow>() else {
-            return false;
-        };
-        let adj = sw.vadjustment();
-        let end = adj.upper() - adj.page_size();
-        if end > 1.0 {
-            adj.set_value(end);
-            true
-        } else {
-            false
-        }
-    }
-
     fn build_palette(self: &Rc<Self>) {
         use crate::palette::{Command as PaletteCommand, Palette};
         let mut commands: Vec<PaletteCommand> = Vec::new();

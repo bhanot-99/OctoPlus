@@ -1,7 +1,5 @@
 //! The Command Palette dialog (Ctrl+K, docs/design/octopit-ux.md §2).
 
-#![allow(dead_code)]
-
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -75,10 +73,6 @@ pub fn filter(commands_titles: &[String], query: &str) -> Vec<usize> {
 pub struct Palette {
     window: gtk::Window,
     entry: gtk::Entry,
-    commands: Rc<Vec<Command>>,
-    titles: Rc<Vec<String>>,
-    list: gtk::ListBox,
-    filtered_indices: Rc<RefCell<Vec<usize>>>,
 }
 
 impl Palette {
@@ -244,14 +238,7 @@ impl Palette {
             window.add_controller(key_ctrl);
         }
 
-        Self {
-            window,
-            entry,
-            commands,
-            titles,
-            list,
-            filtered_indices,
-        }
+        Self { window, entry }
     }
 
     /// Shows the palette, clearing and focusing the search entry.

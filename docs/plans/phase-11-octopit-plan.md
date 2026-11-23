@@ -1,6 +1,6 @@
 # Phase 11 build plan — The OctoPit (GUI dashboard)
 
-**Branch:** `cockpit` · **Stories:** P11-S01…S08 (to be added to `phases.md` as §14, "After v1.0" moves to §15) · **Report:** `reports/phase-11-octopit.md`
+**Branch:** `cockpit` · **Stories:** P11-S01…S08 (`phases.md` §14) · **Report:** `reports/phase-11-octopit.md`
 **Status:** BUILT 2026-11-23 on branch `cockpit` (see `reports/phase-11-octopit.md` for what is proven and what is not). Owner decided 2026-11-23: name **OctoPit**; it has a dedicated mic button that starts listening and shows voice state. Remaining owner approvals in §9. The visual and interaction design is in `docs/design/octopit-ux.md` (the build follows it).
 **Origin:** the owner asked (2026-11-23) for "a proper GPU dashboard as a face of Semantic NeuroOS", from `docs/octo-plus-vision.md` §5. Scope discussed with the owner: health, text chat, mic button, backends and GPU, "how it's going" (speed, egress, audit). This file is the revised, complete plan.
 
@@ -118,3 +118,11 @@ Claude plans, writes each task, checks every diff and reruns every check; agy bu
 ## 10. Not in scope
 
 Approve buttons, remote or web access, the 3D Memory Galaxy, PhaseLoopNN dials, Mobile Neural Link, Markdown rendering in chat, Flatpak, macOS.
+
+## 11. As built (2026-11-23)
+
+The plan above was followed with these changes, all recorded in ADR-0017 and `reports/phase-11-octopit.md`:
+- The GPU is read by OctoPit itself (`nvidia-smi`), not by C1; C1 and C4 are unchanged.
+- The visual design was replaced after the first build by the owner's v2 redesign (`docs/design/octopit-ux.md` §10); the layout in §1 of the UX spec (sidebar and right voice dock) is superseded by top tabs, a left icon rail, a voice card on Overview and a floating mic button.
+- agy built pages and widgets in bounded tasks and reviewed the result read-only; after the owner's instruction of 2026-11-23 evening, Claude built the rest alone.
+- Not built: Activity time ranges, spoken turns in Chat, pending-approval display, Memory Galaxy, PhaseLoopNN dials.

@@ -18,7 +18,6 @@ pub type SettingsCallback = Box<dyn Fn(&Settings)>;
 type CallbackList = Rc<RefCell<Vec<SettingsCallback>>>;
 
 /// The Settings page.
-#[allow(dead_code)]
 pub struct SettingsPage {
     root: gtk::ScrolledWindow,
     settings: Rc<RefCell<Settings>>,
@@ -275,13 +274,11 @@ impl SettingsPage {
     }
 
     /// Registers a callback to be called whenever settings are modified on the page.
-    #[allow(dead_code)]
     pub fn on_change(&self, f: Box<dyn Fn(&Settings)>) {
         self.callbacks.borrow_mut().push(f);
     }
 
     /// Updates the UI widgets from `s` without triggering `on_change` callbacks.
-    #[allow(dead_code)]
     pub fn set(&self, s: &Settings) {
         *self.settings.borrow_mut() = s.clone();
         self.updating.set(true);

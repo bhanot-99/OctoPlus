@@ -113,6 +113,8 @@ Rather than an open folder of loosely managed scripts, **Octo+ is packaged as a 
 
 ## 5. The Octo+ Cockpit (Native GUI Dashboard)
 
+> **Status 2026-11-23:** built as **OctoPit** with GTK4 (not Slint), as a client that cannot approve anything: ADR-0017, `docs/design/octopit-ux.md`. The 3D Memory Galaxy and the cognitive dials below are not built.
+
 A sleek, hardware-accelerated dashboard (built with Slint / Metal / SwiftUI) that provides full transparency into the operating system:
 
 1. **System Vitals & Neural Load:**
