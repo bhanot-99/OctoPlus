@@ -10,7 +10,7 @@
 
 | Field | Value |
 | :--- | :--- |
-| Last updated | 2026-11-22 |
+| Last updated | 2026-11-23 |
 | Project stage | **Hardening audit** (2026-11-22, branch `hardening-audit`): Phases 0-7 hold; Phases 8-10 reopened — their evidence did not hold up (`reports/hardening-audit-2026-11-22.md`). |
 | Current phase | Phases 8-10 back in gate review |
 | Current story | Audit fixes A-01..A-21 done on the branch; owner items left |
@@ -76,6 +76,7 @@ One line each. Older entries archived to `docs/history/decisions-pre-phase-3.md`
 
 | Date | ID | Decision | ADR |
 | :--- | :--- | :--- | :--- |
+| 2026-11-23 | D-50 | Owner stopped the 24 h soak (run cut short, not a result) to do the **voice upgrade** on branch `voice-upgrade` (shared folder, no worktree: owner said skip it). Baseline run 2 (`reports/bench/voice-baseline-2026-11-23-1046.json`): real answer's first sound 5.3 s median after end of speech (model first words 1.5 s, first voice piece 3.4 s), plus 0.6 s silence wait. Order: 0 baseline, 1 find the cause (4 guesses: splitter waits for text, first piece too long, CPU/memory fight with the model, cold engine), 2 instant answers for easy questions, 3 fix voice delay (gentle: threads, pinning, priority; never pause the model), 4 model start, 5 smarter silence wait. **Pass marks (owner approved):** easy questions real-answer first sound under 1 s; hard questions median at or under 3.5 s (lower is a bonus); slowest few no worse than today; people cut off no more than today; owner listens once, not choppy; KPI-13 routing sets not worse. Measure the cached "let me check" clip and the real answer separately. Restart the soak when the owner says. | 0015 |
 | 2026-11-23 | D-49 | Owner directive (before sleep): keep the fresh re-installed version, remove older files only if it works, then start the 24 h soak. Done: fresh working copy `~/Semantic-NeuroOS`, fresh user-level install from it, all checks green (`reports/clean-install-2026-11-23.md`), old build caches deleted (25 GB), old source folder kept because another Claude session uses it, 24 h soak started 2026-11-23 10:13:53 (ends about 10:14 on the 24th). The system-wide `.deb` install and the fresh-VM proof still need the owner's `sudo`. | — |
 | 2026-11-22 | D-48 | Owner approved the voice system (C2) **for now as the base version**, with room to upgrade later, after a live test of the wake phrase, a spoken turn, the new `neuroosctl voice watch` signal and the echo-loop fix (BUG-126). Known limits accepted: no echo cancellation (only the wake phrase interrupts a spoken answer; `barge_in = speech` for headphones), quiet voice at the microphone needs a sensible capture gain (mic boost was +20 dB, capture +30 dB: lowered to +10 dB and about +13 dB), the speech recogniser can hallucinate on noise, NFR-PERF-02 not re-measured after D-47, KPI-3/4/5 not run on the owner's voice, the spoken nudge (UJ-2) not yet checked. | 0015 |
 | 2026-11-22 | D-47 | Owner asked to start speech before the first whole sentence (NFR-PERF-02). The first spoken piece of an answer may end at a comma, semicolon or colon after 40 characters; later pieces stay whole sentences. Not yet measured live. | — |

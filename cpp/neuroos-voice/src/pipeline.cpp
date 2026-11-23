@@ -525,6 +525,9 @@ void VoicePipeline::QueueSpeech(const std::string& text, bool nudge, std::uint64
       ok = epoch == epoch_;
     }
     if (ok) {
+      if (d_.on_trace) {
+        d_.on_trace("synth_start");
+      }
       auto r = d_.tts->Synthesize(text);
       if (r.ok()) {
         pcm = std::move(r).value();
@@ -667,6 +670,9 @@ void VoicePipeline::OnSpeak(std::string_view text) {
   {
     const std::lock_guard<std::mutex> lock(mu_);
     epoch = epoch_;
+  }
+  if (d_.on_trace) {
+    d_.on_trace("speak_received");
   }
   for (const auto& piece : SplitForSpeech(text, cfg_.max_piece_chars)) {
     QueueSpeech(piece, false, epoch);

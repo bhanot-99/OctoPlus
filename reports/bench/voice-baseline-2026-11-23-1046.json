@@ -1,0 +1,193 @@
+{
+ "turns": [
+  {
+   "stt": 0.059,
+   "to_command": 0.0,
+   "model_first": 0.93,
+   "tts_first": 1.192,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 2.18
+  },
+  {
+   "stt": 0.044,
+   "to_command": 0.0,
+   "model_first": 2.826,
+   "tts_first": 1.227,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 4.097
+  },
+  {
+   "stt": 0.05,
+   "to_command": 0.0,
+   "model_first": 1.542,
+   "tts_first": 4.919,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 6.511
+  },
+  {
+   "stt": 0.029,
+   "to_command": 0.0,
+   "model_first": 0.411,
+   "tts_first": 1.058,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 1.498
+  },
+  {
+   "stt": 0.039,
+   "to_command": 0.0,
+   "model_first": 0.665,
+   "tts_first": 1.277,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 1.981
+  },
+  {
+   "stt": 0.047,
+   "to_command": 0.0,
+   "model_first": 0.758,
+   "tts_first": 1.591,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 2.396
+  },
+  {
+   "stt": 0.052,
+   "to_command": 0.0,
+   "model_first": 1.088,
+   "tts_first": 1.69,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 2.83
+  },
+  {
+   "stt": 0.073,
+   "to_command": 0.0,
+   "model_first": 1.855,
+   "tts_first": 2.952,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 4.88
+  },
+  {
+   "stt": 0.06,
+   "to_command": 0.0,
+   "model_first": 4.786,
+   "tts_first": 3.881,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 8.726
+  },
+  {
+   "stt": 0.053,
+   "to_command": 0.0,
+   "model_first": 0.958,
+   "tts_first": 2.507,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 3.519
+  },
+  {
+   "stt": 0.066,
+   "to_command": 0.0,
+   "model_first": 3.456,
+   "tts_first": 3.207,
+   "to_speaker": 0.001,
+   "preamble": null,
+   "first_sound": 6.73
+  },
+  {
+   "stt": 0.074,
+   "to_command": 0.0,
+   "model_first": 3.079,
+   "tts_first": 3.69,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 6.843
+  },
+  {
+   "stt": 0.076,
+   "to_command": 0.0,
+   "model_first": 1.86,
+   "tts_first": 4.753,
+   "to_speaker": 0.001,
+   "preamble": null,
+   "first_sound": 6.69
+  },
+  {
+   "stt": 0.075,
+   "to_command": 0.0,
+   "model_first": 1.482,
+   "tts_first": 4.471,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 6.029
+  },
+  {
+   "stt": 0.103,
+   "to_command": 0.0,
+   "model_first": 1.56,
+   "tts_first": 5.359,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 7.022
+  },
+  {
+   "stt": 0.087,
+   "to_command": 0.0,
+   "model_first": 2.23,
+   "tts_first": 4.851,
+   "to_speaker": 0.001,
+   "preamble": null,
+   "first_sound": 7.169
+  },
+  {
+   "stt": 0.09,
+   "to_command": 0.0,
+   "model_first": 1.428,
+   "tts_first": 4.141,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 5.659
+  },
+  {
+   "stt": 0.119,
+   "to_command": 0.0,
+   "model_first": 1.789,
+   "tts_first": 4.74,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 6.648
+  },
+  {
+   "stt": 0.077,
+   "to_command": 0.0,
+   "model_first": 0.937,
+   "tts_first": 3.511,
+   "to_speaker": 0.0,
+   "preamble": null,
+   "first_sound": 4.526
+  },
+  {
+   "stt": 0.076,
+   "to_command": 0.0,
+   "model_first": 0.93,
+   "tts_first": 1.191,
+   "to_speaker": 0.001,
+   "preamble": null,
+   "first_sound": 2.197
+  }
+ ],
+ "median": {
+  "stt": 0.0695,
+  "to_command": 0.0,
+  "model_first": 1.512,
+  "tts_first": 3.359,
+  "to_speaker": 0.0,
+  "preamble": null,
+  "first_sound": 5.2695
+ }
+}

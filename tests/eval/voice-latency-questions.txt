@@ -1,0 +1,20 @@
+Hey Jarvis, what is the battery level?
+Hey Jarvis, what time is it?
+Hey Jarvis, what is today's date?
+Hey Jarvis, hello
+Hey Jarvis, thank you
+Hey Jarvis, how is the system doing?
+Hey Jarvis, what is two plus two?
+Hey Jarvis, how much disk space is free?
+Hey Jarvis, how much memory is in use?
+Hey Jarvis, is the network connected?
+Hey Jarvis, what did I work on yesterday?
+Hey Jarvis, summarise my notes about the voice system.
+Hey Jarvis, why is my laptop fan running loudly?
+Hey Jarvis, explain how the knowledge store finds documents.
+Hey Jarvis, what is the difference between RAM and swap?
+Hey Jarvis, which process is using the most memory?
+Hey Jarvis, remind me what the soak test measures.
+Hey Jarvis, what are the privacy rules of this system?
+Hey Jarvis, how do I free up more disk space?
+Hey Jarvis, tell me something about the phases of this project.
