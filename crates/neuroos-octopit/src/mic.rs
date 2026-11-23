@@ -31,6 +31,7 @@ pub struct MicDock {
     state_label: gtk::Label,
     hint: gtk::Label,
     level: gtk::ProgressBar,
+    privacy: gtk::Label,
     action: Rc<Cell<MicAction>>,
     last_state: Cell<Option<VoiceState>>,
 }
@@ -110,6 +111,7 @@ impl MicDock {
         privacy.set_wrap(true);
         privacy.set_xalign(0.0);
         root.append(&privacy);
+        let privacy_keep = privacy.clone();
 
         let action = Rc::new(Cell::new(MicAction::None));
         {
@@ -129,6 +131,7 @@ impl MicDock {
             state_label,
             hint,
             level,
+            privacy: privacy_keep,
             action,
             last_state: Cell::new(None),
         };
@@ -140,6 +143,13 @@ impl MicDock {
     #[must_use]
     pub fn widget(&self) -> gtk::Widget {
         self.root.clone().upcast()
+    }
+
+    /// Narrow layout: a slimmer dock without the long captions.
+    pub fn set_compact(&self, compact: bool) {
+        self.root.set_size_request(if compact { 160 } else { 232 }, -1);
+        self.hint.set_visible(!compact);
+        self.privacy.set_visible(!compact);
     }
 
     /// Presses the button as a click would (the Ctrl+Space shortcut).

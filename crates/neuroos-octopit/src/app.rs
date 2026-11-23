@@ -31,6 +31,9 @@ pub struct Window {
     pub window: gtk::ApplicationWindow,
     stack: gtk::Stack,
     nav: Vec<(PageId, gtk::Button)>,
+    nav_labels: Vec<gtk::Label>,
+    sidebar: gtk::Box,
+    compact: Cell<bool>,
     pages: Vec<(PageId, Box<dyn Page>)>,
     pill_dot: gtk::Box,
     pill_text: gtk::Label,
@@ -157,12 +160,16 @@ impl Window {
         sidebar.add_css_class("sidebar");
         sidebar.set_size_request(188, -1);
         let mut nav = Vec::new();
+        let mut nav_labels = Vec::new();
         for id in PageId::SIDEBAR {
             let b = gtk::Button::new();
             b.add_css_class("nav-item");
+            b.set_tooltip_text(Some(id.title()));
             let row = gtk::Box::new(gtk::Orientation::Horizontal, 10);
             row.append(&icon(id.icon(), 16));
-            row.append(&label(id.title(), &[]));
+            let text = label(id.title(), &[]);
+            nav_labels.push(text.clone());
+            row.append(&text);
             b.set_child(Some(&row));
             b.update_property(&[gtk::accessible::Property::Label(id.title())]);
             sidebar.append(&b);
@@ -213,6 +220,9 @@ impl Window {
             window,
             stack,
             nav,
+            nav_labels,
+            sidebar: sidebar.clone(),
+            compact: Cell::new(false),
             pages,
             pill_dot,
             pill_text,
@@ -250,6 +260,17 @@ impl Window {
             f.connect_clicked(move |_| w.show_page(p));
         }
         win.install_actions(app, controller);
+        {
+            // Narrow windows: icon-only sidebar and a slimmer voice dock (docs/design/octopit-ux.md §2).
+            let w = Rc::downgrade(&win);
+            win.window.add_tick_callback(move |window, _| {
+                if let Some(w) = w.upgrade() {
+                    w.set_compact(window.width() < 900);
+                }
+                glib::ControlFlow::Continue
+            });
+        }
+        win.window.set_focus(None::<&gtk::Widget>);
         win.show_page(PageId::Overview);
         win.redraw_all();
 
@@ -288,6 +309,18 @@ impl Window {
         add("theme-dark", "<Ctrl><Shift>d", Box::new(move || theme::apply(&w.provider, Theme::Dark)));
         let w = Rc::clone(self);
         add("theme-light", "<Ctrl><Shift>l", Box::new(move || theme::apply(&w.provider, Theme::Light)));
+    }
+
+    fn set_compact(&self, compact: bool) {
+        if self.compact.get() == compact {
+            return;
+        }
+        self.compact.set(compact);
+        for l in &self.nav_labels {
+            l.set_visible(!compact);
+        }
+        self.sidebar.set_size_request(if compact { 60 } else { 188 }, -1);
+        self.mic.set_compact(compact);
     }
 
     /// Switches the theme.
