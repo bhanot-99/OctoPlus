@@ -1,0 +1,36 @@
+english  | 31 chars | Generated: 1920 ms of audio in 410 ms so 4.68x faster than real-time RSS=667908KB WALL=1.29s 
+english  | 31 chars | Generated: 1920 ms of audio in 414 ms so 4.64x faster than real-time RSS=668216KB WALL=1.23s 
+english  | 43 chars | Generated: 2720 ms of audio in 556 ms so 4.89x faster than real-time RSS=668276KB WALL=1.39s 
+english  | 43 chars | Generated: 2720 ms of audio in 578 ms so 4.71x faster than real-time RSS=668092KB WALL=1.41s 
+english  | 83 chars | Generated: 4480 ms of audio in 892 ms so 5.02x faster than real-time RSS=667988KB WALL=1.67s 
+english  | 83 chars | Generated: 4480 ms of audio in 920 ms so 4.87x faster than real-time RSS=668168KB WALL=2.22s 
+english_18m_2026-10  | 31 chars | Generated: 2000 ms of audio in 108 ms so 18.52x faster than real-time RSS=241120KB WALL=86.14s 
+english_18m_2026-10  | 31 chars | Generated: 2000 ms of audio in 122 ms so 16.39x faster than real-time RSS=234396KB WALL=0.69s 
+english_18m_2026-10  | 43 chars | Generated: 2720 ms of audio in 167 ms so 16.29x faster than real-time RSS=234940KB WALL=0.75s 
+english_18m_2026-10  | 43 chars | Generated: 2720 ms of audio in 158 ms so 17.22x faster than real-time RSS=234720KB WALL=0.80s 
+english_18m_2026-10  | 83 chars | Generated: 4400 ms of audio in 280 ms so 15.71x faster than real-time RSS=234448KB WALL=0.83s 
+english_18m_2026-10  | 83 chars | Generated: 4400 ms of audio in 406 ms so 10.84x faster than real-time RSS=234888KB WALL=0.94s 
+english_7m_2026-10  | 31 chars | Generated: 1920 ms of audio in 70 ms so 27.43x faster than real-time RSS=154376KB WALL=36.23s 
+english_7m_2026-10  | 31 chars | Generated: 1920 ms of audio in 86 ms so 22.33x faster than real-time RSS=148876KB WALL=0.68s 
+english_7m_2026-10  | 43 chars | Generated: 2720 ms of audio in 187 ms so 14.55x faster than real-time RSS=148552KB WALL=0.70s 
+english_7m_2026-10  | 43 chars | Generated: 2720 ms of audio in 175 ms so 15.54x faster than real-time RSS=148744KB WALL=0.71s 
+english_7m_2026-10  | 83 chars | Generated: 4640 ms of audio in 292 ms so 15.89x faster than real-time RSS=153456KB WALL=0.82s 
+english_7m_2026-10  | 83 chars | Generated: 4640 ms of audio in 359 ms so 12.92x faster than real-time RSS=169068KB WALL=0.98s 
+english --quantize | 31 chars | Generated: 1920 ms of audio in 250 ms so 7.68x faster than real-time RSS=451448KB WALL=1.36s 
+english --quantize | 31 chars | Generated: 1920 ms of audio in 251 ms so 7.65x faster than real-time RSS=451712KB WALL=1.12s 
+english --quantize | 43 chars | Generated: 2720 ms of audio in 338 ms so 8.05x faster than real-time RSS=451076KB WALL=1.21s 
+english --quantize | 43 chars | Generated: 2720 ms of audio in 339 ms so 8.02x faster than real-time RSS=451420KB WALL=1.15s 
+english --quantize | 83 chars | Generated: 4560 ms of audio in 570 ms so 8.00x faster than real-time RSS=451152KB WALL=1.42s 
+english --quantize | 83 chars | Generated: 4560 ms of audio in 589 ms so 7.74x faster than real-time RSS=451456KB WALL=1.37s 
+en_US-lessac-medium | 31 chars | 1741 ms audio in 74 ms = 23.7x | load 0.38s | RSS 174 MB
+en_US-lessac-medium | 31 chars | 1753 ms audio in 57 ms = 30.5x | load 0.38s | RSS 187 MB
+en_US-lessac-medium | 43 chars | 2879 ms audio in 107 ms = 26.9x | load 0.38s | RSS 203 MB
+en_US-lessac-medium | 43 chars | 2786 ms audio in 91 ms = 30.7x | load 0.38s | RSS 203 MB
+en_US-lessac-medium | 83 chars | 4435 ms audio in 163 ms = 27.2x | load 0.38s | RSS 231 MB
+en_US-lessac-medium | 83 chars | 4505 ms audio in 166 ms = 27.1x | load 0.38s | RSS 239 MB
+en_US-ryan-high | 31 chars | 1695 ms audio in 288 ms = 5.9x | load 0.47s | RSS 428 MB
+en_US-ryan-high | 31 chars | 1823 ms audio in 298 ms = 6.1x | load 0.47s | RSS 428 MB
+en_US-ryan-high | 43 chars | 2543 ms audio in 472 ms = 5.4x | load 0.47s | RSS 428 MB
+en_US-ryan-high | 43 chars | 2705 ms audio in 465 ms = 5.8x | load 0.47s | RSS 428 MB
+en_US-ryan-high | 83 chars | 4737 ms audio in 887 ms = 5.3x | load 0.47s | RSS 428 MB
+en_US-ryan-high | 83 chars | 4737 ms audio in 1032 ms = 4.6x | load 0.47s | RSS 488 MB
