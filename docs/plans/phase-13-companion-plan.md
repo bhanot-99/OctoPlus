@@ -1,6 +1,6 @@
 # Phase 13 plan — The Companion: a friend that talks, jokes and chats (voice only)
 
-**Status:** PLANNED, NOT STARTED. The owner answered the decisions in §1 on 2026-11-23 and said: build the whole plan now, then wait for the instruction of what to work on. No code until the owner names a story.
+**Status:** PLANNED, NOT STARTED. The owner answered the decisions in §1 on 2026-11-23 and said: build the whole plan now, then wait for the instruction of what to work on. No code until the owner names a story. **Refined on paper 2026-11-23 (during the second 24 h soak, nothing built, nothing run):** story C-S05 made to match the memory decision in §6, story order fixed, start order and budget notes added (§7a), two risks added (§9). 
 **Branch:** `companion-plan` (docs only). **ADR:** 0019 (Proposed).
 **Origin:** owner: "make it more conversational: it should talk more often, not only useful but like a friend: jokes, normal conversation." Personal use only. A MacBook port is planned later (`macbook-future-target` in project memory), so every design below keeps platform specifics behind small interfaces.
 
@@ -109,14 +109,24 @@ Decides **when** to start a talk. Target 2 to 4 talks an hour while the owner is
 | C-S02 | Open-mic sessions in C2: session state, shorter endpointing, backchannel clips, earcons, timeouts, stop phrases, guest mode, directedness check | S01 | Replay tests with recorded ambient audio: no false actions, session ends on time; first-sound latency target measured |
 | C-S03 | Pulse scheduler in C5: gating, topics, rate learning, voice controls, caps | S01, S02 | Fake-clock simulation: caps never exceeded, quiet hours and focus respected, adapts to "not now" |
 | C-S04 | Humour tuning: feedback loop, repeat avoidance, avoided topics, sensitive-moment rules | S03 | Joke-quality set rated by the owner; no repeats in 200 simulated days |
-| C-S05 | "Ask once, then remember" facts (if the owner chooses), day memory recall, forget commands | S01 | Facts only after a yes; ambient speech never saved; forget works |
+| C-S05 | Memory of you as decided in §6: "remember ..." always saved, other things by chance (about 40-50 %) with the exclusions, "what do you remember", forget commands, day-memory recall | S01 | Explicit requests always saved; chance average between 40 % and 50 % over many events (seeded, counts only); exclusions never saved; ambient speech never saved; forget works at once |
 | C-S06 | OctoPit: session indicator, companion card, settings, today's talks, feedback buttons | S02, S03 | Screenshots in both themes; controls work live |
 | C-S07 | Speed work: warm engine, streaming pieces, latency to target | S01 | p50 first sound about 1.5 s on casual replies, measured with the baseline script |
 | C-S08 | Safety verification: actions guard (companion speech cannot dispatch), open-mic privacy checks (no audio written), injection tests, log scan | all | Security report; gate green |
-| C-S10 | Hinglish spike and language pack (see §9a): record, compare speech-to-text and text-to-speech candidates on the owner's voice, decide, then build the pack with transliteration for speech | S01, S02 and the Mac memory budget | Owner-rated comparison on own recordings; a written decision; then a pack the owner can talk to for 10 minutes without repeats |
 | C-S09 | Soak and trial: 24 h soak in companion mode, then the owner's one-week "aliveness" trial with daily ratings | all | Report with the measured numbers and the owner's ratings |
+| C-S10 | Hinglish spike and language pack (see §9a): record, compare speech-to-text and text-to-speech candidates on the owner's voice, decide, then build the pack with transliteration for speech | S01, S02 and the Mac memory budget | Owner-rated comparison on own recordings; a written decision; then a pack the owner can talk to for 10 minutes without repeats |
 
 Rough size: a few weeks of focused work in total; S01 to S03 are the core. The Mac port comes after (or instead of redoing Linux-only parts).
+
+### 7a. Start order and budget notes (proposal, for the owner to confirm; added 2026-11-23)
+
+**Suggested order:** C-S00 (paper and ADR, can start any time), then C-S01 (text only, so it needs no microphone and no change to the voice daemon), then C-S07 (speed baseline early, so every later story is measured against the same numbers), then C-S02, C-S03, C-S04, C-S05, C-S06, C-S08, C-S09. C-S10 (Hinglish) is a separate spike and can wait for the Mac.
+
+**Budget notes the stories must respect (from the 2026-11-22 soak watch list):**
+- **One model only.** The safety kernel's memory budget for the language model (C4) was already at its limit (2,813 of 2,800 MiB peak). The "fast banter route" in §4.2 therefore means a **short prompt on the model that is already loaded**, not a second model. A second, smaller model is allowed only if the owner approves a new memory budget (a change in the open, as with the voice upgrade).
+- **Voice memory.** C2 peaked at 766 of 800 MiB while speaking. Open-mic sessions keep speech-to-text active for longer, so story C-S02 must measure C2 during a 15-minute session and report it before the story is signed.
+- **Each story starts from a clean soak result.** Do not start C-S01 until the current 24 h soak has been judged, so the companion work is measured against a known good base.
+- **Gate rule unchanged.** Each story ends with a full `just ci` on a worktree (not by switching branches in the shared folder), a report, and the owner's sign-off.
 
 ## 8. How we will measure "alive" and keep it safe
 
@@ -132,6 +142,8 @@ Rough size: a few weeks of focused work in total; S01 to S03 are the core. The M
 - **CPU and battery:** always-on VAD already exists; sessions add speech to text only while active. Measure on battery.
 - **Language:** the current speech-to-text model is English only; Hinglish is handled in §9a and story C-S10.
 - **Attachment and manners:** the persona rules keep it honest and non-manipulative.
+- **Memory budgets:** the model and the voice daemon are both at their limits today (see §7a); a companion that needs a second model or a longer-running speech recogniser can break the soak numbers. Measured in C-S01 and C-S02 before anything is signed.
+- **Long-session attachment:** an open microphone and a warm persona make long sessions easy; the dependence guard in the persona file (`docs/design/companion-persona-laila.md` §5a) has concrete thresholds so it is testable, not a vague intention.
 - **Quality of "who is speaking":** no voice-print identification is planned (it would be biometric data); revisit only if the owner asks.
 
 ## 9a. Hinglish (owner prefers it; research 2026-11-23, sources self-reported, no neutral benchmark found)
