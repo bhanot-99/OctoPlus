@@ -354,7 +354,8 @@ TEST(VoicePipeline, TheFirstPieceOfAnAnswerIsShortAndNothingIsLost) {
   r.p->PreloadClips();
   r.AskByVoice();
   const std::size_t before = r.tts.spoken.size();  // the cached clips were voiced already
-  r.link.receiver->OnSpeak("Your laptop fan may run loudly when the processor is busy, for example.");
+  r.link.receiver->OnSpeak(
+      "Your laptop fan may run loudly when the processor is busy, for example.");
   r.link.receiver->OnSpeak("Try closing heavy programs and see if it quiets down.");
   r.link.receiver->OnFinished(true);
   r.Settle();
