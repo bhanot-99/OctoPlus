@@ -111,7 +111,7 @@ headerbar.octopit-header {
 .rail-btn.active image { color: @oct_ink_fg; }
 
 /* ---- surfaces ---- */
-.page { padding: 8px 28px 28px 8px; }
+.page { padding: 8px 28px 110px 18px; }
 .card {
   background-color: @oct_surface;
   border: 1px solid alpha(@oct_border, 0.6);
@@ -235,8 +235,12 @@ switch slider { background-color: #FFFFFF; border-color: transparent; border-rad
 .composer textview:focus-within, .composer textview:focus { outline: none; }
 .chat-empty { padding: 48px 16px; }
 .chat-example-box { margin-top: 16px; }
-.example-prompt { border-radius: 999px; padding: 10px 18px; background-color: @oct_surface; border: 1px solid @oct_border; color: @oct_text2; font-weight: 600; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04); }
-.example-prompt:hover { border-color: @oct_a; color: @oct_text; }
+.example-prompt { border-radius: 999px; padding: 10px 18px; background-image: none; box-shadow: none; background-color: @oct_surface_soft; border: 1px solid @oct_border; color: @oct_text2; font-weight: 600; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04); }
+.example-prompt:hover { border-color: @oct_a; color: @oct_text; background-color: @oct_surface; }
+.gradient-card progressbar.slim trough { background-color: rgba(255, 255, 255, 0.28); }
+.gradient-card progressbar.slim progress { background-image: none; background-color: #FFFFFF; }
+.gradient-card .mic-button { background-color: #FFFFFF; color: #14161C; }
+.gradient-card .mic-button.listening, .gradient-card .mic-button.speaking { background-image: none; background-color: #14161C; color: #FFFFFF; }
 
 /* ---- the mic: the floating button and the big voice card ---- */
 .mic-button {
@@ -320,7 +324,7 @@ window.octopit entry { background-color: @oct_surface; color: @oct_text; border:
 
 /* ---- narrow windows ---- */
 window.compact .metric { font-size: 1.8em; }
-window.compact .page { padding: 4px 14px 20px 14px; }
+window.compact .page { padding: 4px 14px 100px 14px; }
 window.compact .title-page { font-size: 1.7em; }
 window.compact .card { padding: 14px 14px; }
 window.compact .hero { padding: 14px 14px; }
@@ -339,3 +343,8 @@ window.compact .tab { padding: 6px 10px; }
 /* ---- backends and activity (agy) ---- */
 .gpu-gauges .tile { padding: 12px 10px; }
 
+
+/* ---- chat send button ---- */
+.composer button.btn.primary { background-image: linear-gradient(135deg, @oct_a, @oct_b); background-color: @oct_a; border: none; color: #FFFFFF; }
+.composer button.btn.primary:disabled { opacity: 0.4; }
+.composer button.btn.primary image { color: #FFFFFF; }

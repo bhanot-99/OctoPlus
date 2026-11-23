@@ -62,7 +62,8 @@ impl SettingsPage {
         theme_section.append(&label("Theme", &["title-card"]));
 
         let theme_box = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-        theme_box.add_css_class("linked");
+        theme_box.add_css_class("seg");
+        theme_box.set_halign(gtk::Align::Start);
 
         let btn_system = gtk::ToggleButton::with_label("System");
         btn_system.add_css_class("btn");
@@ -91,7 +92,8 @@ impl SettingsPage {
         text_section.append(&label("Text size", &["title-card"]));
 
         let text_box = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-        text_box.add_css_class("linked");
+        text_box.add_css_class("seg");
+        text_box.set_halign(gtk::Align::Start);
 
         let btn_100 = gtk::ToggleButton::with_label("100%");
         btn_100.add_css_class("btn");

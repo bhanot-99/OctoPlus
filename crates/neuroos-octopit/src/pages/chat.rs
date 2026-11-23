@@ -352,6 +352,7 @@ impl ChatPage {
             &["caption"],
         ));
         root.append(&header_box);
+        crate::widgets::clamp_width(&root, &header_box, 820, 24, 24);
 
         // Scrolled conversation area
         let scrolled = gtk::ScrolledWindow::new();
@@ -370,6 +371,7 @@ impl ChatPage {
         conv_box.update_property(&[gtk::accessible::Property::Label("Conversation")]);
         scrolled.set_child(Some(&conv_box));
         root.append(&scrolled);
+        crate::widgets::clamp_width(&scrolled, &conv_box, 820, 24, 24);
 
         // Empty state
         let empty_state = gtk::Box::new(gtk::Orientation::Vertical, 12);
@@ -429,6 +431,7 @@ impl ChatPage {
         hint.set_xalign(0.5);
         composer_container.append(&hint);
         root.append(&composer_container);
+        crate::widgets::clamp_width(&root, &composer_container, 820, 24, 104);
 
         let inner = Rc::new(ChatPageInner {
             root,

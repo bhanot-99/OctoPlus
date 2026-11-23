@@ -79,6 +79,30 @@ pub fn plain_text(text: &str) -> gtk::Label {
     l
 }
 
+/// Keeps `target` at most `max_px` wide and centred inside `tracker` (GTK has no clamp widget
+/// without libadwaita): the margins follow the tracker's width on every frame it changes.
+/// `min_start` and `min_end` are the smallest margins (the floating mic needs room at the end).
+pub fn clamp_width(
+    tracker: &impl IsA<gtk::Widget>,
+    target: &impl IsA<gtk::Widget>,
+    max_px: i32,
+    min_start: i32,
+    min_end: i32,
+) {
+    let target = target.clone().upcast::<gtk::Widget>();
+    let last = Cell::new(-1);
+    tracker.add_tick_callback(move |t, _| {
+        let w = t.width();
+        if w != last.get() {
+            last.set(w);
+            let side = ((w - max_px) / 2).max(0);
+            target.set_margin_start(side.max(min_start));
+            target.set_margin_end(side.max(min_end));
+        }
+        gtk::glib::ControlFlow::Continue
+    });
+}
+
 /// A themed icon from the bundled set.
 pub fn icon(name: &str, size: i32) -> gtk::Image {
     let i = gtk::Image::from_icon_name(name);

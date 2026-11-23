@@ -9,6 +9,8 @@ OctoPit v1.1.0 is built: a GTK4 desktop dashboard with Overview, Chat, Backends 
 
 What is **not** proven yet is in §6 and §9: the mic button has not been tried against the live voice service (the running C2 predates the new control messages), `just ci` was not run on this branch, the final `.deb` is not built, and no screen reader or two-person walkthrough has been done.
 
+**Update 2026-11-23 (evening): v2 redesign.** At the owner's request the whole UI was redesigned from a reference (airy light canvas, white rounded cards, ink pill tabs, left icon rail, pastel gradients, donut and bar charts, glossy orb, floating mic with a big gradient voice card on Overview). Spec: `docs/design/octopit-ux.md` §10; tokens: `ui/tokens/tokens.json` (`octopit`); chart widgets: `crates/neuroos-octopit/src/charts.rs`. agy built the chart widgets, the Overview, Backends and Activity pages; Claude built the shell, stylesheet, mic faces, Privacy, Chat and Settings restyle and checked every page on screen in light and dark, maximised and at a tiled 918x465 size. After the owner said to take full control, no further work went to agy. Checks after the redesign: clippy `--workspace -D warnings` clean, 114 Rust tests pass, `scripts/check-octopit.sh` ok. Not re-run after the redesign: the install test, TSan, accessibility pass.
+
 ## 2. Stories
 
 | ID | Story | Status | Builder | Checker | Evidence |

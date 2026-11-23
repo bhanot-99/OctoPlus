@@ -87,6 +87,10 @@ pub fn run(win: &Rc<Window>, dir: String, app: &gtk::Application) {
             steps.push((theme, page));
         }
     }
+    // A maximised window gives a roomy, repeatable size for the review.
+    if std::env::var_os("OCTOPIT_SIZE").is_none() {
+        win.window.maximize();
+    }
     let steps: Steps = Rc::new(std::cell::RefCell::new(steps.into_iter()));
     let (w, app) = (Rc::clone(win), app.clone());
     // Give the first poll time to arrive, then one page at a time.

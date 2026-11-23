@@ -49,9 +49,7 @@ const fn glyph_for(v: &VoiceView) -> &'static str {
 #[allow(dead_code)] // used by the v2 Overview page
 const fn hint_for(s: VoiceState) -> &'static str {
     match s {
-        VoiceState::Idle | VoiceState::FollowUp => {
-            "Say \u{201c}hey jarvis\u{201d} or press Ctrl+Space"
-        }
+        VoiceState::Idle | VoiceState::FollowUp => "Or press Ctrl+Space anywhere in OctoPit",
         VoiceState::Listening => "Press again to finish",
         VoiceState::Thinking | VoiceState::Speaking => "Press to stop",
         VoiceState::Busy => "Close the other app, then try again",
@@ -198,6 +196,7 @@ impl VoiceCard {
         halo.set_halign(gtk::Align::Center);
         halo.set_valign(gtk::Align::Center);
         halo.append(&mic.button);
+        halo.set_vexpand(true);
         root.append(&halo);
         let state_label = label("", &["voice-label"]);
         state_label.set_halign(gtk::Align::Center);

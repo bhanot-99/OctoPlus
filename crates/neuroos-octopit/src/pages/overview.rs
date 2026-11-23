@@ -367,6 +367,7 @@ impl OverviewPage {
         let card_q = card(&["raised"]);
         card_q.set_hexpand(true);
         card_q.set_size_request(300, -1);
+        card_q.set_valign(gtk::Align::Start);
         card_q.append(&label("QUICK QUESTIONS", &["title-card"]));
 
         let prompt_box = gtk::Box::new(gtk::Orientation::Vertical, 8);
@@ -377,7 +378,7 @@ impl OverviewPage {
         ] {
             let btn = gtk::Button::with_label(question);
             btn.add_css_class("example-prompt");
-            btn.set_hexpand(true);
+            btn.set_halign(gtk::Align::Start);
             btn.update_property(&[gtk::accessible::Property::Label(question)]);
             let ask = ctx.ask.clone();
             btn.connect_clicked(move |_| ask(question));
@@ -390,6 +391,7 @@ impl OverviewPage {
         let card_act = card(&["raised"]);
         card_act.set_hexpand(true);
         card_act.set_size_request(300, -1);
+        card_act.set_valign(gtk::Align::Start);
         card_act.append(&label("LAST ACTIVITY", &["title-card"]));
 
         let audit_box = gtk::Box::new(gtk::Orientation::Vertical, 6);

@@ -85,6 +85,7 @@ pub struct PrivacyPage {
     controller: Controller,
 
     // Hero
+    hero: gtk::Box,
     hero_loading: gtk::Box,
     hero_error: gtk::Box,
     hero_error_msg: gtk::Label,
@@ -154,6 +155,17 @@ impl PrivacyPage {
 
         content.append(&hero);
 
+        // The detail cards flow: two across when there is room, one when there is not.
+        let flow = gtk::FlowBox::new();
+        flow.set_selection_mode(gtk::SelectionMode::None);
+        flow.set_min_children_per_line(1);
+        flow.set_max_children_per_line(2);
+        flow.set_column_spacing(20);
+        flow.set_row_spacing(20);
+        flow.set_homogeneous(false);
+        flow.set_can_focus(false);
+        content.append(&flow);
+
         // Network Ledger Card
         let ledger_card = card(&[]);
         ledger_card.append(&label("Network ledger", &["title-section"]));
@@ -165,7 +177,10 @@ impl PrivacyPage {
         ledger_rows.set_visible(false);
         ledger_card.append(&ledger_rows);
 
-        content.append(&ledger_card);
+        ledger_card.set_hexpand(true);
+        ledger_card.set_valign(gtk::Align::Start);
+        ledger_card.set_size_request(320, -1);
+        flow.append(&ledger_card);
 
         // Isolation Card
         let iso_card = card(&[]);
@@ -215,7 +230,10 @@ impl PrivacyPage {
         iso_cap.set_wrap(true);
         iso_card.append(&iso_cap);
 
-        content.append(&iso_card);
+        iso_card.set_hexpand(true);
+        iso_card.set_valign(gtk::Align::Start);
+        iso_card.set_size_request(320, -1);
+        flow.append(&iso_card);
 
         // Audit Log Card
         let audit_card = card(&[]);
@@ -245,7 +263,10 @@ impl PrivacyPage {
         audit_row.append(&check_btn);
 
         audit_card.append(&audit_row);
-        content.append(&audit_card);
+        audit_card.set_hexpand(true);
+        audit_card.set_valign(gtk::Align::Start);
+        audit_card.set_size_request(320, -1);
+        flow.append(&audit_card);
 
         // What OctoPit does Card
         let does_card = card(&[]);
@@ -266,7 +287,10 @@ impl PrivacyPage {
             does_card.append(&row);
         }
 
-        content.append(&does_card);
+        does_card.set_hexpand(true);
+        does_card.set_valign(gtk::Align::Start);
+        does_card.set_size_request(320, -1);
+        flow.append(&does_card);
 
         let root = gtk::ScrolledWindow::new();
         root.set_child(Some(&content));
@@ -275,6 +299,7 @@ impl PrivacyPage {
         Self {
             root,
             controller: ctx.controller.clone(),
+            hero: hero.clone(),
             hero_loading,
             hero_error,
             hero_error_msg,
@@ -296,17 +321,20 @@ impl PrivacyPage {
                 self.hero_loading.set_visible(true);
                 self.hero_error.set_visible(false);
                 self.hero_ok.set_visible(false);
+                self.hero.remove_css_class("gradient-card");
             }
             Some(Err(msg)) => {
                 self.hero_loading.set_visible(false);
                 self.hero_error.set_visible(true);
                 self.hero_ok.set_visible(false);
+                self.hero.remove_css_class("gradient-card");
                 self.hero_error_msg.set_text(msg);
             }
             Some(Ok(rows)) => {
                 self.hero_loading.set_visible(false);
                 self.hero_error.set_visible(false);
                 self.hero_ok.set_visible(true);
+                self.hero.add_css_class("gradient-card");
 
                 let sum_bytes_out: u64 = rows.iter().map(|r| r.bytes_out).sum();
                 self.hero_metric.set_text(&format::bytes_iec(sum_bytes_out));
