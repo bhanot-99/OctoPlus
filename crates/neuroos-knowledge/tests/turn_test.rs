@@ -153,6 +153,7 @@ struct FakeInference {
     token_delay: Duration,
     cancelled: Arc<AtomicBool>,
     cancel_notify: Arc<tokio::sync::Notify>,
+    stop: StopReason,
 }
 
 /// Marks the generation as cancelled when its handler future is dropped before it finished.
@@ -198,7 +199,7 @@ impl Handler for FakeInference {
         }
         guard.done = true;
         Ok(Body::GenerateDone(GenerateDone {
-            reason: StopReason::EndOfText as i32,
+            reason: self.stop as i32,
             ..GenerateDone::default()
         }))
     }
@@ -223,6 +224,7 @@ struct Opts {
     result_json: String,
     token_delay: Duration,
     dispatch_error: Option<ErrorCode>,
+    stop: StopReason,
 }
 
 impl Default for Opts {
@@ -244,6 +246,7 @@ impl Default for Opts {
             result_json: "{}".to_string(),
             token_delay: Duration::ZERO,
             dispatch_error: None,
+            stop: StopReason::EndOfText,
         }
     }
 }
@@ -328,6 +331,7 @@ impl Stack {
                     token_delay: o.token_delay,
                     cancelled: c4_cancelled.clone(),
                     cancel_notify: c4_cancel_notify.clone(),
+                    stop: o.stop,
                 },
                 &stop,
             )
@@ -497,6 +501,55 @@ fn route(d: &AnswerDone) -> Route {
 
 fn taint(d: &AnswerDone) -> u32 {
     d.taint.as_ref().unwrap().flags
+}
+
+// ---- what is kept of an answer ---------------------------------------------------------------------
+
+/// BUG-130: C4 ends a cancelled generation with a "cancelled" reason after whatever it had said.
+/// That half answer ("Two") or no answer at all used to be stored as a finished turn.
+#[tokio::test]
+async fn an_answer_cut_short_by_a_cancel_is_not_stored_as_a_finished_turn() {
+    let s = Stack::start(Opts {
+        answer: vec!["Two".into()],
+        stop: StopReason::Cancelled,
+        ..Opts::default()
+    })
+    .await;
+    let _ = s.ask("tell me something about dolphins").await;
+    assert!(
+        s.rec().stored.is_empty(),
+        "a cancelled answer is not evidence"
+    );
+}
+
+#[tokio::test]
+async fn an_answer_with_no_words_in_it_is_not_stored() {
+    for answer in [
+        vec![],
+        vec!["\u{1F34A}".to_string()],
+        vec!["  ".to_string()],
+    ] {
+        let s = Stack::start(Opts {
+            answer,
+            ..Opts::default()
+        })
+        .await;
+        let _ = s.ask("tell me something about dolphins").await;
+        assert!(s.rec().stored.is_empty(), "an empty answer is not stored");
+    }
+}
+
+#[tokio::test]
+async fn a_finished_answer_is_still_stored_without_its_emoji() {
+    let s = Stack::start(Opts {
+        answer: vec!["Dolphins are mammals. ".into(), "\u{1F42C}".into()],
+        ..Opts::default()
+    })
+    .await;
+    let _ = s.ask("tell me something about dolphins").await;
+    let rec = s.rec();
+    assert_eq!(rec.stored.len(), 1);
+    assert_eq!(rec.stored[0].1.trim(), "Dolphins are mammals.");
 }
 
 // ---- routes and grounding ------------------------------------------------------------------------

@@ -26,7 +26,7 @@ use neuroos_proto::v1::{
     Ack, ActivityItem, AnswerChunk, AnswerDone, AskRequest, DispatchRequest, DispatchResult,
     DispatchStatus, Domain, ErrorCode, EvaluateRequest, Evidence, GenerateRequest, NudgeList,
     Origin, PreambleKind, PreambleRequest, ProfileListRequest, QueryActivity, QueryFocusHistory,
-    QueryHybrid, Route, SpeakChunk, StoreInteraction, Taint, VoiceCommand,
+    QueryHybrid, Route, SpeakChunk, StopReason, StoreInteraction, Taint, VoiceCommand,
 };
 use neuroos_taint::TaintFlags;
 use tracing::warn;
@@ -979,9 +979,10 @@ impl KnowledgeHandler {
             ));
         }
         Self::say(sink, chat::WEB_ANSWER_LEAD).await?;
-        let Some(answer) = self.stream_answer(&prompt, started, sink).await? else {
+        let Some(streamed) = self.stream_answer(&prompt, started, sink).await? else {
             return self.c4_down(sink).await;
         };
+        let answer = streamed.text;
         let mut shown = format!("{}{answer}", chat::WEB_ANSWER_LEAD);
         let mut pending = Pending::None;
         if chat::personal_fact_statement(question) {
@@ -1122,9 +1123,11 @@ impl KnowledgeHandler {
             self.metrics.route_general.fetch_add(1, Ordering::Relaxed);
             Route::GeneralChat
         };
-        let Some(answer) = self.stream_answer(&prompt, started, sink).await? else {
+        let Some(streamed) = self.stream_answer(&prompt, started, sink).await? else {
             return self.c4_down(sink).await;
         };
+        let answer = streamed.text;
+        let cut_short = streamed.cut_short;
 
         // Offers are our own sentences, added by code and never by the model (FR-CHT-03, R0-8).
         let mut shown = answer.clone();
@@ -1146,14 +1149,17 @@ impl KnowledgeHandler {
             s.session.push(text, &shown, turn_taint, now);
             s.pending = pending;
         });
-        self.remember_turn(TurnRecord {
-            question: text,
-            answer: &shown,
-            origin,
-            at_ns: now,
-            taint: turn_taint,
-        })
-        .await;
+        // Only a finished answer is kept as evidence (BUG-130): not one that was cut short.
+        if !cut_short {
+            self.remember_turn(TurnRecord {
+                question: text,
+                answer: &shown,
+                origin,
+                at_ns: now,
+                taint: turn_taint,
+            })
+            .await;
+        }
         self.metrics.completed.fetch_add(1, Ordering::Relaxed);
         Ok(Self::done_with(route, turn_taint, false, c3_down))
     }
@@ -1307,14 +1313,14 @@ impl KnowledgeHandler {
         ))
     }
 
-    /// Streams the answer to the client; returns the kept answer text, or `None` when C4 cannot
-    /// be reached (nothing was sent).
+    /// Streams the answer to the client; returns the kept answer text and whether C4 ended it early
+    /// (cancelled or failed), or `None` when C4 cannot be reached (nothing was sent).
     async fn stream_answer(
         &self,
         prompt: &prompt::Prompt,
         started: Instant,
         sink: &StreamSink,
-    ) -> Result<Option<String>, HandlerError> {
+    ) -> Result<Option<Streamed>, HandlerError> {
         let client =
             match tokio::time::timeout(self.timing.control, self.peers.inference.get()).await {
                 Ok(Ok(c)) => c,
@@ -1332,6 +1338,7 @@ impl KnowledgeHandler {
         };
         let mut kept = String::new();
         let mut first = true;
+        let mut cut_short = false;
         while let Some(item) = stream.next().await {
             match item {
                 Ok(Body::TokenChunk(chunk)) => {
@@ -1344,7 +1351,15 @@ impl KnowledgeHandler {
                     }
                     Self::say(sink, &chunk.text).await?;
                 }
-                Ok(Body::GenerateDone(_)) => break,
+                Ok(Body::GenerateDone(done)) => {
+                    // A cancelled or failed generation stops mid-answer: what was said is not a
+                    // finished answer (BUG-130).
+                    cut_short = matches!(
+                        StopReason::try_from(done.reason),
+                        Ok(StopReason::Cancelled | StopReason::Error)
+                    );
+                    break;
+                }
                 Ok(_) => {}
                 Err(e) => {
                     warn!("inference stream error: {e}");
@@ -1356,7 +1371,10 @@ impl KnowledgeHandler {
                 }
             }
         }
-        Ok(Some(kept))
+        Ok(Some(Streamed {
+            text: kept,
+            cut_short,
+        }))
     }
 
     /// Collects a whole (short, grammar-limited) generation; `None` when C4 is unreachable.
@@ -1408,6 +1426,9 @@ impl KnowledgeHandler {
             .chars()
             .take(SUMMARY_CHARS)
             .collect();
+        if summary.trim().is_empty() {
+            return; // nothing was said: there is nothing to remember
+        }
         let body = Body::StoreInteraction(StoreInteraction {
             question: question.to_string(),
             answer_summary: summary,
@@ -1424,6 +1445,13 @@ impl KnowledgeHandler {
             warn!("could not store the turn in C3: {e}");
         }
     }
+}
+
+/// What `stream_answer` hands back.
+struct Streamed {
+    text: String,
+    /// C4 ended the generation early (cancelled or failed).
+    cut_short: bool,
 }
 
 /// Most activity lines one answer is given (the evidence block has a token budget).
