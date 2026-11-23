@@ -211,8 +211,7 @@ impl OverviewPage {
             Headline::Attention { part, .. } if st.have_snapshot => Some(part),
             _ => None,
         });
-        self.hero_button
-            .set_visible(self.attention.get().is_some());
+        self.hero_button.set_visible(self.attention.get().is_some());
 
         for (part, t) in &self.tiles {
             let Some(c) = snap.parts.iter().find(|p| p.part == *part) else {

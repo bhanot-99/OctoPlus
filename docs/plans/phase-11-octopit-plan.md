@@ -1,7 +1,7 @@
 # Phase 11 build plan — The OctoPit (GUI dashboard)
 
 **Branch:** `cockpit` · **Stories:** P11-S01…S08 (to be added to `phases.md` as §14, "After v1.0" moves to §15) · **Report:** `reports/phase-11-octopit.md`
-**Status:** PLAN ONLY. Nothing is built. Owner decided 2026-11-23: name **OctoPit**; it has a dedicated mic button that starts listening and shows voice state. Remaining owner approvals in §9. The visual and interaction design is in `docs/design/octopit-ux.md` (the build follows it).
+**Status:** BUILT 2026-11-23 on branch `cockpit` (see `reports/phase-11-octopit.md` for what is proven and what is not). Owner decided 2026-11-23: name **OctoPit**; it has a dedicated mic button that starts listening and shows voice state. Remaining owner approvals in §9. The visual and interaction design is in `docs/design/octopit-ux.md` (the build follows it).
 **Origin:** the owner asked (2026-11-23) for "a proper GPU dashboard as a face of Semantic NeuroOS", from `docs/octo-plus-vision.md` §5. Scope discussed with the owner: health, text chat, mic button, backends and GPU, "how it's going" (speed, egress, audit). This file is the revised, complete plan.
 
 Requirements touched: `PRD.md` §3 (scope), §6; `rules.md` AB-4 and the free-text rule; `security.md` §4, §9; `Architecture.md` §5.2 (socket map), §13 (packaging).
