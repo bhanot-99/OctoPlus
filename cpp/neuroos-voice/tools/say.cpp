@@ -46,8 +46,9 @@ int main(int argc, char** argv) {
   // (the model is loaded once) and prints each synthesis time, so a warm speed can be read off.
   // NOLINTNEXTLINE(concurrency-mt-unsafe) - read once at start
   if (const char* rep = std::getenv("NEUROOS_SAY_REPEAT")) {
-    const int n = std::atoi(rep);
-    for (int i = 0; i < n; ++i) {
+    char* end = nullptr;
+    const long n = std::strtol(rep, &end, 10);  // a bad or negative value means no repeats
+    for (long i = 0; end != rep && i < n && i < 100; ++i) {
       const auto t0 = std::chrono::steady_clock::now();
       auto warm = tts.value()->Synthesize(text);
       const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
