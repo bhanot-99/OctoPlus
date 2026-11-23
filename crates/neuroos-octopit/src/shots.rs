@@ -80,7 +80,7 @@ fn next(w: Rc<Window>, steps: Steps, dir: String, app: gtk::Application) {
         w.ask("What is two plus two? Answer in one short sentence.");
         25_000
     } else {
-        700
+        1500
     };
     glib::timeout_add_local_once(Duration::from_millis(wait), move || {
         let name = format!(

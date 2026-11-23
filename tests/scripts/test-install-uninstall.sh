@@ -40,6 +40,17 @@ assert_file "$test_dir/opt/neuroos/bin/neuroosctl"
 assert_file "$test_dir/opt/neuroos/bin/neuroos-healthd"
 assert_file "$test_dir$HOME/.config/systemd/user/neuroos.target"
 assert_file "$test_dir$HOME/.local/opt/neuroos/bin/neuroosctl"
+# OctoPit (ADR-0017): program, launcher entry and icons, system and user scope.
+assert_file "$test_dir/opt/neuroos/bin/neuroos-octopit"
+assert_file "$test_dir/usr/share/applications/neuroos-octopit.desktop"
+assert_file "$test_dir/usr/share/icons/hicolor/scalable/apps/neuroos-octopit.svg"
+assert_file "$test_dir$HOME/.local/opt/neuroos/bin/neuroos-octopit"
+assert_file "$test_dir$HOME/.local/share/applications/neuroos-octopit.desktop"
+assert_file "$test_dir$HOME/.local/share/icons/hicolor/scalable/apps/neuroos-octopit.svg"
+if ! grep -q "^Exec=" "$test_dir/usr/share/applications/neuroos-octopit.desktop"; then
+  echo "FAILED: the launcher entry has no Exec line" >&2
+  exit 1
+fi
 
 echo "Installation verified successfully."
 
