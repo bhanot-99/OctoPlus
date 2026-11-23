@@ -202,7 +202,8 @@ impl OverviewPage {
             Headline::Attention { part, .. } if st.have_snapshot => Some(part),
             _ => None,
         };
-        self.hero_button.set_visible(self.attention.borrow().is_some());
+        self.hero_button
+            .set_visible(self.attention.borrow().is_some());
 
         for (part, t) in &self.tiles {
             let Some(c) = snap.parts.iter().find(|p| p.part == *part) else {
@@ -229,7 +230,8 @@ impl OverviewPage {
             for cl in ["state-ok", "state-degraded", "state-down", "state-starting"] {
                 t.state.remove_css_class(cl);
             }
-            t.state.add_css_class(&format!("state-{}", state_class(c.state)));
+            t.state
+                .add_css_class(&format!("state-{}", state_class(c.state)));
             set_bar(&t.bar, c.rss_fraction());
             t.mem.set_text(&format!(
                 "{} of {} MiB",
@@ -271,10 +273,11 @@ impl Page for OverviewPage {
             self.redraw_health(st);
         }
         if ch.ledgers || ch.health {
-            self.key_egress.set_text(&match st.ledgers.egress_bytes_out() {
-                Some(b) => format::bytes_iec(b),
-                None => "\u{2014}".to_owned(),
-            });
+            self.key_egress
+                .set_text(&match st.ledgers.egress_bytes_out() {
+                    Some(b) => format::bytes_iec(b),
+                    None => "\u{2014}".to_owned(),
+                });
         }
         if ch.gpu {
             self.key_gpu.set_text(&match &st.gpu {
@@ -287,4 +290,3 @@ impl Page for OverviewPage {
         }
     }
 }
-

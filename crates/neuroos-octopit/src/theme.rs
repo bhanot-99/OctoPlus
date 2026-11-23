@@ -68,7 +68,8 @@ pub fn install_icons() {
         Err(e) => tracing::warn!("icon resource did not load: {e}"),
     }
     if let Some(display) = gtk::gdk::Display::default() {
-        gtk::IconTheme::for_display(&display).add_resource_path("/org/neuroos/octopit/icons/icons/hicolor");
+        gtk::IconTheme::for_display(&display)
+            .add_resource_path("/org/neuroos/octopit/icons/icons/hicolor");
     }
     gtk::Window::set_default_icon_name("neuroos-octopit");
 }

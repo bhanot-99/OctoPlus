@@ -150,7 +150,12 @@ impl Spark {
             let pts = d.borrow();
             let (w, h) = (f64::from(w), f64::from(h));
             // baseline
-            cr.set_source_rgba(f64::from(pal.track.red()), f64::from(pal.track.green()), f64::from(pal.track.blue()), f64::from(pal.track.alpha()));
+            cr.set_source_rgba(
+                f64::from(pal.track.red()),
+                f64::from(pal.track.green()),
+                f64::from(pal.track.blue()),
+                f64::from(pal.track.alpha()),
+            );
             cr.set_line_width(1.0);
             cr.move_to(0.0, h - 0.5);
             cr.line_to(w, h - 0.5);
@@ -167,7 +172,11 @@ impl Spark {
                 let x = step * i as f64;
                 cr.line_to(x, y(*v));
             }
-            let (r, g, b) = (f64::from(pal.line.red()), f64::from(pal.line.green()), f64::from(pal.line.blue()));
+            let (r, g, b) = (
+                f64::from(pal.line.red()),
+                f64::from(pal.line.green()),
+                f64::from(pal.line.blue()),
+            );
             cr.set_source_rgba(r, g, b, 1.0);
             cr.set_line_width(1.75);
             cr.set_line_join(gtk::cairo::LineJoin::Round);
@@ -220,12 +229,22 @@ impl Ring {
             let sweep = 1.5 * std::f64::consts::PI;
             cr.set_line_width(8.0);
             cr.set_line_cap(gtk::cairo::LineCap::Round);
-            cr.set_source_rgba(f64::from(pal.track.red()), f64::from(pal.track.green()), f64::from(pal.track.blue()), f64::from(pal.track.alpha()));
+            cr.set_source_rgba(
+                f64::from(pal.track.red()),
+                f64::from(pal.track.green()),
+                f64::from(pal.track.blue()),
+                f64::from(pal.track.alpha()),
+            );
             cr.arc(cx, cy, radius, start, start + sweep);
             let _ = cr.stroke();
             let v = f.get().clamp(0.0, 1.0);
             if v > 0.0 {
-                cr.set_source_rgba(f64::from(pal.line.red()), f64::from(pal.line.green()), f64::from(pal.line.blue()), 1.0);
+                cr.set_source_rgba(
+                    f64::from(pal.line.red()),
+                    f64::from(pal.line.green()),
+                    f64::from(pal.line.blue()),
+                    1.0,
+                );
                 cr.arc(cx, cy, radius, start, start + sweep * v);
                 let _ = cr.stroke();
             }

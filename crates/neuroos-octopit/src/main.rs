@@ -3,6 +3,8 @@
 //! A client like `neuroosctl`: it talks to the parts over the sockets the socket map lists for
 //! it, shows status and chat, and can never approve anything.
 
+#![allow(clippy::print_stdout, clippy::print_stderr)] // a command line program: --version, --help and the screenshot tool print
+
 mod app;
 mod mic;
 mod pages;
@@ -33,7 +35,9 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
     if args.iter().any(|a| a == "--help" || a == "-h") {
-        println!("neuroos-octopit: the Semantic-NeuroOS dashboard\n\nUsage: neuroos-octopit [--version] [--screenshots DIR]");
+        println!(
+            "neuroos-octopit: the Semantic-NeuroOS dashboard\n\nUsage: neuroos-octopit [--version] [--screenshots DIR]"
+        );
         return ExitCode::SUCCESS;
     }
     let Some(root) = runtime_root() else {

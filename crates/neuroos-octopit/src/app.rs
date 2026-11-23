@@ -49,6 +49,7 @@ pub struct Window {
     state: Rc<RefCell<AppState>>,
     current: Cell<PageId>,
     provider: gtk::CssProvider,
+    controller: Controller,
 }
 
 fn fact(text: &str, tip: &str) -> gtk::Button {
@@ -238,6 +239,7 @@ impl Window {
             state,
             current: Cell::new(PageId::Overview),
             provider,
+            controller: controller.clone(),
         });
         *nav_cell.borrow_mut() = Some(Rc::clone(&win));
 
@@ -295,20 +297,40 @@ impl Window {
         for (i, id) in PageId::SIDEBAR.iter().enumerate() {
             let w = Rc::clone(self);
             let id = *id;
-            add(&format!("page-{}", id.key()), &format!("<Ctrl>{}", i + 1), Box::new(move || w.show_page(id)));
+            add(
+                &format!("page-{}", id.key()),
+                &format!("<Ctrl>{}", i + 1),
+                Box::new(move || w.show_page(id)),
+            );
         }
         let w = Rc::clone(self);
-        add("page-settings", "<Ctrl>comma", Box::new(move || w.show_page(PageId::Settings)));
+        add(
+            "page-settings",
+            "<Ctrl>comma",
+            Box::new(move || w.show_page(PageId::Settings)),
+        );
         let w = Rc::clone(self);
         add("mic", "<Ctrl>space", Box::new(move || w.mic.press()));
         let ctl = controller.clone();
-        add("stop", "Escape", Box::new(move || {
-            let _ = ctl.send(Command::StopAsk);
-        }));
+        add(
+            "stop",
+            "Escape",
+            Box::new(move || {
+                let _ = ctl.send(Command::StopAsk);
+            }),
+        );
         let w = Rc::clone(self);
-        add("theme-dark", "<Ctrl><Shift>d", Box::new(move || theme::apply(&w.provider, Theme::Dark)));
+        add(
+            "theme-dark",
+            "<Ctrl><Shift>d",
+            Box::new(move || theme::apply(&w.provider, Theme::Dark)),
+        );
         let w = Rc::clone(self);
-        add("theme-light", "<Ctrl><Shift>l", Box::new(move || theme::apply(&w.provider, Theme::Light)));
+        add(
+            "theme-light",
+            "<Ctrl><Shift>l",
+            Box::new(move || theme::apply(&w.provider, Theme::Light)),
+        );
     }
 
     fn set_compact(&self, compact: bool) {
@@ -319,8 +341,21 @@ impl Window {
         for l in &self.nav_labels {
             l.set_visible(!compact);
         }
-        self.sidebar.set_size_request(if compact { 60 } else { 188 }, -1);
+        self.sidebar
+            .set_size_request(if compact { 60 } else { 188 }, -1);
         self.mic.set_compact(compact);
+    }
+
+    /// Asks a question as if it had been typed (the screenshot review uses it).
+    pub fn ask(&self, text: &str) {
+        let q = self.state.borrow_mut().conversation.begin(text);
+        if let Some(q) = q {
+            self.redraw(Changed {
+                chat: true,
+                ..Changed::default()
+            });
+            let _ = self.controller.send(Command::Ask(q));
+        }
     }
 
     /// Switches the theme.
@@ -350,7 +385,8 @@ impl Window {
         self.toast_box.set_visible(true);
         let gen_id = self.toast_gen.get() + 1;
         self.toast_gen.set(gen_id);
-        self.toast.announce(text, gtk::AccessibleAnnouncementPriority::Medium);
+        self.toast
+            .announce(text, gtk::AccessibleAnnouncementPriority::Medium);
         let w = Rc::clone(self);
         glib::timeout_add_local_once(std::time::Duration::from_secs(5), move || {
             if w.toast_gen.get() == gen_id {
@@ -431,7 +467,14 @@ impl Window {
                 .map_or(0, |p| p.p99_ns);
             set_fact(
                 &self.fact_speed,
-                &format!("Model speed: {}", if speed > 0 { format!("{}/token", format::latency(speed)) } else { "\u{2014}".to_owned() }),
+                &format!(
+                    "Model speed: {}",
+                    if speed > 0 {
+                        format!("{}/token", format::latency(speed))
+                    } else {
+                        "\u{2014}".to_owned()
+                    }
+                ),
             );
         }
         if changed.ledgers || changed.health {

@@ -222,3 +222,16 @@ window.octopit:not(.reduce-motion) .mic-button.thinking { animation: octopit-bre
 .spark, .ring { color: @accent_primary; }
 .spark.warn, .ring.warn { color: @status_degraded; }
 .spark.hot, .ring.hot { color: @tier_dangerous; }
+
+/* ---- chat (agy) ---- */
+.chat-empty {
+  padding: 48px 16px;
+}
+.chat-example-box {
+  margin-top: 16px;
+}
+.composer textview {
+  min-height: 24px;
+}
+.composer textview:focus-within, .composer textview:focus { outline: none; }
+

@@ -147,7 +147,8 @@ impl MicDock {
 
     /// Narrow layout: a slimmer dock without the long captions.
     pub fn set_compact(&self, compact: bool) {
-        self.root.set_size_request(if compact { 160 } else { 232 }, -1);
+        self.root
+            .set_size_request(if compact { 160 } else { 232 }, -1);
         self.hint.set_visible(!compact);
         self.privacy.set_visible(!compact);
     }
@@ -171,10 +172,14 @@ impl MicDock {
             .update_property(&[gtk::accessible::Property::Label(v.button_label())]);
         self.button.set_tooltip_text(Some(v.button_label()));
         set_bar(&self.level, f64::from(v.level));
-        self.level
-            .set_visible(matches!(v.state, VoiceState::Listening | VoiceState::Idle | VoiceState::FollowUp));
+        self.level.set_visible(matches!(
+            v.state,
+            VoiceState::Listening | VoiceState::Idle | VoiceState::FollowUp
+        ));
         self.hint.set_text(match v.state {
-            VoiceState::Idle | VoiceState::FollowUp => "Wake phrase: \u{201c}hey jarvis\u{201d}\nCtrl+Space to talk",
+            VoiceState::Idle | VoiceState::FollowUp => {
+                "Wake phrase: \u{201c}hey jarvis\u{201d}\nCtrl+Space to talk"
+            }
             VoiceState::Listening => "Press again to finish",
             VoiceState::Thinking | VoiceState::Speaking => "Press to stop",
             VoiceState::Busy => "Close the other app, then try again",
@@ -184,7 +189,8 @@ impl MicDock {
         // Tell screen readers when the state changes (never on every level update).
         if self.last_state.get() != Some(v.state) {
             self.last_state.set(Some(v.state));
-            self.state_label.announce(v.label(), gtk::AccessibleAnnouncementPriority::Medium);
+            self.state_label
+                .announce(v.label(), gtk::AccessibleAnnouncementPriority::Medium);
         }
     }
 }
