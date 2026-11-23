@@ -270,7 +270,7 @@ impl Window {
                 glib::ControlFlow::Continue
             });
         }
-        win.window.set_focus(None::<&gtk::Widget>);
+        GtkWindowExt::set_focus(&win.window, None::<&gtk::Widget>);
         win.show_page(PageId::Overview);
         win.redraw_all();
 
