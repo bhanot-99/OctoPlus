@@ -265,3 +265,43 @@ window.octopit:not(.reduce-motion) .mic-button.thinking { animation: octopit-bre
   min-width: 16px;
 }
 
+/* ---- settings (agy) ---- */
+.settings-group {
+  margin-bottom: 8px;
+}
+.settings-row {
+  margin-top: 8px;
+}
+
+/* ---- palette / welcome (agy) ---- */
+.palette-window {
+  padding: 12px;
+}
+.palette-search {
+  margin-bottom: 8px;
+}
+.palette-list {
+  background-color: transparent;
+}
+.palette-row {
+  padding: 8px 12px;
+  border-radius: @RADIUS_SM@px;
+}
+.welcome-window {
+  padding: 24px;
+}
+.welcome-step {
+  padding: 16px 24px;
+}
+
+window.octopit list { background-color: transparent; color: @text_primary; }
+window.octopit list row { border-radius: @RADIUS_SM@px; }
+window.octopit list row:selected { background-color: @bg_raised; color: @text_primary; outline: 1px solid @accent_primary; outline-offset: -1px; }
+window.octopit entry { background-color: @bg_surface; color: @text_primary; border: 1px solid @border_strong; border-radius: @RADIUS_SM@px; }
+progressbar.slim progress { min-width: 0; }
+progressbar.slim trough { min-width: 0; }
+progressbar.slim progress { margin: 0; }
+togglebutton.btn:checked, button.btn:checked { background-color: @accent_primary; color: @accent_primary_fg; border-color: @accent_primary; font-weight: 600; }
+switch { background-color: @border_strong; border: 1px solid @border_strong; }
+switch:checked { background-color: @accent_primary; border-color: @accent_primary; }
+switch slider { background-color: @bg_canvas; border-color: transparent; }

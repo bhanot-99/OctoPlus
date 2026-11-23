@@ -8,8 +8,10 @@
 mod app;
 mod mic;
 mod pages;
+mod palette;
 mod shots;
 mod theme;
+mod welcome;
 mod widgets;
 
 use std::path::PathBuf;

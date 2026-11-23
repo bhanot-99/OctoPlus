@@ -23,7 +23,7 @@ const PAGES: [PageId; 6] = [
     PageId::Settings,
 ];
 
-fn save(win: &gtk::ApplicationWindow, path: &str) -> Result<(), String> {
+fn save(win: &impl IsA<gtk::Widget>, path: &str) -> Result<(), String> {
     let paintable = gtk::WidgetPaintable::new(Some(win));
     let snap = gtk::Snapshot::new();
     let (w, h) = (f64::from(win.width()), f64::from(win.height()));
@@ -62,13 +62,15 @@ pub fn run(win: &Rc<Window>, dir: String, app: &gtk::Application) {
     let steps: Steps = Rc::new(std::cell::RefCell::new(steps.into_iter()));
     let (w, app) = (Rc::clone(win), app.clone());
     // Give the first poll time to arrive, then one page at a time.
-    glib::timeout_add_local_once(Duration::from_millis(2500), move || next(w, steps, dir, app));
+    glib::timeout_add_local_once(Duration::from_millis(2500), move || {
+        next(w, steps, dir, app)
+    });
 }
 
 fn next(w: Rc<Window>, steps: Steps, dir: String, app: gtk::Application) {
     let step = steps.borrow_mut().next();
     let Some((theme, page)) = step else {
-        app.quit();
+        extras(w, dir, app);
         return;
     };
     w.set_theme(theme);
@@ -83,7 +85,11 @@ fn next(w: Rc<Window>, steps: Steps, dir: String, app: gtk::Application) {
     glib::timeout_add_local_once(Duration::from_millis(wait), move || {
         let name = format!(
             "{dir}/{}-{}.png",
-            if theme == Theme::Dark { "dark" } else { "light" },
+            if theme == Theme::Dark {
+                "dark"
+            } else {
+                "light"
+            },
             page.key()
         );
         match save(&w.window, &name) {
@@ -104,4 +110,41 @@ fn next(w: Rc<Window>, steps: Steps, dir: String, app: gtk::Application) {
             next(w, steps, dir, app);
         }
     });
+}
+
+/// The palette and the welcome window are separate windows: save each one on its own.
+fn extras(w: Rc<Window>, dir: String, app: gtk::Application) {
+    w.set_theme(Theme::Dark);
+    w.show_page(PageId::Overview);
+    w.show_palette();
+    glib::timeout_add_local_once(Duration::from_millis(800), move || {
+        save_other_windows(&w, &format!("{dir}/palette.png"));
+        for t in gtk::Window::list_toplevels() {
+            if let Some(win) = t.downcast_ref::<gtk::Window>() {
+                if win.title().as_deref() == Some("Command palette") {
+                    win.close();
+                }
+            }
+        }
+        crate::welcome::show(&w.window, Box::new(|| {}));
+        glib::timeout_add_local_once(Duration::from_millis(800), move || {
+            save_other_windows(&w, &format!("{dir}/welcome.png"));
+            app.quit();
+        });
+    });
+}
+
+fn save_other_windows(main: &Rc<Window>, name: &str) {
+    for t in gtk::Window::list_toplevels() {
+        let Some(win) = t.downcast_ref::<gtk::Window>() else {
+            continue;
+        };
+        if win == main.window.upcast_ref::<gtk::Window>() || !win.is_visible() {
+            continue;
+        }
+        match save(win, name) {
+            Ok(()) => println!("saved {name}"),
+            Err(e) => eprintln!("screenshot {name}: {e}"),
+        }
+    }
 }

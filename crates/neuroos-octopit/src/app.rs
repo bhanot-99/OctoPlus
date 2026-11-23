@@ -12,6 +12,7 @@ use tokio::sync::mpsc::UnboundedReceiver;
 use neuroos_octopit_core::controller::{Command, Controller, Update};
 use neuroos_octopit_core::format;
 use neuroos_octopit_core::gpu::GpuState;
+use neuroos_octopit_core::settings::{self, Settings, ThemeChoice};
 use neuroos_octopit_core::state::{AppState, Changed};
 
 use crate::mic::MicDock;
@@ -50,6 +51,10 @@ pub struct Window {
     current: Cell<PageId>,
     provider: gtk::CssProvider,
     controller: Controller,
+    scale_provider: gtk::CssProvider,
+    settings: RefCell<Settings>,
+    settings_path: Option<std::path::PathBuf>,
+    palette: RefCell<Option<crate::palette::Palette>>,
 }
 
 fn fact(text: &str, tip: &str) -> gtk::Button {
@@ -117,13 +122,33 @@ impl Window {
             state: Rc::clone(&state),
         };
 
+        let settings_path = settings::default_path(
+            std::env::var_os("XDG_CONFIG_HOME").as_deref(),
+            std::env::var_os("HOME").as_deref(),
+        );
+        let loaded = settings_path
+            .as_deref()
+            .map(Settings::load)
+            .unwrap_or_default();
+        let settings_page = SettingsPage::new(&ctx);
+        settings_page.set(&loaded);
+        {
+            let cell = Rc::clone(&nav_cell);
+            settings_page.on_change(Box::new(move |s| {
+                let win = cell.borrow().clone();
+                if let Some(w) = win {
+                    w.change_settings(s);
+                }
+            }));
+        }
+
         let pages: Vec<(PageId, Box<dyn Page>)> = vec![
             (PageId::Overview, Box::new(OverviewPage::new(&ctx))),
             (PageId::Chat, Box::new(ChatPage::new(&ctx))),
             (PageId::Backends, Box::new(BackendsPage::new(&ctx))),
             (PageId::Activity, Box::new(ActivityPage::new(&ctx))),
             (PageId::Privacy, Box::new(PrivacyPage::new(&ctx))),
-            (PageId::Settings, Box::new(SettingsPage::new(&ctx))),
+            (PageId::Settings, Box::new(settings_page)),
         ];
         for (id, p) in &pages {
             stack.add_named(&p.widget(), Some(id.key()));
@@ -240,6 +265,10 @@ impl Window {
             current: Cell::new(PageId::Overview),
             provider,
             controller: controller.clone(),
+            scale_provider: gtk::CssProvider::new(),
+            settings: RefCell::new(loaded.clone()),
+            settings_path,
+            palette: RefCell::new(None),
         });
         *nav_cell.borrow_mut() = Some(Rc::clone(&win));
 
@@ -260,6 +289,29 @@ impl Window {
         ] {
             let w = Rc::clone(&win);
             f.connect_clicked(move |_| w.show_page(p));
+        }
+        if let Some(display) = gtk::gdk::Display::default() {
+            gtk::style_context_add_provider_for_display(
+                &display,
+                &win.scale_provider,
+                gtk::STYLE_PROVIDER_PRIORITY_APPLICATION + 1,
+            );
+        }
+        win.apply_settings(&loaded);
+        win.build_palette();
+        if !loaded.welcome_done && !std::env::args().any(|a| a == "--screenshots") {
+            let w = Rc::clone(&win);
+            glib::idle_add_local_once(move || {
+                let w2 = Rc::clone(&w);
+                crate::welcome::show(
+                    &w.window,
+                    Box::new(move || {
+                        let mut s = w2.settings.borrow().clone();
+                        s.welcome_done = true;
+                        w2.save_settings(&s);
+                    }),
+                );
+            });
         }
         win.install_actions(app, controller);
         {
@@ -309,6 +361,8 @@ impl Window {
             "<Ctrl>comma",
             Box::new(move || w.show_page(PageId::Settings)),
         );
+        let w = Rc::clone(self);
+        add("palette", "<Ctrl>k", Box::new(move || w.show_palette()));
         let w = Rc::clone(self);
         add("mic", "<Ctrl>space", Box::new(move || w.mic.press()));
         let ctl = controller.clone();
@@ -373,6 +427,107 @@ impl Window {
             true
         } else {
             false
+        }
+    }
+
+    fn build_palette(self: &Rc<Self>) {
+        use crate::palette::{Command as PaletteCommand, Palette};
+        let mut commands: Vec<PaletteCommand> = Vec::new();
+        for (i, id) in PageId::SIDEBAR.iter().enumerate() {
+            let w = Rc::clone(self);
+            let id = *id;
+            commands.push(PaletteCommand {
+                title: format!("Go to {}", id.title()),
+                hint: format!("Ctrl+{}", i + 1),
+                run: Rc::new(move || w.show_page(id)),
+            });
+        }
+        let w = Rc::clone(self);
+        commands.push(PaletteCommand {
+            title: "Open Settings".to_owned(),
+            hint: "Ctrl+,".to_owned(),
+            run: Rc::new(move || w.show_page(PageId::Settings)),
+        });
+        let w = Rc::clone(self);
+        commands.push(PaletteCommand {
+            title: "Start or stop listening".to_owned(),
+            hint: "Ctrl+Space".to_owned(),
+            run: Rc::new(move || w.mic.press()),
+        });
+        let w = Rc::clone(self);
+        commands.push(PaletteCommand {
+            title: "Ask a question".to_owned(),
+            hint: "Chat".to_owned(),
+            run: Rc::new(move || w.show_page(PageId::Chat)),
+        });
+        let ctl = self.controller.clone();
+        commands.push(PaletteCommand {
+            title: "Stop the answer".to_owned(),
+            hint: "Esc".to_owned(),
+            run: Rc::new(move || {
+                let _ = ctl.send(Command::StopAsk);
+            }),
+        });
+        for (title, choice) in [
+            ("Theme: follow the desktop", ThemeChoice::System),
+            ("Theme: dark", ThemeChoice::Dark),
+            ("Theme: light", ThemeChoice::Light),
+        ] {
+            let w = Rc::clone(self);
+            commands.push(PaletteCommand {
+                title: title.to_owned(),
+                hint: "Appearance".to_owned(),
+                run: Rc::new(move || {
+                    let mut s = w.settings.borrow().clone();
+                    s.theme = choice;
+                    w.apply_settings(&s);
+                    w.save_settings(&s);
+                }),
+            });
+        }
+        *self.palette.borrow_mut() = Some(Palette::new(&self.window, commands));
+    }
+
+    /// Opens the command palette.
+    pub fn show_palette(&self) {
+        if let Some(p) = self.palette.borrow().as_ref() {
+            p.show();
+        }
+    }
+
+    /// Applies settings to the window (theme, text size, motion).
+    fn apply_settings(&self, s: &Settings) {
+        let theme = match s.theme {
+            ThemeChoice::System => Theme::System,
+            ThemeChoice::Light => Theme::Light,
+            ThemeChoice::Dark => Theme::Dark,
+        };
+        theme::apply(&self.provider, theme);
+        self.scale_provider.load_from_string(&format!(
+            "window.octopit {{ font-size: {}%; }}",
+            s.text_scale
+        ));
+        if s.reduce_motion || !theme::animations_enabled() {
+            self.window.add_css_class("reduce-motion");
+        } else {
+            self.window.remove_css_class("reduce-motion");
+        }
+    }
+
+    /// The settings page changed something: apply it and keep it for the next start.
+    fn change_settings(&self, s: &Settings) {
+        let mut new = s.clone();
+        new.welcome_done = self.settings.borrow().welcome_done;
+        self.apply_settings(&new);
+        self.save_settings(&new);
+    }
+
+    fn save_settings(&self, s: &Settings) {
+        *self.settings.borrow_mut() = s.clone();
+        if let Some(path) = &self.settings_path
+            && let Err(e) = s.save(path)
+        {
+            tracing::warn!("settings were not saved: {e}");
         }
     }
 

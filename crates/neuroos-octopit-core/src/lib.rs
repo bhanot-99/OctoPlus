@@ -7,5 +7,6 @@ pub mod gateway;
 pub mod gpu;
 pub mod health;
 pub mod series;
+pub mod settings;
 pub mod state;
 pub mod voice;
