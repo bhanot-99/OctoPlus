@@ -357,7 +357,7 @@ impl ChatPage {
         let scrolled = gtk::ScrolledWindow::new();
         scrolled.set_vexpand(true);
         scrolled.set_hexpand(true);
-        scrolled.set_hscrollbar_policy(gtk::PolicyType::Never);
+        scrolled.set_hscrollbar_policy(gtk::PolicyType::Automatic);
         let vadjustment = scrolled.vadjustment();
 
         let conv_box = gtk::Box::new(gtk::Orientation::Vertical, 16);

@@ -224,8 +224,10 @@ fn build_gauge(title: &str, ring: &Ring, value_label: &gtk::Label) -> gtk::Box {
 
     col.append(ring.widget());
 
-    value_label.add_css_class("metric");
+    value_label.add_css_class("metric-md");
     value_label.add_css_class("num");
+    value_label.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    value_label.set_max_width_chars(18);
     value_label.set_halign(gtk::Align::Center);
     value_label.set_xalign(0.5);
     col.append(value_label);
@@ -335,12 +337,22 @@ impl BackendsPage {
         let ring_temp = Ring::new(96, "GPU temperature");
         let val_temp = label("\u{2014}", &[]);
 
-        let gauges_row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+        // A flow box: three across when there is room, fewer when there is not.
+        let gauges_row = gtk::FlowBox::new();
         gauges_row.add_css_class("gpu-gauges");
+        gauges_row.set_selection_mode(gtk::SelectionMode::None);
+        gauges_row.set_min_children_per_line(1);
+        gauges_row.set_max_children_per_line(3);
         gauges_row.set_homogeneous(true);
-        gauges_row.append(&build_gauge("Busy", &ring_busy, &val_busy));
-        gauges_row.append(&build_gauge("Video memory", &ring_mem, &val_mem));
-        gauges_row.append(&build_gauge("Temperature", &ring_temp, &val_temp));
+        gauges_row.set_can_focus(false);
+        for col in [
+            build_gauge("Busy", &ring_busy, &val_busy),
+            build_gauge("Video memory", &ring_mem, &val_mem),
+            build_gauge("Temperature", &ring_temp, &val_temp),
+        ] {
+            col.set_size_request(150, -1);
+            gauges_row.append(&col);
+        }
         gpu_present.append(&gauges_row);
 
         // Sparklines
@@ -374,7 +386,7 @@ impl BackendsPage {
 
         let root = gtk::ScrolledWindow::new();
         root.set_child(Some(&content));
-        root.set_hscrollbar_policy(gtk::PolicyType::Never);
+        root.set_hscrollbar_policy(gtk::PolicyType::Automatic);
 
         Self {
             root,

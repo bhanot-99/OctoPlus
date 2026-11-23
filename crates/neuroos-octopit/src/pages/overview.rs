@@ -43,6 +43,8 @@ fn key_number(title: &str, value: &gtk::Label) -> gtk::Box {
     let b = card(&["raised"]);
     b.set_hexpand(true);
     b.append(&label(title, &["title-card"]));
+    value.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    value.set_max_width_chars(14);
     value.add_css_class("metric");
     value.add_css_class("num");
     b.append(value);
@@ -118,12 +120,24 @@ impl OverviewPage {
         for l in [&key_speed, &key_memory, &key_egress, &key_gpu] {
             l.set_xalign(0.0);
         }
-        let keys = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+        // A flow box: four across when there is room, two by two when there is not.
+        let keys = gtk::FlowBox::new();
+        keys.set_selection_mode(gtk::SelectionMode::None);
+        keys.set_min_children_per_line(1);
+        keys.set_max_children_per_line(4);
+        keys.set_column_spacing(12);
+        keys.set_row_spacing(12);
         keys.set_homogeneous(true);
-        keys.append(&key_number("MODEL SPEED", &key_speed));
-        keys.append(&key_number("MEMORY IN USE", &key_memory));
-        keys.append(&key_number("SENT TO NETWORK", &key_egress));
-        keys.append(&key_number("GPU", &key_gpu));
+        keys.set_can_focus(false);
+        for tile in [
+            key_number("MODEL SPEED", &key_speed),
+            key_number("MEMORY IN USE", &key_memory),
+            key_number("SENT TO NETWORK", &key_egress),
+            key_number("GPU", &key_gpu),
+        ] {
+            tile.set_size_request(150, -1);
+            keys.append(&tile);
+        }
         content.append(&keys);
 
         // Parts grid.
@@ -159,7 +173,7 @@ impl OverviewPage {
 
         let root = gtk::ScrolledWindow::new();
         root.set_child(Some(&content));
-        root.set_hscrollbar_policy(gtk::PolicyType::Never);
+        root.set_hscrollbar_policy(gtk::PolicyType::Automatic);
         Self {
             root,
             hero,

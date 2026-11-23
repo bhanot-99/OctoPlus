@@ -255,7 +255,7 @@ impl SettingsPage {
 
         let root = gtk::ScrolledWindow::new();
         root.set_child(Some(&content));
-        root.set_hscrollbar_policy(gtk::PolicyType::Never);
+        root.set_hscrollbar_policy(gtk::PolicyType::Automatic);
 
         Self {
             root,

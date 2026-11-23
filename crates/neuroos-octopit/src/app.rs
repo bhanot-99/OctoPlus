@@ -83,8 +83,32 @@ impl Window {
 
         let window = gtk::ApplicationWindow::new(app);
         window.set_title(Some("OctoPit"));
-        window.set_default_size(1100, 720);
-        window.set_size_request(760, 520);
+        // Never bigger than the screen: 1100x720 on a roomy display, otherwise most of it.
+        let (mut width, mut height) = (1100, 720);
+        if let Some(display) = gtk::gdk::Display::default()
+            && let Some(monitor) = display
+                .monitors()
+                .item(0)
+                .and_then(|m| m.downcast::<gtk::gdk::Monitor>().ok())
+        {
+            let g = monitor.geometry();
+            width = width.min(g.width() * 9 / 10);
+            height = height.min(g.height() * 9 / 10);
+        }
+        // OCTOPIT_SIZE=WxH forces a size (the screenshot review of narrow windows).
+        if let Some((w, h)) = std::env::var("OCTOPIT_SIZE")
+            .ok()
+            .and_then(|v| {
+                v.split_once('x')
+                    .map(|(a, b)| (a.parse().ok(), b.parse().ok()))
+            })
+            .and_then(|(a, b)| a.zip(b))
+        {
+            width = w;
+            height = h;
+        }
+        window.set_default_size(width, height);
+        window.set_size_request(480, 400);
         window.add_css_class("octopit");
         if !theme::animations_enabled() {
             window.add_css_class("reduce-motion");
@@ -319,7 +343,7 @@ impl Window {
             let w = Rc::downgrade(&win);
             win.window.add_tick_callback(move |window, _| {
                 if let Some(w) = w.upgrade() {
-                    w.set_compact(window.width() < 900);
+                    w.set_compact(window.width() < 1000);
                 }
                 glib::ControlFlow::Continue
             });
@@ -392,12 +416,19 @@ impl Window {
             return;
         }
         self.compact.set(compact);
+        if compact {
+            self.window.add_css_class("compact");
+        } else {
+            self.window.remove_css_class("compact");
+        }
         for l in &self.nav_labels {
             l.set_visible(!compact);
         }
         self.sidebar
             .set_size_request(if compact { 60 } else { 188 }, -1);
         self.mic.set_compact(compact);
+        self.fact_speed.set_visible(!compact);
+        self.fact_gpu.set_visible(!compact);
     }
 
     /// Asks a question as if it had been typed (the screenshot review uses it).

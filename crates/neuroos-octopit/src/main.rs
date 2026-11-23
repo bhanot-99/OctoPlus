@@ -63,6 +63,12 @@ fn main() -> ExitCode {
 
     let application = gtk::Application::builder()
         .application_id("org.neuroos.OctoPit")
+        // The screenshot review must not hand over to a window that is already open.
+        .flags(if shots_dir.is_some() {
+            gtk::gio::ApplicationFlags::NON_UNIQUE
+        } else {
+            gtk::gio::ApplicationFlags::default()
+        })
         .build();
     application.connect_activate(move |app| {
         if let Some(rx) = updates.borrow_mut().take() {

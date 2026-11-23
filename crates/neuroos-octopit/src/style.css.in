@@ -305,3 +305,12 @@ togglebutton.btn:checked, button.btn:checked { background-color: @accent_primary
 switch { background-color: @border_strong; border: 1px solid @border_strong; }
 switch:checked { background-color: @accent_primary; border-color: @accent_primary; }
 switch slider { background-color: @bg_canvas; border-color: transparent; }
+
+/* ---- narrow windows ---- */
+window.compact .metric { font-size: 1.9em; }
+window.compact .page { padding: 16px 16px; }
+window.compact .title-page { font-size: 1.6em; }
+window.compact .card { padding: 12px 12px; }
+window.compact .hero { padding: 14px 14px; }
+
+.metric-md { font-size: 1.7em; font-weight: 700; letter-spacing: -0.01em; }
