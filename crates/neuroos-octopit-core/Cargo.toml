@@ -13,9 +13,7 @@ neuroos-ipc = { path = "../neuroos-ipc" }
 neuroos-proto = { path = "../neuroos-proto" }
 serde.workspace = true
 serde_json.workspace = true
-thiserror.workspace = true
 tokio.workspace = true
-tracing.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true

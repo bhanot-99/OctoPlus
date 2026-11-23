@@ -1780,7 +1780,6 @@ dependencies = [
  "gtk4",
  "neuroos-common",
  "neuroos-octopit-core",
- "neuroos-proto",
  "serde_json",
  "tokio",
  "tracing",
@@ -1798,9 +1797,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
- "thiserror",
  "tokio",
- "tracing",
 ]
 
 [[package]]
