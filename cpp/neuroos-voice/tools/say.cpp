@@ -1,7 +1,9 @@
 // neuroos-voice-say: speaks a sentence with the voice models into a WAV file (a developer and
 // test tool: the synthetic "user" of the real-stack voice tests). Not installed, writes only the
 // file it is told to.
+#include <chrono>
 #include <cstdint>
+#include <cstdlib>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -39,6 +41,21 @@ int main(int argc, char** argv) {
       text += ' ';
     }
     text += argv[i];
+  }
+  // Timing aid for the voice upgrade: NEUROOS_SAY_REPEAT=N speaks the text N more times first
+  // (the model is loaded once) and prints each synthesis time, so a warm speed can be read off.
+  // NOLINTNEXTLINE(concurrency-mt-unsafe) - read once at start
+  if (const char* rep = std::getenv("NEUROOS_SAY_REPEAT")) {
+    const int n = std::atoi(rep);
+    for (int i = 0; i < n; ++i) {
+      const auto t0 = std::chrono::steady_clock::now();
+      auto warm = tts.value()->Synthesize(text);
+      const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                          std::chrono::steady_clock::now() - t0)
+                          .count();
+      std::cerr << "synth " << text.size() << " chars: " << ms << " ms, "
+                << (warm.ok() ? warm.value().size() * 1000 / 24000 : 0) << " ms of audio\n";
+    }
   }
   auto pcm = tts.value()->Synthesize(text);
   if (!pcm.ok()) {

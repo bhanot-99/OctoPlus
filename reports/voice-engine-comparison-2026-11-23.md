@@ -28,3 +28,24 @@ Integration notes (from the engines' own pages, not tried):
 - Pocket TTS: official runtime is PyTorch or a Rust binary (CPU, no Python). No official ONNX; community
   ONNX and C++ ports exist. Weights CC-BY-4.0, code MIT; the Hugging Face page is gated.
 - Piper: ONNX voices run directly on ONNX Runtime, which C2 already uses; needs a phonemiser (espeak-ng).
+
+## Rerun, same footing (2026-11-23, after the owner's listening test)
+
+Both engines warm, model loaded once, median of the last 4 of 5 runs, nothing else heavy running.
+Kokoro through `neuroos-voice-say` with the new `NEUROOS_SAY_REPEAT` option; Pocket TTS 18M through its
+own `generate` command (its reported generation time, load not included).
+
+| Text | Chars | Kokoro | Pocket TTS 18M | Faster by |
+| :--- | :--- | :--- | :--- | :--- |
+| "17 times 6 is 102." | 18 | 2190 ms | 152 ms | 14x |
+| "The sky appears blue because" | 28 | 1535 ms | 123 ms | 12x |
+| "Sure, the battery is at eighty." | 31 | 1597 ms | 125 ms | 13x |
+| "Jane Austen wrote Pride and Prejudice." | 38 | 1967 ms | 142 ms | 14x |
+| "Two plus two is four, which is a basic sum." | 43 | 2311 ms | 170 ms | 14x |
+| "Your laptop fan may run loudly ... for example." | 83 | 4224 ms | 347 ms | 12x |
+
+Peak memory: Kokoro 573-862 MB (grows with the piece), Pocket TTS 18M about 235 MB.
+Owner's listening result: Kokoro best, Pocket TTS 18M second (D-52).
+Reading: with the fp32 model Kokoro needs about 1.5 s even for a 28-character piece (a short piece with
+digits was slowest), so shortening the first piece has reached its floor. Under 1 s needs either a
+faster Kokoro (quantized model, settings), ready-made audio for easy answers, or a faster engine.
