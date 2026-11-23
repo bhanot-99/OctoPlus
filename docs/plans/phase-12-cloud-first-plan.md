@@ -1,8 +1,17 @@
 # Phase 12 strategy — Cloud-first answers, local model as the offline fallback, private by construction
 
-**Status:** PLANNED, NOT STARTED. The owner answered the decisions in §10 on 2026-11-23 and said: plan everything, wait for the start instruction. No code until the owner says start. It changes rules R0-1/R0-2 in a controlled way (ADR-0018, Proposed).
+**Status:** OPTIONAL, ON HOLD (owner, 2026-11-23): this plan is only used if a week of real use on the MacBook shows the local model is not good or fast enough (see §0a). PLANNED, NOT STARTED. The owner answered the decisions in §10 on 2026-11-23 and said: plan everything, wait for the start instruction. No code until the owner says start. It changes rules R0-1/R0-2 in a controlled way (ADR-0018, Proposed).
 **Origin:** owner, 2026-11-23: "make NeuroOS completely depend on free cloud AI like Claude, agy or Perplexity, keep the local LLM only for when the laptop is offline, and be confident about privacy." Personal use only; no business goals.
 **Branch:** `cloud-strategy` (docs only).
+
+## 0a. Optional plan: when it would be used (owner decision 2026-11-23)
+
+The owner is moving to a MacBook next month, where the local model can use the Mac's GPU and shared memory and may be good enough. So:
+- **Default path on the Mac:** local model first. Nothing in this plan is built.
+- **Trial:** use the Mac version for one normal week and write down every answer that was wrong, slow or not good enough (the two-week trial list, shortened).
+- **Trigger:** if that week shows real problems the local model cannot fix (quality, speed or memory), the owner tells Claude to start this plan, using the same decisions in §10. Otherwise it stays shelved.
+- **Mac notes:** the plan is written to port: key sealing becomes Secure Enclave and Keychain instead of the TPM, the sandbox becomes App Sandbox, and the privacy tests stay the same. The Privacy Gate, the provider adapters and the classification are platform-neutral.
+- **Encrypted storage (S01) is independent of the cloud decision** and may be done on its own if the owner wants it (on the Mac with the Secure Enclave); this is not started either.
 
 ## 0. The idea in one picture
 

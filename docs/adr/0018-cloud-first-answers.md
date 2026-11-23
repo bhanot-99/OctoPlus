@@ -1,6 +1,6 @@
 # ADR-0018 — Cloud-first answers behind a Privacy Gate; encrypted storage; local model as fallback
 
-**Status:** Proposed 2026-11-23. Owner decisions recorded in `docs/plans/phase-12-cloud-first-plan.md` §10 (trust the gate for P1, TPM-only unlock, local model loads on demand for P2, tags yes); work has NOT started and waits for the owner's instruction.
+**Status:** Proposed, OPTIONAL and on hold 2026-11-23 (used only if a week of real use on the MacBook shows the local model is not enough). Owner decisions recorded in `docs/plans/phase-12-cloud-first-plan.md` §10 (trust the gate for P1, TPM-only unlock, local model loads on demand for P2, tags yes); work has NOT started and waits for the owner's instruction.
 **Date:** 2026-11-23
 **Changes (if accepted):** `rules.md` R0-2 (standing approval policy for a defined class of requests), `PRD.md` §3 (cloud answers in scope), `Architecture.md` (C7 provider adapters, C5 router and Privacy Gate, C4 on demand, C3 encryption), `security.md` (provider terms, key handling, residual risks).
 **Evidence:** provider terms read on 2026-11-23 (Gemini unpaid tier may be used to improve products and reviewed by humans; Perplexity API documents zero-day retention; Claude has no standing free API tier). Links in the plan.
