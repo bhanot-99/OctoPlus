@@ -249,3 +249,11 @@ window.octopit:not(.reduce-motion) .mic-button.thinking { animation: octopit-bre
   margin-top: 12px;
 }
 
+/* ---- activity (agy) ---- */
+.audit-row {
+  min-height: 28px;
+}
+.audit-time {
+  min-width: 60px;
+}
+

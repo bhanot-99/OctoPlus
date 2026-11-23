@@ -157,7 +157,7 @@ impl Gateway {
         }
     }
 
-    /// The newest egress records.
+    /// The newest egress records, newest first (the kernel sends oldest first).
     ///
     /// # Errors
     /// A plain sentence when the kernel cannot be reached.
@@ -173,6 +173,7 @@ impl Gateway {
             Ok(Body::EgressRecords(r)) => Ok(r
                 .records
                 .into_iter()
+                .rev()
                 .map(|r| EgressRow {
                     at_ns: r.at_ns,
                     host: plain(&r.host, 80),
@@ -185,7 +186,7 @@ impl Gateway {
         }
     }
 
-    /// The newest audit records.
+    /// The newest audit records, newest first (the kernel sends oldest first).
     ///
     /// # Errors
     /// A plain sentence when the kernel cannot be reached.
@@ -201,6 +202,7 @@ impl Gateway {
             Ok(Body::AuditRecords(r)) => Ok(r
                 .records
                 .into_iter()
+                .rev()
                 .map(|r| AuditRow {
                     seq: r.seq,
                     at_ns: r.at_ns,
