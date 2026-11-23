@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/org/neuroos/octopit/icons">
+    <file>icons/hicolor/scalable/apps/neuroos-octopit.svg</file>
+    <file>icons/hicolor/symbolic/apps/neuroos-octopit-symbolic.svg</file>
+    <file>icons/hicolor/symbolic/actions/octopit-activity-symbolic.svg</file>
+    <file>icons/hicolor/symbolic/actions/octopit-alert-symbolic.svg</file>
+    <file>icons/hicolor/symbolic/actions/octopit-backends-symbolic.svg</file>
+    <file>icons/hicolor/symbolic/actions/octopit-chat-symbolic.svg</file>
+    <file>icons/hicolor/symbolic/actions/octopit-check-symbolic.svg</file>
+    <file>icons/hicolor/symbolic/actions/octopit-close-symbolic.svg</file>
+    <file>icons/hicolor/symbolic/actions/octopit-mic-off-symbolic.svg</file>
+    <file>icons/hicolor/symbolic/actions/octopit-mic-symbolic.svg</file>
+    <file>icons/hicolor/symbolic/actions/octopit-overview-symbolic.svg</file>
+    <file>icons/hicolor/symbolic/actions/octopit-privacy-symbolic.svg</file>
+    <file>icons/hicolor/symbolic/actions/octopit-search-symbolic.svg</file>
+    <file>icons/hicolor/symbolic/actions/octopit-send-symbolic.svg</file>
+    <file>icons/hicolor/symbolic/actions/octopit-settings-symbolic.svg</file>
+    <file>icons/hicolor/symbolic/actions/octopit-stop-symbolic.svg</file>
+    <file>icons/hicolor/symbolic/actions/octopit-theme-symbolic.svg</file>
+  </gresource>
+</gresources>

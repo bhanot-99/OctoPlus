@@ -18,7 +18,7 @@ v1.0 is voice, notifications, one dialog and a CLI. The owner wants a profession
 3. Model text is shown as plain text only: no markup, links, images or remote content; control characters removed; length capped.
 4. No network crate, no web view, no microphone access. The mic button sends start/stop to C2's control socket; C2 owns all audio.
 5. C2 gains control messages (start listening, stop listening, cancel) and a level value in its status. They only open or close the same capture path the wake word opens.
-6. C1 gains an optional GPU health row (additive).
+6. GPU numbers are read by OctoPit itself, not by C1 (see the addendum). C1 and C4 do not change for the GPU page.
 7. OctoPit's logic lives in a GTK-free library crate so most tests need no display.
 
 ## Consequences
@@ -32,3 +32,10 @@ Good: one place to see the whole system; the privacy page proves the zero-egress
 | Slint / Metal / SwiftUI (vision doc) | New dependencies and licences for no gain on the Linux target |
 | Web view or Electron | Large attack surface, remote content risk |
 | Reuse `Client::Ctl` | Hides OctoPit's reach; a separate class lists exactly what each page may call |
+
+## Addendum 2026-11-23: spike results
+
+- **Q-1 (GPU inside C1's sandbox):** the vendor counters need the NVIDIA device files, which C1's sandbox hides on purpose (R0-3: never weaken a sandbox). Reading them from C1 would need an exception and a new proto row for a dashboard nicety. Instead OctoPit, an ordinary user program, runs `/usr/bin/nvidia-smi --query-gpu=... --format=csv,noheader,nounits` with fixed arguments, an empty environment, a 1.5 s deadline and a 4 KiB output cap, and shows what it returns. Nothing about the user's data is involved. The plan's C1 change is dropped; the owner's approval for it was therefore not needed.
+- **C2 control (mic button):** `VoiceControl {START_LISTENING, STOP_LISTENING, CANCEL}` on C2's control socket only (not on `voice.sock`, which belongs to C5), and `input_level_permille` in `VoiceStatus`. They post the same events a wake phrase and a lost device post; the turn machine's rules are unchanged. Handled on the audio thread. No audio, no text.
+- **Socket map:** `Client::OctoPit` is listed on healthd, knowledge, voice/control and kernel only; never on a health socket.
+- **Icons and app mark:** bundled as SVG in a compiled resource; the colour mark is drawn for OctoPit and needs the owner's approval before release (plan §9).
