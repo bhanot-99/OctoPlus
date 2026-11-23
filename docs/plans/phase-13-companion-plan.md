@@ -12,7 +12,7 @@
 | 2 | How chatty | **A few times an hour** (target 2 to 4 spontaneous talks an hour while the owner is around and free) |
 | 3 | Open microphone (no wake word during a conversation) | **Yes** |
 | 4 | Model-written casual lines | **Yes** |
-| 5 | Name and personality | **To be given by the owner later** (the persona file is built so these drop in) |
+| 5 | Name and personality | **Given: Arin Vale** (a 25-year-old whose logic and heart keep arguing). Full text and the implementation notes: `docs/design/companion-persona-arin-vale.md` |
 | 6 | Where it talks | **Voice only** (OctoPit only shows status and controls, no chat for this) |
 
 Answered later the same day:
@@ -40,6 +40,7 @@ Unchanged: R0-7 (approval only in the dialog), R0-8 until the owner decides (§6
 ## 4. Components
 
 ### 4.1 Persona (C5)
+The persona is **Arin Vale** (`docs/design/companion-persona-arin-vale.md`): two switching modes (logic and heart) run by a small mode machine, a gated backstory topic, honesty about being an AI, and no manipulation.
 A single file (`persona.toml`, owner-editable, later editable in OctoPit) with: name, voice (one of the installed voices), humour style and level, warmth, formality, favourite topics, topics to avoid, how it greets, how it says goodbye, boundaries ("never claims to be human", "never guilt-trips you to keep talking", "never gives professional advice as fact"). One prompt template renders the persona into the model's system prompt for every companion turn. A regression set of prompts proves the persona holds (§8).
 
 ### 4.2 Conversation engine (C5)
