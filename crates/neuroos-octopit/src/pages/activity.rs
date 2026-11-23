@@ -9,7 +9,17 @@ use neuroos_octopit_core::gateway::{AuditRow, ChainStatus};
 use neuroos_octopit_core::state::{AppState, Changed};
 
 use super::{Ctx, Page};
-use crate::widgets::{Spark, bar, card, label, set_bar, skeleton};
+use crate::widgets::{Spark, bar, card, icon, label, set_bar, skeleton};
+
+/// Returns the symbolic icon name for an audit row.
+#[must_use]
+pub fn audit_row_icon(kind: &str, status: &str) -> &'static str {
+    if kind == "RESULT" && status.contains("EXECUTED") {
+        "octopit-check-symbolic"
+    } else {
+        "octopit-activity-symbolic"
+    }
+}
 
 /// Maps an audit record tier to its corresponding chip CSS modifier class.
 #[must_use]
@@ -104,20 +114,27 @@ fn build_audit_row(row: &AuditRow, now_ns: u64) -> gtk::Box {
         ))],
     );
 
+    let icon_name = audit_row_icon(&row.kind, &row.status);
+    let badge = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    badge.add_css_class("badge-icon");
+    badge.set_halign(gtk::Align::Center);
+    badge.set_valign(gtk::Align::Center);
+    badge.append(&icon(icon_name, 16));
+    row_box.append(&badge);
+
+    let skill_lbl = label(&row.skill, &["mono"]);
+    skill_lbl.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    skill_lbl.set_hexpand(true);
+    skill_lbl.set_xalign(0.0);
+    row_box.append(&skill_lbl);
+
     if let Some(time_str) = format_audit_time(now_ns, row.at_ns) {
-        let time_lbl = label(&time_str, &["caption", "num", "audit-time"]);
-        time_lbl.set_size_request(60, -1);
+        let time_lbl = label(&time_str, &["caption", "num", "muted", "audit-time"]);
         row_box.append(&time_lbl);
     }
 
-    let kind_lbl = label(&row.kind, &["chip"]);
-    row_box.append(&kind_lbl);
-
-    let skill_lbl = label(&row.skill, &["mono"]);
-    skill_lbl.set_hexpand(true);
-    row_box.append(&skill_lbl);
-
     let status_lbl = label(&row.status, &["caption"]);
+    status_lbl.set_ellipsize(gtk::pango::EllipsizeMode::End);
     row_box.append(&status_lbl);
 
     let t_class = tier_class(&row.tier);
@@ -126,6 +143,7 @@ fn build_audit_row(row: &AuditRow, now_ns: u64) -> gtk::Box {
     } else {
         label(&row.tier, &["chip", t_class])
     };
+    tier_lbl.set_valign(gtk::Align::Center);
     row_box.append(&tier_lbl);
 
     row_box
@@ -165,57 +183,69 @@ impl ActivityPage {
     /// Builds the page.
     #[must_use]
     pub fn new(_ctx: &Ctx) -> Self {
-        let content = gtk::Box::new(gtk::Orientation::Vertical, 16);
+        let content = gtk::Box::new(gtk::Orientation::Vertical, 20);
         content.add_css_class("page");
 
         // Header
-        content.append(&label("Activity", &["title-page"]));
-        content.append(&label(
+        let title_lbl = label("Activity", &["title-page"]);
+        let greet_lbl = label(
             "How NeuroOS is doing right now and what it has done.",
-            &["caption"],
-        ));
+            &["title-greet"],
+        );
+        greet_lbl.set_wrap(true);
+        content.append(&title_lbl);
+        content.append(&greet_lbl);
 
-        // Key tiles row
-        let keys_row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+        // Key cards in a FlowBox (min 1 / max 3)
+        let keys_row = gtk::FlowBox::new();
+        keys_row.set_selection_mode(gtk::SelectionMode::None);
+        keys_row.set_min_children_per_line(1);
+        keys_row.set_max_children_per_line(3);
+        keys_row.set_column_spacing(12);
+        keys_row.set_row_spacing(12);
         keys_row.set_homogeneous(true);
+        keys_row.set_can_focus(false);
 
-        // Tile 1: MEMORY IN USE
-        let tile_mem = card(&["raised"]);
-        tile_mem.set_hexpand(true);
-        tile_mem.append(&label("MEMORY IN USE", &["title-card"]));
+        // Card 1: MEMORY IN USE
+        let card_mem = card(&[]);
+        card_mem.set_hexpand(true);
+        card_mem.set_size_request(200, -1);
+        card_mem.append(&label("MEMORY IN USE", &["title-card"]));
         let key_memory_val = label("\u{2014}", &["metric", "num"]);
         key_memory_val.set_xalign(0.0);
-        tile_mem.append(&key_memory_val);
+        card_mem.append(&key_memory_val);
         let key_memory_bar = bar();
-        tile_mem.append(&key_memory_bar);
+        card_mem.append(&key_memory_bar);
         let key_memory_cap = label("\u{2014}", &["caption", "muted"]);
         key_memory_cap.set_xalign(0.0);
-        tile_mem.append(&key_memory_cap);
-        keys_row.append(&tile_mem);
+        card_mem.append(&key_memory_cap);
+        keys_row.append(&card_mem);
 
-        // Tile 2: PARTS RUNNING
-        let tile_parts = card(&["raised"]);
-        tile_parts.set_hexpand(true);
-        tile_parts.append(&label("PARTS RUNNING", &["title-card"]));
+        // Card 2: PARTS RUNNING
+        let card_parts = card(&[]);
+        card_parts.set_hexpand(true);
+        card_parts.set_size_request(200, -1);
+        card_parts.append(&label("PARTS RUNNING", &["title-card"]));
         let key_parts_val = label("\u{2014}", &["metric", "num"]);
         key_parts_val.set_xalign(0.0);
-        tile_parts.append(&key_parts_val);
+        card_parts.append(&key_parts_val);
         let key_parts_cap = label("healthy of total", &["caption", "muted"]);
         key_parts_cap.set_xalign(0.0);
-        tile_parts.append(&key_parts_cap);
-        keys_row.append(&tile_parts);
+        card_parts.append(&key_parts_cap);
+        keys_row.append(&card_parts);
 
-        // Tile 3: MODEL SPEED
-        let tile_speed = card(&["raised"]);
-        tile_speed.set_hexpand(true);
-        tile_speed.append(&label("MODEL SPEED", &["title-card"]));
+        // Card 3: MODEL SPEED
+        let card_speed = card(&[]);
+        card_speed.set_hexpand(true);
+        card_speed.set_size_request(200, -1);
+        card_speed.append(&label("MODEL SPEED", &["title-card"]));
         let key_speed_val = label("\u{2014}", &["metric", "num"]);
         key_speed_val.set_xalign(0.0);
-        tile_speed.append(&key_speed_val);
+        card_speed.append(&key_speed_val);
         let key_speed_cap = label("inference p99", &["caption", "muted"]);
         key_speed_cap.set_xalign(0.0);
-        tile_speed.append(&key_speed_cap);
-        keys_row.append(&tile_speed);
+        card_speed.append(&key_speed_cap);
+        keys_row.append(&card_speed);
 
         content.append(&keys_row);
 
@@ -250,6 +280,7 @@ impl ActivityPage {
         let chain_chip = label("INTACT", &["chip", "ok"]);
         chain_chip.set_visible(false);
         let chain_label = label("Checking\u{2026}", &["caption"]);
+        chain_label.set_wrap(true);
         chain_box.append(&chain_chip);
         chain_box.append(&chain_label);
         audit_card.append(&chain_box);
@@ -383,13 +414,15 @@ impl ActivityPage {
                 row.set_valign(gtk::Align::Center);
 
                 let title_lbl = label(p.title, &["body"]);
-                title_lbl.set_size_request(140, -1);
+                title_lbl.set_ellipsize(gtk::pango::EllipsizeMode::End);
+                title_lbl.set_size_request(120, -1);
                 title_lbl.set_xalign(0.0);
                 row.append(&title_lbl);
 
                 let b = bar();
                 b.set_fraction(scale_p99(p.p99_ns, max_p99).clamp(0.0, 1.0));
                 b.set_hexpand(true);
+                b.set_size_request(80, -1);
                 row.append(&b);
 
                 let val_lbl = label(&format::latency(p.p99_ns), &["caption", "num"]);
@@ -586,6 +619,26 @@ mod tests {
         assert_eq!(
             format_audit_time(10_000_000_000, 5_000_000_000),
             Some("5 s ago".to_owned())
+        );
+    }
+
+    #[test]
+    fn test_audit_row_icon() {
+        assert_eq!(
+            audit_row_icon("RESULT", "EXECUTED (ok)"),
+            "octopit-check-symbolic"
+        );
+        assert_eq!(
+            audit_row_icon("RESULT", "FAILED (error)"),
+            "octopit-activity-symbolic"
+        );
+        assert_eq!(
+            audit_row_icon("ATTEMPT", "STARTED"),
+            "octopit-activity-symbolic"
+        );
+        assert_eq!(
+            audit_row_icon("CALL", "EXECUTED"),
+            "octopit-activity-symbolic"
         );
     }
 }

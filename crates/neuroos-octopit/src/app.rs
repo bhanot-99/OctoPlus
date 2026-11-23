@@ -27,7 +27,7 @@ use crate::theme::{self, Theme};
 use crate::widgets::{dot, icon, label, set_dot};
 
 /// Overview shows the big voice card, so the floating mic hides there.
-const OVERVIEW_HAS_VOICE_CARD: bool = false;
+const OVERVIEW_HAS_VOICE_CARD: bool = true;
 
 /// Everything the window owns.
 pub struct Window {
@@ -532,7 +532,26 @@ impl Window {
         }
     }
 
+    /// Scrolls the visible page down by most of a screen; returns false at the end (or when it
+    /// does not scroll at all). The screenshot review pages through tall pages with it.
+    pub fn scroll_page_down(&self) -> bool {
+        let Some(child) = self.stack.visible_child() else {
+            return false;
+        };
+        let Some(sw) = child.downcast_ref::<gtk::ScrolledWindow>() else {
+            return false;
+        };
+        let adj = sw.vadjustment();
+        let end = adj.upper() - adj.page_size();
+        if adj.value() + 1.0 >= end {
+            return false;
+        }
+        adj.set_value((adj.value() + adj.page_size() * 0.85).min(end));
+        true
+    }
+
     /// Scrolls the visible page to its end; returns whether it could scroll at all.
+    #[allow(dead_code)]
     pub fn scroll_to_end(&self) -> bool {
         let Some(child) = self.stack.visible_child() else {
             return false;

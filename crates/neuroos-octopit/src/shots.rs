@@ -54,7 +54,14 @@ fn save(win: &impl IsA<gtk::Widget>, path: &str) -> Result<(), String> {
         w,
         h,
     );
-    let node = snap.to_node().ok_or("empty snapshot")?;
+    let node = snap.to_node().ok_or_else(|| {
+        format!(
+            "empty snapshot (size {}x{}, mapped {})",
+            win.width(),
+            win.height(),
+            win.is_mapped()
+        )
+    })?;
     let renderer = win
         .native()
         .and_then(|n| n.renderer())
@@ -117,27 +124,36 @@ fn next(w: Rc<Window>, steps: Steps, dir: String, app: gtk::Application) {
         save_retry(
             &w,
             name.clone(),
-            Box::new(move || {
-                // A page taller than the window gets a second shot of its end.
-                if w2.scroll_to_end() {
-                    let end_name = name.replace(".png", "-end.png");
-                    let w3 = Rc::clone(&w2);
-                    glib::timeout_add_local_once(Duration::from_millis(600), move || {
-                        let w4 = Rc::clone(&w3);
-                        save_retry(
-                            &w3,
-                            end_name,
-                            Box::new(move || next(w4, steps, dir, app)),
-                            4,
-                        );
-                    });
-                } else {
-                    next(w2, steps, dir, app);
-                }
-            }),
+            Box::new(move || scroll_through(w2, name, 1, steps, dir, app)),
             4,
         );
     });
+}
+
+/// Pages down a tall page, saving `<name>-2.png`, `-3.png`, ... until the end (at most 6 shots).
+#[allow(clippy::too_many_arguments)]
+fn scroll_through(
+    w: Rc<Window>,
+    name: String,
+    n: u32,
+    steps: Steps,
+    dir: String,
+    app: gtk::Application,
+) {
+    if n < 6 && w.scroll_page_down() {
+        let shot = name.replace(".png", &format!("-{}.png", n + 1));
+        glib::timeout_add_local_once(Duration::from_millis(700), move || {
+            let w2 = Rc::clone(&w);
+            save_retry(
+                &w,
+                shot,
+                Box::new(move || scroll_through(w2, name, n + 1, steps, dir, app)),
+                4,
+            );
+        });
+    } else {
+        next(w, steps, dir, app);
+    }
 }
 
 /// The palette and the welcome window are separate windows: save each one on its own.

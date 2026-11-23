@@ -336,3 +336,6 @@ window.compact .tab { padding: 6px 10px; }
 .series-6 { background-color: @oct_warn; }
 .series-7 { background-color: @oct_text3; }
 
+/* ---- backends and activity (agy) ---- */
+.gpu-gauges .tile { padding: 12px 10px; }
+

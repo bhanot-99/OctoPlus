@@ -10,9 +10,7 @@ use neuroos_octopit_core::health::{PartCard, PartState};
 use neuroos_octopit_core::state::{AppState, Changed};
 
 use super::{Ctx, Page};
-use crate::widgets::{
-    Ring, Spark, bar, card, dot, label, set_bar, set_dot, skeleton, state_class, state_word,
-};
+use crate::widgets::{Ring, Spark, bar, card, icon, label, set_bar, skeleton};
 
 /// Returns the CSS class ("warn", "hot", or "") for a gauge fraction `0.0..=1.0`.
 #[must_use]
@@ -92,6 +90,26 @@ pub fn format_power_row(power_w: Option<f64>, limit_w: Option<f64>) -> Option<St
     }
 }
 
+/// Returns the chip text and CSS class modifier for a backend component state.
+#[must_use]
+pub fn model_state_chip(
+    state: PartState,
+    reachable: bool,
+    have_snapshot: bool,
+) -> (&'static str, &'static str) {
+    if !have_snapshot {
+        ("\u{2014}", "")
+    } else if !reachable || state == PartState::Down {
+        ("Down", "down")
+    } else if state == PartState::Degraded {
+        ("Degraded", "warn")
+    } else if state == PartState::Starting {
+        ("Starting", "warn")
+    } else {
+        ("Running", "ok")
+    }
+}
+
 struct ModelCardUpdate<'a> {
     card_data: &'a PartCard,
     have_snapshot: bool,
@@ -101,8 +119,7 @@ struct ModelCardUpdate<'a> {
 
 struct ModelCardWidgets {
     root: gtk::Box,
-    dot: gtk::Box,
-    state_label: gtk::Label,
+    state_chip: gtk::Label,
     mem_bar: Option<gtk::ProgressBar>,
     mem_label: gtk::Label,
     detail_label: gtk::Label,
@@ -141,44 +158,65 @@ pub struct BackendsPage {
     power_label: gtk::Label,
 }
 
-fn build_model_card(
-    title: &str,
-    role: &str,
+struct ModelCardSpec<'a> {
+    title: &'a str,
+    role: &'a str,
+    icon_name: &'a str,
     has_mem_bar: bool,
     has_subsystems: bool,
     has_speed: bool,
-) -> (gtk::Box, ModelCardWidgets) {
+}
+
+fn build_model_card(spec: &ModelCardSpec<'_>) -> (gtk::Box, ModelCardWidgets) {
     let root = card(&["backend-card"]);
     root.set_hexpand(true);
+    root.set_size_request(300, -1);
 
-    let head = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-    let d = dot(PartState::Starting);
-    head.append(&d);
-    head.append(&label(title, &["title-section"]));
+    let head = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+    head.set_valign(gtk::Align::Center);
+
+    let badge = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    badge.add_css_class("badge-icon");
+    badge.set_halign(gtk::Align::Center);
+    badge.set_valign(gtk::Align::Center);
+    badge.append(&icon(spec.icon_name, 16));
+    head.append(&badge);
+
+    let title_lbl = label(spec.title, &["title-section"]);
+    title_lbl.set_hexpand(true);
+    title_lbl.set_xalign(0.0);
+    title_lbl.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    head.append(&title_lbl);
+
+    let state_chip = label("Starting", &["chip"]);
+    state_chip.set_valign(gtk::Align::Center);
+    head.append(&state_chip);
+
     root.append(&head);
 
-    let role_lbl = label(role, &["caption"]);
+    let role_lbl = label(spec.role, &["caption"]);
     role_lbl.set_wrap(true);
+    role_lbl.set_xalign(0.0);
     root.append(&role_lbl);
 
-    let state_lbl = label("Starting", &["caption"]);
-    root.append(&state_lbl);
-
-    let (mem_bar, mem_label) = if has_mem_bar {
+    let (mem_bar, mem_label) = if spec.has_mem_bar {
         let b = bar();
         root.append(&b);
         let m = label("", &["caption", "num"]);
+        m.set_xalign(0.0);
         root.append(&m);
         (Some(b), m)
     } else {
         let m = label("Shares memory with speech to text", &["caption", "muted"]);
+        m.set_xalign(0.0);
         root.append(&m);
         (None, m)
     };
 
-    let subsystems_label = if has_subsystems {
+    let subsystems_label = if spec.has_subsystems {
         let s = label("", &["caption"]);
         s.set_wrap(true);
+        s.set_xalign(0.0);
         root.append(&s);
         Some(s)
     } else {
@@ -187,10 +225,12 @@ fn build_model_card(
 
     let detail_label = label("", &["caption"]);
     detail_label.set_wrap(true);
+    detail_label.set_xalign(0.0);
     root.append(&detail_label);
 
-    let speed_label = if has_speed {
+    let speed_label = if spec.has_speed {
         let sp = label("", &["caption", "num"]);
+        sp.set_xalign(0.0);
         root.append(&sp);
         Some(sp)
     } else {
@@ -199,8 +239,7 @@ fn build_model_card(
 
     let widgets = ModelCardWidgets {
         root: root.clone(),
-        dot: d,
-        state_label: state_lbl,
+        state_chip,
         mem_bar,
         mem_label,
         detail_label,
@@ -212,17 +251,19 @@ fn build_model_card(
 }
 
 fn build_gauge(title: &str, ring: &Ring, value_label: &gtk::Label) -> gtk::Box {
-    let col = gtk::Box::new(gtk::Orientation::Vertical, 4);
+    let col = gtk::Box::new(gtk::Orientation::Vertical, 8);
+    col.add_css_class("tile");
     col.add_css_class("gpu-gauge-col");
     col.set_hexpand(true);
-    col.set_halign(gtk::Align::Center);
 
     let title_lbl = label(title, &["title-card"]);
     title_lbl.set_halign(gtk::Align::Center);
     title_lbl.set_xalign(0.5);
     col.append(&title_lbl);
 
-    col.append(ring.widget());
+    let ring_widget = ring.widget();
+    ring_widget.set_halign(gtk::Align::Center);
+    col.append(ring_widget);
 
     value_label.add_css_class("metric-md");
     value_label.add_css_class("num");
@@ -239,65 +280,78 @@ impl BackendsPage {
     /// Builds the page.
     #[must_use]
     pub fn new(_ctx: &Ctx) -> Self {
-        let content = gtk::Box::new(gtk::Orientation::Vertical, 16);
+        let content = gtk::Box::new(gtk::Orientation::Vertical, 20);
         content.add_css_class("page");
 
         // Header
-        content.append(&label("Backends", &["title-page"]));
-        content.append(&label(
+        let title_lbl = label("Backends", &["title-page"]);
+        let greet_lbl = label(
             "The models that run on this machine. Nothing here leaves it.",
-            &["caption"],
-        ));
+            &["title-greet"],
+        );
+        greet_lbl.set_wrap(true);
+        content.append(&title_lbl);
+        content.append(&greet_lbl);
 
         // Models Grid
         let flow = gtk::FlowBox::new();
         flow.set_selection_mode(gtk::SelectionMode::None);
         flow.set_min_children_per_line(1);
         flow.set_max_children_per_line(2);
-        flow.set_column_spacing(12);
-        flow.set_row_spacing(12);
+        flow.set_column_spacing(16);
+        flow.set_row_spacing(16);
         flow.set_homogeneous(true);
         flow.set_activate_on_single_click(false);
 
         // 1. Language model (Part::Inference)
-        let (card0, w0) = build_model_card(
-            "Language model",
-            "Writes the answers, fully offline.",
-            true,
-            false,
-            true,
-        );
+        let (card0, w0) = build_model_card(&ModelCardSpec {
+            title: "Language model",
+            role: "Writes the answers, fully offline.",
+            icon_name: "octopit-chat-symbolic",
+            has_mem_bar: true,
+            has_subsystems: false,
+            has_speed: true,
+        });
         flow.append(&card0);
 
         // 2. Speech to text (Part::Voice)
-        let (card1, w1) = build_model_card(
-            "Speech to text",
-            "Transcribes speech from the microphone.",
-            true,
-            false,
-            false,
-        );
+        let (card1, w1) = build_model_card(&ModelCardSpec {
+            title: "Speech to text",
+            role: "Transcribes speech from the microphone.",
+            icon_name: "octopit-mic-symbolic",
+            has_mem_bar: true,
+            has_subsystems: false,
+            has_speed: false,
+        });
         flow.append(&card1);
 
         // 3. Voice output (Part::Voice)
-        let (card2, w2) = build_model_card("Voice", "Speaks answers aloud.", false, true, false);
+        let (card2, w2) = build_model_card(&ModelCardSpec {
+            title: "Voice",
+            role: "Speaks answers aloud.",
+            icon_name: "octopit-mic-symbolic",
+            has_mem_bar: false,
+            has_subsystems: true,
+            has_speed: false,
+        });
         flow.append(&card2);
 
         // 4. Embeddings (Part::Storage)
-        let (card3, w3) = build_model_card(
-            "Embeddings",
-            "Semantic search for notes and history.",
-            true,
-            false,
-            false,
-        );
+        let (card3, w3) = build_model_card(&ModelCardSpec {
+            title: "Embeddings",
+            role: "Semantic search for notes and history.",
+            icon_name: "octopit-backends-symbolic",
+            has_mem_bar: true,
+            has_subsystems: false,
+            has_speed: false,
+        });
         flow.append(&card3);
 
         content.append(&flow);
 
         // GPU Card
-        let gpu_card = card(&["raised"]);
-        gpu_card.append(&label("GPU", &["title-section"]));
+        let gpu_card = card(&[]);
+        gpu_card.append(&label("GPU", &["title-card"]));
 
         // GPU loading skeleton
         let gpu_loading = gtk::Box::new(gtk::Orientation::Vertical, 8);
@@ -319,17 +373,33 @@ impl BackendsPage {
         gpu_card.append(&gpu_unavailable);
 
         // GPU present content
-        let gpu_present = gtk::Box::new(gtk::Orientation::Vertical, 12);
+        let gpu_present = gtk::Box::new(gtk::Orientation::Vertical, 16);
         gpu_present.set_visible(false);
 
-        let gpu_head = gtk::Box::new(gtk::Orientation::Vertical, 2);
-        let gpu_name = label("", &["title-section"]);
-        let gpu_driver = label("", &["caption"]);
-        gpu_head.append(&gpu_name);
-        gpu_head.append(&gpu_driver);
-        gpu_present.append(&gpu_head);
+        // Header row with badge-icon, GPU name, and Driver caption
+        let gpu_head_row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+        gpu_head_row.set_valign(gtk::Align::Center);
 
-        // 3 Gauges
+        let badge = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        badge.add_css_class("badge-icon");
+        badge.set_halign(gtk::Align::Center);
+        badge.set_valign(gtk::Align::Center);
+        badge.append(&icon("octopit-backends-symbolic", 16));
+        gpu_head_row.append(&badge);
+
+        let gpu_title_box = gtk::Box::new(gtk::Orientation::Vertical, 2);
+        gpu_title_box.set_hexpand(true);
+        let gpu_name = label("", &["title-section"]);
+        gpu_name.set_ellipsize(gtk::pango::EllipsizeMode::End);
+        gpu_name.set_xalign(0.0);
+        let gpu_driver = label("", &["caption", "muted"]);
+        gpu_driver.set_xalign(0.0);
+        gpu_title_box.append(&gpu_name);
+        gpu_title_box.append(&gpu_driver);
+        gpu_head_row.append(&gpu_title_box);
+        gpu_present.append(&gpu_head_row);
+
+        // 3 Gauges inside tile boxes in a FlowBox
         let ring_busy = Ring::new(96, "GPU utilization");
         let val_busy = label("\u{2014}", &[]);
         let ring_mem = Ring::new(96, "Video memory in use");
@@ -337,41 +407,59 @@ impl BackendsPage {
         let ring_temp = Ring::new(96, "GPU temperature");
         let val_temp = label("\u{2014}", &[]);
 
-        // A flow box: three across when there is room, fewer when there is not.
         let gauges_row = gtk::FlowBox::new();
         gauges_row.add_css_class("gpu-gauges");
         gauges_row.set_selection_mode(gtk::SelectionMode::None);
         gauges_row.set_min_children_per_line(1);
         gauges_row.set_max_children_per_line(3);
+        gauges_row.set_column_spacing(12);
+        gauges_row.set_row_spacing(12);
         gauges_row.set_homogeneous(true);
         gauges_row.set_can_focus(false);
+
         for col in [
-            build_gauge("Busy", &ring_busy, &val_busy),
-            build_gauge("Video memory", &ring_mem, &val_mem),
-            build_gauge("Temperature", &ring_temp, &val_temp),
+            build_gauge("BUSY", &ring_busy, &val_busy),
+            build_gauge("VIDEO MEMORY", &ring_mem, &val_mem),
+            build_gauge("TEMPERATURE", &ring_temp, &val_temp),
         ] {
             col.set_size_request(150, -1);
             gauges_row.append(&col);
         }
         gpu_present.append(&gauges_row);
 
-        // Sparklines
-        let spark_box = gtk::Box::new(gtk::Orientation::Vertical, 12);
-        spark_box.add_css_class("gpu-spark-row");
+        // Sparklines each in their own tile with its caption
+        let spark_flow = gtk::FlowBox::new();
+        spark_flow.set_selection_mode(gtk::SelectionMode::None);
+        spark_flow.set_min_children_per_line(1);
+        spark_flow.set_max_children_per_line(2);
+        spark_flow.set_column_spacing(12);
+        spark_flow.set_row_spacing(12);
+        spark_flow.set_homogeneous(true);
+        spark_flow.set_can_focus(false);
 
+        let tile_busy = gtk::Box::new(gtk::Orientation::Vertical, 8);
+        tile_busy.add_css_class("tile");
+        tile_busy.set_hexpand(true);
         let spark_busy = Spark::new(56, "GPU utilization history");
         let spark_busy_caption = label("", &["caption"]);
-        spark_box.append(spark_busy.widget());
-        spark_box.append(&spark_busy_caption);
+        tile_busy.append(spark_busy.widget());
+        tile_busy.append(&spark_busy_caption);
+        spark_flow.append(&tile_busy);
 
+        let tile_temp = gtk::Box::new(gtk::Orientation::Vertical, 8);
+        tile_temp.add_css_class("tile");
+        tile_temp.set_hexpand(true);
         let spark_temp = Spark::new(56, "GPU temperature history");
         let spark_temp_caption = label("", &["caption"]);
-        spark_box.append(spark_temp.widget());
-        spark_box.append(&spark_temp_caption);
-        gpu_present.append(&spark_box);
+        tile_temp.append(spark_temp.widget());
+        tile_temp.append(&spark_temp_caption);
+        spark_flow.append(&tile_temp);
+
+        gpu_present.append(&spark_flow);
 
         // Power row
         let power_label = label("", &["caption"]);
+        power_label.set_xalign(0.0);
         gpu_present.append(&power_label);
 
         // Vendor caption
@@ -379,6 +467,8 @@ impl BackendsPage {
             "Read with the GPU vendor's own tool, once every two seconds.",
             &["caption", "muted"],
         );
+        vendor_cap.set_xalign(0.0);
+        vendor_cap.set_wrap(true);
         gpu_present.append(&vendor_cap);
 
         gpu_card.append(&gpu_present);
@@ -501,28 +591,24 @@ impl BackendsPage {
         let w = &self.model_cards[index];
         let card_data = update.card_data;
 
-        set_dot(&w.dot, card_data.state);
-
         w.root.remove_css_class("down");
         w.root.remove_css_class("attention");
 
         if !card_data.reachable || card_data.state == PartState::Down {
             w.root.add_css_class("down");
-            w.state_label.set_text("Not running");
         } else if card_data.state == PartState::Degraded {
             w.root.add_css_class("attention");
-            w.state_label.set_text(state_word(card_data.state));
-        } else if update.have_snapshot {
-            w.state_label.set_text(state_word(card_data.state));
-        } else {
-            w.state_label.set_text("\u{2014}");
         }
 
-        for c in ["state-ok", "state-degraded", "state-down", "state-starting"] {
-            w.state_label.remove_css_class(c);
+        let (chip_text, chip_cls) =
+            model_state_chip(card_data.state, card_data.reachable, update.have_snapshot);
+        w.state_chip.set_text(chip_text);
+        for c in ["ok", "warn", "down"] {
+            w.state_chip.remove_css_class(c);
         }
-        w.state_label
-            .add_css_class(&format!("state-{}", state_class(card_data.state)));
+        if !chip_cls.is_empty() {
+            w.state_chip.add_css_class(chip_cls);
+        }
 
         // Memory bar
         if let Some(ref b) = w.mem_bar {
@@ -762,5 +848,33 @@ mod tests {
             Some("Power draw 50 W".to_string())
         );
         assert_eq!(format_power_row(None, Some(100.0)), None);
+    }
+
+    #[test]
+    fn test_model_state_chip() {
+        assert_eq!(
+            model_state_chip(PartState::Ok, true, false),
+            ("\u{2014}", "")
+        );
+        assert_eq!(
+            model_state_chip(PartState::Ok, true, true),
+            ("Running", "ok")
+        );
+        assert_eq!(
+            model_state_chip(PartState::Ok, false, true),
+            ("Down", "down")
+        );
+        assert_eq!(
+            model_state_chip(PartState::Down, true, true),
+            ("Down", "down")
+        );
+        assert_eq!(
+            model_state_chip(PartState::Degraded, true, true),
+            ("Degraded", "warn")
+        );
+        assert_eq!(
+            model_state_chip(PartState::Starting, true, true),
+            ("Starting", "warn")
+        );
     }
 }
