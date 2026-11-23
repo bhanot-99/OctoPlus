@@ -87,3 +87,49 @@ Contrast AA for all tokens in both themes (already checked for the tokens; re-ch
 - Screenshots of every page in both themes at 1100x720 and 760x520 reviewed against this file; no clipped text, no overlap.
 - The Privacy page and Overview agree with `neuroosctl` for the same moment.
 - Performance: window opens in under 1 s; UI never freezes for more than 50 ms while a part is down; idle CPU under 2%.
+
+## 10. Visual language v2 (owner redesign, 2026-11-23)
+
+The owner asked for a professional, product-grade look inspired by a soft, airy finance dashboard (light canvas, white rounded cards, black active pill, pastel gradients, donut and bar charts). This section replaces §2 (layout) and §5 (visual language) where they differ; the principles in §1 and the states in §6 still hold.
+
+### 10.1 Layout
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ ◉ OctoPit    (Overview)(Chat)(Backends)(Activity)(Privacy)   🔍 Search  ● All healthy  (◎) │
+├──┬───────────────────────────────────────────────────────────────────────────┤
+│▣ │  Overview                                           [Now | Memory | Speed]  │
+│🔍│  Good evening. Everything is running.                                       │
+│🛡│  ┌ health + orb ─────┐ ┌ memory budget ──────┐ ┌ voice (gradient card) ┐   │
+│⚙ │  │ big number, tabs  │ │ gradient bar        │ │   (mic)  Listening     │   │
+│◐ │  │ bar chart (parts) │ │ donut + legend      │ │ quick questions        │   │
+│  │  └───────────────────┘ └─────────────────────┘ │ last activity list     │   │
+└──┴─────────────────────────────────────────────────┴────────────────────────┘
+ status strip (egress, memory, GPU, model speed)                    ( mic ) floating on other pages
+```
+
+- **Top bar:** brand mark and name; five pill tabs (icon + word; the active one is a solid black/ink pill); search pill (opens the command palette, Ctrl+K); status pill (green, amber or red tint with a word); round gradient avatar button (Settings).
+- **Left rail:** a vertical white pill of round icon buttons: Overview, Search, Privacy, Settings, Light/Dark. The active one is solid ink.
+- **Content:** cards on the light canvas, 24 px gaps, three columns when wide, two when medium, one when narrow (FlowBox, never horizontal scrolling). Page title 2.1 em bold with a one-line friendly greeting or caption under it.
+- **Mic:** on Overview it is the big gradient voice card (mic button, state in words, level bar, hint). On every other page it floats bottom right as a round ink button; a small white pill with the state word appears beside it when something is happening (listening, thinking, speaking, busy, off).
+- **Below 1200 px** the tabs lose their words (icons only) and the search pill loses its word; below 1000 px the strip drops two items and cards tighten. Nothing is ever cut off: rows reflow or ellipsize.
+
+### 10.2 Surfaces and type
+
+- Canvas `#ECEEF4` (dark `#0B0D12`); cards white (dark `#151821`), radius 24, shadow `0 8 28 rgba(16,24,40,.05)`; tiles (inner boxes) soft grey `#F4F5F9`, radius 16; chips radius 10; buttons and tabs are pills.
+- Colour is almost only neutral. The one decoration is the pastel gradient violet `#8B7CFF` -> pink `#FF7A90` (-> peach `#FFB27A`, blue `#5EA2FF`): progress bars, the user's chat bubble, the voice card, the avatar, the orb. State colours (green, amber, red) are for state only and always come with a word.
+- Numbers are large (2.4 em, tabular figures, tight tracking); labels above them are small caps-like (0.8 em, letter-spaced, secondary colour).
+- Charts: donut with rounded caps and a 2-degree gap, legend dots in the series colours; vertical rounded bars with faint guide lines; the 3D "orb" is a glossy pastel sphere drawn with gradients (it breathes only when motion is allowed).
+
+### 10.3 Pages
+
+- **Overview:** greeting line; row of cards: (1) *Health* card with the orb, the headline ("All systems healthy" / the one part that needs attention), a segmented control (Now / Memory / Speed) that switches the bar chart below between memory use per part (% of budget) and slowest-1% latency per part, and two small stats (parts running, memory); (2) *Memory budget* card: "used / budget" numbers, a gradient bar, the "available" figure, then the *donut* of memory by part with a legend (dot, part name, MiB); (3) the *voice card*; below it *Quick questions* (round chips that open Chat with the text) and *Last activity* (audit rows: round icon badge, skill, time, tier chip on the right). Under the row: the eight part tiles as a compact grid (dot, name, state word, MiB bar).
+- **Chat:** centred conversation, user bubbles in the gradient, assistant bubbles white; the composer is a floating pill at the bottom; example prompts are pill chips.
+- **Backends:** model cards as white cards with a round icon badge; the GPU card with three ring gauges, two sparklines and a soft gradient header.
+- **Activity:** key numbers row, memory sparkline card, response-times bars, the audit list as a clean list with round badges.
+- **Privacy:** a gradient hero ("0 B sent to the network" in white on the gradient when the ledger was read; neutral card with the error when it could not be read), then isolation list, audit check, ledger.
+- **Settings:** grouped white cards with segmented controls and a gradient switch.
+
+### 10.4 Motion and accessibility
+
+Same rules as §5 and §8: 120-200 ms ease-out, listening pulse and orb breathing only when motion is allowed, every state has a word and an icon, focus ring 2 px in the violet accent, text contrast at least 4.5:1 in both themes (text on gradients is white and the gradient stops stay dark enough; check each screenshot), everything reachable by keyboard.

@@ -15,7 +15,7 @@ use neuroos_octopit_core::gpu::GpuState;
 use neuroos_octopit_core::settings::{self, Settings, ThemeChoice};
 use neuroos_octopit_core::state::{AppState, Changed};
 
-use crate::mic::MicDock;
+use crate::mic::MicFab;
 use crate::pages::activity::ActivityPage;
 use crate::pages::backends::BackendsPage;
 use crate::pages::chat::ChatPage;
@@ -26,6 +26,9 @@ use crate::pages::{Ctx, Page, PageId};
 use crate::theme::{self, Theme};
 use crate::widgets::{dot, icon, label, set_dot};
 
+/// Overview shows the big voice card, so the floating mic hides there.
+const OVERVIEW_HAS_VOICE_CARD: bool = false;
+
 /// Everything the window owns.
 pub struct Window {
     /// The top-level window.
@@ -33,13 +36,14 @@ pub struct Window {
     stack: gtk::Stack,
     nav: Vec<(PageId, gtk::Button)>,
     nav_labels: Vec<gtk::Label>,
-    sidebar: gtk::Box,
+    rail_btns: Vec<(PageId, gtk::Button)>,
+    search_label: gtk::Label,
     compact: Cell<bool>,
     pages: Vec<(PageId, Box<dyn Page>)>,
     pill_dot: gtk::Box,
     pill_text: gtk::Label,
     pill: gtk::Box,
-    mic: MicDock,
+    mic: MicFab,
     fact_egress: gtk::Button,
     fact_memory: gtk::Button,
     fact_gpu: gtk::Button,
@@ -178,15 +182,41 @@ impl Window {
             stack.add_named(&p.widget(), Some(id.key()));
         }
 
-        // Header.
+        // Header: brand, pill tabs, search, status, settings (docs/design/octopit-ux.md §10).
         let header = gtk::HeaderBar::new();
         header.add_css_class("octopit-header");
         header.set_show_title_buttons(true);
         let brand = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-        let mark = icon("neuroos-octopit", 24);
-        brand.append(&mark);
+        brand.append(&icon("neuroos-octopit", 28));
         brand.append(&label("OctoPit", &["brand"]));
+        brand.set_margin_end(12);
         header.pack_start(&brand);
+
+        let tabs = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+        let mut nav = Vec::new();
+        let mut nav_labels = Vec::new();
+        for id in PageId::SIDEBAR {
+            let b = gtk::Button::new();
+            b.add_css_class("tab");
+            b.set_tooltip_text(Some(id.title()));
+            let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+            row.append(&icon(id.icon(), 16));
+            let text = label(id.title(), &[]);
+            nav_labels.push(text.clone());
+            row.append(&text);
+            b.set_child(Some(&row));
+            b.update_property(&[gtk::accessible::Property::Label(id.title())]);
+            tabs.append(&b);
+            nav.push((id, b));
+        }
+        header.set_title_widget(Some(&tabs));
+
+        let avatar = gtk::Button::new();
+        avatar.add_css_class("avatar");
+        avatar.set_child(Some(&icon("neuroos-octopit-symbolic", 18)));
+        avatar.set_tooltip_text(Some("Settings"));
+        avatar.update_property(&[gtk::accessible::Property::Label("Settings")]);
+        header.pack_end(&avatar);
         let pill = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         pill.add_css_class("pill");
         pill.add_css_class("loading");
@@ -194,40 +224,48 @@ impl Window {
         let pill_text = label("Connecting\u{2026}", &[]);
         pill.append(&pill_dot);
         pill.append(&pill_text);
-        pill.set_halign(gtk::Align::Center);
-        header.set_title_widget(Some(&pill));
-        let settings_btn = gtk::Button::new();
-        settings_btn.set_child(Some(&icon("octopit-settings-symbolic", 16)));
-        settings_btn.add_css_class("btn");
-        settings_btn.add_css_class("flat");
-        settings_btn.set_tooltip_text(Some("Settings"));
-        settings_btn.update_property(&[gtk::accessible::Property::Label("Settings")]);
-        header.pack_end(&settings_btn);
+        header.pack_end(&pill);
+        let search = gtk::Button::new();
+        search.add_css_class("search-pill");
+        let search_row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        search_row.append(&icon("octopit-search-symbolic", 14));
+        let search_label = label("Search", &[]);
+        search_row.append(&search_label);
+        search.set_child(Some(&search_row));
+        search.set_tooltip_text(Some("Search commands (Ctrl+K)"));
+        search.update_property(&[gtk::accessible::Property::Label("Search commands")]);
+        header.pack_end(&search);
         window.set_titlebar(Some(&header));
 
-        // Sidebar.
-        let sidebar = gtk::Box::new(gtk::Orientation::Vertical, 4);
-        sidebar.add_css_class("sidebar");
-        sidebar.set_size_request(188, -1);
-        let mut nav = Vec::new();
-        let mut nav_labels = Vec::new();
-        for id in PageId::SIDEBAR {
+        // Left rail: a vertical pill of round icon buttons.
+        let rail = gtk::Box::new(gtk::Orientation::Vertical, 4);
+        rail.add_css_class("rail");
+        rail.set_valign(gtk::Align::Start);
+        rail.set_margin_start(14);
+        rail.set_margin_top(6);
+        let mut rail_btns = Vec::new();
+        let rail_button = |icon_name: &str, tip: &str| {
             let b = gtk::Button::new();
-            b.add_css_class("nav-item");
-            b.set_tooltip_text(Some(id.title()));
-            let row = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-            row.append(&icon(id.icon(), 16));
-            let text = label(id.title(), &[]);
-            nav_labels.push(text.clone());
-            row.append(&text);
-            b.set_child(Some(&row));
-            b.update_property(&[gtk::accessible::Property::Label(id.title())]);
-            sidebar.append(&b);
-            nav.push((id, b));
+            b.add_css_class("rail-btn");
+            b.set_child(Some(&icon(icon_name, 18)));
+            b.set_tooltip_text(Some(tip));
+            b.update_property(&[gtk::accessible::Property::Label(tip)]);
+            b
+        };
+        let rail_overview = rail_button(PageId::Overview.icon(), "Overview");
+        let rail_search = rail_button("octopit-search-symbolic", "Search commands");
+        let rail_privacy = rail_button(PageId::Privacy.icon(), "Privacy");
+        let rail_settings = rail_button(PageId::Settings.icon(), "Settings");
+        let rail_theme = rail_button("octopit-theme-symbolic", "Switch light and dark");
+        for b in [&rail_overview, &rail_search, &rail_privacy, &rail_settings, &rail_theme] {
+            rail.append(b);
         }
+        rail_btns.push((PageId::Overview, rail_overview.clone()));
+        rail_btns.push((PageId::Privacy, rail_privacy.clone()));
+        rail_btns.push((PageId::Settings, rail_settings.clone()));
 
-        // Voice dock and status strip.
-        let mic = MicDock::new(controller);
+        // Floating mic and status strip.
+        let mic = MicFab::new(controller);
         let fact_egress = fact("Sent to network: \u{2014}", "Open the Privacy page");
         let fact_memory = fact("Memory: \u{2014}", "Open the Overview page");
         let fact_gpu = fact("GPU: \u{2014}", "Open the Backends page");
@@ -242,7 +280,7 @@ impl Window {
         strip.append(&grow);
         strip.append(&label("OctoPit", &["caption", "muted"]));
 
-        // Toast overlay.
+        // Toast and floating mic overlay the pages.
         let toast_label = label("", &[]);
         toast_label.set_wrap(true);
         let toast_box = gtk::Box::new(gtk::Orientation::Horizontal, 0);
@@ -255,11 +293,11 @@ impl Window {
         let overlay = gtk::Overlay::new();
         overlay.set_child(Some(&stack));
         overlay.add_overlay(&toast_box);
+        overlay.add_overlay(&mic.widget());
 
         let middle = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-        middle.append(&sidebar);
+        middle.append(&rail);
         middle.append(&overlay);
-        middle.append(&mic.widget());
         let outer = gtk::Box::new(gtk::Orientation::Vertical, 0);
         middle.set_vexpand(true);
         outer.append(&middle);
@@ -271,7 +309,8 @@ impl Window {
             stack,
             nav,
             nav_labels,
-            sidebar: sidebar.clone(),
+            rail_btns,
+            search_label,
             compact: Cell::new(false),
             pages,
             pill_dot,
@@ -303,7 +342,18 @@ impl Window {
         }
         {
             let w = Rc::clone(&win);
-            settings_btn.connect_clicked(move |_| w.show_page(PageId::Settings));
+            avatar.connect_clicked(move |_| w.show_page(PageId::Settings));
+            let w = Rc::clone(&win);
+            search.connect_clicked(move |_| w.show_palette());
+            let w = Rc::clone(&win);
+            rail_search.connect_clicked(move |_| w.show_palette());
+            let w = Rc::clone(&win);
+            rail_theme.connect_clicked(move |_| w.toggle_theme());
+        }
+        for (id, b) in &win.rail_btns {
+            let w = Rc::clone(&win);
+            let id = *id;
+            b.connect_clicked(move |_| w.show_page(id));
         }
         for (f, p) in [
             (&win.fact_egress, PageId::Privacy),
@@ -401,13 +451,13 @@ impl Window {
         add(
             "theme-dark",
             "<Ctrl><Shift>d",
-            Box::new(move || theme::apply(&w.provider, Theme::Dark)),
+            Box::new(move || w.set_theme(Theme::Dark)),
         );
         let w = Rc::clone(self);
         add(
             "theme-light",
             "<Ctrl><Shift>l",
-            Box::new(move || theme::apply(&w.provider, Theme::Light)),
+            Box::new(move || w.set_theme(Theme::Light)),
         );
     }
 
@@ -424,9 +474,7 @@ impl Window {
         for l in &self.nav_labels {
             l.set_visible(!compact);
         }
-        self.sidebar
-            .set_size_request(if compact { 60 } else { 188 }, -1);
-        self.mic.set_compact(compact);
+        self.search_label.set_visible(!compact);
         self.fact_speed.set_visible(!compact);
         self.fact_gpu.set_visible(!compact);
     }
@@ -533,7 +581,12 @@ impl Window {
             ThemeChoice::Light => Theme::Light,
             ThemeChoice::Dark => Theme::Dark,
         };
-        theme::apply(&self.provider, theme);
+        let dark = theme::apply(&self.provider, theme);
+        if dark {
+            self.window.add_css_class("dark");
+        } else {
+            self.window.remove_css_class("dark");
+        }
         self.scale_provider.load_from_string(&format!(
             "window.octopit {{ font-size: {}%; }}",
             s.text_scale
@@ -562,9 +615,22 @@ impl Window {
         }
     }
 
+    /// Flips between light and dark and keeps the choice.
+    fn toggle_theme(&self) {
+        let mut s = self.settings.borrow().clone();
+        let dark_now = self.window.has_css_class("dark");
+        s.theme = if dark_now { ThemeChoice::Light } else { ThemeChoice::Dark };
+        self.apply_settings(&s);
+        self.save_settings(&s);
+    }
+
     /// Switches the theme.
     pub fn set_theme(&self, theme: Theme) {
-        theme::apply(&self.provider, theme);
+        if theme::apply(&self.provider, theme) {
+            self.window.add_css_class("dark");
+        } else {
+            self.window.remove_css_class("dark");
+        }
     }
 
     /// Shows a page and moves the sidebar highlight.
@@ -578,6 +644,14 @@ impl Window {
                 b.remove_css_class("active");
             }
         }
+        for (rid, b) in &self.rail_btns {
+            if *rid == id {
+                b.add_css_class("active");
+            } else {
+                b.remove_css_class("active");
+            }
+        }
+        self.mic.set_visible(!(id == PageId::Overview && OVERVIEW_HAS_VOICE_CARD));
         if let Some((_, p)) = self.pages.iter().find(|(pid, _)| *pid == id) {
             p.shown();
         }

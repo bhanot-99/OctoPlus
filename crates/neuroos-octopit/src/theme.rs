@@ -29,7 +29,8 @@ fn system_prefers_dark() -> bool {
 }
 
 /// Installs the stylesheet for `theme` on the default display. Safe to call again to switch.
-pub fn apply(provider: &gtk::CssProvider, theme: Theme) {
+/// Returns whether the dark theme is now in use.
+pub fn apply(provider: &gtk::CssProvider, theme: Theme) -> bool {
     let dark = match theme {
         Theme::Dark => true,
         Theme::Light => false,
@@ -39,6 +40,7 @@ pub fn apply(provider: &gtk::CssProvider, theme: Theme) {
         settings.set_gtk_application_prefer_dark_theme(dark);
     }
     provider.load_from_string(if dark { CSS_DARK } else { CSS_LIGHT });
+    dark
 }
 
 /// Registers the provider once.

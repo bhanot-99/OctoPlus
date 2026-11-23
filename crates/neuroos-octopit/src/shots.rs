@@ -23,6 +23,27 @@ const PAGES: [PageId; 6] = [
     PageId::Settings,
 ];
 
+/// Saves a shot, retrying while the window has not drawn a frame yet.
+fn save_retry(win: &Rc<Window>, path: String, then: Box<dyn FnOnce()>, tries: u32) {
+    match save(&win.window, &path) {
+        Ok(()) => {
+            println!("saved {path}");
+            then();
+        }
+        Err(e) if tries > 0 => {
+            let w = Rc::clone(win);
+            glib::timeout_add_local_once(Duration::from_millis(800), move || {
+                save_retry(&w, path, then, tries - 1);
+            });
+            let _ = e;
+        }
+        Err(e) => {
+            eprintln!("screenshot {path}: {e}");
+            then();
+        }
+    }
+}
+
 fn save(win: &impl IsA<gtk::Widget>, path: &str) -> Result<(), String> {
     let paintable = gtk::WidgetPaintable::new(Some(win));
     let snap = gtk::Snapshot::new();
@@ -85,30 +106,28 @@ fn next(w: Rc<Window>, steps: Steps, dir: String, app: gtk::Application) {
     glib::timeout_add_local_once(Duration::from_millis(wait), move || {
         let name = format!(
             "{dir}/{}-{}.png",
-            if theme == Theme::Dark {
-                "dark"
-            } else {
-                "light"
-            },
+            if theme == Theme::Dark { "dark" } else { "light" },
             page.key()
         );
-        match save(&w.window, &name) {
-            Ok(()) => println!("saved {name}"),
-            Err(e) => eprintln!("screenshot {name}: {e}"),
-        }
-        // A page taller than the window gets a second shot of its end.
-        if w.scroll_to_end() {
-            let end_name = name.replace(".png", "-end.png");
-            glib::timeout_add_local_once(Duration::from_millis(500), move || {
-                match save(&w.window, &end_name) {
-                    Ok(()) => println!("saved {end_name}"),
-                    Err(e) => eprintln!("screenshot {end_name}: {e}"),
+        let w2 = Rc::clone(&w);
+        save_retry(
+            &w,
+            name.clone(),
+            Box::new(move || {
+                // A page taller than the window gets a second shot of its end.
+                if w2.scroll_to_end() {
+                    let end_name = name.replace(".png", "-end.png");
+                    let w3 = Rc::clone(&w2);
+                    glib::timeout_add_local_once(Duration::from_millis(600), move || {
+                        let w4 = Rc::clone(&w3);
+                        save_retry(&w3, end_name, Box::new(move || next(w4, steps, dir, app)), 4);
+                    });
+                } else {
+                    next(w2, steps, dir, app);
                 }
-                next(w, steps, dir, app);
-            });
-        } else {
-            next(w, steps, dir, app);
-        }
+            }),
+            4,
+        );
     });
 }
 

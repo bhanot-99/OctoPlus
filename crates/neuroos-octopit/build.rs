@@ -43,6 +43,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .ok_or_else(|| format!("token color.{theme}.{name} missing"))?;
             writeln!(defs, "@define-color {} {value};", name.replace('.', "_"))?;
         }
+        // OctoPit's own tokens (v2 visual language): oct_<name>.
+        let oct = tokens["octopit"][theme]
+            .as_object()
+            .ok_or_else(|| format!("tokens octopit.{theme} missing"))?;
+        for (name, value) in oct {
+            let v = value
+                .as_str()
+                .ok_or_else(|| format!("token octopit.{theme}.{name} is not a string"))?;
+            writeln!(defs, "@define-color oct_{} {v};", name.replace('.', "_"))?;
+        }
         let radius = &tokens["radius"];
         let css = template
             .replace("/*@COLORS@*/", &defs)
@@ -53,6 +63,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .replace("@FOCUS_OFF@", &tokens["focus"]["offset"].to_string());
         std::fs::write(out.join(format!("style-{theme}.css")), css)?;
     }
+
+    // The chart palette as constants, so drawn charts and the stylesheet share one source.
+    let series = tokens["octopit"]["series"]
+        .as_array()
+        .ok_or("tokens octopit.series missing")?;
+    let mut rs = String::from("/// Chart series colours from `ui/tokens/tokens.json`.\npub const SERIES: [&str; 8] = [\n");
+    for c in series.iter().take(8) {
+        let c = c.as_str().ok_or("series colour is not a string")?;
+        writeln!(rs, "    \"{c}\",")?;
+    }
+    rs.push_str("];\n");
+    std::fs::write(out.join("tokens.rs"), rs)?;
 
     // The bundled icons (docs/design/octopit-ux.md §5): one resource file, loaded at start.
     let assets = manifest.join("assets");
