@@ -257,3 +257,11 @@ window.octopit:not(.reduce-motion) .mic-button.thinking { animation: octopit-bre
   min-width: 60px;
 }
 
+/* ---- privacy (agy) ---- */
+.ledger-time {
+  min-width: 60px;
+}
+.bullet-dot {
+  min-width: 16px;
+}
+
