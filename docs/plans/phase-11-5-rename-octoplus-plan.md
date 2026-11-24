@@ -1,4 +1,6 @@
-# Phase 11.5 plan — Rename Semantic NeuroOS to OctoPlus, everywhere
+# Phase 11.5 plan — Preparation on Linux: rename to OctoPlus, then Mac readiness
+
+> **Two parts.** Part 1 is the rename (everything below until "Part 2"). **Part 2 is the Mac readiness work** (formerly "Phase 16.0"): put Linux-only code behind interfaces so the Mac conversion (Phase 15) replaces edges and does not rewrite logic. If the Mac is already in hand when Part 1 finishes, Part 2 is done as the first steps of Phase 15 instead.
 
 **Status:** PLANNED, NOT STARTED. Owner directive 2026-11-24. **Branch (when started):** `rename-octoplus`.
 **Size:** mechanical but wide; about 1 to 2 working days with a script, plus the gate. **Builder:** Claude (a
@@ -117,3 +119,20 @@ Plus: no file or folder name on disk contains `neuroos`; `systemctl --user list-
 | The fetcher stops working (user, key, nft rule) | Owner `sudo` steps are written out and checked with the existing egress check |
 | The name clashes with something else called OctoPlus | A short name search (apps, crates, packages) in S01 before the script runs; owner decides |
 | Scripted replace damages unrelated text | Dry run diff reviewed by file group; the audit; the full test suite |
+
+---
+
+# Part 2 — Mac readiness (on Linux; about 1 week)
+
+**Purpose.** Do the part of the Mac port that needs no Mac. **Needs:** Part 1 done.
+
+| ID | Step | Done when |
+| :-- | :-- | :-- |
+| P115-R1 | `Platform` interfaces for: service manager, sandbox, audio source and sink, focus and idle sensors, key sealing, process stats, paths | Each has one Linux implementation; nothing outside `platform/` mentions systemd, Landlock, PipeWire, `/proc` or XDG |
+| P115-R2 | One `Paths` type for every folder; no hard-coded `~/.local` strings | `git grep ".local/"` finds only the Linux implementation |
+| P115-R3 | Soak input injection: the voice part gets a "test source" that plays a WAV into the pipeline | The soak sends speech with no PipeWire loopback (run 1 sent none, because the `say` tool was not built) |
+| P115-R4 | Soak and tests read memory through one function (resident plus swapped on Linux, `phys_footprint` on the Mac) | The soak script uses it |
+| P115-R5 | Socket folder name policy: under 100 characters (macOS limit is 104) | A test fails on a longer path |
+| P115-R6 | Hand-run checklist template for things only testable on the Mac | `docs/design/mac-checklists.md` exists |
+
+**Done when.** The gate is green on Linux with the interfaces in place and behaviour unchanged.

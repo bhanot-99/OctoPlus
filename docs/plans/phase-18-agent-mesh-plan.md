@@ -1,7 +1,7 @@
-# Phase 19 plan — The agent mesh: small sandboxed helpers that work for you in the background
+# Phase 18 plan — The agent mesh: small sandboxed helpers that work for you in the background
 
 **Status:** PLANNED, NOT STARTED. Owner directive 2026-11-24 (from `docs/octo-plus-vision.md` Pillar 5). **Branch
-(when started):** `agent-mesh`. **Needs:** Phase 18 (skills), Phase 13 (cloud switch and the privacy gate), Phase
+(when started):** `agent-mesh`. **Needs:** Phase 14 (skills), Phase 13 (cloud switch and the privacy gate), Phase
 14 (OctoPit controls). **ADR:** 0025 (to write). It relaxes today's rule that nothing but the user's reply can start
 an action (FR-NUD-10) **only for agents the owner started**, and only through the existing safety kernel.
 
@@ -37,7 +37,7 @@ alone, and because they use only parts that already exist (skills, fetcher, moni
 ## 3. How an agent runs
 
 A small **agent runner** part (C8, its own sandboxed helper) owns the loop: plan one step, pick an allowed skill
-(using the Phase 18 router), run it through C6, read the result as tainted text, decide the next step, stop at the
+(using the Phase 14 router), run it through C6, read the result as tainted text, decide the next step, stop at the
 budget or when done. The model is the local one by default. Output goes to OctoPit (a card), optionally a quiet
 notification, and optionally the voice ("your tests finished, two failed") by the nudge rules. Scheduling: manual
 start, on an event (a failed build), or on a timer, set in OctoPit.
@@ -46,14 +46,14 @@ start, on an event (a failed build), or on a timer, set in OctoPit.
 
 | ID | Story | Done when |
 | :-- | :-- | :-- |
-| P19-S01 | ADR-0025: definition format, budgets, rules in §2, threat model (what a hostile page in a repo or search result can try) | Reviewed by the owner |
-| P19-S02 | Agent runner (C8): loop, budgets, kill switch, heat and battery pauses, audit | A toy agent obeys every limit under test |
-| P19-S03 | Taint and permission tests: agents cannot approve, cannot start agents, cannot change definitions | Red-team prompts in repo files and pages do nothing |
-| P19-S04 | System Physician (easiest, no network) | Finds a real cause for a forced slowdown and offers cleanup through the dialog |
-| P19-S05 | Code Janitor | On a seeded failing project it explains the failure and runs the tests; changes need approval |
-| P19-S06 | Intelligence Scout with the bounded research approval | A brief with sources; the approval text matches the actual requests |
-| P19-S07 | OctoPit Agents page: list, start, stop, history, budgets, per-agent switches | Stop works within 2 s |
-| P19-S08 | Gate: security probe, 4 h soak with agents running, battery and heat check on the Air | All green |
+| P18-S01 | ADR-0025: definition format, budgets, rules in §2, threat model (what a hostile page in a repo or search result can try) | Reviewed by the owner |
+| P18-S02 | Agent runner (C8): loop, budgets, kill switch, heat and battery pauses, audit | A toy agent obeys every limit under test |
+| P18-S03 | Taint and permission tests: agents cannot approve, cannot start agents, cannot change definitions | Red-team prompts in repo files and pages do nothing |
+| P18-S04 | System Physician (easiest, no network) | Finds a real cause for a forced slowdown and offers cleanup through the dialog |
+| P18-S05 | Code Janitor | On a seeded failing project it explains the failure and runs the tests; changes need approval |
+| P18-S06 | Intelligence Scout with the bounded research approval | A brief with sources; the approval text matches the actual requests |
+| P18-S07 | OctoPit Agents page: list, start, stop, history, budgets, per-agent switches | Stop works within 2 s |
+| P18-S08 | Gate: security probe, 4 h soak with agents running, battery and heat check on the Air | All green |
 
 ## 5. Exit criteria
 

@@ -1,10 +1,10 @@
-# Phase 16 plan — Converting OctoPlus to a Mac-only app (MacBook Air)
+# Phase 15 plan — Converting OctoPlus to a Mac-only app (MacBook Air)
 
 **Status:** PLANNED, NOT STARTED. Owner directive 2026-11-24: the owner moves to a MacBook Air next month, and
 OctoPlus becomes **macOS only** afterwards. **Branch (when started):** `mac-port`. **ADR:** 0022 (to write:
 "macOS is the only platform"; it supersedes the Linux-first parts of ADR-0001, -0003 and -0009 and `security.md` §
 on Landlock and seccomp).
-**Needs:** the Mac in hand; Phase 11.5 (new names) done. Phase 16.0 can start before the Mac arrives.
+**Needs:** the Mac in hand; Phase 11.5 part 1 (new names) done. Part 2 of Phase 11.5 (Mac readiness, steps P115-R1 to R6) can be done before the Mac arrives.
 **Knowledge level:** the macOS facts below are from general knowledge, not tested here. Every line marked
 **[verify]** is checked on the Mac in the first spike (S01) before anything depends on it.
 
@@ -58,7 +58,7 @@ nudge and Companion logic. That is most of the code; the port is mostly the edge
 
 ## 4. Principles
 
-1. **Edges behind interfaces first (16.0), then replace.** Each Linux-specific thing gets a small Rust or C++
+1. **Edges behind interfaces first (Phase 11.5 part 2), then replace.** Each Linux-specific thing gets a small Rust or C++
    interface and one Linux implementation. The Mac implementation is added; the Linux one is deleted last.
 2. **Test where it runs.** Logic tests keep running on any machine. Sandbox, audio, sensors, login items and
    packaging can only be tested on the Mac, so each has a hand-run checklist plus a scripted check.
@@ -77,18 +77,18 @@ nudge and Companion logic. That is most of the code; the port is mostly the edge
   (BSD `sed`, `stat`, no `systemctl`, `awk` differences) or moved to Python.
 - CI: a macOS runner for the gate if the repository's plan allows it; otherwise the gate runs on the Air.
 
-## 6. Phase 16.0 — readiness work that needs no Mac (can start now, on Linux)
+## 6. Readiness work that needs no Mac (now Phase 11.5 part 2; steps P115-R1 to R6 are listed in `phase-11-5-rename-octoplus-plan.md`)
 
 Pure refactors that keep Linux working and make the later steps small.
 
 | ID | Story | Done when |
 | :-- | :-- | :-- |
-| P16-S00a | `Platform` interfaces: service manager, sandbox, audio source and sink, focus and idle sensors, key sealing, process stats, paths | Each has one Linux implementation behind it; nothing outside `platform/` mentions systemd, Landlock, PipeWire, `/proc` or XDG |
-| P16-S00b | A path layer: all folders come from one `Paths` type (it already exists in `neuroos-common`); no hard-coded `~/.local` strings | `git grep ".local/"` finds only the Linux implementation |
-| P16-S00c | Soak input injection: C2 gets a "test source" that plays a WAV into the pipeline, so the soak needs no virtual microphone | The soak runs speech traffic with no PipeWire loopback |
-| P16-S00d | Soak and tests read memory through one function (resident plus swapped on Linux, `phys_footprint` on the Mac) | The soak script uses it |
-| P16-S00e | Socket path length: the socket folder name policy limited to under 100 characters | A test fails on a longer path (macOS limit is 104) |
-| P16-S00f | Document: the hand-run checklist template for things only testable on the Mac | In `docs/design/mac-checklists.md` |
+| P115-R1 | `Platform` interfaces: service manager, sandbox, audio source and sink, focus and idle sensors, key sealing, process stats, paths | Each has one Linux implementation behind it; nothing outside `platform/` mentions systemd, Landlock, PipeWire, `/proc` or XDG |
+| P115-R2 | A path layer: all folders come from one `Paths` type (it already exists in `neuroos-common`); no hard-coded `~/.local` strings | `git grep ".local/"` finds only the Linux implementation |
+| P115-R3 | Soak input injection: C2 gets a "test source" that plays a WAV into the pipeline, so the soak needs no virtual microphone | The soak runs speech traffic with no PipeWire loopback |
+| P115-R4 | Soak and tests read memory through one function (resident plus swapped on Linux, `phys_footprint` on the Mac) | The soak script uses it |
+| P115-R5 | Socket path length: the socket folder name policy limited to under 100 characters | A test fails on a longer path (macOS limit is 104) |
+| P115-R6 | Document: the hand-run checklist template for things only testable on the Mac | In `docs/design/mac-checklists.md` |
 
 ## 7. Decision: OctoPit and the approval dialog become native
 
@@ -101,7 +101,7 @@ GTK4 would look foreign and miss menu bar, Touch ID, system notifications and ac
   where it is only presentation; the decision is made in S08 after a spike.
 - The approval dialog (C6) becomes a small native helper with its own sandbox profile, so it stays separate and
   trusted. It uses Touch ID or the system password as an optional second step for dangerous actions [verify].
-- Phase 14 then builds the full interface in this toolkit.
+- Phase 16 then builds the full interface in this toolkit.
 
 ## 8. Subsystem plans
 
@@ -145,7 +145,7 @@ Phase 13 encryption (bundled SQLCipher or an equivalent) uses a data key wrapped
 Backups, GC and rollup become launchd scheduled jobs, or tasks of the supervisor.
 
 **8.7 Inference (C4) and knowledge (C5).** llama.cpp with Metal; the model and context size follow the Air's
-memory. The prompt layout and latency work in ADR-0005 are re-measured. The first-answer targets in Phase 15 are
+memory. The prompt layout and latency work in ADR-0005 are re-measured. The first-answer targets in Phase 20 are
 measured here. Unified memory means the model's memory shows in the same budget as everything else, so the global
 memory plan (§9) is redone.
 
@@ -211,27 +211,27 @@ without any visible error. Decisions:
   on. The Mac import re-seals keys to the Secure Enclave. Models are re-downloaded, not copied. TPM-sealed keys
   cannot move; this is why the export asks for a passphrase.
 
-## 11. Stories (after 16.0)
+## 11. Stories (after Phase 11.5 part 2)
 
 | ID | Story | Done when |
 | :-- | :-- | :-- |
-| P16-S01 | **Spike on the Mac (day 1):** install toolchains; build the Rust workspace and the C++ presets; try each [verify] item: sandbox for a signed helper, socket sharing, peer checks, CoreAudio capture and echo cancel, Accessibility, Secure Enclave wrap, launchd registration | `docs/design/mac-spike-results.md` with a yes, no or workaround for each; ADR-0022 written from it |
-| P16-S02 | Build and unit tests green on macOS (compile errors, `cfg` gates, path layer) | `cargo test --workspace` passes for the portable crates |
-| P16-S03 | Services: launchd plists and the supervisor; health and restart behaviour | All 8 parts start, restart on kill, stop cleanly |
-| P16-S04 | Sandbox profiles and entitlements per helper; the fetcher's network rule | A scripted test: each helper fails every forbidden access; the fetcher reaches only 443 |
-| P16-S05 | IPC on macOS: socket folder, peer checks, framing tests | Existing IPC tests pass; peer-spoof test passes |
-| P16-S06 | Storage and knowledge on the Mac; models on Metal; budgets re-set | Search and answer tests pass; first-answer baseline recorded |
-| P16-S07 | Audio: CoreAudio capture, playback, echo cancel, device changes | Voice turns work on the built-in mic and speaker and on a headset |
-| P16-S08 | Monitor sensors and permissions; reduced mode without them | Focus, idle, lock, battery work; denied permission gives a clear state |
-| P16-S09 | Native OctoPit shell and the approval dialog helper (the pages themselves are Phase 14) | App opens, shows health, mic button works, approvals go through the helper |
-| P16-S10 | Packaging, signing identity (§8.11), first-run, update, uninstall; permission-survives-update test | A clean user account installs and runs from the `.dmg` |
-| P16-S11 | Data import from Linux | The owner's real memory arrives and is searchable |
-| P16-S12 | Mac gate: the whole test suite, security probe, a 12 h soak with sleep cycles and `phys_footprint` | PASS; owner uses it as the main machine for a week |
-| P16-S13 | **Drop Linux:** tag `linux-final`; delete `deploy/systemd`, Landlock, seccomp, nftables, PipeWire, GTK code and Linux scripts and docs; update the PRD, `security.md`, the README | The tree builds only for macOS; the grep audit finds no Linux-only code |
+| P15-S01 | **Spike on the Mac (day 1):** install toolchains; build the Rust workspace and the C++ presets; try each [verify] item: sandbox for a signed helper, socket sharing, peer checks, CoreAudio capture and echo cancel, Accessibility, Secure Enclave wrap, launchd registration | `docs/design/mac-spike-results.md` with a yes, no or workaround for each; ADR-0022 written from it |
+| P15-S02 | Build and unit tests green on macOS (compile errors, `cfg` gates, path layer) | `cargo test --workspace` passes for the portable crates |
+| P15-S03 | Services: launchd plists and the supervisor; health and restart behaviour | All 8 parts start, restart on kill, stop cleanly |
+| P15-S04 | Sandbox profiles and entitlements per helper; the fetcher's network rule | A scripted test: each helper fails every forbidden access; the fetcher reaches only 443 |
+| P15-S05 | IPC on macOS: socket folder, peer checks, framing tests | Existing IPC tests pass; peer-spoof test passes |
+| P15-S06 | Storage and knowledge on the Mac; models on Metal; budgets re-set | Search and answer tests pass; first-answer baseline recorded |
+| P15-S07 | Audio: CoreAudio capture, playback, echo cancel, device changes | Voice turns work on the built-in mic and speaker and on a headset |
+| P15-S08 | Monitor sensors and permissions; reduced mode without them | Focus, idle, lock, battery work; denied permission gives a clear state |
+| P15-S09 | Native OctoPit shell and the approval dialog helper (the pages themselves are Phase 16) | App opens, shows health, mic button works, approvals go through the helper |
+| P15-S10 | Packaging, signing identity (§8.11), first-run, update, uninstall; permission-survives-update test | A clean user account installs and runs from the `.dmg` |
+| P15-S11 | Data import from Linux | The owner's real memory arrives and is searchable |
+| P15-S12 | Mac gate: the whole test suite, security probe, a 12 h soak with sleep cycles and `phys_footprint` | PASS; owner uses it as the main machine for a week |
+| P15-S13 | **Drop Linux:** tag `linux-final`; delete `deploy/systemd`, Landlock, seccomp, nftables, PipeWire, GTK code and Linux scripts and docs; update the PRD, `security.md`, the README | The tree builds only for macOS; the grep audit finds no Linux-only code |
 
 ## 12. Order of work and timing
 
-- **Before the Mac arrives:** 11.5, then 16.0 (S00a to S00f), then Phase 12 on Linux.
+- **Before the Mac arrives:** Phase 11.5 (both parts), then Phase 12, 13A and 14A on Linux.
 - **First days with the Mac:** S01 (the spike), then S02 and S03. Do not start the other stories until the spike
   answers are written down.
 - **Then** S04 to S09 in that order (each depends on the earlier ones), S10 and S11 in parallel, S12 and S13 last.

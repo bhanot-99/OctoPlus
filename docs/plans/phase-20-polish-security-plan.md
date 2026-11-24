@@ -1,7 +1,7 @@
-# Phase 15 plan — Final polish, optimisation and high-level security testing
+# Phase 20 plan — Final polish, optimisation and high-level security testing
 
 **Status:** PLANNED, NOT STARTED. Owner directive 2026-11-24 (D-63). **Branch (when started):** `polish-security`.
-**Needs:** Phases 12, 13, 14 built; runs on the Mac (Phase 16 done).
+**Needs:** Phases 12 to 19 built; runs on the Mac (Phase 15 done).
 
 ## 1. The goal
 
@@ -46,16 +46,16 @@ in writing by the owner before release.
 
 | ID | Story | Done when |
 | :-- | :-- | :-- |
-| P15-S01 | Performance pass on the Mac: profile, fix the top five costs, re-measure | Targets in §2 met or the gap explained |
-| P15-S02 | Battery, heat and idle behaviour; pause rules | The one-hour energy runs pass |
-| P15-S03 | UX polish pass and accessibility fixes | UX acceptance list all green |
-| P15-S04 | Threat model refresh and the test plan | Reviewed by the owner |
-| P15-S05 | Egress capture, privacy red team, injection suite | Report with numbers, no canary leaks |
-| P15-S06 | Fuzzing, sandbox escape, local attacker tests | Report; findings logged |
-| P15-S07 | Encryption review and supply-chain checks | Review notes; checks clean |
-| P15-S08 | Independent review and fixes for S1 and S2 | Re-test of each fix |
-| P15-S09 | The release soak: 24 h on the Mac (the PRD length), with swap recorded | PASS verdict, report in `reports/` |
-| P15-S10 | Release candidate: signed build, install test on a clean account, release notes | Owner signs off |
+| P20-S01 | Performance pass on the Mac: profile, fix the top five costs, re-measure | Targets in §2 met or the gap explained |
+| P20-S02 | Battery, heat and idle behaviour; pause rules | The one-hour energy runs pass |
+| P20-S03 | UX polish pass and accessibility fixes | UX acceptance list all green |
+| P20-S04 | Threat model refresh and the test plan | Reviewed by the owner |
+| P20-S05 | Egress capture, privacy red team, injection suite | Report with numbers, no canary leaks |
+| P20-S06 | Fuzzing, sandbox escape, local attacker tests | Report; findings logged |
+| P20-S07 | Encryption review and supply-chain checks | Review notes; checks clean |
+| P20-S08 | Independent review and fixes for S1 and S2 | Re-test of each fix |
+| P20-S09 | The release soak: 24 h on the Mac (the PRD length), with swap recorded | PASS verdict, report in `reports/` |
+| P20-S10 | Release candidate: signed build, install test on a clean account, release notes | Owner signs off |
 
 ## 5. Exit criteria
 

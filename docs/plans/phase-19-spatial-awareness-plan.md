@@ -1,7 +1,7 @@
-# Phase 20 plan — Spatial awareness: knowing where you are, privately
+# Phase 19 plan — Spatial awareness: knowing where you are, privately
 
 **Status:** PLANNED, NOT STARTED. Owner directive 2026-11-24 (from `docs/octo-plus-vision.md` Pillar 3). **Branch
-(when started):** `spatial`. **Needs:** Phase 16 (Mac), Phase 13 (encrypted storage and the privacy gate).
+(when started):** `spatial`. **Needs:** Phase 15 (Mac), Phase 13 (encrypted storage and the privacy gate).
 **ADR:** 0026 (to write). Location is among the most sensitive data there is, so this phase is built to keep it on
 the machine by default and to need no map service at all in the first version.
 
@@ -46,15 +46,15 @@ CoreLocation (coarse, with its permission) or phone GPS.
 
 | ID | Story | Done when |
 | :-- | :-- | :-- |
-| P20-S01 | ADR-0026 and spike: which signals the Mac gives without a location prompt (Wi-Fi name access has changed across macOS versions and may need the location permission [verify]); decide the fingerprint recipe | Spike report; honest list of what is available |
-| P20-S02 | Place model in storage: places, labels, fingerprints, dwell records, encrypted | Migration and tests; forget and export work |
-| P20-S03 | Place recogniser and the "label this place" flow | A known place is recognised in a test of 20 visits; a new place asks once |
-| P20-S04 | Geotag memory chunks and search by place and time | The vision's example question is answered on seeded data |
-| P20-S05 | Place context for the assistant, nudges, silent chat and the Companion | Rules tested; nothing about place leaves the machine in the gate tests |
-| P20-S06 | Routine hints (simple, readable rules) | Hints appear only after enough visits and can be turned off |
-| P20-S07 | Optional nearby suggestions from an owner-curated local list; the web variant behind the gate | A request with place data shows the coarsened text in the approval |
-| P20-S08 | OctoPit Places page: map-free list, labels, history, delete all, on and off | Matches the stored data; deletion proven |
-| P20-S09 | Gate: privacy red team (place canaries must never reach a cloud request), 4 h soak | All green |
+| P19-S01 | ADR-0026 and spike: which signals the Mac gives without a location prompt (Wi-Fi name access has changed across macOS versions and may need the location permission [verify]); decide the fingerprint recipe | Spike report; honest list of what is available |
+| P19-S02 | Place model in storage: places, labels, fingerprints, dwell records, encrypted | Migration and tests; forget and export work |
+| P19-S03 | Place recogniser and the "label this place" flow | A known place is recognised in a test of 20 visits; a new place asks once |
+| P19-S04 | Geotag memory chunks and search by place and time | The vision's example question is answered on seeded data |
+| P19-S05 | Place context for the assistant, nudges, silent chat and the Companion | Rules tested; nothing about place leaves the machine in the gate tests |
+| P19-S06 | Routine hints (simple, readable rules) | Hints appear only after enough visits and can be turned off |
+| P19-S07 | Optional nearby suggestions from an owner-curated local list; the web variant behind the gate | A request with place data shows the coarsened text in the approval |
+| P19-S08 | OctoPit Places page: map-free list, labels, history, delete all, on and off | Matches the stored data; deletion proven |
+| P19-S09 | Gate: privacy red team (place canaries must never reach a cloud request), 4 h soak | All green |
 
 ## 5. Exit criteria
 

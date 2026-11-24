@@ -1,12 +1,12 @@
-# Phase 18 plan — The skills library: 200+ ways to control the laptop by voice or text
+# Phase 14 plan — The skills library: 200+ ways to control the laptop by voice or text
 
 **Status:** PLANNED, NOT STARTED. Owner directive 2026-11-24: "more than 200 scripts to control the laptop:
 brightness, volume, browser, mail, calendar, notifications and so on", plus an earlier voice-assistant project of
 the owner's with **181 script skills** (not yet seen; see §9). **Branch (when started):** `skills-library`.
-**Needs:** Phase 16 (Mac; most skills are macOS actions) and Phase 12 (the model must pick skills reliably).
+**Needs:** 14A: Phases 11.5, 12 and 13A (portable, on Linux). 14B: Phase 15 (Mac; most skills are macOS actions). **Split:** 14A is the portable part (manifest, loader, classes, router, importer, packs that call no OS interface); 14B is the macOS packs.
 **ADR:** 0024 (to write: skill packs, skill routing, per-class sandboxes). Catalog: `docs/design/skills-catalog.md`.
 
-> **Split (roadmap v2 §2):** **18A** (manifest, loader, classes, router and test set, undo and limits, the importer, and the packs that use no OS interface) is portable and can start on Linux; **18B** (the macOS packs and the Skills page) needs the Mac.
+> **Split (roadmap v2 §2):** **14A** (manifest, loader, classes, router and test set, undo and limits, the importer, and the packs that use no OS interface) is portable and can start on Linux; **14B** (the macOS packs and the Skills page) needs the Mac.
 
 ## 1. Where we are
 
@@ -29,7 +29,7 @@ more than 200, which raises four problems that the old 181-script assistant did 
    class it belongs to and what it adds.
 3. **macOS permissions.** Controlling Mail, Calendar, Safari or System Settings goes through automation and
    accessibility permissions that macOS asks per target app. The library asks only when a skill from that group is
-   first used, explains why, and degrades cleanly if refused [verify in the Phase 16 spike].
+   first used, explains why, and degrades cleanly if refused [verify in the Phase 15 spike].
 4. **Mistakes by voice.** A misheard "turn it off" must never do damage. Rules in §3 handle this.
 
 ## 3. Rules every skill follows
@@ -50,7 +50,7 @@ more than 200, which raises four problems that the old 181-script assistant did 
 - **Rate limits and dry-run.** A skill can only run N times a minute; REVIEW and DANGEROUS skills support
   "show me what you would do" first.
 - **Test double per skill.** Each skill ships with a fake backend so the test suite runs on any machine without
-  touching the real system; a small set of real-Mac checks is run by hand (Phase 16 checklist style).
+  touching the real system; a small set of real-Mac checks is run by hand (Phase 15 checklist style).
 - **The user owns the list.** OctoPit shows every skill with its tier and a switch to turn it off; destructive
   groups are off by default.
 
@@ -73,18 +73,18 @@ more than 200, which raises four problems that the old 181-script assistant did 
 
 | ID | Story | Done when |
 | :-- | :-- | :-- |
-| P18-S01 | ADR-0024; skill manifest format (id, class, tier, args schema, spoken template, undo, platform, tests) | Reviewed; an example skill passes the new loader |
-| P18-S02 | Skill loader, classes and per-class sandbox profiles; user enable and disable | Existing 13 skills moved to the new format with no behaviour change |
-| P18-S03 | **Skill routing:** retrieval index, top-k, constrained fill, confidence threshold and "ask me" fallback | Router accuracy at least 95 % on the labelled set of 200 phrasings per 20 skills (§6) |
-| P18-S04 | Undo, rate limits, dry-run, Touch ID option for DANGEROUS | Tests per feature |
-| P18-S05 | Import tool for the owner's 181 existing scripts: converts each to a manifest, flags shell-string builders, proposes tier and class | A report listing every script as keep, rewrite or drop |
-| P18-S06 | Pack A, system: volume, brightness, display, audio devices, wifi, bluetooth, power, focus, lock, screenshot | About 45 skills, all with fake-backend tests |
-| P18-S07 | Pack B, apps and windows, clipboard, notifications, files | About 45 skills |
-| P18-S08 | Pack C, Mail, Calendar, Reminders, Notes, Messages (read and draft SAFE/REVIEW; send DANGEROUS) | About 40 skills, each permission flow tested |
-| P18-S09 | Pack D, browser (tabs, open, search, bookmarks, reading list), media, Shortcuts | About 35 skills |
-| P18-S10 | Pack E, dev and productivity, timers, text tools, web lookups through the fetcher | About 35 skills |
-| P18-S11 | OctoPit Skills page (search, tier, switches, history, undo) and the first-run permission tour | Page built in the Phase 14 toolkit |
-| P18-S12 | Gate: router accuracy, every skill's tests, injection and mishearing red team, 4 h soak with skill traffic | All green |
+| P14-S01 | ADR-0024; skill manifest format (id, class, tier, args schema, spoken template, undo, platform, tests) | Reviewed; an example skill passes the new loader |
+| P14-S02 | Skill loader, classes and per-class sandbox profiles; user enable and disable | Existing 13 skills moved to the new format with no behaviour change |
+| P14-S03 | **Skill routing:** retrieval index, top-k, constrained fill, confidence threshold and "ask me" fallback | Router accuracy at least 95 % on the labelled set of 200 phrasings per 20 skills (§6) |
+| P14-S04 | Undo, rate limits, dry-run, Touch ID option for DANGEROUS | Tests per feature |
+| P14-S05 | Import tool for the owner's 181 existing scripts: converts each to a manifest, flags shell-string builders, proposes tier and class | A report listing every script as keep, rewrite or drop |
+| P14-S06 | Pack A, system: volume, brightness, display, audio devices, wifi, bluetooth, power, focus, lock, screenshot | About 45 skills, all with fake-backend tests |
+| P14-S07 | Pack B, apps and windows, clipboard, notifications, files | About 45 skills |
+| P14-S08 | Pack C, Mail, Calendar, Reminders, Notes, Messages (read and draft SAFE/REVIEW; send DANGEROUS) | About 40 skills, each permission flow tested |
+| P14-S09 | Pack D, browser (tabs, open, search, bookmarks, reading list), media, Shortcuts | About 35 skills |
+| P14-S10 | Pack E, dev and productivity, timers, text tools, web lookups through the fetcher | About 35 skills |
+| P14-S11 | OctoPit Skills page (search, tier, switches, history, undo) and the first-run permission tour | Page built in the Phase 16 toolkit |
+| P14-S12 | Gate: router accuracy, every skill's tests, injection and mishearing red team, 4 h soak with skill traffic | All green |
 
 (The pack sizes add up to about 200; the final number comes from the catalog and the old scripts.)
 
@@ -108,7 +108,7 @@ B?") whenever the top two candidates are close.
 
 | Risk | Mitigation |
 | :-- | :-- |
-| Router confusion at 200 skills | Retrieval then choice; labelled evaluation; clarifying question fallback; a bigger model (Phase 16) if needed |
+| Router confusion at 200 skills | Retrieval then choice; labelled evaluation; clarifying question fallback; a bigger model (Phase 15) if needed |
 | Permission fatigue on first use | One guided tour; ask per group; reduced mode |
 | Scripts that break on a macOS update | Real-Mac checks per pack; each pack version-tagged |
 | Over-permissive skills added later | Every new skill needs a manifest, tier and review; user skills in a folder are off until reviewed |

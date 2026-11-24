@@ -629,20 +629,20 @@ flowchart LR
 
 ---
 
-## 16. Roadmap v2 (2026-11-24, owner directive D-63)
+## 16. Roadmap v2 (2026-11-24, owner directive D-63; numbered in build order)
 
-After Phase 11 the work continues in these phases. The master plan, the order and the owner decisions are in
-`docs/plans/roadmap-v2.md`.
+After Phase 11 the work continues in these phases. The complete plan, the order and the owner decisions are in
+`docs/plans/master-plan-11-5-to-20.md` (one file) and `docs/plans/roadmap-v2.md`.
 
 | Phase | Name | Plan |
 | :--- | :--- | :--- |
-| 11.5 | Rename Semantic NeuroOS to OctoPlus everywhere, with migration of the installed system | `docs/plans/phase-11-5-rename-octoplus-plan.md` |
+| 11.5 | Preparation on Linux: rename to OctoPlus (with migration), then Mac readiness | `docs/plans/phase-11-5-rename-octoplus-plan.md` |
 | 12 | Companion (Laila) | `docs/plans/phase-12-companion-plan.md` |
-| 13 | Cloud models, privacy gate, encrypted storage, Local/Cloud/Auto switch | `docs/plans/phase-13-cloud-plan.md` |
-| 14 | OctoPit as the one interface | `docs/plans/phase-14-octopit-interface-plan.md` |
-| 15 | Final polish, optimisation, high-level security testing, release | `docs/plans/phase-15-polish-security-plan.md` |
-| 16 | Conversion to a Mac-only app (starts before the Mac arrives with readiness work) | `docs/plans/phase-16-mac-conversion-plan.md` |
+| 13 | Cloud models, privacy gate, encrypted storage, Local/Cloud/Auto switch (13A portable, 13B Mac) | `docs/plans/phase-13-cloud-plan.md` |
+| 14 | Skills library, 200+ skills (14A portable, 14B Mac) | `docs/plans/phase-14-skills-library-plan.md`, `docs/design/skills-catalog.md` |
+| 15 | Conversion to a Mac-only app | `docs/plans/phase-15-mac-conversion-plan.md` |
+| 16 | OctoPit as the one interface | `docs/plans/phase-16-octopit-interface-plan.md` |
 | 17 | Stealth silent chat | `docs/plans/phase-17-silent-chat-plan.md` |
-| 18 | Skills library (200+ skills) | `docs/plans/phase-18-skills-library-plan.md`, `docs/design/skills-catalog.md` |
-| 19 | Agent mesh | `docs/plans/phase-19-agent-mesh-plan.md` |
-| 20 | Spatial awareness | `docs/plans/phase-20-spatial-awareness-plan.md` |
+| 18 | Agent mesh | `docs/plans/phase-18-agent-mesh-plan.md` |
+| 19 | Spatial awareness | `docs/plans/phase-19-spatial-awareness-plan.md` |
+| 20 | Polish, optimisation, high-level security testing, release | `docs/plans/phase-20-polish-security-plan.md` |

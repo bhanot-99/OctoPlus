@@ -1,8 +1,8 @@
 # Skills catalog (draft 1, 2026-11-24)
 
 **Status:** a starting list, not final. The owner has about 200 skills in mind and an earlier project with 181 script
-skills that has not been read yet (Phase 18 §9). This file is where they get merged into one list: **one name per
-action, one tier, one class.** Plan: `docs/plans/phase-18-skills-library-plan.md`.
+skills that has not been read yet (Phase 14 §9). This file is where they get merged into one list: **one name per
+action, one tier, one class.** Plan: `docs/plans/phase-14-skills-library-plan.md`.
 
 Tier key: **S** = SAFE, **R** = REVIEW (dialog shows exactly what will happen), **D** = DANGEROUS (always asks, shows
 the exact payload, may need Touch ID). "u" after a tier means an undo is stored. Names use `group.action`.
@@ -66,7 +66,7 @@ Counts are targets per group; the examples are the first ones to build.
 ## Totals
 
 Pack A about 45, B about 45, C about 40, D about 35, E about 35 = about 200, plus the 13 core skills.
-Anything the 181-script project has that is not listed here is added in the import step (P18-S05); anything here that
+Anything the 181-script project has that is not listed here is added in the import step (P14-S05); anything here that
 the owner never uses is dropped. **Never build:** moving money, posting publicly, purchases, deleting accounts.
 
 ## Rules that decide a tier (so new skills need no argument)

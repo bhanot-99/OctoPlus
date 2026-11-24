@@ -1,4 +1,4 @@
-# OctoPlus master plan: Phase 11.5 to Phase 20
+# OctoPlus master plan: Phase 11.5 to Phase 19
 
 **Status:** PLAN, NOT STARTED. Written 2026-11-24 on branch `roadmap-v2` from the owner's directives (D-63 to D-66 in
 `memory.md`). Nothing described here is built yet. This file is the single, complete read: every phase in full,
@@ -11,9 +11,9 @@ the phase numbers. Part C is what spans phases: decisions, risks, lessons, measu
 ## Contents
 
 - Part A: [Where we stand](#a1-where-we-stand), [The goal](#a2-the-goal-in-the-owners-words), [The order and the Mac gate](#a3-the-order-and-the-mac-gate), [Rules that hold in every phase](#a4-rules-that-hold-in-every-phase)
-- Part B: [11.5 Rename](#phase-115--rename-to-octoplus), [16.0 Mac readiness](#phase-160--mac-readiness-on-linux), [12 Companion](#phase-12--the-companion-laila), [13 Cloud and switch](#phase-13--cloud-models-the-privacy-gate-encrypted-storage-and-the-switch), [16 Mac conversion](#phase-16--conversion-to-a-mac-only-app), [14 OctoPit interface](#phase-14--octopit-as-the-one-interface), [17 Silent chat](#phase-17--stealth-silent-chat), [18 Skills library](#phase-18--the-skills-library), [19 Agent mesh](#phase-19--the-agent-mesh), [20 Spatial awareness](#phase-20--spatial-awareness), [15 Polish and security](#phase-15--polish-optimisation-and-high-level-security-testing)
+- Part B: [11.5 Preparation](#phase-115--preparation-on-linux-rename-to-octoplus-then-mac-readiness), [12 Companion](#phase-12--the-companion-laila), [13 Cloud and switch](#phase-13--cloud-models-the-privacy-gate-encrypted-storage-and-the-switch), [14 Skills library](#phase-14--the-skills-library), [15 Mac conversion](#phase-15--conversion-to-a-mac-only-app), [16 OctoPit interface](#phase-16--octopit-as-the-one-interface), [17 Silent chat](#phase-17--stealth-silent-chat), [18 Agent mesh](#phase-18--the-agent-mesh), [19 Spatial awareness](#phase-19--spatial-awareness), [20 Polish and security](#phase-20--polish-optimisation-and-high-level-security-testing)
 - Part C: [Decisions register](#c1-decisions-register), [Risk register](#c2-risk-register), [Lessons that shape the plan](#c3-lessons-that-shape-the-plan), [Vision items not assigned](#c4-vision-items-not-yet-assigned)
-- Part D: [Naming table](#d1-naming-table), [Linux to Mac map](#d2-linux-to-mac-map), [Skills catalog summary](#d3-skills-catalog-summary), [Effort and calendar](#d4-effort-and-calendar), [Glossary](#d5-glossary)
+- Part D: [Naming table](#d1-naming-table), [Old-to-new phase numbers](#d1a-old-to-new-phase-numbers), [Linux to Mac map](#d2-linux-to-mac-map), [Skills catalog summary](#d3-skills-catalog-summary), [Effort and calendar](#d4-effort-and-calendar-estimates-with-the-owner-checking-each-phase), [Glossary](#d5-glossary)
 
 ---
 
@@ -49,48 +49,54 @@ As of 2026-11-24 evening:
 
 ## A3. The order and the Mac gate
 
-The Mac may arrive any day. The order therefore has: a start that is right either way, a block of work that does not
-care which machine it runs on, a **Mac gate**, and the rest on the Mac.
+**Phase numbers follow the build order:** 11.5, 12, 13, 14, 15, 16, 17, 18, 19, 20. (Earlier drafts used other numbers;
+the old-to-new table is in D1a so old notes can be read.)
 
-Two phases are split so that Mac-independent work never waits:
+The Mac may arrive any day, so the order has a start that is right either way, a block of work that does not care which
+machine it runs on, a **Mac gate**, and the rest on the Mac. Two phases have a Mac-dependent tail, named with a letter:
 
-- **13A (portable)** privacy gate, provider adapters, the Local/Cloud/Auto switch logic, encrypted storage behind a
-  `KeySealer` interface (a passphrase sealer for development), canary tests. **13B (Mac)** Secure Enclave sealing.
-- **18A (portable)** skill manifest, loader, classes, the router and its test set, undo and limits, the importer for
-  the 181 scripts, and packs that call no OS interface (text, clock, dev, web). **18B (Mac)** the packs that call
-  macOS and the Skills page.
+- **Phase 13 (cloud):** **13A (portable)** privacy gate, provider adapters, the Local/Cloud/Auto switch logic, encrypted
+  storage behind a `KeySealer` interface (a passphrase sealer for development), canary tests. **13B (Mac)** Secure Enclave
+  sealing, built right after Phase 15.
+- **Phase 14 (skills):** **14A (portable)** skill manifest, loader, classes, the router and its test set, undo and limits,
+  the importer for the 181 scripts, and packs that call no OS interface (text, clock, dev, web). **14B (Mac)** the packs
+  that call macOS and the Skills page content, built after 13B.
 
-| Step | Work | Where | Estimate | Note |
+| Order | Work | Where | Estimate | Note |
 | :-- | :-- | :-- | :-- | :-- |
 | 0 | Read soak run 2, merge `fix/soak-memory` (OctoPit is already on `main`) | Linux | 1 day | After about 22:30 IST on 2026-11-24 |
-| 1 | **Phase 11.5 Rename** | Linux | 1 to 2 days | Always first: no other branch may be open |
-| gate | If the Mac is already here: go to step 5 | | | 16.0 items are done as the first port steps |
-| 2 | **Phase 16.0 Mac readiness** | Linux | about 1 week | Interfaces, soak input injection, checklists |
-| 3a | **Phase 12 Companion** | Linux | 3 to 4 weeks | Mostly portable logic |
-| 3b | **Phase 13A** | Linux | 2 to 3 weeks | The gate and switch are plain Rust |
-| 3c | **Phase 18A** | Linux | 3 to 4 weeks | The router is the hard, portable part |
-| 3d | If still waiting: **Phase 15 preparation** | Linux | 1 week | Threat model, test plan, canary harness |
-| gate | After every story in step 3: is the Mac here? If yes, finish the story, merge, go to step 5 | | | |
-| 5 | **Phase 16.1 to 16.5 Mac conversion** | Mac | 4 to 5 weeks | Mac becomes the main line; `linux-final` tag; Linux deleted at the end |
-| 6 | **13B**, **14**, **17**, **18B**, **19**, **20** in that order | Mac | 3 to 6 weeks each | Dependencies below |
-| 7 | **Phase 15** polish, security tests, 24 h Mac soak, trial, release | Mac | 4 to 5 weeks | Always last |
+| 1 | **Phase 11.5**: part 1 the rename, then part 2 Mac readiness | Linux | 1 to 2 days, then about 1 week | The rename is always first: no other branch may be open |
+| gate | If the Mac is already here: go to order 6 | | | The readiness items are done as the first port steps |
+| 2 | **Phase 12 Companion** | Linux | 3 to 4 weeks | Mostly portable logic |
+| 3 | **Phase 13A** | Linux | 2 to 3 weeks | The gate and switch are plain Rust |
+| 4 | **Phase 14A** | Linux | 3 to 4 weeks | The router is the hard, portable part |
+| 5 | If still waiting: **Phase 20 preparation** (threat model, test plan, canary harness) | Linux | 1 week | No code risk |
+| gate | After every story in orders 2 to 5: is the Mac here? If yes, finish the story, merge, go to order 6 | | | |
+| 6 | **Phase 15 Mac conversion** | Mac | 4 to 5 weeks | Mac becomes the main line; `linux-final` tag; Linux deleted at the end |
+| 7 | **Phase 13B** | Mac | about 1 week | Small; the keys are sealed once, on the Secure Enclave |
+| 8 | **Phase 14B** | Mac | 6 to 8 weeks | Shippable pack by pack |
+| 9 | **Phase 16 OctoPit as the one interface** | Mac | 4 to 6 weeks | Needs 13A and 15; includes the Skills page |
+| 10 | **Phase 17 Stealth silent chat** | Mac | 2 to 3 weeks | Needs 16 |
+| 11 | **Phase 18 Agent mesh** | Mac | 3 to 4 weeks | Needs 14, 13, 16 |
+| 12 | **Phase 19 Spatial awareness** | Mac | 2 to 3 weeks | Needs 15 and the encrypted store from 13 |
+| 13 | **Phase 20 Polish, security testing, 24 h Mac soak, trial, release** | Mac | 4 to 5 weeks | Always last |
 
-Why this order: the rename is cheapest first. The Mac conversion unlocks the real machine and is the parent of 13B,
-14, 17, 18B, 19 and 20. Companion makes the system feel alive soonest and is portable. 13A and 18A are the hardest
-thinking in cloud and skills and need no Mac. 14 needs the 13A interfaces and the Mac toolkit; 17 needs 14; 18B
-needs 16 and 18A; 19 needs the skills; 20 needs the encrypted store. 15 tests everything, so it is last.
+Why this order: the rename is cheapest first. The Mac conversion unlocks the real machine and is the parent of everything
+after it. Companion makes the system feel alive soonest and is portable. 13A and 14A are the hard thinking in cloud and
+skills and need no Mac. 16 needs the 13A interfaces and the Mac toolkit; 17 needs 16; 18 needs the skills; 19 needs the
+encrypted store. 20 tests everything, so it is last.
 
 **If the Mac arrives:**
 
 | When | What happens |
 | :-- | :-- |
-| This week, during 11.5 | 11.5, then Phase 16 immediately (16.0 folded in). Then 12, 13 (A and B together), 14, 17, 18, 19, 20, 15 on the Mac. Nothing is built twice. |
-| In 1 to 2 weeks, during 16.0 or early Companion | Finish the current story, merge, then Phase 16. Resume 12 on the Mac. |
-| In 3 or more weeks, during 12, 13A or 18A | Finish the current story, merge, then Phase 16. Portable code ports with only its edges changed. Resume step 6 plus the unfinished A parts. |
-| After step 3d | All portable work is done. Phase 16, then 13B, 14, 17, 18B, 19, 20, 15. |
+| This week, during Phase 11.5 | Finish the rename, then Phase 15 immediately (the readiness work folds into it). Then 12, 13 (A and B together), 14 (A and B together), 16, 17, 18, 19, 20 on the Mac. Nothing is built twice. |
+| In 1 to 2 weeks, during readiness or early Companion | Finish the current story, merge, then Phase 15. Resume Phase 12 on the Mac. |
+| In 3 or more weeks, during 12, 13A or 14A | Finish the current story, merge, then Phase 15. Portable code built so far ports with only its edges changed. Resume with 13B, 14B, then 16 to 20 plus the unfinished A parts. |
+| After order 5 | All portable work is done. Phase 15, then 13B, 14B, 16, 17, 18, 19, 20. |
 
-**Before the Mac, do not build:** any GTK interface page (Phase 14 waits for the toolkit decision), anything that
-needs cgroups, nftables or systemd beyond what exists, Linux-only sensors or audio changes. They would be thrown away.
+**Before the Mac, do not build:** any GTK interface page (Phase 16 waits for the toolkit decision), anything that needs
+cgroups, nftables or systemd beyond what exists, Linux-only sensors or audio changes. They would be thrown away.
 
 ## A4. Rules that hold in every phase
 
@@ -117,7 +123,9 @@ owner does.** Estimates are mine and rough.
 
 ---
 
-## Phase 11.5 — Rename to OctoPlus
+## Phase 11.5 — Preparation on Linux: rename to OctoPlus, then Mac readiness
+
+### Part 1 — Rename to OctoPlus
 
 **Purpose.** Change the product name from Semantic NeuroOS to **OctoPlus** everywhere: code, commands, services,
 folders, packages, documents. The GUI keeps the name OctoPit as a part of OctoPlus.
@@ -187,24 +195,22 @@ group, the audit, the full suite).
 
 **Estimate.** 1 to 2 working days plus the gate. Builder and checker: Claude with a script; the audit checks it.
 
----
-
-## Phase 16.0 — Mac readiness (on Linux)
+### Part 2 — Mac readiness (on Linux)
 
 **Purpose.** Make the later Mac conversion small by doing the part that needs no Mac: put every Linux-specific thing
 behind a small interface, so the Mac work replaces edges and does not rewrite logic. Skipped as a separate step if
 the Mac is already here (the same items become the first port steps).
 
-**Needs.** Phase 11.5 done.
+**Needs.** Part 1 of Phase 11.5 (the rename) done.
 
 | ID | Step | Done when |
 | :-- | :-- | :-- |
-| P16-S00a | `Platform` interfaces for: service manager, sandbox, audio source and sink, focus and idle sensors, key sealing, process stats, paths | Each has one Linux implementation; nothing outside `platform/` mentions systemd, Landlock, PipeWire, `/proc` or XDG |
-| P16-S00b | One `Paths` type for every folder; no hard-coded `~/.local` strings | `git grep ".local/"` finds only the Linux implementation |
-| P16-S00c | Soak input injection: the voice part gets a "test source" that plays a WAV into the pipeline | The soak sends speech with no PipeWire loopback (run 1 never sent any speech, because the `say` tool was not built) |
-| P16-S00d | Soak and tests read memory through one function (resident plus swapped on Linux, `phys_footprint` on the Mac) | The soak script uses it |
-| P16-S00e | Socket folder name policy: under 100 characters (macOS limit is 104) | A test fails on a longer path |
-| P16-S00f | Hand-run checklist template for things only testable on the Mac | `docs/design/mac-checklists.md` exists |
+| P115-R1 | `Platform` interfaces for: service manager, sandbox, audio source and sink, focus and idle sensors, key sealing, process stats, paths | Each has one Linux implementation; nothing outside `platform/` mentions systemd, Landlock, PipeWire, `/proc` or XDG |
+| P115-R2 | One `Paths` type for every folder; no hard-coded `~/.local` strings | `git grep ".local/"` finds only the Linux implementation |
+| P115-R3 | Soak input injection: the voice part gets a "test source" that plays a WAV into the pipeline | The soak sends speech with no PipeWire loopback (run 1 never sent any speech, because the `say` tool was not built) |
+| P115-R4 | Soak and tests read memory through one function (resident plus swapped on Linux, `phys_footprint` on the Mac) | The soak script uses it |
+| P115-R5 | Socket folder name policy: under 100 characters (macOS limit is 104) | A test fails on a longer path |
+| P115-R6 | Hand-run checklist template for things only testable on the Mac | `docs/design/mac-checklists.md` exists |
 
 **Done when.** The gate is green on Linux with the interfaces in place; behaviour is unchanged. **Estimate.** About 1 week.
 
@@ -216,7 +222,7 @@ the Mac is already here (the same items become the first port steps).
 should talk more often, not only useful but like a friend: jokes, normal conversation." Personal use only.
 Plan file: `phase-12-companion-plan.md` (was Phase 13); persona: `docs/design/companion-persona-laila.md`; ADR-0019.
 
-**Needs.** Phase 11.5. Voice stays the main channel here; in Phase 14 OctoPit adds Laila's text chat and controls.
+**Needs.** Phase 11.5. Voice stays the main channel here; in Phase 16 OctoPit adds Laila's text chat and controls.
 
 **Owner decisions already taken (2026-11-23):**
 - Rule R0-6 (nudge text only from templates) is **removed**. One thing is kept as a design requirement: companion speech
@@ -282,7 +288,7 @@ you told it; one "not now" quiets it; you can always see when it is listening an
 | C-S03 | Pulse scheduler: gating, topics, rate learning, voice controls, caps | Fake-clock simulation: caps never exceeded, quiet hours respected |
 | C-S04 | Humour tuning: feedback loop, repeat avoidance, avoided topics, sensitive-moment rules | No repeats in 200 simulated days; owner rates jokes |
 | C-S05 | Memory of you as decided | Chance average 40 to 50 % over many events; exclusions never saved; forget works at once |
-| C-S06 | OctoPit: session indicator, companion card, settings, today's talks, feedback buttons | Screenshots both themes (this is reworked in Phase 14 for the Mac) |
+| C-S06 | OctoPit: session indicator, companion card, settings, today's talks, feedback buttons | Screenshots both themes (this is reworked in Phase 16 for the Mac) |
 | C-S08 | Safety verification: companion speech cannot dispatch, no audio written, injection tests, log scan | Security report; gate green |
 | C-S09 | 24 h soak in companion mode, then a one-week "aliveness" trial with daily ratings | Report with numbers and ratings |
 | C-S10 | Hinglish spike and pack | Owner-rated comparison; a written decision; a pack the owner can talk to for 10 minutes |
@@ -345,7 +351,7 @@ snippets), redact with stable placeholders, build **one** outbound text that the
 C7 sends (the fetcher already refuses any other text), then de-redact the answer locally and mark it external and
 untrusted (the taint model exists). Cloud text can never trigger an action by itself.
 
-**The switch (Phase 13 logic, shown in OctoPit in Phase 14).** Three modes: **Local** (never leaves), **Cloud** (the
+**The switch (Phase 13 logic, shown in OctoPit in Phase 16).** Three modes: **Local** (never leaves), **Cloud** (the
 gate decides per question), **Auto** (the gate decides, and falls back to local when offline, when a provider fails,
 or when the class is P2). The default is Local, and when the network is down the choice is Local automatically.
 Every answer shows which model answered and why.
@@ -403,13 +409,105 @@ reads the Privacy page in the trial, signs off.
 
 ---
 
-## Phase 16 — Conversion to a Mac-only app
+## Phase 14 — The skills library
+
+**Purpose.** More than 200 ways to control the laptop by voice or text: brightness, volume, browser, mail, calendar,
+notifications, windows, files, dev tools, timers and more, including the owner's earlier **181 script skills**. Plan file:
+`phase-14-skills-library-plan.md`; catalog `docs/design/skills-catalog.md`; ADR-0024 (to write: skill packs, routing,
+per-class sandboxes). Split: **14A portable** (can start on Linux), **14B Mac** (the macOS packs and the Skills page).
+
+**Where we are.** The safety kernel (C6) has a real skill framework: each skill declares one capability, a base tier
+(SAFE, REVIEW, DANGEROUS), an argument schema and a sandbox profile; each runs in a sandboxed child process with a
+timeout; every call goes into a hash-chained audit log; tainted context escalates tiers. It ships **13 skills** (disk
+report, calendar read, notes search and append, cleanup, web fetch and search, privacy pause, memory and profile forget
+and remember, shell exec disabled). This phase makes it a library of 200+.
+
+**The four hard problems.**
+1. **Choosing among 200.** The prompt cannot list 200 skills; a small model gets confused above about 15 to 20. Two steps:
+   retrieval by meaning (the embedding model already in storage) returns the best 8 to 12 candidates; the model picks one
+   and fills the arguments under a grammar constraint. The current router accuracy of about 90 to 94 % on new wording
+   (BUG-070) is the baseline to beat.
+2. **Safety at scale.** Hand-writing 200 sandbox profiles is a bug factory. Skills belong to **classes**, each with one
+   reviewed profile; a skill declares its class and what it adds.
+3. **macOS permissions.** Controlling Mail, Calendar, Safari or System Settings goes through automation and accessibility
+   permissions asked per target app. The library asks only when a skill group is first used, explains why, and degrades
+   cleanly if refused [verify].
+4. **Mistakes by voice.** A misheard "turn it off" must never do damage (rules below).
+
+**Rules every skill follows.**
+- **Tiers.** SAFE: reads, or a trivial undoable change (volume, brightness, dark mode, play and pause). REVIEW: changes
+  your data or sends something beyond the machine's own state (create a calendar event, draft a mail, move files, open a
+  URL from tainted text): the dialog shows exactly what will happen. DANGEROUS: deletes, sends mail or messages, runs
+  code, changes security, restarts: always asks, shows the exact payload, may need Touch ID. A tier can only go up by
+  context (taint), never down. A skill's tier is the highest of its base tier, the tier raised by tainted arguments, and
+  anything it calls.
+- **No shell strings.** Arguments go as an argument list or a typed message to a fixed helper, never glued into a shell
+  command; a skill that needs `osascript` or a script runs a fixed script file with the arguments as data. Scripts that
+  build commands from spoken text are injection holes, and this is the first thing the old 181 scripts are checked for.
+- **Undo where possible.** Reversible skills store the previous value so "undo that" works for a short time.
+- **One result shape.** A short spoken line, an optional detail for OctoPit, a status, what changed; the audit log records
+  arguments (secrets masked), result and tier.
+- **Rate limits and dry run.** A skill runs at most N times a minute; REVIEW and DANGEROUS skills can "show what you would do".
+- **A fake backend per skill** so the suite runs anywhere without touching the real system; a small hand-run real-Mac check per pack.
+- **The user owns the list.** OctoPit shows every skill with its tier and a switch; destructive groups are off by default.
+- **Never build:** moving money, posting publicly, purchases, deleting accounts.
+
+**Skill classes (one reviewed sandbox profile each).** `system-state` (query), `system-control` (change a setting),
+`app-control` (open, quit, focus), `apple-events` (automation permission for named apps), `files-read` and `files-write`
+(allow-listed folders), `web` (only through the fetcher, approval and the gate), `dev` (project folders, no network),
+`text` (nothing), `clock` (timers and alarms), `shortcuts` (a named macOS Shortcut; REVIEW by default).
+
+**The packs** (about 200 plus the 13 core; the catalog lists examples and default tiers):
+
+| Pack | Part | About | Contents |
+| :-- | :-- | --: | :-- |
+| A System | 14B | 45 | audio, display, network, power, focus, screen, system |
+| B Apps and files | 14B | 45 | app, window, clipboard, notifications, files (the file group can start in 14A) |
+| C Mail, calendar, reminders, notes, messages | 14B | 40 | read and draft SAFE or REVIEW; send DANGEROUS |
+| D Browser, media, shortcuts, home | 14B | 35 | tabs, search, bookmarks, now playing, run Shortcuts, optional HomeKit |
+| E Dev, productivity, text, web | 14A | 35 | git status and diff, tests, builds, timers, calculators, translation, web lookups through the fetcher |
+
+**How routing is judged.** A labelled set: for each skill at least 10 differently worded requests (including noisy
+transcripts) and 20 near-miss requests that must not trigger it. Measured: right skill, right arguments, wrong skill, and
+"should have asked". Targets: right skill at least 95 %; wrong-skill execution under 0.5 % (the dialog is a second guard
+for REVIEW and DANGEROUS); a safe fallback ("did you mean A or B?") whenever the top two are close.
+
+| ID | Step | Part | Done when |
+| :-- | :-- | :-- | :-- |
+| P14-S01 | ADR-0024; manifest format (id, class, tier, argument schema, spoken template, undo, platform, tests) | A | An example skill passes the new loader |
+| P14-S02 | Loader, classes, per-class sandbox profiles, user enable and disable | A | The existing 13 skills moved with no behaviour change |
+| P14-S03 | **Skill routing:** retrieval index, top-k, constrained fill, confidence threshold, "ask me" fallback | A | At least 95 % on the labelled set (200 phrasings per 20 skills) |
+| P14-S04 | Undo, rate limits, dry run, Touch ID option for DANGEROUS | A | Tests per feature |
+| P14-S05 | **Importer for the 181 scripts:** converts each to a manifest, flags shell-string builders, proposes tier and class | A | A report listing every script as keep, rewrite or drop |
+| P14-S10 | Pack E (dev, productivity, text, web) and the portable file skills | A | About 35 skills with fake-backend tests |
+| P14-S06 | Pack A, system | B | About 45 skills |
+| P14-S07 | Pack B, apps, windows, clipboard, notifications, files | B | About 45 skills |
+| P14-S08 | Pack C, mail, calendar, reminders, notes, messages | B | About 40 skills; each permission flow tested |
+| P14-S09 | Pack D, browser, media, Shortcuts | B | About 35 skills |
+| P14-S11 | OctoPit Skills page and the first-run permission tour | B | Built in the Phase 16 toolkit |
+| P14-S12 | Gate: router accuracy, every skill's tests, injection and mishearing red team, 4 h soak with skill traffic | B | All green |
+
+**Done when.** 200+ skills each with a manifest, tier, class, undo (where possible), fake-backend tests and a real-Mac
+check; the router meets its targets; no DANGEROUS skill runs without a dialog showing the exact payload; the red team
+(mishearing, prompt injection through a mail or web page, malformed arguments) finds no unapproved action; any skill can
+be turned off from OctoPit. **Risks:** router confusion at 200 skills (retrieval, labelled evaluation, clarifying question,
+a bigger Mac model); permission fatigue (one tour, per group, reduced mode); scripts that break on macOS updates (real-Mac
+checks, version-tagged packs); over-permissive skills later (every new skill needs a manifest, tier and review; user-folder
+skills are off until reviewed); duplicates (one name per action).
+
+**Owner does.** **Says where the 181-script project lives** (it is not under the owner's home folder on this laptop under
+any name I could find), lists the daily-use skills first, lists the actions that must never exist, approves tiers.
+**Estimate.** 14A 3 to 4 weeks on Linux; 14B 6 to 8 weeks on the Mac, shippable pack by pack.
+
+---
+
+## Phase 15 — Conversion to a Mac-only app
 
 **Purpose.** Make OctoPlus a Mac app for the MacBook Air and drop Linux. The Linux version is frozen at the git tag
-`linux-final` so it can always be rebuilt. Plan file: `phase-16-mac-conversion-plan.md`; ADR-0022 (to write: "macOS is
+`linux-final` so it can always be rebuilt. Plan file: `phase-15-mac-conversion-plan.md`; ADR-0022 (to write: "macOS is
 the only platform"; supersedes the Linux-first parts of ADR-0001, -0003, -0009 and the Landlock and seccomp parts of `security.md`).
 
-**Needs.** The Mac in hand; Phase 11.5 done. 16.0 (above) may be done before. **Knowledge level:** the macOS facts here
+**Needs.** The Mac in hand; Phase 11.5 part 1 (the rename) done. Part 2 of Phase 11.5 (readiness, above) may be done before. **Knowledge level:** the macOS facts here
 come from general knowledge, not from trying them. Every item marked **[verify]** is checked in the first spike (S01).
 
 **What "Mac-only" means.** One platform: macOS on Apple Silicon. Delivered as `OctoPlus.app` with its background helpers
@@ -435,7 +533,7 @@ API; MPRIS → scripting for Music and Spotify; GTK4 36 → SwiftUI and AppKit; 
 logic, protobuf messages, Unix-socket framed IPC, bundled SQLite with FTS5, the vector scan, the tokenizer, the safety
 kernel's decisions, the nudge and Companion logic. The port is mostly the edges.
 
-**Principles.** Edges behind interfaces first (16.0), then replace. Test where it runs (sandbox, audio, sensors,
+**Principles.** Edges behind interfaces first (Phase 11.5 part 2), then replace. Test where it runs (sandbox, audio, sensors,
 login items and packaging can only be tested on the Mac, so each has a hand-run checklist plus a script). One change
 at a time, each with a green gate. Never trust a macOS fact without trying it.
 
@@ -491,23 +589,23 @@ the app; OctoPit offers "remove my data" and never deletes the data folder witho
 Linux:** an export tool (on Linux, before the move) writes a portable archive of facts, chunks and settings plus a
 passphrase-protected key export if encryption is on; the Mac re-seals the keys; models are re-downloaded.
 
-**Steps (after 16.0).**
+**Steps (after Phase 11.5 part 2).**
 
 | ID | Step | Done when |
 | :-- | :-- | :-- |
-| P16-S01 | **Day-1 spike on the Mac:** toolchains; build everything; try every [verify] item | `docs/design/mac-spike-results.md`; ADR-0022 written from it |
-| P16-S02 | Build and unit tests green on macOS (`cfg` gates, path layer) | Portable crates pass `cargo test` |
-| P16-S03 | Services: launchd plists and the supervisor | All 8 parts start, restart on kill, stop cleanly |
-| P16-S04 | Sandbox profiles and entitlements per helper; the fetcher's network rule | A script: each helper fails every forbidden access; fetcher reaches only 443 |
-| P16-S05 | IPC on macOS: folder, peer checks, framing | Existing IPC tests pass; peer-spoof test passes |
-| P16-S06 | Storage and knowledge; models on Metal; budgets re-set | Search and answer tests pass; baseline recorded |
-| P16-S07 | Audio: CoreAudio, echo cancel, device changes | Voice turns work on built-in mic and speaker and a headset |
-| P16-S08 | Monitor sensors and permissions; reduced mode | Focus, idle, lock, battery work; denial gives a clear state |
-| P16-S09 | Native OctoPit shell and approval dialog helper (pages are Phase 14) | App opens, shows health, mic button works, approvals go through the helper |
-| P16-S10 | Packaging, signing identity, first run, update, uninstall; permission-survives-update test | A clean user account installs and runs |
-| P16-S11 | Data import from Linux | The owner's real memory arrives and is searchable |
-| P16-S12 | Mac gate: full suite, security probe, 12 h soak with sleep cycles on `phys_footprint` | PASS; owner uses the Mac as the main machine for a week |
-| P16-S13 | **Drop Linux:** tag `linux-final`; delete systemd, Landlock, seccomp, nftables, PipeWire, GTK code and Linux scripts; update PRD, `security.md`, README | The tree builds only for macOS |
+| P15-S01 | **Day-1 spike on the Mac:** toolchains; build everything; try every [verify] item | `docs/design/mac-spike-results.md`; ADR-0022 written from it |
+| P15-S02 | Build and unit tests green on macOS (`cfg` gates, path layer) | Portable crates pass `cargo test` |
+| P15-S03 | Services: launchd plists and the supervisor | All 8 parts start, restart on kill, stop cleanly |
+| P15-S04 | Sandbox profiles and entitlements per helper; the fetcher's network rule | A script: each helper fails every forbidden access; fetcher reaches only 443 |
+| P15-S05 | IPC on macOS: folder, peer checks, framing | Existing IPC tests pass; peer-spoof test passes |
+| P15-S06 | Storage and knowledge; models on Metal; budgets re-set | Search and answer tests pass; baseline recorded |
+| P15-S07 | Audio: CoreAudio, echo cancel, device changes | Voice turns work on built-in mic and speaker and a headset |
+| P15-S08 | Monitor sensors and permissions; reduced mode | Focus, idle, lock, battery work; denial gives a clear state |
+| P15-S09 | Native OctoPit shell and approval dialog helper (pages are Phase 16) | App opens, shows health, mic button works, approvals go through the helper |
+| P15-S10 | Packaging, signing identity, first run, update, uninstall; permission-survives-update test | A clean user account installs and runs |
+| P15-S11 | Data import from Linux | The owner's real memory arrives and is searchable |
+| P15-S12 | Mac gate: full suite, security probe, 12 h soak with sleep cycles on `phys_footprint` | PASS; owner uses the Mac as the main machine for a week |
+| P15-S13 | **Drop Linux:** tag `linux-final`; delete systemd, Landlock, seccomp, nftables, PipeWire, GTK code and Linux scripts; update PRD, `security.md`, README | The tree builds only for macOS |
 
 **Order inside the phase.** The spike first and do not continue until its answers are written. Then S02, S03, then S04 to
 S09 in order, S10 and S11 in parallel, S12 and S13 last. **Estimate:** spike 1 to 2 days, S02 to S08 about 2 to 3 weeks,
@@ -524,16 +622,16 @@ Linux removes the fallback (the tag; delete only after a week of Mac use).
 
 ---
 
-## Phase 14 — OctoPit as the one interface
+## Phase 16 — OctoPit as the one interface
 
 **Purpose.** OctoPit becomes the way a person uses OctoPlus, so nothing needs the terminal, a config file or a separate
-window. Plan file: `phase-14-octopit-interface-plan.md`; ADR-0021 (to write; revises ADR-0017 and the rule that OctoPit
+window. Plan file: `phase-16-octopit-interface-plan.md`; ADR-0021 (to write; revises ADR-0017 and the rule that OctoPit
 cannot approve). "Only place the user interacts" is read as: every action a person takes happens in OctoPit.
 **Two doors stay open on purpose, with their controls and history in OctoPit:** voice (hands-free use must not need the app
 in front) and the **approval dialog** for dangerous actions, which stays a separate window owned by the safety kernel so a
 bug or spoof in the interface can never approve its own request.
 
-**Needs.** 13A (the switch and privacy interfaces), 16 (the Mac toolkit; the recommendation is SwiftUI).
+**Needs.** 13A (the switch and privacy interfaces) and Phase 15 (the Mac toolkit is chosen there; the recommendation is SwiftUI).
 
 **Pages and what each does.**
 
@@ -560,16 +658,16 @@ notifications that open the right page, a global shortcut, the command palette. 
 
 | ID | Step | Done when |
 | :-- | :-- | :-- |
-| P14-S01 | ADR-0021 and UX spec v3 (all pages, permissions, flows, copy) | Owner reviews mock screenshots |
-| P14-S02 | Shell: window, navigation, menu-bar item, notifications, shortcut, palette | Opens from every entry point; accessibility checks pass |
-| P14-S03 | Talk: unified text and voice with streaming and sources | A voice turn and a typed turn appear in one thread |
-| P14-S04 | Brain switch and Privacy pages | Switching changes the next answer's route; the ledger view matches the real ledger |
-| P14-S05 | Memory page | Deleting in the page deletes in storage (tested) |
-| P14-S06 | Companion and Voice pages | Settings change behaviour without a restart where possible |
-| P14-S07 | Activity, Skills and approvals, Health pages | Pending approval shows and links to the dialog |
-| P14-S08 | Settings, backups, updates, diagnostics | Every setting validated; restore tested on a copy |
-| P14-S09 | First-run onboarding and empty states | A fresh install reaches a first answer without the terminal |
-| P14-S10 | Gate: UX acceptance, accessibility, security probe for the new calls, 4 h soak with the app open | All green |
+| P16-S01 | ADR-0021 and UX spec v3 (all pages, permissions, flows, copy) | Owner reviews mock screenshots |
+| P16-S02 | Shell: window, navigation, menu-bar item, notifications, shortcut, palette | Opens from every entry point; accessibility checks pass |
+| P16-S03 | Talk: unified text and voice with streaming and sources | A voice turn and a typed turn appear in one thread |
+| P16-S04 | Brain switch and Privacy pages | Switching changes the next answer's route; the ledger view matches the real ledger |
+| P16-S05 | Memory page | Deleting in the page deletes in storage (tested) |
+| P16-S06 | Companion and Voice pages | Settings change behaviour without a restart where possible |
+| P16-S07 | Activity, Skills and approvals, Health pages | Pending approval shows and links to the dialog |
+| P16-S08 | Settings, backups, updates, diagnostics | Every setting validated; restore tested on a copy |
+| P16-S09 | First-run onboarding and empty states | A fresh install reaches a first answer without the terminal |
+| P16-S10 | Gate: UX acceptance, accessibility, security probe for the new calls, 4 h soak with the app open | All green |
 
 **Done when.** Everything above works from OctoPit and `octoplusctl` is only for debugging; the probe shows OctoPit cannot
 approve, reach the network or read storage files; a new person can install, onboard and hold a conversation without a
@@ -586,9 +684,9 @@ allow-list, tests). **Estimate:** 4 to 6 weeks.
 the same eyes on your screen, reached in one keystroke and answering in text. Plan file: `phase-17-silent-chat-plan.md`;
 ADR-0023 (to write). From `docs/octo-plus-vision.md` §6.2.
 
-**Needs.** Phase 14 and Phase 16.
+**Needs.** Phase 16 and Phase 15.
 
-| Vision item | On `main` today (OctoPit v1.1) | Phase 14 | This phase |
+| Vision item | On `main` today (OctoPit v1.1) | Phase 16 | This phase |
 | :-- | :-- | :-- | :-- |
 | Text chat with streamed answers | Built, plain text | Unified thread with voice | Markdown, code blocks, copy buttons |
 | Command palette | Built | Kept | Becomes the HUD's command line |
@@ -640,106 +738,14 @@ hotkey clash (configurable). **Estimate:** 2 to 3 weeks.
 
 ---
 
-## Phase 18 — The skills library
-
-**Purpose.** More than 200 ways to control the laptop by voice or text: brightness, volume, browser, mail, calendar,
-notifications, windows, files, dev tools, timers and more, including the owner's earlier **181 script skills**. Plan file:
-`phase-18-skills-library-plan.md`; catalog `docs/design/skills-catalog.md`; ADR-0024 (to write: skill packs, routing,
-per-class sandboxes). Split: **18A portable** (can start on Linux), **18B Mac** (the macOS packs and the Skills page).
-
-**Where we are.** The safety kernel (C6) has a real skill framework: each skill declares one capability, a base tier
-(SAFE, REVIEW, DANGEROUS), an argument schema and a sandbox profile; each runs in a sandboxed child process with a
-timeout; every call goes into a hash-chained audit log; tainted context escalates tiers. It ships **13 skills** (disk
-report, calendar read, notes search and append, cleanup, web fetch and search, privacy pause, memory and profile forget
-and remember, shell exec disabled). This phase makes it a library of 200+.
-
-**The four hard problems.**
-1. **Choosing among 200.** The prompt cannot list 200 skills; a small model gets confused above about 15 to 20. Two steps:
-   retrieval by meaning (the embedding model already in storage) returns the best 8 to 12 candidates; the model picks one
-   and fills the arguments under a grammar constraint. The current router accuracy of about 90 to 94 % on new wording
-   (BUG-070) is the baseline to beat.
-2. **Safety at scale.** Hand-writing 200 sandbox profiles is a bug factory. Skills belong to **classes**, each with one
-   reviewed profile; a skill declares its class and what it adds.
-3. **macOS permissions.** Controlling Mail, Calendar, Safari or System Settings goes through automation and accessibility
-   permissions asked per target app. The library asks only when a skill group is first used, explains why, and degrades
-   cleanly if refused [verify].
-4. **Mistakes by voice.** A misheard "turn it off" must never do damage (rules below).
-
-**Rules every skill follows.**
-- **Tiers.** SAFE: reads, or a trivial undoable change (volume, brightness, dark mode, play and pause). REVIEW: changes
-  your data or sends something beyond the machine's own state (create a calendar event, draft a mail, move files, open a
-  URL from tainted text): the dialog shows exactly what will happen. DANGEROUS: deletes, sends mail or messages, runs
-  code, changes security, restarts: always asks, shows the exact payload, may need Touch ID. A tier can only go up by
-  context (taint), never down. A skill's tier is the highest of its base tier, the tier raised by tainted arguments, and
-  anything it calls.
-- **No shell strings.** Arguments go as an argument list or a typed message to a fixed helper, never glued into a shell
-  command; a skill that needs `osascript` or a script runs a fixed script file with the arguments as data. Scripts that
-  build commands from spoken text are injection holes, and this is the first thing the old 181 scripts are checked for.
-- **Undo where possible.** Reversible skills store the previous value so "undo that" works for a short time.
-- **One result shape.** A short spoken line, an optional detail for OctoPit, a status, what changed; the audit log records
-  arguments (secrets masked), result and tier.
-- **Rate limits and dry run.** A skill runs at most N times a minute; REVIEW and DANGEROUS skills can "show what you would do".
-- **A fake backend per skill** so the suite runs anywhere without touching the real system; a small hand-run real-Mac check per pack.
-- **The user owns the list.** OctoPit shows every skill with its tier and a switch; destructive groups are off by default.
-- **Never build:** moving money, posting publicly, purchases, deleting accounts.
-
-**Skill classes (one reviewed sandbox profile each).** `system-state` (query), `system-control` (change a setting),
-`app-control` (open, quit, focus), `apple-events` (automation permission for named apps), `files-read` and `files-write`
-(allow-listed folders), `web` (only through the fetcher, approval and the gate), `dev` (project folders, no network),
-`text` (nothing), `clock` (timers and alarms), `shortcuts` (a named macOS Shortcut; REVIEW by default).
-
-**The packs** (about 200 plus the 13 core; the catalog lists examples and default tiers):
-
-| Pack | Part | About | Contents |
-| :-- | :-- | --: | :-- |
-| A System | 18B | 45 | audio, display, network, power, focus, screen, system |
-| B Apps and files | 18B | 45 | app, window, clipboard, notifications, files (the file group can start in 18A) |
-| C Mail, calendar, reminders, notes, messages | 18B | 40 | read and draft SAFE or REVIEW; send DANGEROUS |
-| D Browser, media, shortcuts, home | 18B | 35 | tabs, search, bookmarks, now playing, run Shortcuts, optional HomeKit |
-| E Dev, productivity, text, web | 18A | 35 | git status and diff, tests, builds, timers, calculators, translation, web lookups through the fetcher |
-
-**How routing is judged.** A labelled set: for each skill at least 10 differently worded requests (including noisy
-transcripts) and 20 near-miss requests that must not trigger it. Measured: right skill, right arguments, wrong skill, and
-"should have asked". Targets: right skill at least 95 %; wrong-skill execution under 0.5 % (the dialog is a second guard
-for REVIEW and DANGEROUS); a safe fallback ("did you mean A or B?") whenever the top two are close.
-
-| ID | Step | Part | Done when |
-| :-- | :-- | :-- | :-- |
-| P18-S01 | ADR-0024; manifest format (id, class, tier, argument schema, spoken template, undo, platform, tests) | A | An example skill passes the new loader |
-| P18-S02 | Loader, classes, per-class sandbox profiles, user enable and disable | A | The existing 13 skills moved with no behaviour change |
-| P18-S03 | **Skill routing:** retrieval index, top-k, constrained fill, confidence threshold, "ask me" fallback | A | At least 95 % on the labelled set (200 phrasings per 20 skills) |
-| P18-S04 | Undo, rate limits, dry run, Touch ID option for DANGEROUS | A | Tests per feature |
-| P18-S05 | **Importer for the 181 scripts:** converts each to a manifest, flags shell-string builders, proposes tier and class | A | A report listing every script as keep, rewrite or drop |
-| P18-S10 | Pack E (dev, productivity, text, web) and the portable file skills | A | About 35 skills with fake-backend tests |
-| P18-S06 | Pack A, system | B | About 45 skills |
-| P18-S07 | Pack B, apps, windows, clipboard, notifications, files | B | About 45 skills |
-| P18-S08 | Pack C, mail, calendar, reminders, notes, messages | B | About 40 skills; each permission flow tested |
-| P18-S09 | Pack D, browser, media, Shortcuts | B | About 35 skills |
-| P18-S11 | OctoPit Skills page and the first-run permission tour | B | Built in the Phase 14 toolkit |
-| P18-S12 | Gate: router accuracy, every skill's tests, injection and mishearing red team, 4 h soak with skill traffic | B | All green |
-
-**Done when.** 200+ skills each with a manifest, tier, class, undo (where possible), fake-backend tests and a real-Mac
-check; the router meets its targets; no DANGEROUS skill runs without a dialog showing the exact payload; the red team
-(mishearing, prompt injection through a mail or web page, malformed arguments) finds no unapproved action; any skill can
-be turned off from OctoPit. **Risks:** router confusion at 200 skills (retrieval, labelled evaluation, clarifying question,
-a bigger Mac model); permission fatigue (one tour, per group, reduced mode); scripts that break on macOS updates (real-Mac
-checks, version-tagged packs); over-permissive skills later (every new skill needs a manifest, tier and review; user-folder
-skills are off until reviewed); duplicates (one name per action).
-
-**Owner does.** **Says where the 181-script project lives** (it is not under the owner's home folder on this laptop under
-any name I could find), lists the daily-use skills first, lists the actions that must never exist, approves tiers.
-**Estimate.** 18A 3 to 4 weeks on Linux; 18B 6 to 8 weeks on the Mac, shippable pack by pack.
-
----
-
-## Phase 19 — The agent mesh
+## Phase 18 — The agent mesh
 
 **Purpose.** Today OctoPlus answers when asked. An agent is a **job with a goal that runs by itself for a while**: it
-watches, thinks and does a few steps, then reports. Plan file: `phase-19-agent-mesh-plan.md`; ADR-0025 (to write). It
+watches, thinks and does a few steps, then reports. Plan file: `phase-18-agent-mesh-plan.md`; ADR-0025 (to write). It
 relaxes the rule that only the user's reply can start an action (FR-NUD-10) **only for agents the owner started**, and only
 through the existing safety kernel.
 
-**Needs.** Phase 18 (skills), 13 (switch and privacy gate), 14 (OctoPit controls).
+**Needs.** Phase 14 (skills), Phase 13 (switch and privacy gate), Phase 16 (OctoPit controls).
 
 | Agent | What it does | Reads | Acts through | Never |
 | :-- | :-- | :-- | :-- | :-- |
@@ -761,20 +767,20 @@ through the existing safety kernel.
 7. Everything is logged in the same hash-chained audit log, with a readable run history in OctoPit.
 
 **How an agent runs.** A small **agent runner** part (C8, its own sandboxed helper) owns the loop: plan one step, pick an
-allowed skill with the Phase 18 router, run it through C6, read the result as tainted text, decide the next step, stop at
+allowed skill with the Phase 14 router, run it through C6, read the result as tainted text, decide the next step, stop at
 the budget or when done. Output goes to OctoPit as a card, optionally a quiet notification, optionally the voice. Start by
 hand, on an event (a failed build), or on a timer set in OctoPit.
 
 | ID | Step | Done when |
 | :-- | :-- | :-- |
-| P19-S01 | ADR-0025: definition format, budgets, the rules, threat model (what a hostile page in a repo or search can try) | Owner reviews |
-| P19-S02 | Agent runner (C8): loop, budgets, kill switch, heat and battery pauses, audit | A toy agent obeys every limit under test |
-| P19-S03 | Taint and permission tests: agents cannot approve, start agents or change definitions | Red-team text in repo files and pages does nothing |
-| P19-S04 | System Physician (easiest, no network) | Finds a real cause for a forced slowdown and offers a cleanup through the dialog |
-| P19-S05 | Code Janitor | On a seeded failing project it explains the failure and runs the tests; changes need approval |
-| P19-S06 | Intelligence Scout with the bounded research approval | A sourced brief; the approval text matches the actual requests |
-| P19-S07 | OctoPit Agents page: list, start, stop, history, budgets, switches | Stop works within 2 s |
-| P19-S08 | Gate: security probe, 4 h soak with agents running, battery and heat check on the Air | All green |
+| P18-S01 | ADR-0025: definition format, budgets, the rules, threat model (what a hostile page in a repo or search can try) | Owner reviews |
+| P18-S02 | Agent runner (C8): loop, budgets, kill switch, heat and battery pauses, audit | A toy agent obeys every limit under test |
+| P18-S03 | Taint and permission tests: agents cannot approve, start agents or change definitions | Red-team text in repo files and pages does nothing |
+| P18-S04 | System Physician (easiest, no network) | Finds a real cause for a forced slowdown and offers a cleanup through the dialog |
+| P18-S05 | Code Janitor | On a seeded failing project it explains the failure and runs the tests; changes need approval |
+| P18-S06 | Intelligence Scout with the bounded research approval | A sourced brief; the approval text matches the actual requests |
+| P18-S07 | OctoPit Agents page: list, start, stop, history, budgets, switches | Stop works within 2 s |
+| P18-S08 | Gate: security probe, 4 h soak with agents running, battery and heat check on the Air | All green |
 
 **Done when.** Three agents work on real tasks, each stops at its budget and on Stop, none approves or acts without the
 dialog, nothing leaves except through the fetcher with the shown approval, and a day of use shows no runaway CPU, memory or
@@ -785,10 +791,10 @@ through the gate); approval fatigue (bounded, few approvals; one batch approval 
 
 ---
 
-## Phase 20 — Spatial awareness
+## Phase 19 — Spatial awareness
 
 **Purpose.** Knowing where you are, privately: recognise "home", "office", "library", join place to memory and context.
-Plan file: `phase-20-spatial-awareness-plan.md`; ADR-0026 (to write). From `docs/octo-plus-vision.md` Pillar 3. Location is
+Plan file: `phase-19-spatial-awareness-plan.md`; ADR-0026 (to write). From `docs/octo-plus-vision.md` Pillar 3. Location is
 among the most sensitive data there is, so it stays on the machine by default and version 1 needs no map service at all.
 
 **An honest note about the Mac.** The vision says GPS. **A MacBook Air has no GPS chip.** Apple's Location Services places
@@ -818,15 +824,15 @@ per install so a copied database does not map to real networks.
 
 | ID | Step | Done when |
 | :-- | :-- | :-- |
-| P20-S01 | ADR-0026 and spike: which signals the Mac gives without a location prompt (reading the Wi-Fi name has changed across macOS versions and may need the permission [verify]); fix the fingerprint recipe | Spike report; honest list of what is available |
-| P20-S02 | Place model in storage: places, labels, fingerprints, dwell records, encrypted | Migration and tests; forget and export work |
-| P20-S03 | Recogniser and the "label this place" flow | A known place is recognised in a test of 20 visits |
-| P20-S04 | Geotag chunks; search by place and time | The vision's example question is answered on seeded data |
-| P20-S05 | Place context for assistant, nudges, silent chat and the Companion | Nothing about place leaves the machine in the gate tests |
-| P20-S06 | Routine hints | Appear only after enough visits; can be turned off |
-| P20-S07 | Optional nearby suggestions: local list; web variant behind the gate | An approval shows the coarsened text |
-| P20-S08 | OctoPit Places page: list, labels, history, delete all, on and off | Matches storage; deletion proven |
-| P20-S09 | Gate: privacy red team (place canaries must never reach a cloud request), 4 h soak | All green |
+| P19-S01 | ADR-0026 and spike: which signals the Mac gives without a location prompt (reading the Wi-Fi name has changed across macOS versions and may need the permission [verify]); fix the fingerprint recipe | Spike report; honest list of what is available |
+| P19-S02 | Place model in storage: places, labels, fingerprints, dwell records, encrypted | Migration and tests; forget and export work |
+| P19-S03 | Recogniser and the "label this place" flow | A known place is recognised in a test of 20 visits |
+| P19-S04 | Geotag chunks; search by place and time | The vision's example question is answered on seeded data |
+| P19-S05 | Place context for assistant, nudges, silent chat and the Companion | Nothing about place leaves the machine in the gate tests |
+| P19-S06 | Routine hints | Appear only after enough visits; can be turned off |
+| P19-S07 | Optional nearby suggestions: local list; web variant behind the gate | An approval shows the coarsened text |
+| P19-S08 | OctoPit Places page: list, labels, history, delete all, on and off | Matches storage; deletion proven |
+| P19-S09 | Gate: privacy red team (place canaries must never reach a cloud request), 4 h soak | All green |
 
 **Done when.** Home, office and a third place are recognised with no location service or network traffic; memory search by
 place works; a canary place label never appears in any outbound request; all place data can be paused and deleted from
@@ -837,10 +843,10 @@ target (encrypted store, protected class, deletion and pause, no raw coordinates
 
 ---
 
-## Phase 15 — Polish, optimisation and high-level security testing
+## Phase 20 — Polish, optimisation and high-level security testing
 
 **Purpose.** Make OctoPlus fast, calm and trustworthy for daily use, and prove the security claims with tests an outsider
-would run. Nothing new is added here. Plan file: `phase-15-polish-security-plan.md`. Always last, on the Mac. A light
+would run. Nothing new is added here. Plan file: `phase-20-polish-security-plan.md`. Always last, on the Mac. A light
 **preparation** (threat model refresh, test plan, canary harness) can fill time before the Mac arrives.
 
 **Polish and optimisation** (targets to be confirmed on the Air):
@@ -878,16 +884,16 @@ the owner before release.
 
 | ID | Step | Done when |
 | :-- | :-- | :-- |
-| P15-S01 | Performance pass on the Mac: profile, fix the top five costs, re-measure | Targets met or the gap explained |
-| P15-S02 | Battery, heat and idle behaviour; pause rules | The one-hour energy runs pass |
-| P15-S03 | UX polish and accessibility fixes | UX acceptance all green |
-| P15-S04 | Threat model refresh and the test plan | Owner reviews |
-| P15-S05 | Egress capture, privacy red team, injection suite | Report with numbers; no canary leaks |
-| P15-S06 | Fuzzing, sandbox escape, local attacker tests | Report; findings logged |
-| P15-S07 | Encryption review and supply-chain checks | Review notes; checks clean |
-| P15-S08 | Independent review and fixes for S1 and S2 | Each fix re-tested |
-| P15-S09 | The release soak: **24 h on the Mac** (the PRD length; run 2 was a 12 h check), swap recorded | PASS, report in `reports/` |
-| P15-S10 | Release candidate: signed build, clean-account install test, release notes | Owner signs off |
+| P20-S01 | Performance pass on the Mac: profile, fix the top five costs, re-measure | Targets met or the gap explained |
+| P20-S02 | Battery, heat and idle behaviour; pause rules | The one-hour energy runs pass |
+| P20-S03 | UX polish and accessibility fixes | UX acceptance all green |
+| P20-S04 | Threat model refresh and the test plan | Owner reviews |
+| P20-S05 | Egress capture, privacy red team, injection suite | Report with numbers; no canary leaks |
+| P20-S06 | Fuzzing, sandbox escape, local attacker tests | Report; findings logged |
+| P20-S07 | Encryption review and supply-chain checks | Review notes; checks clean |
+| P20-S08 | Independent review and fixes for S1 and S2 | Each fix re-tested |
+| P20-S09 | The release soak: **24 h on the Mac** (the PRD length; run 2 was a 12 h check), swap recorded | PASS, report in `reports/` |
+| P20-S10 | Release candidate: signed build, clean-account install test, release notes | Owner signs off |
 
 **Done when.** No open S1 or S2 finding; all targets met or each gap accepted in writing; the 24 h soak passes; the egress
 capture shows no unexpected traffic; the owner has lived with it for two weeks (the trial) and signs off; the release is tagged.
@@ -921,9 +927,9 @@ capture shows no unexpected traffic; the owner has lived with it for two weeks (
 | 4 | OctoPit toolkit on the Mac | SwiftUI |
 | 5 | Voice and spoken nudges stay as a second door controlled from OctoPit | Yes |
 | 6 | Rename the GitHub repository and the local folder after 11.5 | Yes |
-| 7 | Soak length for release: 12 h done as a check; 24 h on the Mac in Phase 15 | 24 h in Phase 15 |
+| 7 | Soak length for release: 12 h done as a check; 24 h on the Mac in Phase 20 | 24 h in Phase 20 |
 | 8 | Secure Enclave plus an offline recovery key replaces "TPM only" | Yes |
-| 9 | Where is the 181-script project | Needed before 18A step S05 |
+| 9 | Where is the 181-script project | Needed before 14A step S05 |
 | 10 | Which vision items in C4 become phases | Owner decides |
 | 11 | `MemorySwapMax=0` for voice and inference (avoids swap-in stalls, costs real RAM) | Decide after the soak; not needed on a Mac without cgroups, so likely dropped |
 
@@ -932,14 +938,14 @@ capture shows no unexpected traffic; the owner has lived with it for two weeks (
 | Risk | Phases | What we do |
 | :-- | :-- | :-- |
 | The Mac date is unknown | all | The Mac gate and the A and B splits; the rename and Companion are right either way |
-| macOS behaves differently from what I assume | 16 to 20 | Every assumption marked [verify] and settled in the day-1 spike and later spikes before anything depends on it |
-| Permissions lost when the code identity changes | 16 to 20 | One stable signing identity; dev and release bundle IDs; a repair card; a test that permissions survive an update |
-| No seccomp equivalent on the Mac | 16, 15 | Sandbox profiles, hardened runtime, minimal entitlements, Rust, fuzzing; the loss written in `security.md` |
-| A model that is too small for good jokes, Hinglish, multi-step agents | 12, 18, 19 | The cloud switch through the gate; a bigger Mac model; short tasks |
-| Privacy mistakes when text leaves the machine | 13, 17, 19, 20 | One privacy gate, canary and capture tests, protected classes (location, health, money, keys, tags), no content in logs |
-| Prompt injection through web, mail, files, screen text | 13, 17, 18, 19 | The taint model, tiers only go up, approvals only in the dialog, red-team suites in each gate |
+| macOS behaves differently from what I assume | 14B, 15 to 19 | Every assumption marked [verify] and settled in the day-1 spike and later spikes before anything depends on it |
+| Permissions lost when the code identity changes | 14B, 15 to 19 | One stable signing identity; dev and release bundle IDs; a repair card; a test that permissions survive an update |
+| No seccomp equivalent on the Mac | 15, 20 | Sandbox profiles, hardened runtime, minimal entitlements, Rust, fuzzing; the loss written in `security.md` |
+| A model that is too small for good jokes, Hinglish, multi-step agents | 12, 14, 18 | The cloud switch through the gate; a bigger Mac model; short tasks |
+| Privacy mistakes when text leaves the machine | 13, 17, 18, 19 | One privacy gate, canary and capture tests, protected classes (location, health, money, keys, tags), no content in logs |
+| Prompt injection through web, mail, files, screen text | 13, 14, 17, 18 | The taint model, tiers only go up, approvals only in the dialog, red-team suites in each gate |
 | Memory and battery budgets on an Air | 13 to 20 | Footprint measured with swap or compression counted; thermal-aware background work; each phase ends with a soak |
-| Scope: 200 skills, a full interface, agents | 14, 18, 19 | Page by page and pack by pack, each shippable; owner can switch anything off |
+| Scope: 200 skills, a full interface, agents | 14, 16, 18 | Page by page and pack by pack, each shippable; owner can switch anything off |
 | Rename breaks data or branches | 11.5 | Backup, inventory, migration test on a copy, no other branch open |
 | The soak measures the wrong thing again | all | The soak records resident plus swapped, a watchdog, a liveness check in minute one, and speech traffic that actually exists |
 
@@ -949,9 +955,9 @@ capture shows no unexpected traffic; the owner has lived with it for two weeks (
   returning; a flat 430.9 MiB for 8 h); storage looked like it grew 22.8 % (partly swap; partly a real arena cost, fixed).
   Memory is now measured as resident plus swapped on Linux and `phys_footprint` on the Mac.
 - **The soak sent no speech.** The `neuroos-voice-say` tool had been removed by a cleanup, so run 1 never exercised voice.
-  Phase 16.0 adds a test input source so the soak needs no virtual microphone and cannot silently skip speech.
+  Phase 11.5 part 2 adds a test input source so the soak needs no virtual microphone and cannot silently skip speech.
 - **Check long runs in minute one.** A 9 h recording with a muted mic was wasted once; the soak now has a watchdog.
-- **A pass at 12 h is not 24 h.** The PRD asks 24 h; Phase 15 repeats it on the Mac, and the owner must approve the shortened
+- **A pass at 12 h is not 24 h.** The PRD asks 24 h; Phase 20 repeats it on the Mac, and the owner must approve the shortened
   check as a recorded deviation.
 - **Do the cheap, mechanical, wide change first** (the rename), when nothing else is in flight.
 - **Do not build twice:** no GTK pages before the Mac toolkit is decided; key sealing built once on the Secure Enclave.
@@ -963,10 +969,10 @@ From `docs/octo-plus-vision.md`; none is in Phases 11.5 to 20 unless the owner a
 | Item | Note |
 | :-- | :-- |
 | PhaseLoopNN (a tiny always-on thinking core, later scaled up) | A separate research project; decide whether and when it joins OctoPlus |
-| Mobile Neural Link (encrypted phone link, remote chat, task dispatch, remote approvals, phone GPS) | Large; needs its own security design; would also give real GPS to Phase 20 |
-| 3D Memory Galaxy and the cognitive-performance dials | Nice pages for OctoPit after Phase 14 |
-| Voice under 300 ms to the first word | Today several seconds; Phase 15 targets 3 s; the vision's number needs its own design (smaller first model, streaming, cached openers) |
-| A larger standby model (about 8.5 GB in the vision) | Decided in Phase 16 once the Air's memory is known |
+| Mobile Neural Link (encrypted phone link, remote chat, task dispatch, remote approvals, phone GPS) | Large; needs its own security design; would also give real GPS to Phase 19 |
+| 3D Memory Galaxy and the cognitive-performance dials | Nice pages for OctoPit after Phase 16 |
+| Voice under 300 ms to the first word | Today several seconds; Phase 20 targets 3 s; the vision's number needs its own design (smaller first model, streaming, cached openers) |
+| A larger standby model (about 8.5 GB in the vision) | Decided in Phase 15 once the Air's memory is known |
 
 ---
 
@@ -991,7 +997,30 @@ From `docs/octo-plus-vision.md`; none is in Phases 11.5 to 20 unless the owner a
 | Database file | `neuroos.sqlite3` | `octoplus.sqlite3` |
 | Bundle IDs on the Mac | | `com.octoplus.app`, helpers under it; dev builds `com.octoplus.app.dev` |
 
-## D2. Linux to Mac map (summary; the full table with counts is in the Phase 16 plan)
+## D1a. Old-to-new phase numbers
+
+Earlier drafts (roadmap v2 first version, 2026-11-24) numbered the phases in a different order. Phase numbers now
+follow the build order. Use this table to read old notes, branch names and conversations.
+
+| New number | Phase | Old number in the first draft | Old plan file name |
+| :-- | :-- | :-- | :-- |
+| 11.5 | Preparation: rename, then Mac readiness | 11.5 and 16.0 | `phase-11-5-rename-octoplus-plan.md` (unchanged) |
+| 12 | Companion | 13 (before that) | `phase-12-companion-plan.md` |
+| 13 | Cloud models and the switch | 12 (before that) | `phase-13-cloud-plan.md` |
+| 14 | Skills library | 18 | `phase-18-skills-library-plan.md` |
+| 15 | Mac conversion | 16 | `phase-16-mac-conversion-plan.md` |
+| 16 | OctoPit as the one interface | 14 | `phase-14-octopit-interface-plan.md` |
+| 17 | Stealth silent chat | 17 | unchanged |
+| 18 | Agent mesh | 19 | `phase-19-agent-mesh-plan.md` |
+| 19 | Spatial awareness | 20 | `phase-20-spatial-awareness-plan.md` |
+| 20 | Polish, optimisation, security testing | 15 | `phase-15-polish-security-plan.md` |
+
+Story IDs follow the phase: `P14-S..` is the skills library (was `P18-S..`), `P15-S..` the Mac conversion (was `P16-S..`),
+`P16-S..` OctoPit (was `P14-S..`), `P18-S..` agents (was `P19-S..`), `P19-S..` spatial (was `P20-S..`), `P20-S..` polish
+(was `P15-S..`). The readiness steps `P16-S00a` to `P16-S00f` are now `P115-R1` to `P115-R6`. Skills split names:
+14A and 14B (were 18A and 18B).
+
+## D2. Linux to Mac map (summary; the full table with counts is in the Phase 15 plan)
 
 | Linux today | Mac |
 | :-- | :-- |
@@ -1030,19 +1059,19 @@ security, restarts or runs code is D.
 | Block | Estimate |
 | :-- | :-- |
 | Close soak, merges | 1 day |
-| 11.5 Rename | 1 to 2 days |
-| 16.0 Readiness | about 1 week |
+| 11.5 part 1, rename | 1 to 2 days |
+| 11.5 part 2, Mac readiness | about 1 week |
 | 12 Companion | 3 to 4 weeks (+1 trial week) |
-| 13A | 2 to 3 weeks |
-| 18A | 3 to 4 weeks |
-| 16 Mac conversion | 4 to 5 weeks |
-| 13B + trial | 1 to 2 weeks |
-| 14 OctoPit interface | 4 to 6 weeks |
+| 13A cloud, portable part | 2 to 3 weeks |
+| 14A skills, portable part | 3 to 4 weeks |
+| 15 Mac conversion | 4 to 5 weeks |
+| 13B Secure Enclave sealing + trial | 1 to 2 weeks |
+| 14B macOS skill packs | 6 to 8 weeks |
+| 16 OctoPit as the interface | 4 to 6 weeks |
 | 17 Silent chat | 2 to 3 weeks |
-| 18B Mac packs | 6 to 8 weeks |
-| 19 Agent mesh | 3 to 4 weeks |
-| 20 Spatial | 2 to 3 weeks |
-| 15 Polish and security | 4 to 5 weeks (+ a two-week trial) |
+| 18 Agent mesh | 3 to 4 weeks |
+| 19 Spatial awareness | 2 to 3 weeks |
+| 20 Polish and security | 4 to 5 weeks (+ a two-week trial) |
 | **Total** | **about 9 to 11 months** of calendar time at this pace |
 
 The calendar depends on the Mac date, how much time the owner has for sign-offs, and how many [verify] items go badly.
@@ -1060,4 +1089,4 @@ Nothing past 11.5 is committed until the owner says "start Phase X".
 - **TCC:** macOS's permission system for microphone, Accessibility and similar; tied to the app's code identity.
 - **phys_footprint:** the memory figure macOS itself uses for limits; counts compressed memory.
 - **[verify]:** a macOS fact I believe but have not tried; settled in a spike on the Mac.
-- **Mac gate:** the check after each story: if the Mac is here, finish the story and start Phase 16.
+- **Mac gate:** the check after each story: if the Mac is here, finish the story and start Phase 15.

@@ -1,7 +1,7 @@
 # Phase 17 plan — Stealth silent chat: a quiet, instant text mode that sees your screen
 
 **Status:** PLANNED, NOT STARTED. Owner directive 2026-11-24 (from `docs/octo-plus-vision.md` §6.2). **Branch (when
-started):** `silent-chat`. **Needs:** Phase 14 (OctoPit as the interface) and Phase 16 (Mac). **ADR:** 0023 (to write).
+started):** `silent-chat`. **Needs:** Phase 16 (OctoPit as the interface) and Phase 15 (Mac). **ADR:** 0023 (to write).
 
 ## 1. The goal
 
@@ -11,7 +11,7 @@ except the channel**: you can start a talk by voice at home and carry on in text
 
 ## 2. What is already built, and what is new
 
-| Vision item (§6.2) | State on `main` (OctoPit v1.1) | Phase 14 | This phase |
+| Vision item (§6.2) | State on `main` (OctoPit v1.1) | Phase 16 | This phase |
 | :-- | :-- | :-- | :-- |
 | Text chat with streamed answers | Built: chat page, plain text only | Unified thread with voice | Markdown with safe rendering, code blocks, copy buttons |
 | Command palette | Built | Kept | Becomes the HUD's command line |
@@ -38,7 +38,7 @@ previous state. The state is shown in OctoPit and the menu bar, and is part of t
 document"), the assistant asks the monitor for a **context bundle**: the frontmost app, the selected text, the
 focused document or tab, the visible error text. Sources on the Mac: the Accessibility API for selection and focused
 element; scripting for the browser's current tab and its text; PDF and document text through the system's own
-document readers; the clipboard only if the user says so [all verify in the Phase 16 spike].
+document readers; the clipboard only if the user says so [all verify in the Phase 15 spike].
 Rules (these keep the safety story intact):
 - The bundle is **tainted external content** from the start (like web text), so it can never raise or lower a tier
   or run an action by itself (NFR-SEC-07).

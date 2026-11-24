@@ -1,4 +1,4 @@
-# Phase 13: the Companion (Laila). Plan for your review
+# Phase 12: the Companion (Laila). Plan for your review
 
 **Written:** 2026-11-23, in plain language, for the owner to read and approve.
 **Status:** PLAN ONLY. Nothing is built. No code starts until you name a story.
@@ -45,7 +45,7 @@ Today NeuroOS answers when you ask and nudges you when something needs attention
 
 ## 5. Limits you should know about
 
-1. **Joke and warmth quality** from a small local model may disappoint. If it does, the answer is the optional cloud plan (Phase 12) or a bigger model on the Mac. Decide after a week of real use.
+1. **Joke and warmth quality** from a small local model may disappoint. If it does, the answer is the optional cloud plan (Phase 13) or a bigger model on the Mac. Decide after a week of real use.
 2. **One model only on this laptop.** The language model is already at its memory limit, so "fast casual chat" means a short prompt on the model that is already loaded, not a second model.
 3. **The voice engine is close to its memory limit too.** Longer open-mic sessions will be measured before anything is signed off.
 4. **Not talking to her is not always detected.** Telling your voice from a TV or another person is imperfect. The "words only" rule and guest mode limit the harm.
