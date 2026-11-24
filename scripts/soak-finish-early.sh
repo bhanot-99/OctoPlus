@@ -13,7 +13,10 @@ set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-csv="${1:-$(ls -t "$root"/reports/bench/soak-24h-*.csv | head -1)}"
+# File names carry a UTC timestamp, so the last one in glob order is the newest.
+csvs=("$root"/reports/bench/soak-24h-*.csv)
+csv="${1:-${csvs[-1]}}"
+[[ -f "$csv" ]] || { echo "no soak CSV found; pass its path as the first argument" >&2; exit 2; }
 base="${csv%.csv}"
 units=(neuroos-healthd neuroos-storage neuroos-inference neuroos-monitor
        neuroos-kernel neuroos-knowledge neuroos-voice)
