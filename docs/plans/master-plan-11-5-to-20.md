@@ -926,7 +926,8 @@ capture shows no unexpected traffic; the owner has lived with it for two weeks (
 | 2026-11-24 | Soak shortened from 24 h to 12 h as a check; a clean rerun after the memory fixes | D-61, D-62 |
 | 2026-11-24 | Roadmap: Companion, OctoPit as the one interface, cloud with a switch, rename to OctoPlus, polish and security, Mac-only | D-63 |
 | 2026-11-24 | Added: spatial awareness, agent mesh, stealth silent chat, 200+ skills | D-65 |
-| 2026-11-24 | Order with a Mac gate, 13 and 18 split into portable and Mac parts | D-66 (proposal, awaiting yes) |
+| 2026-11-24 | Order with a Mac gate, phases 13 and 14 split into portable and Mac parts, phases renumbered in build order | D-66, D-67 (proposal, awaiting yes) |
+| 2026-11-24 | **The Linux laptop will be sold for good** once the Mac works: Sale gate, mandatory export tool, baseline pack, backups, no TPM sealing | D-68; `linux-retirement-checklist.md` |
 
 **Waiting for the owner**
 
