@@ -16,6 +16,10 @@ full plan to make the project a Mac-only app because the owner moves to a MacBoo
 | 14 | OctoPit as the interface | OctoPit becomes the one place to talk to and control OctoPlus | `phase-14-octopit-interface-plan.md` | 12, 13; the Mac UI toolkit decision |
 | 15 | Polish, optimisation, security testing | Speed, memory, battery, look and feel; high-level security testing; release | `phase-15-polish-security-plan.md` | 12 to 14 |
 | 16 | Mac conversion (Mac-only) | Port the whole project to macOS on the MacBook Air and drop Linux | `phase-16-mac-conversion-plan.md` | the Mac in hand; 11.5 |
+| 17 | Stealth silent chat | One-hotkey HUD, silent mode that provably records nothing, "this" resolved from the screen, one thread across voice and text | `phase-17-silent-chat-plan.md` | 14, 16 |
+| 18 | Skills library | 200+ laptop-control skills (volume, brightness, browser, mail, calendar, notifications, files, dev), skill routing, the owner's 181 old scripts imported | `phase-18-skills-library-plan.md`, `../design/skills-catalog.md` | 16, 12; the old scripts located |
+| 19 | Agent mesh | Code Janitor, Intelligence Scout, System Physician: sandboxed background helpers with budgets and a kill switch | `phase-19-agent-mesh-plan.md` | 18, 13, 14 |
+| 20 | Spatial awareness | Places from local Wi-Fi fingerprints (no GPS on a Mac), geotagged memory, place-aware nudges, location never leaves by default | `phase-20-spatial-awareness-plan.md` | 16, 13 |
 
 Old numbering, so old notes can be read: the old "Phase 12 cloud-first" is now **Phase 13**; the old "Phase 13
 Companion" is now **Phase 12**. Files were renamed with `git mv`; ADR 0018 (cloud) and 0019 (Companion) keep their
@@ -39,6 +43,11 @@ The Mac arrives in about a month. Some work cannot be done well before it, and s
    natively would waste the work. The toolkit is decided in Phase 16.
 8. **Phase 15 (polish and security), on the Mac,** ending with the 24 h soak the PRD asks for and the release.
 
+9. **Phases 17 to 20, on the Mac.** Suggested order: **17** (small, needs only 14), then **18** (the biggest gain in
+   usefulness; its router work can start as soon as Phase 12 is done), then **19** (needs the skills), then **20**
+   (privacy-sensitive, needs the encrypted store from 13). Phase 18's manifest format and router can be built
+   early and its packs added one at a time; each pack is shippable alone.
+
 If the owner prefers cloud before the Mac, Phase 13 can run on Linux with a `KeySealer` interface (TPM now,
 Secure Enclave later), at the cost of redoing the sealing step in Phase 16.
 
@@ -53,6 +62,16 @@ Secure Enclave later), at the cost of redoing the sealing step in Phase 16.
 | 5 | Voice and spoken nudges stay as a second door, controlled and shown in OctoPit | Yes (Phase 14 §2) |
 | 6 | Rename of the GitHub repository and the local folder | Yes, after the rename lands |
 | 7 | The soak length for release: 12 h done as a check, 24 h on the Mac as the PRD says | 24 h in Phase 15 |
+
+## 3a. Vision items not yet assigned to a phase (from `docs/octo-plus-vision.md`)
+
+| Item | Note |
+| :-- | :-- |
+| PhaseLoopNN (the tiny always-on thinking core, later scaled up) | A separate research project; a decision is needed on whether and when it joins OctoPlus |
+| Mobile Neural Link (encrypted phone link, remote chat, task dispatch, remote approvals, phone GPS) | Large; needs its own security design; would also give real GPS to Phase 20 |
+| 3D Memory Galaxy and the cognitive-performance dials | Nice-to-have pages for OctoPit after Phase 14 |
+| Voice speed under 300 ms to the first word | The current first answer takes seconds; Phase 15 targets 3 s; the vision's number needs a design (smaller first model, streaming, cached openers) |
+| A larger standby model (about 8.5 GB in the vision) | Decided with the Air's memory in Phase 16 |
 
 ## 4. What stays true in every phase
 

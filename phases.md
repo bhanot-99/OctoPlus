@@ -642,3 +642,7 @@ After Phase 11 the work continues in these phases. The master plan, the order an
 | 14 | OctoPit as the one interface | `docs/plans/phase-14-octopit-interface-plan.md` |
 | 15 | Final polish, optimisation, high-level security testing, release | `docs/plans/phase-15-polish-security-plan.md` |
 | 16 | Conversion to a Mac-only app (starts before the Mac arrives with readiness work) | `docs/plans/phase-16-mac-conversion-plan.md` |
+| 17 | Stealth silent chat | `docs/plans/phase-17-silent-chat-plan.md` |
+| 18 | Skills library (200+ skills) | `docs/plans/phase-18-skills-library-plan.md`, `docs/design/skills-catalog.md` |
+| 19 | Agent mesh | `docs/plans/phase-19-agent-mesh-plan.md` |
+| 20 | Spatial awareness | `docs/plans/phase-20-spatial-awareness-plan.md` |
