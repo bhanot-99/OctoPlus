@@ -1,6 +1,6 @@
 # ADR-0019 — Companion mode: model-written talk, open-microphone sessions, proactive chat
 
-**Status:** Proposed 2026-11-23 (owner decisions recorded in `docs/plans/phase-13-companion-plan.md` §1; work has NOT started and waits for the owner to name a story)
+**Status:** Proposed 2026-11-23 (owner decisions recorded in `docs/plans/phase-12-companion-plan.md` §1; work has NOT started and waits for the owner to name a story)
 **Date:** 2026-11-23
 **Changes (when work starts):** `rules.md` (R0-6 retired as ordered; the "speech has no path to actions" property kept as a design requirement unless the owner overrules), `phases.md`, ADR-0015, Phase 6 and 7 plans (references to R0-6), `PRD.md` (companion mode in scope), `design.md` (voice section), `security.md` (open microphone, ambient speech).
 **Evidence:** the voice reports (first sound about 4.0 s median today), the nudge engine (templates, caps, quiet rules), the voice turn machine (wake word, an 8 s follow-up window, barge-in).

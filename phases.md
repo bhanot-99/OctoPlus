@@ -626,3 +626,19 @@ flowchart LR
 | Load-on-demand speech engine | Largest known memory saving in C2 |
 | Custom wake-word model | Needed before any distribution |
 | HUD overlay, wlroots, X11, GPU for voice or embedding | By demand |
+
+---
+
+## 16. Roadmap v2 (2026-11-24, owner directive D-63)
+
+After Phase 11 the work continues in these phases. The master plan, the order and the owner decisions are in
+`docs/plans/roadmap-v2.md`.
+
+| Phase | Name | Plan |
+| :--- | :--- | :--- |
+| 11.5 | Rename Semantic NeuroOS to OctoPlus everywhere, with migration of the installed system | `docs/plans/phase-11-5-rename-octoplus-plan.md` |
+| 12 | Companion (Laila) | `docs/plans/phase-12-companion-plan.md` |
+| 13 | Cloud models, privacy gate, encrypted storage, Local/Cloud/Auto switch | `docs/plans/phase-13-cloud-plan.md` |
+| 14 | OctoPit as the one interface | `docs/plans/phase-14-octopit-interface-plan.md` |
+| 15 | Final polish, optimisation, high-level security testing, release | `docs/plans/phase-15-polish-security-plan.md` |
+| 16 | Conversion to a Mac-only app (starts before the Mac arrives with readiness work) | `docs/plans/phase-16-mac-conversion-plan.md` |

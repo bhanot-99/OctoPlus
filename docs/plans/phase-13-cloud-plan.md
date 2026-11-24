@@ -1,6 +1,8 @@
-# Phase 12 strategy — Cloud-first answers, local model as the offline fallback, private by construction
+# Phase 13 strategy — Cloud models with a switch: encrypted storage, a privacy gate, local by default and when offline
 
-**Status:** OPTIONAL, ON HOLD (owner, 2026-11-23): this plan is only used if a week of real use on the MacBook shows the local model is not good or fast enough (see §0a). PLANNED, NOT STARTED. The owner answered the decisions in §10 on 2026-11-23 and said: plan everything, wait for the start instruction. No code until the owner says start. It changes rules R0-1/R0-2 in a controlled way (ADR-0018, Proposed).
+> **Renumbered and re-scoped 2026-11-24 (roadmap v2, D-63):** this was Phase 12 and was ON HOLD. The owner took it off hold and changed the shape: **not cloud-first.** OctoPit gets a **priority switch (Local, Cloud, Auto)**; the **local model is the default**, and it is the automatic choice when there is no internet. Everything else below (encrypted storage S01, the privacy gate, C7 as the only network door, the egress ledger, provider adapters) stays. Where the text below says "cloud-first" or "cloud answers by default", read "cloud when the switch says Cloud, or Auto with the gate's approval". It is built **on the Mac** (Phase 16), so key sealing uses the Secure Enclave directly, with a `KeySealer` interface (TPM only if this is ever built on Linux first). See `roadmap-v2.md` §2.
+
+**Status (old, superseded by the note above):** OPTIONAL, ON HOLD (owner, 2026-11-23): this plan was only to be used if a week of real use on the MacBook shows the local model is not good or fast enough (see §0a). PLANNED, NOT STARTED. The owner answered the decisions in §10 on 2026-11-23 and said: plan everything, wait for the start instruction. No code until the owner says start. It changes rules R0-1/R0-2 in a controlled way (ADR-0018, Proposed).
 **Origin:** owner, 2026-11-23: "make NeuroOS completely depend on free cloud AI like Claude, agy or Perplexity, keep the local LLM only for when the laptop is offline, and be confident about privacy." Personal use only; no business goals.
 **Branch:** `cloud-strategy` (docs only).
 

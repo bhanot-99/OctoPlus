@@ -1,4 +1,6 @@
-# Phase 13 plan — The Companion: a friend that talks, jokes and chats (voice only)
+# Phase 12 plan — The Companion: a friend that talks, jokes and chats (voice first)
+
+> **Renumbered 2026-11-24 (roadmap v2, D-63):** this was Phase 13; it is now **Phase 12** and comes right after the OctoPlus rename (Phase 11.5). See `roadmap-v2.md`. The owner's "voice only" answer in §1 still holds for this phase; in Phase 14 OctoPit becomes the one interface, and Laila's text chat and controls are added there. The review file is `phase-12-companion-review.md`.
 
 **Status:** PLANNED, NOT STARTED. The owner answered the decisions in §1 on 2026-11-23 and said: build the whole plan now, then wait for the instruction of what to work on. No code until the owner names a story. **Refined on paper 2026-11-23 (during the second 24 h soak, nothing built, nothing run):** story C-S05 made to match the memory decision in §6, story order fixed, start order and budget notes added (§7a), two risks added (§9). 
 **Branch:** `companion-plan` (docs only). **ADR:** 0019 (Proposed).
