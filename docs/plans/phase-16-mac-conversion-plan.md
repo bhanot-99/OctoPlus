@@ -24,7 +24,7 @@ on Landlock and seccomp).
 | # | Question | Why it matters |
 | :-- | :-- | :-- |
 | 1 | The Air's chip, memory (8, 16, 24 GB) and macOS version | Memory budgets, which model size is realistic, which APIs exist |
-| 2 | A paid Apple Developer account, or personal use with local signing | Notarisation and Gatekeeper; some entitlements and login-item rules [verify] |
+| 2 | A paid Apple Developer account, or a free Apple ID or self-signed certificate | Permissions are tied to the signing identity (§8.11); a paid account only adds notarisation for other people [verify] |
 | 3 | Keep the Linux laptop for development until the Mac works | Avoids a gap; the Mac build is proven before Linux is deleted |
 | 4 | Data to carry over: the stored memory, facts and settings | A one-way export and import (§10) |
 | 5 | Is the Air the only Mac (no second machine to test an update path on) | Update and migration testing |
@@ -156,6 +156,26 @@ user; its purpose (approval binding) is rebuilt on a key in the Keychain shared 
 **8.9 Notifications and nudges (C1/C5).** Linux desktop notifications become `UserNotifications`; spoken nudges
 and Companion talk stay in voice. Do-not-disturb and Focus modes are respected [verify].
 
+**8.11 Code identity and permissions (the signature rule).** macOS ties each privacy permission (Microphone,
+Accessibility, Automation per target app, Notifications, Location) to the app's **code identity**: bundle identifier
+plus signing requirement, not its name. If the identity changes, the permission is lost or asked again, often
+without any visible error. Decisions:
+1. **One stable signing identity from day one**: an Apple Development certificate (free Apple ID) or a self-signed
+   certificate made once on the Mac and kept in the Keychain. **Never ad-hoc signing for a build the owner uses:**
+   its identity changes on every rebuild and every permission would be lost each time. A paid Developer ID is only
+   for notarising builds for other people.
+2. **Every helper is signed with the same identity and a fixed bundle ID** (voice, monitor, fetcher, kernel and the
+   rest). Each is its own permission holder; identifiers are never renamed after release.
+3. **Dev and release builds use different bundle IDs** (for example `com.octoplus.app` and `com.octoplus.app.dev`),
+   so testing and `tccutil reset` never touch the real install's grants.
+4. **Updates keep the identity:** replace in place, verify the signature first, and a test proves permissions
+   survive an update.
+5. **Detect and repair:** at start and after updates the app checks each permission (Accessibility trust,
+   microphone authorisation, automation access). A lost one shows an OctoPit card ("Re-grant microphone" opening
+   the right System Settings page); the parts keep working in reduced mode and never fail silently.
+6. **Scripted check:** a script prints every helper's designated requirement and fails the build if it differs from
+   the last release. All details above are **[verify]** in spike S01.
+
 **8.10 Paths and files.** `~/.local/opt/octoplus` → the app bundle (read-only code and models inside or in
 `~/Library/Application Support/OctoPlus/models`); config → `~/Library/Application Support/OctoPlus/config.toml`
 (and Preferences for UI settings); data → `…/OctoPlus/data`; logs → `~/Library/Logs/OctoPlus`; caches →
@@ -204,7 +224,7 @@ and Companion talk stay in voice. Do-not-disturb and Focus modes are respected [
 | P16-S07 | Audio: CoreAudio capture, playback, echo cancel, device changes | Voice turns work on the built-in mic and speaker and on a headset |
 | P16-S08 | Monitor sensors and permissions; reduced mode without them | Focus, idle, lock, battery work; denied permission gives a clear state |
 | P16-S09 | Native OctoPit shell and the approval dialog helper (the pages themselves are Phase 14) | App opens, shows health, mic button works, approvals go through the helper |
-| P16-S10 | Packaging, signing, first-run, update, uninstall | A clean user account installs and runs from the `.dmg` |
+| P16-S10 | Packaging, signing identity (§8.11), first-run, update, uninstall; permission-survives-update test | A clean user account installs and runs from the `.dmg` |
 | P16-S11 | Data import from Linux | The owner's real memory arrives and is searchable |
 | P16-S12 | Mac gate: the whole test suite, security probe, a 12 h soak with sleep cycles and `phys_footprint` | PASS; owner uses it as the main machine for a week |
 | P16-S13 | **Drop Linux:** tag `linux-final`; delete `deploy/systemd`, Landlock, seccomp, nftables, PipeWire, GTK code and Linux scripts and docs; update the PRD, `security.md`, the README | The tree builds only for macOS; the grep audit finds no Linux-only code |
