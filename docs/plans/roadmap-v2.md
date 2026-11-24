@@ -12,12 +12,12 @@ full plan to make the project a Mac-only app because the owner moves to a MacBoo
 | :-- | :-- | :-- | :-- | :-- |
 | 11.5 | Rename to OctoPlus | Every name changes from Semantic NeuroOS / `neuroos` to OctoPlus / `octoplus`, with a safe migration of the installed system | `phase-11-5-rename-octoplus-plan.md` | `cockpit`, `fix/soak-memory` merged; soak run 2 read |
 | 12 | Companion | The voice friend (Laila): talks on its own, jokes, remembers | `phase-12-companion-plan.md` (was 13) | 11.5 |
-| 13 | Cloud models and the switch | Encrypted storage, privacy gate, cloud providers, local/cloud/auto switch, local default and offline fallback | `phase-13-cloud-plan.md` (was 12) | 11.5; key sealing choice (§3) |
-| 14 | OctoPit as the interface | OctoPit becomes the one place to talk to and control OctoPlus | `phase-14-octopit-interface-plan.md` | 12, 13; the Mac UI toolkit decision |
+| 13 | Cloud models and the switch | Encrypted storage, privacy gate, cloud providers, local/cloud/auto switch, local default and offline fallback | `phase-13-cloud-plan.md` (was 12) | 11.5. Split: 13A portable, 13B Mac (§2) |
+| 14 | OctoPit as the interface | OctoPit becomes the one place to talk to and control OctoPlus | `phase-14-octopit-interface-plan.md` | 13A, 16 (the toolkit is chosen there) |
 | 15 | Polish, optimisation, security testing | Speed, memory, battery, look and feel; high-level security testing; release | `phase-15-polish-security-plan.md` | 12 to 14 |
 | 16 | Mac conversion (Mac-only) | Port the whole project to macOS on the MacBook Air and drop Linux | `phase-16-mac-conversion-plan.md` | the Mac in hand; 11.5 |
 | 17 | Stealth silent chat | One-hotkey HUD, silent mode that provably records nothing, "this" resolved from the screen, one thread across voice and text | `phase-17-silent-chat-plan.md` | 14, 16 |
-| 18 | Skills library | 200+ laptop-control skills (volume, brightness, browser, mail, calendar, notifications, files, dev), skill routing, the owner's 181 old scripts imported | `phase-18-skills-library-plan.md`, `../design/skills-catalog.md` | 16, 12; the old scripts located |
+| 18 | Skills library | 200+ laptop-control skills (volume, brightness, browser, mail, calendar, notifications, files, dev), skill routing, the owner's 181 old scripts imported | `phase-18-skills-library-plan.md`, `../design/skills-catalog.md` | 11.5, 12, 13A for 18A; 16 for 18B; the old scripts located |
 | 19 | Agent mesh | Code Janitor, Intelligence Scout, System Physician: sandboxed background helpers with budgets and a kill switch | `phase-19-agent-mesh-plan.md` | 18, 13, 14 |
 | 20 | Spatial awareness | Places from local Wi-Fi fingerprints (no GPS on a Mac), geotagged memory, place-aware nudges, location never leaves by default | `phase-20-spatial-awareness-plan.md` | 16, 13 |
 
@@ -26,30 +26,52 @@ Companion" is now **Phase 12**. Files were renamed with `git mv`; ADR 0018 (clou
 numbers. Phase 11 (OctoPit v1.1) stays as it was. The vision document `docs/octo-plus-vision.md` has more ideas
 (phone link, agent mesh, GPS, PhaseLoopNN); none of them are in this roadmap unless the owner asks.
 
-## 2. Recommended order (the owner decides)
+## 2. The order (proposal of 2026-11-24; the Mac's arrival date is unknown)
 
-The Mac arrives in about a month. Some work cannot be done well before it, and some should not be done twice.
+The Mac may arrive this week or in three. So the order has a start that is right either way, a block of work that
+does not care which machine it runs on, a **Mac gate** (the moment the Mac is in hand, finish the current story and
+switch to Phase 16), and the rest on the Mac.
 
-1. **Now:** finish soak run 2, merge `fix/soak-memory`, merge `cockpit` (OctoPit v1.1).
-2. **Phase 11.5 (rename), on Linux.** First, because every later phase, the Mac build and the installer all use
-   the new names. Merge every other branch first, or the rename will conflict with them.
-3. **Phase 16.0 (Mac readiness, on Linux):** only the parts that can be done without a Mac: put Linux-only code
-   behind interfaces, write the soak input injection, document. See Phase 16 §6.
-4. **Phase 12 (Companion), on Linux** while waiting for the Mac. Almost all of it is portable logic (C5 and C2
-   behaviour, not audio plumbing).
-5. **The Mac arrives: Phase 16.1 to 16.5.** The Mac build becomes the main line; Linux is dropped at the end.
-6. **Phase 13 (cloud), on the Mac.** Key sealing is built once, on the Secure Enclave, and not twice.
-7. **Phase 14 (OctoPit as the interface), on the Mac.** Building a large GTK4 interface now and then rebuilding it
-   natively would waste the work. The toolkit is decided in Phase 16.
-8. **Phase 15 (polish and security), on the Mac,** ending with the 24 h soak the PRD asks for and the release.
+**Two phases are split so Mac-independent work is not left waiting:**
+- **13A (portable):** the privacy gate (classify, minimise, redact), provider adapters, the Local/Cloud/Auto switch
+  and offline fallback, the egress ledger changes, encrypted storage behind a `KeySealer` interface (a passphrase
+  sealer for development), and the canary tests. **13B (Mac):** Secure Enclave sealing and Keychain.
+- **18A (portable):** skill manifest and loader, classes and sandbox profile format, the router and its labelled
+  test set, undo, rate limits and dry-run, the importer for the 181 old scripts, and the packs that use no OS
+  interface (text, clock, dev, web). **18B (Mac):** the packs that call macOS (system, apps and windows, mail,
+  calendar, notes, messages, browser, media, shortcuts, clipboard, notifications) and the Skills page.
 
-9. **Phases 17 to 20, on the Mac.** Suggested order: **17** (small, needs only 14), then **18** (the biggest gain in
-   usefulness; its router work can start as soon as Phase 12 is done), then **19** (needs the skills), then **20**
-   (privacy-sensitive, needs the encrypted store from 13). Phase 18's manifest format and router can be built
-   early and its packs added one at a time; each pack is shippable alone.
+| Step | Work | Where | Estimate | Note |
+| :-- | :-- | :-- | :-- | :-- |
+| 0 | Read soak run 2; merge `fix/soak-memory` and `cockpit` | Linux | 1 day | Tonight or tomorrow |
+| 1 | **Phase 11.5 rename** | Linux | 1 to 2 days | Always first: no other branch may be open, and the Mac build must use the new names from its first line |
+| gate | **If the Mac is already here: go to Step 5** | | | The 16.0 readiness items are done as the first port steps |
+| 2 | **Phase 16.0 readiness** | Linux | about 1 week | Interfaces for sandbox, service, audio, sensors, sealing, paths; soak input injection |
+| 3a | **Phase 12 Companion** | Linux | 3 to 4 weeks | Mostly portable logic; the voice edge is ported later |
+| 3b | **Phase 13A** | Linux | 2 to 3 weeks | After 12; the gate and switch are plain Rust |
+| 3c | **Phase 18A** | Linux | 3 to 4 weeks | The router and manifests are the hardest part and are portable |
+| 3d | If still waiting: **Phase 15 preparation** (threat model refresh, test plan, canary harness) | Linux | 1 week | No code risk |
+| gate | **After every story in Step 3, check: is the Mac here?** If yes, finish the story, merge, go to Step 5 | | | |
+| 5 | **Phase 16.1 to 16.5 Mac conversion** | Mac | 4 to 5 weeks | The Mac build becomes the main line; Linux frozen at tag `linux-final` and deleted at the end |
+| 6 | **13B**, then **Phase 14**, then **17**, then **18B**, then **19**, then **20** | Mac | 3 to 6 weeks each | 13B first (small); 14 needs the 13A interfaces; 17 needs 14; 18B needs 16 and 18A; 19 needs 18; 20 needs 13 |
+| 7 | **Phase 15** polish, security testing, 24 h Mac soak, two-week trial, release | Mac | 4 to 5 weeks | Always last |
 
-If the owner prefers cloud before the Mac, Phase 13 can run on Linux with a `KeySealer` interface (TPM now,
-Secure Enclave later), at the cost of redoing the sealing step in Phase 16.
+**If the Mac arrives:**
+
+| When | What happens |
+| :-- | :-- |
+| This week, during Phase 11.5 | 11.5, then Phase 16 right away. Afterwards 12, 13 (A and B together), 14, 17, 18, 19, 20, 15, all on the Mac. Nothing is built twice |
+| In 1 to 2 weeks, during 16.0 or the start of Companion | Finish the current story, merge, then Phase 16. Resume with 12 on the Mac |
+| In 3 or more weeks, during 12, 13A or 18A | Finish the current story, merge, then Phase 16. The Mac-independent parts built so far port with only their edges changed. Resume the list in Step 6 plus the unfinished A parts |
+| Later than Step 3d | Everything portable is done; Phase 16 then 13B, 14, 17, 18B, 19, 20, 15 |
+
+**Before the Mac, do not build:** any GTK interface page (Phase 14 waits for the toolkit decision), anything that
+needs cgroups, nftables or systemd beyond what exists, Linux-only sensors or audio changes. These would be thrown
+away.
+
+**Why this order:** the rename is cheapest first. The Mac conversion unlocks the owner's real machine and is the
+parent of 13B, 14, 17, 18B, 19 and 20. Companion makes the system feel alive soonest and is portable. 13A and 18A
+are the hard thinking parts of cloud and skills and do not need a Mac. Phase 15 is last because it tests everything.
 
 ## 3. Decisions needed from the owner
 

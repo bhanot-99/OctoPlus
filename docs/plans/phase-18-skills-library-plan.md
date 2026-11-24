@@ -6,6 +6,8 @@ the owner's with **181 script skills** (not yet seen; see §9). **Branch (when s
 **Needs:** Phase 16 (Mac; most skills are macOS actions) and Phase 12 (the model must pick skills reliably).
 **ADR:** 0024 (to write: skill packs, skill routing, per-class sandboxes). Catalog: `docs/design/skills-catalog.md`.
 
+> **Split (roadmap v2 §2):** **18A** (manifest, loader, classes, router and test set, undo and limits, the importer, and the packs that use no OS interface) is portable and can start on Linux; **18B** (the macOS packs and the Skills page) needs the Mac.
+
 ## 1. Where we are
 
 The safety kernel (C6) has a real skill framework: each skill declares one capability, a base tier (SAFE, REVIEW,
