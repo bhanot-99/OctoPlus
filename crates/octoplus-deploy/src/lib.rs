@@ -270,9 +270,7 @@ pub const STORAGE_JOBS: [(&str, &str); 3] = [
 pub fn generate_storage_job_service(job: &str) -> String {
     let mut out = String::new();
     out.push_str("[Unit]\n");
-    out.push_str(&format!(
-        "Description=OctoPlus storage job: {job}\n"
-    ));
+    out.push_str(&format!("Description=OctoPlus storage job: {job}\n"));
     out.push_str("After=octoplus-storage.service\n\n[Service]\nType=oneshot\n");
     for line in [
         "PrivateNetwork=true",
@@ -711,7 +709,9 @@ pub fn generate_fetcher_system_service() -> String {
 #[must_use]
 pub fn generate_sysusers_conf() -> String {
     let mut out = String::new();
-    out.push_str("# OctoPlus fetcher system user and group (Architecture §13, FR-HLT-02, FR-STO-10).\n");
+    out.push_str(
+        "# OctoPlus fetcher system user and group (Architecture §13, FR-HLT-02, FR-STO-10).\n",
+    );
     out.push_str("g octoplus -\n");
     out.push_str("u octoplus-fetcher -:octoplus \"OctoPlus Fetcher\" /run/octoplus-fetcher /usr/sbin/nologin\n");
     out
@@ -721,9 +721,7 @@ pub fn generate_sysusers_conf() -> String {
 #[must_use]
 pub fn generate_tmpfiles_conf() -> String {
     let mut out = String::new();
-    out.push_str(
-        "# OctoPlus fetcher runtime and spool folders (Architecture §7.1, §13).\n",
-    );
+    out.push_str("# OctoPlus fetcher runtime and spool folders (Architecture §7.1, §13).\n");
     out.push_str("d /run/octoplus-fetcher 0750 octoplus-fetcher octoplus -\n");
     out.push_str("d /run/octoplus-fetcher/fetch 2770 octoplus-fetcher octoplus -\n");
     out.push_str("d /run/octoplus-fetcher/health 2770 octoplus-fetcher octoplus -\n");

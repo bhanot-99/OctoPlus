@@ -24,8 +24,8 @@ use std::process::ExitCode;
 use gtk::prelude::*;
 use gtk4 as gtk;
 
-use octoplus_common::paths;
 use octopit_core::controller::{self, Rates};
+use octoplus_common::paths;
 
 fn runtime_root() -> Option<PathBuf> {
     paths::runtime_root(std::env::var_os("XDG_RUNTIME_DIR").as_deref()).ok()

@@ -830,7 +830,8 @@ fn test_audit_tail_json_serialization() {
     assert!(serialized.contains("\"taint\":1"));
     assert!(serialized.contains("\"origin\":\"VOICE\""));
 
-    let deserialized: octoplusctl::audit::AuditTailJson = serde_json::from_str(&serialized).unwrap();
+    let deserialized: octoplusctl::audit::AuditTailJson =
+        serde_json::from_str(&serialized).unwrap();
     assert_eq!(deserialized.schema, 1);
     assert_eq!(deserialized.records[0], json_rec);
 }

@@ -7,10 +7,10 @@ use gtk::glib;
 use gtk::prelude::*;
 use gtk4 as gtk;
 
-use octoplus_common::paths::Part;
 use octopit_core::format;
 use octopit_core::health::{Headline, PartCard, PartState, Snapshot};
 use octopit_core::state::{AppState, Changed};
+use octoplus_common::paths::Part;
 
 use super::{Ctx, Page, PageId};
 use crate::charts::{Bar, BarChart, Donut, Orb, OrbTint, series_css_class};

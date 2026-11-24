@@ -686,11 +686,7 @@ pub struct BenchmarkReport {
 // CLI Options
 // -----------------------------------------------------------------------------
 #[derive(Parser, Debug)]
-#[command(
-    author,
-    version,
-    about = "OctoPlus Spike S-01 Storage Scan Benchmark"
-)]
+#[command(author, version, about = "OctoPlus Spike S-01 Storage Scan Benchmark")]
 struct Cli {
     #[arg(long, default_value = "")]
     db_path: String,

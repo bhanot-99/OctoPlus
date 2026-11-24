@@ -47,7 +47,12 @@ pub fn init(ctx: &mut ServiceContext) -> Result<(), ServiceError> {
         Box::new(move || {
             let st = match st_clone.try_read() {
                 Ok(guard) => guard,
-                Err(_) => return (octoplus_proto::v1::HealthStatus::Degraded, "state lock busy"),
+                Err(_) => {
+                    return (
+                        octoplus_proto::v1::HealthStatus::Degraded,
+                        "state lock busy",
+                    );
+                }
             };
             if st.last_generated_at_ns > 0 {
                 (octoplus_proto::v1::HealthStatus::Ok, "scraper active")

@@ -153,7 +153,7 @@ TEST(VoiceFlagsTest, RejectsBadNumericWithoutExceptions) {
   CliConfig cfg;
 
   // Non-numeric string for --threads
-  constexpr std::array<const char*, 7> bad_argv1 = {"octoplus-voice",   "--socket",   "v.sock=uid",
+  constexpr std::array<const char*, 7> bad_argv1 = {"octoplus-voice",  "--socket",   "v.sock=uid",
                                                     "--health-socket", "h.sock=uid", "--threads",
                                                     "invalid"};
   EXPECT_FALSE(ParseCliArgs(static_cast<int>(bad_argv1.size()), bad_argv1.data(), &cfg));
@@ -161,18 +161,19 @@ TEST(VoiceFlagsTest, RejectsBadNumericWithoutExceptions) {
   // Negative number
   constexpr std::array<const char*, 7> bad_argv2 = {
       "octoplus-voice", "--socket",  "v.sock=uid", "--health-socket",
-      "h.sock=uid",    "--threads", "-2"};
+      "h.sock=uid",     "--threads", "-2"};
   EXPECT_FALSE(ParseCliArgs(static_cast<int>(bad_argv2.size()), bad_argv2.data(), &cfg));
 
   // Overflow
   constexpr std::array<const char*, 7> bad_argv3 = {
       "octoplus-voice", "--socket",  "v.sock=uid",          "--health-socket",
-      "h.sock=uid",    "--threads", "99999999999999999999"};
+      "h.sock=uid",     "--threads", "99999999999999999999"};
   EXPECT_FALSE(ParseCliArgs(static_cast<int>(bad_argv3.size()), bad_argv3.data(), &cfg));
 
   // Valid number
   constexpr std::array<const char*, 7> good_argv = {
-      "octoplus-voice", "--socket", "v.sock=uid", "--health-socket", "h.sock=uid", "--threads", "2"};
+      "octoplus-voice", "--socket",  "v.sock=uid", "--health-socket",
+      "h.sock=uid",     "--threads", "2"};
   EXPECT_TRUE(ParseCliArgs(static_cast<int>(good_argv.size()), good_argv.data(), &cfg));
   EXPECT_EQ(cfg.threads, 2U);
 }

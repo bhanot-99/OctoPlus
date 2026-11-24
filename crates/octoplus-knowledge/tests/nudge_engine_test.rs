@@ -10,7 +10,9 @@ use std::time::Duration;
 
 use octoplus_common::config::NudgesConfig;
 use octoplus_ipc::server::{ServerConfig, ensure_private_dir};
-use octoplus_ipc::{Client, Handler, HandlerError, ReconnectingClient, Request, Server, StreamSink};
+use octoplus_ipc::{
+    Client, Handler, HandlerError, ReconnectingClient, Request, Server, StreamSink,
+};
 use octoplus_knowledge::nudge::engine::{NudgeHandle, NudgePeers};
 use octoplus_knowledge::nudge::rules::defaults;
 use octoplus_knowledge::turn::{KnowledgeHandler, Metrics, Peers, Timing};

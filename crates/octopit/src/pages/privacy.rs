@@ -3,11 +3,11 @@
 use gtk::prelude::*;
 use gtk4 as gtk;
 
-use octoplus_common::paths::Part;
 use octopit_core::controller::{Command, Controller};
 use octopit_core::format;
 use octopit_core::gateway::ChainStatus;
 use octopit_core::state::{AppState, Changed};
+use octoplus_common::paths::Part;
 
 use super::{Ctx, Page};
 use crate::widgets::{card, dot, label, set_dot, skeleton, state_class, state_word};

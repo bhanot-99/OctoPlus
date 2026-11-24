@@ -3,10 +3,10 @@
 use gtk::prelude::*;
 use gtk4 as gtk;
 
-use octoplus_common::paths::Part;
 use octopit_core::format;
 use octopit_core::gateway::{AuditRow, ChainStatus};
 use octopit_core::state::{AppState, Changed};
+use octoplus_common::paths::Part;
 
 use super::{Ctx, Page};
 use crate::widgets::{Spark, bar, card, icon, label, set_bar, skeleton};

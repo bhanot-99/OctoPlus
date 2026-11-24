@@ -117,8 +117,8 @@ fn cpp_exec_start(part: Part, canary: &Path) -> String {
 }
 
 async fn status() -> Option<StatusReport> {
-    let root =
-        octoplus_common::paths::runtime_root(std::env::var_os("XDG_RUNTIME_DIR").as_deref()).ok()?;
+    let root = octoplus_common::paths::runtime_root(std::env::var_os("XDG_RUNTIME_DIR").as_deref())
+        .ok()?;
     let sock = octoplus_common::paths::socket_path(&root, Part::Healthd, "healthd");
     let client = Client::connect(&sock, 1024 * 1024).await.ok()?;
     match client

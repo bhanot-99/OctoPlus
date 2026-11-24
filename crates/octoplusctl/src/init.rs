@@ -28,10 +28,7 @@ pub struct InitOptions {
 }
 
 pub async fn run_init(opts: InitOptions, s: Styler) -> i32 {
-    println!(
-        "{}",
-        s.bold("=== OctoPlus First-Run Setup (v1.0.0) ===")
-    );
+    println!("{}", s.bold("=== OctoPlus First-Run Setup (v1.0.0) ==="));
 
     let config_dir = match opts.config_dir {
         Some(d) => d,

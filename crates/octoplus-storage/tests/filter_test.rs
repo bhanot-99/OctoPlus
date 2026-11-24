@@ -138,8 +138,9 @@ fn octoplus_own_windows_are_dropped_and_their_process_trees_too() {
         ],
     );
     assert!(
-        out.iter()
-            .any(|o| matches!(o, Output::Segment(s) if s.app_id == "com.example.org.octoplus.fake"))
+        out.iter().any(
+            |o| matches!(o, Output::Segment(s) if s.app_id == "com.example.org.octoplus.fake")
+        )
     );
 }
 

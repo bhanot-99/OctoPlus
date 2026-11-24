@@ -77,7 +77,9 @@ pub struct Options {
 ///
 /// # Errors
 /// Returns [`octoplus_health::ServiceError`] if socket registration fails.
-pub fn init(ctx: &mut octoplus_health::ServiceContext) -> Result<(), octoplus_health::ServiceError> {
+pub fn init(
+    ctx: &mut octoplus_health::ServiceContext,
+) -> Result<(), octoplus_health::ServiceError> {
     init_with(ctx, &Options::default())
 }
 

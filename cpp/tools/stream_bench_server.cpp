@@ -65,8 +65,8 @@ void SleepUs(std::uint64_t us, const octoplus::ipc::CancelToken& cancel) {
 }
 
 octoplus::Status Handle(const octoplus::ipc::Request& req, octoplus::ipc::StreamSink& sink,
-                       const octoplus::ipc::CancelToken& cancel, octoplus::v1::Envelope* reply,
-                       std::uint64_t inject_delay_us) {
+                        const octoplus::ipc::CancelToken& cancel, octoplus::v1::Envelope* reply,
+                        std::uint64_t inject_delay_us) {
   if (!req.envelope.has_generate_request()) {
     return octoplus::Error{"unsupported request", false, octoplus::v1::ERROR_CODE_INVALID_REQUEST};
   }

@@ -40,7 +40,9 @@ pub const PERSONA: &str = "You are the user's laptop buddy: a calm, warm, capabl
 ///
 /// # Errors
 /// Returns [`octoplus_health::ServiceError`] on failure.
-pub fn init(ctx: &mut octoplus_health::ServiceContext) -> Result<(), octoplus_health::ServiceError> {
+pub fn init(
+    ctx: &mut octoplus_health::ServiceContext,
+) -> Result<(), octoplus_health::ServiceError> {
     let max_frame = ctx.config.ipc.max_frame_bytes;
     let client = |part: Part, name: &str| {
         Arc::new(ReconnectingClient::new(

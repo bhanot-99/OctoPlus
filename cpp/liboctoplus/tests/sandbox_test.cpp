@@ -27,8 +27,8 @@ TEST(SandboxTest, MissingPathFailsClosedBeforeRestricting) {
 // A single file (the audio server's socket, in C2) can be granted on its own: the rule carries
 // file rights only, and its neighbour stays closed.
 TEST(SandboxTest, ASingleFileCanBeGrantedAndItsNeighbourStaysClosed) {
-  auto base =
-      std::filesystem::temp_directory_path() / ("octoplus_sandbox_file_" + std::to_string(getpid()));
+  auto base = std::filesystem::temp_directory_path() /
+              ("octoplus_sandbox_file_" + std::to_string(getpid()));
   std::filesystem::remove_all(base);
   std::filesystem::create_directories(base);
   const auto granted = base / "granted.txt";
@@ -72,8 +72,8 @@ TEST(SandboxTest, CoveredHelper) {
 
 TEST(SandboxTest, RulesApplyInForkedChild) {
   // Setup temp directories
-  auto base_dir =
-      std::filesystem::temp_directory_path() / ("octoplus_sandbox_test_" + std::to_string(getpid()));
+  auto base_dir = std::filesystem::temp_directory_path() /
+                  ("octoplus_sandbox_test_" + std::to_string(getpid()));
   std::filesystem::remove_all(base_dir);
   std::filesystem::create_directories(base_dir / "ro");
   std::filesystem::create_directories(base_dir / "rw");
@@ -178,8 +178,8 @@ TEST(SandboxTest, RulesApplyInForkedChild) {
 
 TEST(SandboxTest, NegativeControlProvesRestrictionIsLoadBearing) {
   // Proves that when Restrict() is skipped, the outside path IS readable.
-  auto base_dir =
-      std::filesystem::temp_directory_path() / ("octoplus_negctrl_test_" + std::to_string(getpid()));
+  auto base_dir = std::filesystem::temp_directory_path() /
+                  ("octoplus_negctrl_test_" + std::to_string(getpid()));
   std::filesystem::remove_all(base_dir);
   std::filesystem::create_directories(base_dir / "outside");
   auto outside_file = base_dir / "outside" / "outside.txt";

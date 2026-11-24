@@ -50,7 +50,10 @@ fn fail(styler: Styler, e: &IpcError) -> i32 {
 pub async fn run_nudges(runtime_root: &Path, command: NudgesCommands, styler: Styler) -> i32 {
     let sock = paths::socket_path(runtime_root, Part::Knowledge, "knowledge");
     let Ok(client) = Client::connect(&sock, 1024 * 1024).await else {
-        eprintln!("{}", styler.error("could not connect to octoplus-knowledge"));
+        eprintln!(
+            "{}",
+            styler.error("could not connect to octoplus-knowledge")
+        );
         return 1;
     };
     match command {

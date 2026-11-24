@@ -324,8 +324,8 @@ TEST_F(IpcTest, DuplicateIdAndBusy) {
     auto f = octoplus::ipc::ReadFrame(fd, kMax);
     ASSERT_TRUE(f.ok() && f.value());
     const auto& e = *f.value();
-    dup =
-        dup || (e.request_id() == 7 && e.error().code() == octoplus::v1::ERROR_CODE_INVALID_REQUEST);
+    dup = dup ||
+          (e.request_id() == 7 && e.error().code() == octoplus::v1::ERROR_CODE_INVALID_REQUEST);
     busy = busy || (e.request_id() == 8 && e.error().code() == octoplus::v1::ERROR_CODE_BUSY);
     served = served || (e.request_id() == 7 && e.has_pong());
   }

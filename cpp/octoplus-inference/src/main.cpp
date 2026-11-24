@@ -154,7 +154,7 @@ int main(int argc, char* argv[]) {
 
   // Load model with llama.cpp (read-only mmap, repacking off)
   auto engine_res = octoplus::inference::LlamaEngine::Load(flags.model_path, flags.ctx, flags.batch,
-                                                          flags.threads);
+                                                           flags.threads);
   if (!engine_res.ok()) {
     std::cerr << "octoplus-inference: " << engine_res.error().message << "\n";
     return 1;

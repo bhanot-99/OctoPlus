@@ -87,7 +87,7 @@ TEST(Health, EndpointOverSocket) {
   auto h = std::make_shared<Health>("octoplus-inference", "0.1.0");
   const octoplus::ipc::ServerConfig cfg;
   auto srv = octoplus::ipc::Server::Start(root / "inference" / "health.sock", cfg,
-                                         octoplus::HealthHandler(h));
+                                          octoplus::HealthHandler(h));
   ASSERT_TRUE(srv.ok());
   auto c = octoplus::ipc::Client::Connect(root / "inference" / "health.sock", cfg.max_frame_bytes);
   ASSERT_TRUE(c.ok());

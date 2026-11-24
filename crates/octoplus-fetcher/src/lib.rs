@@ -339,7 +339,9 @@ impl Handler for FetcherHandler {
 ///
 /// # Errors
 /// Returns [`octoplus_health::ServiceError`] on failure; see [`init_with_key`].
-pub fn init(ctx: &mut octoplus_health::ServiceContext) -> Result<(), octoplus_health::ServiceError> {
+pub fn init(
+    ctx: &mut octoplus_health::ServiceContext,
+) -> Result<(), octoplus_health::ServiceError> {
     init_with_key(Path::new(FETCH_KEY_PATH), ctx)
 }
 

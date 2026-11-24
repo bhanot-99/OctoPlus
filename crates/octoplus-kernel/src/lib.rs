@@ -309,7 +309,9 @@ impl Handler for KernelHandler {
 ///
 /// # Errors
 /// Returns [`octoplus_health::ServiceError`] on failure.
-pub fn init(ctx: &mut octoplus_health::ServiceContext) -> Result<(), octoplus_health::ServiceError> {
+pub fn init(
+    ctx: &mut octoplus_health::ServiceContext,
+) -> Result<(), octoplus_health::ServiceError> {
     init_with(ctx, &KernelPaths::from_env()?)
 }
 

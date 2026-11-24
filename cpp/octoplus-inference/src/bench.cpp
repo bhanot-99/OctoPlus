@@ -14,8 +14,7 @@ namespace octoplus::inference {
 namespace {
 
 std::vector<std::int32_t> BuildSyntheticTokens(Engine* engine, std::uint32_t prompt_tokens) {
-  const std::string synth_text =
-      "The OctoPlus architecture provides local verified privacy. ";
+  const std::string synth_text = "The OctoPlus architecture provides local verified privacy. ";
   auto tok_res = engine->Tokenize(synth_text, true);
   if (!tok_res.ok() || tok_res.value().empty()) {
     return {};

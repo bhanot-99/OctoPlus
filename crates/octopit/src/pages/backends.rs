@@ -3,11 +3,11 @@
 use gtk::prelude::*;
 use gtk4 as gtk;
 
-use octoplus_common::paths::Part;
 use octopit_core::format;
 use octopit_core::gpu::{GpuReading, GpuState};
 use octopit_core::health::{PartCard, PartState};
 use octopit_core::state::{AppState, Changed};
+use octoplus_common::paths::Part;
 
 use super::{Ctx, Page};
 use crate::widgets::{Ring, Spark, bar, card, icon, label, set_bar, skeleton};

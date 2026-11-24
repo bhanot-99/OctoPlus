@@ -316,7 +316,10 @@ fn cpp_parts_flags_and_model_from_manifest() {
         .unwrap();
     // The hash check is its own unit (BUG-028): C4 requires and orders after it.
     assert!(!inf.content.contains("ExecStartPre="));
-    assert!(inf.content.contains("Requires=octoplus-model-check.service"));
+    assert!(
+        inf.content
+            .contains("Requires=octoplus-model-check.service")
+    );
     assert!(
         inf.content
             .contains("octoplus-model-check.service\n\n[Service]")
@@ -389,7 +392,9 @@ fn fetcher_system_unit_and_permissions() {
     assert!(lines.contains(&"RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6"));
     assert!(!lines.contains(&"PrivateNetwork=true"));
     assert!(lines.contains(&"ReadWritePaths=/run/octoplus-fetcher /var/spool/octoplus-fetcher"));
-    assert!(lines.contains(&"ExecStart=/opt/octoplus/bin/octoplus-fetcher --allow-uid @OWNER_UID@"));
+    assert!(
+        lines.contains(&"ExecStart=/opt/octoplus/bin/octoplus-fetcher --allow-uid @OWNER_UID@")
+    );
     assert!(lines.contains(&"MemoryMax=48M"));
     assert!(lines.contains(&"UMask=0027"));
 

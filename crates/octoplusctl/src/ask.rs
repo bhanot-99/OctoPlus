@@ -107,10 +107,7 @@ pub async fn run_ask(
         );
         return 1;
     } else {
-        println!(
-            "{}",
-            styler.bold("=== OctoPlus Conversation Session ===")
-        );
+        println!("{}", styler.bold("=== OctoPlus Conversation Session ==="));
         println!(
             "{}",
             styler.dim("Type your message and press Enter. Say 'bye' to finish.\n")
@@ -238,7 +235,10 @@ where
     let client = match Client::connect(&sock, 1024 * 1024).await {
         Ok(c) => c,
         Err(_) => {
-            eprintln!("{}", styler.error("could not connect to octoplus-knowledge"));
+            eprintln!(
+                "{}",
+                styler.error("could not connect to octoplus-knowledge")
+            );
             eprintln!(
                 "{}",
                 styler.hint("start the service with 'systemctl --user start octoplus-knowledge'")

@@ -9,7 +9,8 @@ use std::process::Command;
 use std::time::{Duration, Instant};
 
 fn ctl() -> PathBuf {
-    PathBuf::from(std::env::var_os("HOME").expect("HOME")).join(".local/opt/octoplus/bin/octoplusctl")
+    PathBuf::from(std::env::var_os("HOME").expect("HOME"))
+        .join(".local/opt/octoplus/bin/octoplusctl")
 }
 
 fn run(args: &[&str]) -> (bool, String) {
