@@ -2,7 +2,7 @@
 
 **Written:** 2026-11-23, in plain language, for the owner to read and approve.
 **Status:** PLAN ONLY. Nothing is built. No code starts until you name a story.
-**Full details:** `docs/plans/phase-13-companion-plan.md` (the technical plan) and `docs/design/companion-persona-laila.md` (her character).
+**Full details:** `docs/plans/phase-12-companion-plan.md` (the technical plan) and `docs/design/companion-persona-laila.md` (her character).
 
 ---
 

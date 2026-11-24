@@ -47,7 +47,7 @@ machine it runs on, a **Mac gate**, and the rest on the Mac. Two phases have a M
 
 | Order | Work | Where | Estimate | Note |
 | :-- | :-- | :-- | :-- | :-- |
-| 0 | Read soak run 2, merge `fix/soak-memory` (OctoPit is already on `main`) | Linux | 1 day | After about 22:30 IST on 2026-11-24 |
+| 0 | Soak run 2 read and `fix/soak-memory` merged (done 2026-11-24); open: voice budget decision, swap protection, a clean soak with a pressure window | Linux | done | The next soak waits for the owner's word |
 | 1 | **Phase 11.5**: part 1 the rename, then part 2 Mac readiness | Linux | 1 to 2 days, then about 1 week | The rename is always first: no other branch may be open |
 | gate | If the Mac is already here: go to order 6 | | | The readiness items are done as the first port steps |
 | 2 | **Phase 12 Companion** | Linux | 3 to 4 weeks | Mostly portable logic |
