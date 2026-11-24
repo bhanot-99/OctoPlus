@@ -1,61 +1,84 @@
 {
-  "soak_passed": true,
+  "verdict": "FAIL",
+  "duration_s": 43184,
+  "asserted": true,
+  "probe": {
+    "p99_first_quarter_ms": 4125.2,
+    "p99_last_quarter_ms": 6613.6,
+    "drift_pct": 60.32,
+    "failed_probes": 0,
+    "samples": 1101
+  },
   "units": {
     "neuroos-healthd": {
-      "baseline_rss_mib": 4.0,
-      "final_rss_mib": 4.0,
-      "rss_growth_pct": 0.0,
-      "latency_drift_pct": 215.84,
+      "baseline_rss_mib": 5.2,
+      "final_rss_mib": 4.2,
+      "rss_growth_pct": -18.8,
+      "peak_rss_mib": 5.3,
+      "budget_mib": 15,
+      "memory_max_hits": 0,
       "restarts": 0,
-      "passed": true
+      "within_limits": true
     },
     "neuroos-storage": {
-      "baseline_rss_mib": 261.0,
-      "final_rss_mib": 261.0,
-      "rss_growth_pct": 0.0,
-      "latency_drift_pct": 215.84,
+      "baseline_rss_mib": 277.0,
+      "final_rss_mib": 272.8,
+      "rss_growth_pct": -1.54,
+      "peak_rss_mib": 280.1,
+      "budget_mib": 320,
+      "memory_max_hits": 0,
       "restarts": 0,
-      "passed": true
+      "within_limits": true
     },
     "neuroos-inference": {
-      "baseline_rss_mib": 2804.0,
-      "final_rss_mib": 2801.0,
-      "rss_growth_pct": -0.11,
-      "latency_drift_pct": 215.84,
+      "baseline_rss_mib": 2748.7,
+      "final_rss_mib": 2746.8,
+      "rss_growth_pct": -0.07,
+      "peak_rss_mib": 2750.3,
+      "budget_mib": 2800,
+      "memory_max_hits": 0,
       "restarts": 0,
-      "passed": true
+      "within_limits": true
     },
     "neuroos-monitor": {
-      "baseline_rss_mib": 7.0,
-      "final_rss_mib": 7.0,
-      "rss_growth_pct": 0.0,
-      "latency_drift_pct": 215.84,
+      "baseline_rss_mib": 7.5,
+      "final_rss_mib": 6.4,
+      "rss_growth_pct": -14.42,
+      "peak_rss_mib": 7.7,
+      "budget_mib": 30,
+      "memory_max_hits": 0,
       "restarts": 0,
-      "passed": true
+      "within_limits": true
     },
     "neuroos-kernel": {
-      "baseline_rss_mib": 5.0,
-      "final_rss_mib": 5.0,
-      "rss_growth_pct": 0.0,
-      "latency_drift_pct": 215.84,
+      "baseline_rss_mib": 6.0,
+      "final_rss_mib": 4.7,
+      "rss_growth_pct": -21.06,
+      "peak_rss_mib": 6.0,
+      "budget_mib": 15,
+      "memory_max_hits": 0,
       "restarts": 0,
-      "passed": true
+      "within_limits": true
     },
     "neuroos-knowledge": {
-      "baseline_rss_mib": 5.0,
-      "final_rss_mib": 5.0,
-      "rss_growth_pct": 0.0,
-      "latency_drift_pct": 215.84,
+      "baseline_rss_mib": 5.9,
+      "final_rss_mib": 4.7,
+      "rss_growth_pct": -19.69,
+      "peak_rss_mib": 6.0,
+      "budget_mib": 60,
+      "memory_max_hits": 0,
       "restarts": 0,
-      "passed": true
+      "within_limits": true
     },
     "neuroos-voice": {
-      "baseline_rss_mib": 589.0,
-      "final_rss_mib": 589.0,
-      "rss_growth_pct": 0.0,
-      "latency_drift_pct": 215.84,
+      "baseline_rss_mib": 507.2,
+      "final_rss_mib": 497.3,
+      "rss_growth_pct": -1.95,
+      "peak_rss_mib": 836.5,
+      "budget_mib": 800,
+      "memory_max_hits": 0,
       "restarts": 0,
-      "passed": true
+      "within_limits": false
     }
   }
 }
