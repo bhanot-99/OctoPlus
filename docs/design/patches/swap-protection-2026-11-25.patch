@@ -1,0 +1,93 @@
+From 398ad4a9c7e1d2bc405cb679a1bc08954bf905b2 Mon Sep 17 00:00:00 2001
+From: bhanot <bhanot@pop-os.lan>
+Date: Tue, 24 Nov 2026 22:49:29 +0530
+Subject: [PATCH] Units: inference, voice and storage never swap
+ (MemorySwapMax=0), generated and tested; NOT merged until the next soak
+ proves it under memory pressure
+
+Soak run 2: first-answer p99 went from 4.1 s to 7.4 s once idle pages were swapped out.
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ crates/neuroos-deploy/src/lib.rs              | 5 +++++
+ crates/neuroos-deploy/tests/units_test.rs     | 9 +++++++++
+ deploy/systemd/user/neuroos-inference.service | 1 +
+ deploy/systemd/user/neuroos-storage.service   | 1 +
+ deploy/systemd/user/neuroos-voice.service     | 1 +
+ 5 files changed, 17 insertions(+)
+
+diff --git a/crates/neuroos-deploy/src/lib.rs b/crates/neuroos-deploy/src/lib.rs
+index f592b1b..4c1c4d4 100644
+--- a/crates/neuroos-deploy/src/lib.rs
++++ b/crates/neuroos-deploy/src/lib.rs
+@@ -458,6 +458,11 @@ fn generate_user_service_internal(
+     out.push_str("LimitCORE=0\n");
+     out.push_str("UMask=0077\n");
+     out.push_str(&format!("MemoryMax={mem_max}\n"));
++    if matches!(part, Part::Inference | Part::Voice | Part::Storage) {
++        // Never swap the big parts out. Idle pages pushed to swap came back with seconds of delay:
++        // soak run 2 (2026-11-24) first-answer 99th percentile went from 4.1 s to 7.4 s once swapping began.
++        out.push_str("MemorySwapMax=0\n");
++    }
+     out.push_str("Restart=on-failure\n");
+     out.push_str("RestartSec=2s\n");
+ 
+diff --git a/crates/neuroos-deploy/tests/units_test.rs b/crates/neuroos-deploy/tests/units_test.rs
+index 3c4c05a..9708e11 100644
+--- a/crates/neuroos-deploy/tests/units_test.rs
++++ b/crates/neuroos-deploy/tests/units_test.rs
+@@ -139,6 +139,15 @@ fn every_baseline_line_present_in_user_units() {
+             expected_mem
+         );
+ 
++        // The big parts must never be swapped out (soak run 2 finding); the small ones are not limited.
++        let big = matches!(part, Part::Inference | Part::Voice | Part::Storage);
++        assert_eq!(
++            lines.contains(&"MemorySwapMax=0"),
++            big,
++            "part {:?}: MemorySwapMax=0 must be present exactly for inference, voice and storage",
++            part
++        );
++
+         // Unit section basics
+         assert!(lines.contains(&"PartOf=neuroos.target"));
+         assert!(lines.contains(&"Requires=neuroos-runtime.service"));
+diff --git a/deploy/systemd/user/neuroos-inference.service b/deploy/systemd/user/neuroos-inference.service
+index d072deb..3b201a6 100644
+--- a/deploy/systemd/user/neuroos-inference.service
++++ b/deploy/systemd/user/neuroos-inference.service
+@@ -38,6 +38,7 @@ AmbientCapabilities=
+ LimitCORE=0
+ UMask=0077
+ MemoryMax=3220M
++MemorySwapMax=0
+ Restart=on-failure
+ RestartSec=2s
+ ExecStart=%h/.local/opt/neuroos/bin/neuroos-inference --socket %t/neuroos/inference/inference/inference.sock=neuroos-knowledge.service --health-socket %t/neuroos/inference/health/health.sock=neuroos-healthd.service --model %h/.local/opt/neuroos/models/llm/Qwen3-4B-Instruct-2507-Q4_K_M.gguf --threads 8 --ctx 2048 --batch 512
+diff --git a/deploy/systemd/user/neuroos-storage.service b/deploy/systemd/user/neuroos-storage.service
+index c01eae1..25c3d93 100644
+--- a/deploy/systemd/user/neuroos-storage.service
++++ b/deploy/systemd/user/neuroos-storage.service
+@@ -41,6 +41,7 @@ AmbientCapabilities=
+ LimitCORE=0
+ UMask=0077
+ MemoryMax=400M
++MemorySwapMax=0
+ Restart=on-failure
+ RestartSec=2s
+ ExecStart=%h/.local/opt/neuroos/bin/neuroos-storage
+diff --git a/deploy/systemd/user/neuroos-voice.service b/deploy/systemd/user/neuroos-voice.service
+index 4cdef82..ae8d56e 100644
+--- a/deploy/systemd/user/neuroos-voice.service
++++ b/deploy/systemd/user/neuroos-voice.service
+@@ -41,6 +41,7 @@ AmbientCapabilities=
+ LimitCORE=0
+ UMask=0077
+ MemoryMax=960M
++MemorySwapMax=0
+ Restart=on-failure
+ RestartSec=2s
+ ExecStart=%h/.local/opt/neuroos/bin/neuroos-voice --socket %t/neuroos/voice/voice/voice.sock=neuroos-knowledge.service --socket %t/neuroos/voice/control/control.sock=uid --health-socket %t/neuroos/voice/health/health.sock=neuroos-healthd.service --models-dir %h/.local/opt/neuroos/models/voice --voice-config %h/.config/neuroos/voice.conf
+-- 
+2.43.0
+

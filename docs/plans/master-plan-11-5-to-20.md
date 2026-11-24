@@ -30,7 +30,7 @@ As of 2026-11-24 evening:
 - **Soak run 2 (finished 2026-11-24 22:30 IST):** a clean 12 h run of the memory fixes. The two run 1 failures are
   fixed (storage -1.5 % instead of +22.8 %, voice -2 % instead of +579 %, no restarts). The script verdict is still
   **FAIL** on two checks: the first-answer probe drifted when the kernel began swapping idle parts out (root cause found,
-  a swap-protection change is on branch `fix/swap-protection`, **not merged and unproven**), and a short voice burst
+  a swap-protection change was built, left unmerged and unproven, and then dropped on 2026-11-25; it is kept as `docs/design/patches/swap-protection-2026-11-25.patch`), and a short voice burst
   reached 836.5 MiB against an 800 MiB budget (an owner decision on the budget is open). Details:
   `reports/soak-memory-findings-2026-11-24.md`. The next clean soak is on hold until the owner says start.
 - **The system today:** 8 parts (health, storage, inference, monitor, kernel, knowledge, voice, fetcher), 13 skills,
