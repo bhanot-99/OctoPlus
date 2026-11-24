@@ -11,7 +11,7 @@ full plan to make the project a Mac-only app because the owner moves to a MacBoo
 
 | Phase | Name | One line | Plan | Needs first |
 | :-- | :-- | :-- | :-- | :-- |
-| 11.5 | Rename to OctoPlus | Every name changes from Semantic NeuroOS / `neuroos` to OctoPlus / `octoplus`, with a safe migration of the installed system | `phase-11-5-rename-octoplus-plan.md` | `cockpit`, `fix/soak-memory` merged; soak run 2 read |
+| 11.5 | Rename to OctoPlus | Every name changes from Semantic NeuroOS / `neuroos` to OctoPlus / `octoplus`, with a safe migration of the installed system | `phase-11-5-rename-octoplus-plan.md` | `fix/soak-memory` merged (OctoPit is already on `main`); soak run 2 read |
 | 12 | Companion | The voice friend (Laila): talks on its own, jokes, remembers | `phase-12-companion-plan.md` (was 13) | 11.5 |
 | 13 | Cloud models and the switch | Encrypted storage, privacy gate, cloud providers, local/cloud/auto switch, local default and offline fallback | `phase-13-cloud-plan.md` (was 12) | 11.5. Split: 13A portable, 13B Mac (§2) |
 | 14 | OctoPit as the interface | OctoPit becomes the one place to talk to and control OctoPlus | `phase-14-octopit-interface-plan.md` | 13A, 16 (the toolkit is chosen there) |
@@ -44,7 +44,7 @@ switch to Phase 16), and the rest on the Mac.
 
 | Step | Work | Where | Estimate | Note |
 | :-- | :-- | :-- | :-- | :-- |
-| 0 | Read soak run 2; merge `fix/soak-memory` and `cockpit` | Linux | 1 day | Tonight or tomorrow |
+| 0 | Read soak run 2; merge `fix/soak-memory` | Linux | 1 day | Tonight or tomorrow |
 | 1 | **Phase 11.5 rename** | Linux | 1 to 2 days | Always first: no other branch may be open, and the Mac build must use the new names from its first line |
 | gate | **If the Mac is already here: go to Step 5** | | | The 16.0 readiness items are done as the first port steps |
 | 2 | **Phase 16.0 readiness** | Linux | about 1 week | Interfaces for sandbox, service, audio, sensors, sealing, paths; soak input injection |

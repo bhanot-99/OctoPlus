@@ -62,7 +62,7 @@ Two phases are split so that Mac-independent work never waits:
 
 | Step | Work | Where | Estimate | Note |
 | :-- | :-- | :-- | :-- | :-- |
-| 0 | Read soak run 2, merge `fix/soak-memory` and `cockpit` | Linux | 1 day | After about 22:30 IST on 2026-11-24 |
+| 0 | Read soak run 2, merge `fix/soak-memory` (OctoPit is already on `main`) | Linux | 1 day | After about 22:30 IST on 2026-11-24 |
 | 1 | **Phase 11.5 Rename** | Linux | 1 to 2 days | Always first: no other branch may be open |
 | gate | If the Mac is already here: go to step 5 | | | 16.0 items are done as the first port steps |
 | 2 | **Phase 16.0 Mac readiness** | Linux | about 1 week | Interfaces, soak input injection, checklists |
@@ -122,7 +122,7 @@ owner does.** Estimates are mine and rough.
 **Purpose.** Change the product name from Semantic NeuroOS to **OctoPlus** everywhere: code, commands, services,
 folders, packages, documents. The GUI keeps the name OctoPit as a part of OctoPlus.
 
-**Needs.** Soak run 2 read; `fix/soak-memory` and `cockpit` merged; no other branch open. A rename touches every
+**Needs.** Soak run 2 read; `fix/soak-memory` merged (OctoPit is already on `main`); no other branch open. A rename touches every
 file, so it conflicts with every open branch, and everything built afterwards (Companion, cloud, the Mac build,
 the installer) should use the new names from its first line.
 
