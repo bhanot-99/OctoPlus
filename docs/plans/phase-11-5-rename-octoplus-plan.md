@@ -134,5 +134,8 @@ Plus: no file or folder name on disk contains `neuroos`; `systemctl --user list-
 | P115-R4 | Soak and tests read memory through one function (resident plus swapped on Linux, `phys_footprint` on the Mac) | The soak script uses it |
 | P115-R5 | Socket folder name policy: under 100 characters (macOS limit is 104) | A test fails on a longer path |
 | P115-R6 | Hand-run checklist template for things only testable on the Mac | `docs/design/mac-checklists.md` exists |
+| P115-R7 | **OctoPlus export tool** (passphrase-protected archive of facts, chunks, settings, persona, ledger, skills list) and its read-back verification. The Linux laptop will be sold, so this is mandatory | Archive written and verified on a copy of the real install |
+| P115-R8 | **Baseline pack:** save the Linux measurements that cannot be repeated later (voice baseline, probe latencies, soak run 2 report, KPI recordings, benchmarks) | Files in `reports/` and the archive |
+| P115-R9 | **Back up everything that exists only on this laptop** and push every repository (the list is in `linux-retirement-checklist.md` §3; `PhaseLoopNN` has no GitHub remote and 43 unpushed commits) | Every repository clean and pushed; non-git folders copied and one copy opened elsewhere |
 
-**Done when.** The gate is green on Linux with the interfaces in place and behaviour unchanged.
+**Done when.** The gate is green on Linux with the interfaces in place and behaviour unchanged; the export archive is written and verified; the baseline pack and the backups of R9 exist. **The Linux laptop will be sold after the Mac works** (see `linux-retirement-checklist.md`), so R7 to R9 are not optional.

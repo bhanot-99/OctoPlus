@@ -25,7 +25,7 @@ on Landlock and seccomp).
 | :-- | :-- | :-- |
 | 1 | The Air's chip, memory (8, 16, 24 GB) and macOS version | Memory budgets, which model size is realistic, which APIs exist |
 | 2 | A paid Apple Developer account, or a free Apple ID or self-signed certificate | Permissions are tied to the signing identity (§8.11); a paid account only adds notarisation for other people [verify] |
-| 3 | Keep the Linux laptop for development until the Mac works | Avoids a gap; the Mac build is proven before Linux is deleted |
+| 3 | **Decided: the Linux laptop will be sold for good.** It is kept only until the **Sale gate** (`linux-retirement-checklist.md`) passes | No Linux fallback exists after the sale; data, code, keys and measurements must all be saved first |
 | 4 | Data to carry over: the stored memory, facts and settings | A one-way export and import (§10) |
 | 5 | Is the Air the only Mac (no second machine to test an update path on) | Update and migration testing |
 
@@ -206,7 +206,7 @@ without any visible error. Decisions:
   [Sparkle-style design, verify]. Rollback keeps the previous app.
 - Uninstall: delete the app, and OctoPit offers "remove my data" (the data folder is separate and never deleted
   without asking).
-- **Carrying data over from Linux:** an export tool (on Linux, now) writes a portable archive: the SQLite file or
+- **Carrying data over from Linux:** an export tool (built in Phase 11.5 part 2, P115-R7) writes a portable archive: the SQLite file or
   a plain export of facts, chunks and settings, plus a passphrase-protected key export if encryption is already
   on. The Mac import re-seals keys to the Secure Enclave. Models are re-downloaded, not copied. TPM-sealed keys
   cannot move; this is why the export asks for a passphrase.
@@ -227,6 +227,7 @@ without any visible error. Decisions:
 | P15-S10 | Packaging, signing identity (§8.11), first-run, update, uninstall; permission-survives-update test | A clean user account installs and runs from the `.dmg` |
 | P15-S11 | Data import from Linux | The owner's real memory arrives and is searchable |
 | P15-S12 | Mac gate: the whole test suite, security probe, a 12 h soak with sleep cycles and `phys_footprint` | PASS; owner uses it as the main machine for a week |
+| P15-S14 | **Sale gate:** the conditions and buyer steps in `linux-retirement-checklist.md` | Every box ticked; then the owner sells the laptop |
 | P15-S13 | **Drop Linux:** tag `linux-final`; delete `deploy/systemd`, Landlock, seccomp, nftables, PipeWire, GTK code and Linux scripts and docs; update the PRD, `security.md`, the README | The tree builds only for macOS; the grep audit finds no Linux-only code |
 
 ## 12. Order of work and timing
@@ -250,7 +251,7 @@ without any visible error. Decisions:
 | Air throttles under sustained load | Slow answers | Thermal-aware background work; measure on battery |
 | Toolchain or dependency fails to build on arm64 | Delay | Spike builds everything first; fall back to a pinned older version |
 | Signing and login-item rules change between macOS versions | Install breaks | Test on the installed version; document the exact steps |
-| Deleting Linux code removes the fallback | No second platform | The `linux-final` tag; delete only after a week of Mac use |
+| The Linux laptop is sold, so there is no fallback machine | A mistake on the Mac cannot be compared against Linux | The Sale gate; the baseline pack; a week of Mac use before the sale; the `linux-final` tag; an emergency disk image and a Linux VM if the sale cannot wait |
 
 ## 14. Exit criteria
 

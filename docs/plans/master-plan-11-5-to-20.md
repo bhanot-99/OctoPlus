@@ -35,7 +35,9 @@ As of 2026-11-24 evening:
   one local 4B model, voice with Kokoro and Whisper tiny, a GTK4 dashboard (OctoPit). It works, but the owner says
   it "still does not feel alive".
 - **The machine:** Linux laptop now. The owner will move to a **MacBook Air** soon; the date is not fixed (this week
-  to three weeks). The product becomes **macOS only**.
+  to three weeks). The product becomes **macOS only**. **The Linux laptop will be sold for good**, so there is no Linux
+  fallback after the sale: nothing may exist only on it when it goes. The **Sale gate** (`linux-retirement-checklist.md`)
+  decides when it can be sold; it needs the Mac proven and a week of use.
 
 ## A2. The goal, in the owner's words
 
@@ -94,6 +96,11 @@ encrypted store. 20 tests everything, so it is last.
 | In 1 to 2 weeks, during readiness or early Companion | Finish the current story, merge, then Phase 15. Resume Phase 12 on the Mac. |
 | In 3 or more weeks, during 12, 13A or 14A | Finish the current story, merge, then Phase 15. Portable code built so far ports with only its edges changed. Resume with 13B, 14B, then 16 to 20 plus the unfinished A parts. |
 | After order 5 | All portable work is done. Phase 15, then 13B, 14B, 16, 17, 18, 19, 20. |
+
+**The Linux laptop is sold after the Mac works.** So before the Mac gate, Linux work stays small, portable and finished (no
+half-built Linux-only pieces), the export tool and the backups of Phase 11.5 part 2 (P115-R7 to R9) are done, and the
+laptop is **not** sold until the Sale gate passes (P15-S14, `linux-retirement-checklist.md`). TPM sealing is never built:
+Phase 13A uses a passphrase sealer so keys can always move, and the Mac re-seals them to the Secure Enclave.
 
 **Before the Mac, do not build:** any GTK interface page (Phase 16 waits for the toolkit decision), anything that needs
 cgroups, nftables or systemd beyond what exists, Linux-only sensors or audio changes. They would be thrown away.
@@ -211,6 +218,9 @@ the Mac is already here (the same items become the first port steps).
 | P115-R4 | Soak and tests read memory through one function (resident plus swapped on Linux, `phys_footprint` on the Mac) | The soak script uses it |
 | P115-R5 | Socket folder name policy: under 100 characters (macOS limit is 104) | A test fails on a longer path |
 | P115-R6 | Hand-run checklist template for things only testable on the Mac | `docs/design/mac-checklists.md` exists |
+| P115-R7 | **OctoPlus export tool** (passphrase-protected archive: facts, chunks, settings, persona, ledger, skills list) and its read-back check | Archive verified on a copy of the real install |
+| P115-R8 | **Baseline pack:** save the Linux measurements that cannot be repeated after the sale | Files in `reports/` and in the archive |
+| P115-R9 | **Back up everything that exists only on this laptop** and push every repository (`PhaseLoopNN` has no GitHub remote and 43 unpushed commits) | Every repository pushed; non-git folders copied and opened elsewhere |
 
 **Done when.** The gate is green on Linux with the interfaces in place; behaviour is unchanged. **Estimate.** About 1 week.
 
@@ -518,7 +528,7 @@ door, approvals, the egress ledger, memory budgets.
 
 **Facts to settle with the owner:** the Air's chip, memory (8, 16 or 24 GB; the vision document targets M4 or M5 with
 24 GB, please confirm) and macOS version; a paid Apple Developer account or a free Apple ID or self-signed certificate
-(see code identity below); keep the Linux laptop until the Mac works; which data to carry over; whether the Air is the
+(see code identity below); **the Linux laptop will be sold, kept only until the Sale gate passes**; which data to carry over; whether the Air is the
 only Mac.
 
 **What is Linux-specific today** (files that mention it, outside docs and reports) and its Mac replacement:
@@ -605,6 +615,7 @@ passphrase-protected key export if encryption is on; the Mac re-seals the keys; 
 | P15-S10 | Packaging, signing identity, first run, update, uninstall; permission-survives-update test | A clean user account installs and runs |
 | P15-S11 | Data import from Linux | The owner's real memory arrives and is searchable |
 | P15-S12 | Mac gate: full suite, security probe, 12 h soak with sleep cycles on `phys_footprint` | PASS; owner uses the Mac as the main machine for a week |
+| P15-S14 | **Sale gate:** the conditions and buyer steps in `linux-retirement-checklist.md` | Every box ticked; then the owner sells the laptop |
 | P15-S13 | **Drop Linux:** tag `linux-final`; delete systemd, Landlock, seccomp, nftables, PipeWire, GTK code and Linux scripts; update PRD, `security.md`, README | The tree builds only for macOS |
 
 **Order inside the phase.** The spike first and do not continue until its answers are written. Then S02, S03, then S04 to
@@ -616,7 +627,7 @@ S09 to S13 about 2 weeks.
 cancel differs (test early). Unified memory pressure (budgets from the real Air, smaller model if needed). Air throttling
 (thermal-aware background work, measure on battery). A dependency fails to build on arm64 (spike builds first; pinned
 older version). Signing and login-item rules change between macOS versions (test on the installed version). Deleting
-Linux removes the fallback (the tag; delete only after a week of Mac use).
+the Linux laptop is sold, so no fallback machine exists (the Sale gate; a week of Mac use first; the baseline pack; the `linux-final` tag; an emergency disk image and a Linux VM if the sale cannot wait).
 
 **Owner does.** Buys the Mac, settles the facts above, tests on the real machine, uses it for a week, signs off.
 

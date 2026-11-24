@@ -78,6 +78,10 @@ encrypted store. 20 tests everything, so it is last.
 | In 3 or more weeks, during 12, 13A or 14A | Finish the current story, merge, then Phase 15. Portable code built so far ports with only its edges changed. Resume with 13B, 14B, then 16 to 20 plus the unfinished A parts. |
 | After order 5 | All portable work is done. Phase 15, then 13B, 14B, 16, 17, 18, 19, 20. |
 
+**The Linux laptop will be sold for good after the Mac works.** The Sale gate (`linux-retirement-checklist.md`, step P15-S14)
+must pass first; the export tool, baseline pack and backups (P115-R7 to R9) are done in Phase 11.5 part 2; TPM sealing is
+never built (a passphrase sealer on Linux, the Secure Enclave on the Mac).
+
 **Before the Mac, do not build:** any GTK interface page (Phase 16 waits for the toolkit decision), anything that needs
 cgroups, nftables or systemd beyond what exists, Linux-only sensors or audio changes. They would be thrown away.
 
