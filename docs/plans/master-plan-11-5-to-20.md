@@ -27,10 +27,12 @@ As of 2026-11-24 evening:
   conversation, nudges, voice).
 - **Built, owner items open:** Phases 8 to 10 (fetcher and search, integration and soak, packaging) and Phase 11
   (OctoPit, the GTK4 dashboard, already merged into `main`; its app mark, a live mic test and the gate run are owner items).
-- **Soak run 2:** a clean 12 h run of the memory fix is in progress and ends about 22:30 IST on 2026-11-24. Run 1
-  failed on measurement artefacts (the kernel swaps idle memory; the soak only counted resident memory) and one
-  real cost (the storage embedder's ONNX memory arena, fixed: 76 MiB less, same results). Everything is in
-  `reports/soak-memory-findings-2026-11-24.md` on branch `fix/soak-memory`.
+- **Soak run 2 (finished 2026-11-24 22:30 IST):** a clean 12 h run of the memory fixes. The two run 1 failures are
+  fixed (storage -1.5 % instead of +22.8 %, voice -2 % instead of +579 %, no restarts). The script verdict is still
+  **FAIL** on two checks: the first-answer probe drifted when the kernel began swapping idle parts out (root cause found,
+  a swap-protection change is on branch `fix/swap-protection`, **not merged and unproven**), and a short voice burst
+  reached 836.5 MiB against an 800 MiB budget (an owner decision on the budget is open). Details:
+  `reports/soak-memory-findings-2026-11-24.md`. The next clean soak is on hold until the owner says start.
 - **The system today:** 8 parts (health, storage, inference, monitor, kernel, knowledge, voice, fetcher), 13 skills,
   one local 4B model, voice with Kokoro and Whisper tiny, a GTK4 dashboard (OctoPit). It works, but the owner says
   it "still does not feel alive".
@@ -66,7 +68,7 @@ machine it runs on, a **Mac gate**, and the rest on the Mac. Two phases have a M
 
 | Order | Work | Where | Estimate | Note |
 | :-- | :-- | :-- | :-- | :-- |
-| 0 | Read soak run 2, merge `fix/soak-memory` (OctoPit is already on `main`) | Linux | 1 day | After about 22:30 IST on 2026-11-24 |
+| 0 | Soak run 2 read and `fix/soak-memory` merged (done 2026-11-24); open: voice budget decision, swap protection, a clean soak with a pressure window | Linux | done | The next soak waits for the owner's word |
 | 1 | **Phase 11.5**: part 1 the rename, then part 2 Mac readiness | Linux | 1 to 2 days, then about 1 week | The rename is always first: no other branch may be open |
 | gate | If the Mac is already here: go to order 6 | | | The readiness items are done as the first port steps |
 | 2 | **Phase 12 Companion** | Linux | 3 to 4 weeks | Mostly portable logic |
