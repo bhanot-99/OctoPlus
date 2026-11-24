@@ -15,7 +15,7 @@
 | Current phase | Phases 8-10 in gate review |
 | Current story | None on `main`. OctoPit (D-57, the GUI dashboard) is merged into `main` (the `cockpit` branch and worktree no longer exist, checked 2026-11-24); owner items left: app mark, live mic test, gate run |
 | Overall progress | 8 / 11 phases signed off on real evidence (0-7); 8-10 need owner steps (24 h soak, two-week trial, `.deb` install, fresh-VM proof) and sign-off |
-| Health | 🟩 Soak run 2 (12 h, clean, fix branch) finished 2026-11-24: storage and voice growth fixed, zero restarts; 🟥 script verdict FAIL on two checks (first-answer drift once the kernel swapped idle parts out; a voice burst of 836.5 MiB over its 800 MiB budget); gate (`just ci`) on merged `main` in progress; owner trial and sign-offs open |
+| Health | 🟩 Soak run 2 (12 h, clean, fix branch) finished 2026-11-24: storage and voice growth fixed, zero restarts; 🟥 script verdict FAIL on two checks (first-answer drift once the kernel swapped idle parts out; a voice burst of 836.5 MiB over its 800 MiB budget); gate (`just ci`) ALL GREEN on merged `main` 2026-11-24 23:58 (994 Rust tests, 209 C++ tests, cargo deny clean, coverage and sanitizers pass); owner trial and sign-offs open |
 | Next milestone (updated 2026-11-24) | Owner decisions: voice budget (about 900 MiB or reduce the peaks), whether to merge `fix/swap-protection`, then say start for the next clean soak (with a memory-pressure window); then Phase 11.5 per `docs/plans/master-plan-11-5-to-20.md` |
 
 ---
@@ -26,7 +26,7 @@
 | :--- | :--- |
 | Story | `fix/soak-memory` and `roadmap-v2` merged into `main` (2026-11-24); nothing in progress. Plans for Phases 11.5 to 20 are in `docs/plans/master-plan-11-5-to-20.md` |
 | Builder / Checker | Claude / Claude (agy not used) — an independent review is still owed |
-| Branch | `main` with `fix/soak-memory` and `roadmap-v2` merged (2026-11-24); pushed to GitHub only after the gate passes. Unmerged: `fix/swap-protection` (swap change, unproven). Worktrees `Semantic-NeuroOS-memfix` and `Semantic-NeuroOS-roadmap` can be removed after the push (do not switch branches in this main folder while other sessions work) |
+| Branch | `main` with `fix/soak-memory` and `roadmap-v2` merged (2026-11-24); gate green, pushed to GitHub 2026-11-24. Unmerged: `fix/swap-protection` (swap change, unproven). The merged branches and their extra worktrees are deleted (do not switch branches in this main folder while other sessions work) |
 | Files being changed | none on `main` |
 | Next concrete step | Owner: decide the open items in Health; no soak starts until the owner says start. Branch `fix/swap-protection` holds the unproven swap change (not merged) |
 
