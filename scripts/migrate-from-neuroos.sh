@@ -90,8 +90,12 @@ fi
 
 if [[ $apply == 1 && $use_systemd == 1 ]]; then
   for part in healthd storage inference monitor kernel knowledge voice; do
+    for _ in $(seq 1 15); do   # a part may need a few seconds to finish shutting down
+      systemctl --user is-active --quiet "neuroos-$part.service" || break
+      sleep 1
+    done
     if systemctl --user is-active --quiet "neuroos-$part.service"; then
-      say "refusing: neuroos-$part.service is still running after the stop; nothing was moved"
+      say "refusing: neuroos-$part.service is still running 15 s after the stop; nothing was moved"
       exit 1
     fi
   done
