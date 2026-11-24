@@ -108,6 +108,7 @@ if [[ -f "$dev_bin/octopit" ]]; then
   install -d -m 0755 "$HOME/.local/bin" "$HOME/.local/share/applications" \
     "$HOME/.local/share/icons/hicolor/scalable/apps" "$HOME/.local/share/icons/hicolor/symbolic/apps"
   ln -sf "$dev_bin/octopit" "$HOME/.local/bin/octopit"
+  ln -sf "$dev_bin/octoplusctl" "$HOME/.local/bin/octoplusctl"
   sed "s|^Exec=.*|Exec=$dev_bin/octopit|" "$root/deploy/desktop/octopit.desktop" \
     > "$HOME/.local/share/applications/octopit.desktop"
   chmod 0644 "$HOME/.local/share/applications/octopit.desktop"
