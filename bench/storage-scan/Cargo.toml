@@ -1,5 +1,5 @@
 [package]
-name = "neuroos-bench-storage-scan"
+name = "octoplus-bench-storage-scan"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

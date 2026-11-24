@@ -4,10 +4,10 @@
 #   scripts/install-dev.sh
 #
 # * Builds release Rust binaries and the C++ release preset.
-# * Copies whatever neuroos-* service binaries and neuroosctl exist into ~/.local/opt/neuroos/bin/
+# * Copies whatever octoplus-* service binaries and octoplusctl exist into ~/.local/opt/octoplus/bin/
 #   (missing binaries are skipped with a note; they are built in later tasks).
-# * Hard-links manifest models into ~/.local/opt/neuroos/models/ and writes SHA256SUMS.
-# * Creates ~/.local/share/neuroos/{storage,soak} with mode 0700.
+# * Hard-links manifest models into ~/.local/opt/octoplus/models/ and writes SHA256SUMS.
+# * Creates ~/.local/share/octoplus/{storage,soak} with mode 0700.
 # * Copies deploy/systemd/user/* into ~/.config/systemd/user/.
 # * Runs systemctl --user daemon-reload.
 #
@@ -46,7 +46,7 @@ if [[ ! -d "$ort_dir" && -f "$root/models/runtime/onnxruntime-linux-x64-1.31.1.t
 fi
 voice_built=0
 if [[ -d "$ort_dir" && -f "$root/cpp/third_party/whisper.cpp/CMakeLists.txt" ]]; then
-  (cd "$root/cpp" && cmake --preset voice-release && cmake --build --preset voice-release --target neuroos-voice --parallel)
+  (cd "$root/cpp" && cmake --preset voice-release && cmake --build --preset voice-release --target octoplus-voice --parallel)
   voice_built=1
 else
   echo "note: ONNX Runtime or the whisper.cpp submodule is missing; C2 stays the stub (run just fetch-models and git submodule update --init)"
@@ -57,7 +57,7 @@ fi
 umask 022
 
 echo "=== 3. Setting up dev install prefix ==="
-dev_opt="$HOME/.local/opt/neuroos"
+dev_opt="$HOME/.local/opt/octoplus"
 dev_bin="$dev_opt/bin"
 dev_models="$dev_opt/models"
 dev_lib="$dev_opt/lib"
@@ -66,25 +66,25 @@ install -d -m 0755 "$dev_bin" "$dev_models" "$dev_lib"
 
 echo "=== 4. Copying available service binaries and shared libraries ==="
 candidates=(
-  "neuroos-healthd"
-  "neuroos-storage"
-  "neuroos-inference"
-  "neuroos-monitor"
-  "neuroos-kernel"
-  "neuroos-confirm"
-  "neuroos-skill"
-  "neuroos-knowledge"
-  "neuroos-voice"
-  "neuroos-fetcher"
-  "neuroosctl"
-  "neuroos-octopit"
-  "neuroos-s04-probe"
+  "octoplus-healthd"
+  "octoplus-storage"
+  "octoplus-inference"
+  "octoplus-monitor"
+  "octoplus-kernel"
+  "octoplus-confirm"
+  "octoplus-skill"
+  "octoplus-knowledge"
+  "octoplus-voice"
+  "octoplus-fetcher"
+  "octoplusctl"
+  "octopit"
+  "octoplus-s04-probe"
 )
 
 for bin in "${candidates[@]}"; do
   src=""
-  if [[ "$bin" == "neuroos-voice" && "$voice_built" == 1 && -f "$root/cpp/build/voice-release/neuroos-voice/neuroos-voice" ]]; then
-    src="$root/cpp/build/voice-release/neuroos-voice/neuroos-voice"
+  if [[ "$bin" == "octoplus-voice" && "$voice_built" == 1 && -f "$root/cpp/build/voice-release/octoplus-voice/octoplus-voice" ]]; then
+    src="$root/cpp/build/voice-release/octoplus-voice/octoplus-voice"
   elif [[ -f "$root/target/release/$bin" ]]; then
     src="$root/target/release/$bin"
   elif [[ -f "$root/cpp/build/release/bin/$bin" ]]; then
@@ -104,17 +104,17 @@ for bin in "${candidates[@]}"; do
 done
 
 # OctoPit, the dashboard (ADR-0017): command on the path, launcher entry and icons (user scope).
-if [[ -f "$dev_bin/neuroos-octopit" ]]; then
+if [[ -f "$dev_bin/octopit" ]]; then
   install -d -m 0755 "$HOME/.local/bin" "$HOME/.local/share/applications" \
     "$HOME/.local/share/icons/hicolor/scalable/apps" "$HOME/.local/share/icons/hicolor/symbolic/apps"
-  ln -sf "$dev_bin/neuroos-octopit" "$HOME/.local/bin/neuroos-octopit"
-  sed "s|^Exec=.*|Exec=$dev_bin/neuroos-octopit|" "$root/deploy/desktop/neuroos-octopit.desktop" \
-    > "$HOME/.local/share/applications/neuroos-octopit.desktop"
-  chmod 0644 "$HOME/.local/share/applications/neuroos-octopit.desktop"
-  install -m 0644 "$root/crates/neuroos-octopit/assets/icons/hicolor/scalable/apps/neuroos-octopit.svg" \
-    "$HOME/.local/share/icons/hicolor/scalable/apps/neuroos-octopit.svg"
-  install -m 0644 "$root/crates/neuroos-octopit/assets/icons/hicolor/symbolic/apps/neuroos-octopit-symbolic.svg" \
-    "$HOME/.local/share/icons/hicolor/symbolic/apps/neuroos-octopit-symbolic.svg"
+  ln -sf "$dev_bin/octopit" "$HOME/.local/bin/octopit"
+  sed "s|^Exec=.*|Exec=$dev_bin/octopit|" "$root/deploy/desktop/octopit.desktop" \
+    > "$HOME/.local/share/applications/octopit.desktop"
+  chmod 0644 "$HOME/.local/share/applications/octopit.desktop"
+  install -m 0644 "$root/crates/octopit/assets/icons/hicolor/scalable/apps/octopit.svg" \
+    "$HOME/.local/share/icons/hicolor/scalable/apps/octopit.svg"
+  install -m 0644 "$root/crates/octopit/assets/icons/hicolor/symbolic/apps/octopit-symbolic.svg" \
+    "$HOME/.local/share/icons/hicolor/symbolic/apps/octopit-symbolic.svg"
   echo "Installed OctoPit launcher entry and icons"
 
   # Keyboard shortcut Super+Shift+O (COSMIC only). Added once; never replaces a binding the user already has.
@@ -126,7 +126,7 @@ if [[ -f "$dev_bin/neuroos-octopit" ]]; then
     else
       cp "$cosmic_custom" "$cosmic_custom.bak-octopit"
       sed -i '$ d' "$cosmic_custom"
-      printf '    %s: Spawn("%s"),\n}\n' "$octopit_key" "$HOME/.local/bin/neuroos-octopit" >> "$cosmic_custom"
+      printf '    %s: Spawn("%s"),\n}\n' "$octopit_key" "$HOME/.local/bin/octopit" >> "$cosmic_custom"
       echo "Added OctoPit shortcut Super+Shift+O (backup: $cosmic_custom.bak-octopit)"
     fi
   fi
@@ -134,7 +134,7 @@ fi
 
 if [[ -d "$root/cpp/build/release" ]]; then
   cp -P --remove-destination "$root"/cpp/build/release/bin/*.so* "$dev_lib/" 2>/dev/null || true
-  cp -P --remove-destination "$root"/cpp/build/release/libneuroos/*.so* "$dev_lib/" 2>/dev/null || true
+  cp -P --remove-destination "$root"/cpp/build/release/liboctoplus/*.so* "$dev_lib/" 2>/dev/null || true
   find "$dev_lib" -type f -exec chmod 0755 {} +
   echo "Copied C++ shared libraries into $dev_lib"
 fi
@@ -209,13 +209,13 @@ else
 fi
 
 echo "=== 6. Creating local share directories ==="
-install -d -m 0700 "$HOME/.local/share/neuroos/storage" "$HOME/.local/share/neuroos/soak" \
-  "$HOME/.local/share/neuroos/audit" "$HOME/.local/share/neuroos/backups"
+install -d -m 0700 "$HOME/.local/share/octoplus/storage" "$HOME/.local/share/octoplus/soak" \
+  "$HOME/.local/share/octoplus/audit" "$HOME/.local/share/octoplus/backups"
 
 echo "=== 6b. C6 approval key (security.md §6, ADR-0010 decision 6) ==="
 # 32 random bytes, 0600, created once. An existing key is kept (rotation is a
 # separate command, Phase 8); a key with the wrong size or mode is an error.
-key_dir="$HOME/.config/neuroos"
+key_dir="$HOME/.config/octoplus"
 key="$key_dir/hmac.key"
 install -d -m 0700 "$key_dir"
 if [[ -L "$key" ]]; then
@@ -241,9 +241,9 @@ for u in "$root/deploy/systemd/user/"*; do
 done
 
 # C6 cleanup roots from [kernel] cleanup_build_folders (OQ-07, ADR-0010).
-"$root/target/release/neuroos-gen-units" --kernel-dropin "$HOME/.config/neuroos/config.toml" "$user_systemd"
+"$root/target/release/octoplus-gen-units" --kernel-dropin "$HOME/.config/octoplus/config.toml" "$user_systemd"
 # C1 watched folders from [[monitor.folders]] (FR-MON-11, OQ-05).
-"$root/target/release/neuroos-gen-units" --monitor-dropin "$HOME/.config/neuroos/config.toml" "$user_systemd"
+"$root/target/release/octoplus-gen-units" --monitor-dropin "$HOME/.config/octoplus/config.toml" "$user_systemd"
 
 echo "=== 8. Reloading user systemd daemon ==="
 if ! systemctl --user daemon-reload 2>/dev/null; then

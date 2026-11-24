@@ -56,7 +56,7 @@ Rules: a click starts or stops listening through C2's control socket only; OctoP
 2. **Chat:** conversation column (max 72 characters wide), user and assistant bubbles, streamed text with a stop button, a composer with Enter to send and Shift+Enter for a new line, a small "source" chip when an answer used a web lookup, an "external text" marker (taint colour) where C5 flags it. Plain text only. Empty state shows three example questions.
 3. **Backends:** cards for language model, speech-to-text, voice, embeddings (name, size, checksum verified tick, memory), and a GPU card: load, VRAM, temperature, power as thin gauges plus 5-minute sparklines drawn by the app. If no GPU data exists the card says why.
 4. **Activity:** latency histograms, tokens/s, disk and battery, temperatures; a time-range switch (5 min / 1 h / 24 h) with data from healthd, plus the recent audit entries as a readable timeline (fixed-text fields only).
-5. **Privacy:** the proof page. A big "Network egress: 0 bytes since <date>" tile, the egress ledger list, "what leaves this machine" explained in two lines, and the list of each part's isolation status (the same facts `neuroosctl` security output reports). A pending approval, if any, appears here and in the header as "Waiting for your approval in the dialog".
+5. **Privacy:** the proof page. A big "Network egress: 0 bytes since <date>" tile, the egress ledger list, "what leaves this machine" explained in two lines, and the list of each part's isolation status (the same facts `octoplusctl` security output reports). A pending approval, if any, appears here and in the header as "Waiting for your approval in the dialog".
 6. **Settings:** theme (system / light / dark), density, reduced motion, text size, voice start behaviour, about and licences. No security settings.
 7. **First run:** a three-card welcome (what OctoPit shows, what it never does, how to talk to it), one screen, skippable.
 
@@ -85,7 +85,7 @@ Contrast AA for all tokens in both themes (already checked for the tokens; re-ch
 
 - A first-time user finds the mic, the chat and "is it healthy?" without help (5-minute walkthrough with two people, notes in the report).
 - Screenshots of every page in both themes at 1100x720 and 760x520 reviewed against this file; no clipped text, no overlap.
-- The Privacy page and Overview agree with `neuroosctl` for the same moment.
+- The Privacy page and Overview agree with `octoplusctl` for the same moment.
 - Performance: window opens in under 1 s; UI never freezes for more than 50 ms while a part is down; idle CPU under 2%.
 
 ## 10. Visual language v2 (owner redesign, 2026-11-23)

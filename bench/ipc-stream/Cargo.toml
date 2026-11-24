@@ -1,5 +1,5 @@
 [package]
-name = "neuroos-bench-ipc-stream"
+name = "octoplus-bench-ipc-stream"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,8 +9,8 @@ publish = false
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
-neuroos-ipc = { path = "../../crates/neuroos-ipc" }
-neuroos-proto = { path = "../../crates/neuroos-proto" }
+octoplus-ipc = { path = "../../crates/octoplus-ipc" }
+octoplus-proto = { path = "../../crates/octoplus-proto" }
 rustix = { workspace = true, features = ["time"] }
 serde.workspace = true
 serde_json.workspace = true

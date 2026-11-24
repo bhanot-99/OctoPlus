@@ -1,4 +1,4 @@
-# Semantic-NeuroOS task runner — the single entry point (NFR-OPS-02, Architecture §14).
+# OctoPlus task runner — the single entry point (NFR-OPS-02, Architecture §14).
 #   just ci         full local gate (reference machine), run before any story is Done
 #   just ci-hosted  the subset hosted CI runs on every push
 
@@ -42,13 +42,13 @@ lint: build
     cargo machete
 
 # Unit, property and contract tests. Live tests stop and start the user's units; if
-# neuroos.target was running before, it is started again afterwards, pass or fail.
+# octoplus.target was running before, it is started again afterwards, pass or fail.
 test: build
     #!/usr/bin/env bash
     set -euo pipefail
     was_active=0
-    systemctl --user is-active --quiet neuroos.target && was_active=1
-    restore() { if [[ $was_active == 1 ]]; then systemctl --user start neuroos.target || true; fi; }
+    systemctl --user is-active --quiet octoplus.target && was_active=1
+    restore() { if [[ $was_active == 1 ]]; then systemctl --user start octoplus.target || true; fi; }
     trap restore EXIT
     cargo nextest run --workspace --locked --no-tests=fail
     (cd cpp && ctest --preset {{cpp_preset}} --no-tests=error)
@@ -73,22 +73,22 @@ deny:
 cov: build
     #!/usr/bin/env bash
     set -euo pipefail
-    # The Rust tests stop and start the real units; leave NeuroOS the way it was found (as `test` does).
+    # The Rust tests stop and start the real units; leave OctoPlus the way it was found (as `test` does).
     was_active=0
-    systemctl --user is-active --quiet neuroos.target && was_active=1
-    restore() { if [[ $was_active == 1 ]]; then systemctl --user start neuroos.target || true; fi; }
+    systemctl --user is-active --quiet octoplus.target && was_active=1
+    restore() { if [[ $was_active == 1 ]]; then systemctl --user start octoplus.target || true; fi; }
     trap restore EXIT
     cargo llvm-cov clean --workspace
     # Benchmark harnesses in bench/ are measuring tools, not product code: excluded from the gate.
-    # `neuroos-octopit` is the GTK drawing layer (ADR-0017): it needs a display, so it is checked by the
-    # screenshot review and scripts/check-octopit.sh; every rule it follows lives in `neuroos-octopit-core`, which is covered.
-    cargo llvm-cov nextest --workspace --exclude neuroos-octopit --exclude neuroos-bench-ipc-stream --exclude neuroos-bench-storage-scan --exclude neuroos-bench-kernel-check --locked --fail-under-lines 80
+    # `octopit` is the GTK drawing layer (ADR-0017): it needs a display, so it is checked by the
+    # screenshot review and scripts/check-octopit.sh; every rule it follows lives in `octopit-core`, which is covered.
+    cargo llvm-cov nextest --workspace --exclude octopit --exclude octoplus-bench-ipc-stream --exclude octoplus-bench-storage-scan --exclude octoplus-bench-kernel-check --locked --fail-under-lines 80
     # Child processes started with a cleared environment write default-named profiles into the crate folders.
     find crates -name '*.profraw' -delete
     rm -rf cpp/build/coverage
     (cd cpp && cmake --preset coverage && cmake --build --preset coverage --parallel)
     (cd cpp && ctest --preset coverage --no-tests=error)
-    gcovr --root cpp --filter 'cpp/libneuroos/src/' --filter 'cpp/neuroos-inference/src/' --filter 'cpp/neuroos-voice/src/' --object-directory cpp/build/coverage \
+    gcovr --root cpp --filter 'cpp/liboctoplus/src/' --filter 'cpp/octoplus-inference/src/' --filter 'cpp/octoplus-voice/src/' --object-directory cpp/build/coverage \
         --gcov-ignore-parse-errors=negative_hits.warn --fail-under-line 70 --print-summary
 
 # C++ tests under AddressSanitizer+UBSan and ThreadSanitizer (Architecture §14).
@@ -132,7 +132,7 @@ fetch-models *args:
 
 # Generate systemd unit files from the socket map (P1-S01, P1-S02).
 units:
-    cargo run -p neuroos-deploy --bin neuroos-gen-units
+    cargo run -p octoplus-deploy --bin octoplus-gen-units
 
 # Install developer units and binaries into ~/.local (P1-S02).
 install-dev:
@@ -158,17 +158,17 @@ sc:
     #!/usr/bin/env bash
     set -euo pipefail
     # The proofs stop the real units. The egress check needs them running, so start them again
-    # first, and leave NeuroOS the way it was found at the end (as `test` does).
+    # first, and leave OctoPlus the way it was found at the end (as `test` does).
     was_active=0
-    systemctl --user is-active --quiet neuroos.target && was_active=1
-    restore() { if [[ $was_active == 1 ]]; then systemctl --user start neuroos.target || true; fi; }
+    systemctl --user is-active --quiet octoplus.target && was_active=1
+    restore() { if [[ $was_active == 1 ]]; then systemctl --user start octoplus.target || true; fi; }
     trap restore EXIT
-    cargo nextest run -p neuroos-testkit --test local_sc_proof_1_net --test local_sc_proof_2_socket_map --test local_sc_proof_3_landlock
-    systemctl --user start neuroos.target
+    cargo nextest run -p octoplus-testkit --test local_sc_proof_1_net --test local_sc_proof_2_socket_map --test local_sc_proof_3_landlock
+    systemctl --user start octoplus.target
     for _ in $(seq 1 90); do
       all=1
       for u in healthd storage inference knowledge kernel monitor voice; do
-        systemctl --user is-active --quiet "neuroos-$u.service" || all=0
+        systemctl --user is-active --quiet "octoplus-$u.service" || all=0
       done
       [[ $all == 1 ]] && break
       sleep 1

@@ -1,0 +1,46 @@
+[package]
+name = "octoplus-monitor"
+description = "OctoPlus Context Monitor (C1)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "octoplus-monitor"
+path = "src/main.rs"
+
+[dependencies]
+octoplus-common = { path = "../octoplus-common" }
+octoplus-health = { path = "../octoplus-health" }
+octoplus-ipc = { path = "../octoplus-ipc" }
+octoplus-proto = { path = "../octoplus-proto" }
+cosmic-protocols.workspace = true
+rustix.workspace = true
+clap.workspace = true
+getrandom.workspace = true
+hmac.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+wayland-client.workspace = true
+wayland-protocols.workspace = true
+zbus = { workspace = true, features = ["proxy"] }
+zeroize.workspace = true
+tokio = { workspace = true, features = ["sync", "time", "macros", "rt"] }
+
+[dev-dependencies]
+octoplus-health = { path = "../octoplus-health", features = ["test-support"] }
+octoplus-monitor = { path = ".", features = ["test-support"] }
+proptest.workspace = true
+zbus = { workspace = true, features = ["proxy", "service"] }
+tempfile.workspace = true
+tokio = { workspace = true, features = ["test-util"] }
+
+[features]
+# Test helpers (a fake clock) for integration tests; never in the shipped binary.
+test-support = []
+
+[lints]
+workspace = true

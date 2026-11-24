@@ -5,13 +5,13 @@
 # 2. No markup, no link and no raw-HTML call in the window code: model text stays plain (ADR-0017 item 3).
 # 3. No approval control: the window code never says approve, allow or deny to a user (R0-7).
 # 4. No `unsafe`, and the only child process is the vendor GPU tool.
-# 5. The socket map lists OctoPit on exactly the sockets the pages use (checked by `cargo test -p neuroos-common`).
+# 5. The socket map lists OctoPit on exactly the sockets the pages use (checked by `cargo test -p octoplus-common`).
 set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 fail=0
 
-for crate in neuroos-octopit neuroos-octopit-core; do
+for crate in octopit octopit-core; do
   if cargo tree -p "$crate" -e normal --prefix none 2>/dev/null \
       | grep -E '^(reqwest|hyper|ureq|hickory|trust-dns|rustls|openssl|native-tls|curl|isahc|surf|attohttpc|h2|tungstenite)\b'; then
     echo "octopit-check: FAIL - $crate links a network crate" >&2
@@ -19,8 +19,8 @@ for crate in neuroos-octopit neuroos-octopit-core; do
   fi
 done
 
-src_gui="crates/neuroos-octopit/src"
-src_core="crates/neuroos-octopit-core/src"
+src_gui="crates/octopit/src"
+src_core="crates/octopit-core/src"
 
 if grep -rnE 'set_markup|use_markup\(true\)|activate-link|LinkButton|gtk::Html|WebKit|webkit' "$src_gui" "$src_core"; then
   echo "octopit-check: FAIL - markup, link or web-view use in OctoPit" >&2

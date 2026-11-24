@@ -1,25 +1,25 @@
 [workspace]
 resolver = "3"
 members = [
-    "crates/neuroos-common",
-    "crates/neuroos-confirm",
-    "crates/neuroos-deploy",
-    "crates/neuroos-fetcher",
-    "crates/neuroos-health",
-    "crates/neuroos-healthd",
-    "crates/neuroos-ipc",
-    "crates/neuroos-kernel",
-    "crates/neuroos-knowledge",
-    "crates/neuroos-monitor",
-    "crates/neuroos-octopit",
-    "crates/neuroos-octopit-core",
-    "crates/neuroos-proto",
-    "crates/neuroos-sandbox",
-    "crates/neuroos-skill",
-    "crates/neuroos-storage",
-    "crates/neuroos-taint",
-    "crates/neuroos-testkit",
-    "crates/neuroosctl",
+    "crates/octoplus-common",
+    "crates/octoplus-confirm",
+    "crates/octoplus-deploy",
+    "crates/octoplus-fetcher",
+    "crates/octoplus-health",
+    "crates/octoplus-healthd",
+    "crates/octoplus-ipc",
+    "crates/octoplus-kernel",
+    "crates/octoplus-knowledge",
+    "crates/octoplus-monitor",
+    "crates/octopit",
+    "crates/octopit-core",
+    "crates/octoplus-proto",
+    "crates/octoplus-sandbox",
+    "crates/octoplus-skill",
+    "crates/octoplus-storage",
+    "crates/octoplus-taint",
+    "crates/octoplus-testkit",
+    "crates/octoplusctl",
     "bench/ipc-stream",
     "bench/kernel-check",
     "bench/storage-scan",
@@ -80,7 +80,7 @@ proptest = "1.12.0"
 tempfile = "3.27.0"
 
 [workspace.lints.rust]
-unsafe_code = "deny"            # rules.md §7: only neuroos-sandbox and FFI shims may opt out
+unsafe_code = "deny"            # rules.md §7: only octoplus-sandbox and FFI shims may opt out
 missing_debug_implementations = "warn"
 unused_must_use = "deny"
 

@@ -1,6 +1,6 @@
-# Runbook — Upgrade Semantic-NeuroOS
+# Runbook — Upgrade OctoPlus
 
-This runbook guides operators through upgrading Semantic-NeuroOS binaries, schema migrations, and model updates without data loss.
+This runbook guides operators through upgrading OctoPlus binaries, schema migrations, and model updates without data loss.
 
 ---
 
@@ -10,18 +10,18 @@ Before upgrading any binaries or configuration:
 
 1. **Create an Immediate Database Snapshot:**
    ```bash
-   neuroosctl storage backup
-   # Verify backup created in ~/.local/share/neuroos/backups/
-   ls -lh ~/.local/share/neuroos/backups/
+   octoplusctl storage backup
+   # Verify backup created in ~/.local/share/octoplus/backups/
+   ls -lh ~/.local/share/octoplus/backups/
    ```
 2. **Record Current Component State:**
    ```bash
-   neuroosctl status --json > /tmp/neuroos-pre-upgrade-status.json
+   octoplusctl status --json > /tmp/octoplus-pre-upgrade-status.json
    ```
 3. **Stop Active Services:**
    ```bash
-   systemctl --user stop neuroos.target
-   sudo systemctl stop neuroos-fetcher.service
+   systemctl --user stop octoplus.target
+   sudo systemctl stop octoplus-fetcher.service
    ```
 
 ---
@@ -30,7 +30,7 @@ Before upgrading any binaries or configuration:
 
 ### If using Debian Package (.deb):
 ```bash
-sudo dpkg -i dist/semantic-neuroos_<new_version>_amd64.deb
+sudo dpkg -i dist/octoplus_<new_version>_amd64.deb
 ```
 
 ### If using Direct Script:
@@ -43,16 +43,16 @@ scripts/install.sh --user
 
 ## 3. Storage Migrations & Integrity Check
 
-Semantic-NeuroOS applies SQLite migrations sequentially using `PRAGMA user_version`. When `neuroos-storage` boots, it checks and applies pending migrations automatically.
+OctoPlus applies SQLite migrations sequentially using `PRAGMA user_version`. When `octoplus-storage` boots, it checks and applies pending migrations automatically.
 
 1. Test database integrity:
    ```bash
-   sqlite3 ~/.local/share/neuroos/storage/storage.db "PRAGMA integrity_check;"
+   sqlite3 ~/.local/share/octoplus/storage/storage.db "PRAGMA integrity_check;"
    ```
    Must output `ok`.
 2. Inspect current migration version:
    ```bash
-   sqlite3 ~/.local/share/neuroos/storage/storage.db "PRAGMA user_version;"
+   sqlite3 ~/.local/share/octoplus/storage/storage.db "PRAGMA user_version;"
    ```
 
 ---
@@ -62,8 +62,8 @@ Semantic-NeuroOS applies SQLite migrations sequentially using `PRAGMA user_versi
 If the new release updates `models/manifest.toml`:
 ```bash
 just fetch-models
-# Verify checksums match ~/.local/opt/neuroos/models/SHA256SUMS
-sha256sum --check --quiet ~/.local/opt/neuroos/models/SHA256SUMS
+# Verify checksums match ~/.local/opt/octoplus/models/SHA256SUMS
+sha256sum --check --quiet ~/.local/opt/octoplus/models/SHA256SUMS
 ```
 
 ---
@@ -74,16 +74,16 @@ sha256sum --check --quiet ~/.local/opt/neuroos/models/SHA256SUMS
    ```bash
    systemctl --user daemon-reload
    sudo systemctl daemon-reload
-   sudo systemctl start neuroos-fetcher.service
-   systemctl --user start neuroos.target
+   sudo systemctl start octoplus-fetcher.service
+   systemctl --user start octoplus.target
    ```
 2. Validate running services:
    ```bash
-   neuroosctl status
+   octoplusctl status
    ```
 3. Verify action audit and egress integrity:
    ```bash
-   neuroosctl audit verify
+   octoplusctl audit verify
    ```
 
 ---
@@ -91,10 +91,10 @@ sha256sum --check --quiet ~/.local/opt/neuroos/models/SHA256SUMS
 ## 6. Rollback Procedure
 
 If the upgraded version fails to start or encounters regressions:
-1. Stop services: `systemctl --user stop neuroos.target`
+1. Stop services: `systemctl --user stop octoplus.target`
 2. Reinstall previous `.deb` or restore binaries from `target/release`.
 3. If database schema was modified, restore backup:
    ```bash
-   cp ~/.local/share/neuroos/backups/storage-<timestamp>.db ~/.local/share/neuroos/storage/storage.db
+   cp ~/.local/share/octoplus/backups/storage-<timestamp>.db ~/.local/share/octoplus/storage/storage.db
    ```
-4. Restart services: `systemctl --user start neuroos.target`.
+4. Restart services: `systemctl --user start octoplus.target`.

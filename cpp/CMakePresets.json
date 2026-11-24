@@ -9,15 +9,15 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": { "CMAKE_CXX_COMPILER": "g++" }
     },
-    { "name": "debug", "inherits": "base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "NEUROOS_WITH_LLAMA": "ON" } },
-    { "name": "release", "inherits": "base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "NEUROOS_WITH_LLAMA": "ON" } },
-    { "name": "voice", "inherits": "base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "NEUROOS_WITH_LLAMA": "OFF", "NEUROOS_WITH_VOICE_ENGINES": "ON" } },
-    { "name": "voice-release", "inherits": "base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "NEUROOS_WITH_LLAMA": "OFF", "NEUROOS_WITH_VOICE_ENGINES": "ON" } },
+    { "name": "debug", "inherits": "base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "OCTOPLUS_WITH_LLAMA": "ON" } },
+    { "name": "release", "inherits": "base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "OCTOPLUS_WITH_LLAMA": "ON" } },
+    { "name": "voice", "inherits": "base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "OCTOPLUS_WITH_LLAMA": "OFF", "OCTOPLUS_WITH_VOICE_ENGINES": "ON" } },
+    { "name": "voice-release", "inherits": "base", "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "OCTOPLUS_WITH_LLAMA": "OFF", "OCTOPLUS_WITH_VOICE_ENGINES": "ON" } },
     {
       "name": "asan", "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "NEUROOS_WITH_LLAMA": "OFF",
+        "OCTOPLUS_WITH_LLAMA": "OFF",
         "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all"
       }
     },
@@ -25,14 +25,14 @@
       "name": "tsan", "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "NEUROOS_WITH_LLAMA": "OFF",
+        "OCTOPLUS_WITH_LLAMA": "OFF",
         "CMAKE_CXX_FLAGS": "-fsanitize=thread -fno-omit-frame-pointer",
         "CMAKE_CROSSCOMPILING_EMULATOR": "setarch;x86_64;-R"
       }
     },
     {
       "name": "coverage", "inherits": "base",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "NEUROOS_WITH_LLAMA": "OFF", "NEUROOS_COVERAGE": "ON" }
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "OCTOPLUS_WITH_LLAMA": "OFF", "OCTOPLUS_COVERAGE": "ON" }
     }
   ],
   "buildPresets": [

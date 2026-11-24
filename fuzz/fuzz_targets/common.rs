@@ -2,7 +2,7 @@
 
 use std::net::IpAddr;
 
-use neuroos_fetcher::ssrf::{AddressPolicy, SafeUrl};
+use octoplus_fetcher::ssrf::{AddressPolicy, SafeUrl};
 
 /// An accepted URL is HTTPS on the default port, carries no credentials, is judged on the
 /// host the HTTP client will use, and never names a non-public IP literal.

@@ -17,7 +17,7 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   # Hosted runners have less free disk than the reference machine.
-  NEUROOS_MIN_FREE_GIB: "5"
+  OCTOPLUS_MIN_FREE_GIB: "5"
 
 jobs:
   gate:

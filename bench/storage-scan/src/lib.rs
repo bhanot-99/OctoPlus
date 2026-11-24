@@ -23,7 +23,7 @@ const FINAL_TOP_N: usize = 5;
 // Fixed vocabulary for realistic text generation (~150 words)
 const VOCABULARY: &[&str] = &[
     "semantic",
-    "neuroos",
+    "octoplus",
     "kernel",
     "storage",
     "vector",
@@ -689,7 +689,7 @@ pub struct BenchmarkReport {
 #[command(
     author,
     version,
-    about = "Semantic-NeuroOS Spike S-01 Storage Scan Benchmark"
+    about = "OctoPlus Spike S-01 Storage Scan Benchmark"
 )]
 struct Cli {
     #[arg(long, default_value = "")]
@@ -1050,7 +1050,7 @@ pub fn run() -> Result<()> {
     let cli = Cli::parse();
 
     println!("============================================================");
-    println!("Semantic-NeuroOS Spike S-01: Storage Scan & Hybrid Query");
+    println!("OctoPlus Spike S-01: Storage Scan & Hybrid Query");
     println!("Story: P0-S07 | Target NFR-PERF-04 (p50 <= 25 ms, p99 <= 50 ms)");
     println!("============================================================");
 
@@ -1059,7 +1059,7 @@ pub fn run() -> Result<()> {
         PathBuf::from(&cli.db_path)
     } else {
         temp_dir = tempfile::Builder::new()
-            .prefix("neuroos-s01-")
+            .prefix("octoplus-s01-")
             .tempdir()
             .context("Create temp dir for benchmark database")?;
         temp_dir.path().join("bench_storage.db")
@@ -1263,7 +1263,7 @@ mod tests {
                 1i64,
                 "ent_1",
                 1,
-                "Semantic neuroos sqlite benchmark",
+                "OctoPlus semantic sqlite benchmark",
                 0,
                 100i64,
                 vec![0u8; DIM * 4]

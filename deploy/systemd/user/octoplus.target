@@ -1,0 +1,6 @@
+[Unit]
+Description=OctoPlus Target
+Wants=octoplus-healthd.service octoplus-storage.service octoplus-inference.service octoplus-monitor.service octoplus-kernel.service octoplus-knowledge.service octoplus-voice.service
+
+[Install]
+WantedBy=default.target

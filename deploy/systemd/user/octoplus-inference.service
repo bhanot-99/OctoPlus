@@ -1,0 +1,46 @@
+[Unit]
+Description=OctoPlus LLM Inference Service
+PartOf=octoplus.target
+Requires=octoplus-runtime.service
+Requires=octoplus-model-check.service
+After=octoplus-runtime.service octoplus-healthd.service octoplus-model-check.service
+
+[Service]
+PrivateNetwork=true
+InaccessiblePaths=-/run/systemd/resolve
+InaccessiblePaths=-/run/dbus/system_bus_socket
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=tmpfs
+BindReadOnlyPaths=%h/.local/opt/octoplus
+BindReadOnlyPaths=-%h/.config/octoplus/config.toml
+InaccessiblePaths=-/run/octoplus-fetcher
+TemporaryFileSystem=%t/octoplus
+BindPaths=%t/octoplus/inference
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service landlock_create_ruleset landlock_add_rule landlock_restrict_self
+CapabilityBoundingSet=
+AmbientCapabilities=
+LimitCORE=0
+UMask=0077
+MemoryMax=3220M
+Restart=on-failure
+RestartSec=2s
+ExecStart=%h/.local/opt/octoplus/bin/octoplus-inference --socket %t/octoplus/inference/inference/inference.sock=octoplus-knowledge.service --health-socket %t/octoplus/inference/health/health.sock=octoplus-healthd.service --model %h/.local/opt/octoplus/models/llm/Qwen3-4B-Instruct-2507-Q4_K_M.gguf --threads 8 --ctx 2048 --batch 512
+
+[Install]
+WantedBy=octoplus.target

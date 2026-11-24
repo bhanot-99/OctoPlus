@@ -22,8 +22,8 @@ fi
 
 RUNTIME_BASE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 PID="$$"
-RUNTIME_DIR="$RUNTIME_BASE/neuroos-s05-$PID"
-PROBE_BIN="$REPO_ROOT/tests/spikes/s05-probe/target/release/neuroos-s05-sensors"
+RUNTIME_DIR="$RUNTIME_BASE/octoplus-s05-$PID"
+PROBE_BIN="$REPO_ROOT/tests/spikes/s05-probe/target/release/octoplus-s05-sensors"
 
 REPORTS_DIR="$REPO_ROOT/reports/spikes"
 OUT_JSON="$REPORTS_DIR/s05-sensors-$DATE_COMPACT.json"
@@ -46,7 +46,7 @@ cleanup() {
         wait "$CAPTURE_PID" 2>/dev/null || true
     fi
     # shellcheck disable=SC2317
-    for unit in $(systemctl --user list-units "neuroos-s05-*" --all --no-legend 2>/dev/null | awk '{print $1}'); do
+    for unit in $(systemctl --user list-units "octoplus-s05-*" --all --no-legend 2>/dev/null | awk '{print $1}'); do
         systemctl --user stop "$unit" 2>/dev/null || true
         systemctl --user reset-failed "$unit" 2>/dev/null || true
     done
@@ -66,7 +66,7 @@ echo "PipeWire: $PIPEWIRE_VER"
 mkdir -p "$RUNTIME_DIR"
 chmod 0700 "$RUNTIME_DIR"
 
-echo "Building neuroos-s05-sensors probe in release mode..."
+echo "Building octoplus-s05-sensors probe in release mode..."
 (cd "$REPO_ROOT/tests/spikes/s05-probe" && cargo build --release)
 
 echo "--- Run 1: Plain User Execution ---"
@@ -86,12 +86,12 @@ CAPTURE_PID=""
 echo "Run 2 complete (mic capture tested and stopped)."
 
 echo "--- Run 3: Transient User Unit (§8.1 Hardening Baseline) ---"
-cp "$PROBE_BIN" "$RUNTIME_DIR/neuroos-s05-sensors"
-chmod 0700 "$RUNTIME_DIR/neuroos-s05-sensors"
+cp "$PROBE_BIN" "$RUNTIME_DIR/octoplus-s05-sensors"
+chmod 0700 "$RUNTIME_DIR/octoplus-s05-sensors"
 
 WAYLAND_SOCK="$RUNTIME_BASE/${WAYLAND_DISPLAY:-wayland-1}"
 PIPEWIRE_SOCK="$RUNTIME_BASE/pipewire-0"
-UNIT_NAME="neuroos-s05-$PID"
+UNIT_NAME="octoplus-s05-$PID"
 
 systemd-run --user --wait --pipe --collect --unit="$UNIT_NAME" \
     -p "PrivateNetwork=yes" \
@@ -125,7 +125,7 @@ systemd-run --user --wait --pipe --collect --unit="$UNIT_NAME" \
     -p "BindReadOnlyPaths=$PIPEWIRE_SOCK" \
     -E "WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-wayland-1}" \
     -E "XDG_RUNTIME_DIR=$RUNTIME_BASE" \
-    "$RUNTIME_DIR/neuroos-s05-sensors" > "$RUN3_JSON" 2> "$UNIT_LOG" || true
+    "$RUNTIME_DIR/octoplus-s05-sensors" > "$RUN3_JSON" 2> "$UNIT_LOG" || true
 
 echo "Run 3 complete."
 

@@ -13,9 +13,9 @@ SYSTEMD_VER="$(systemctl --version | head -n 1)"
 
 RUNTIME_BASE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 PID="$$"
-RUNTIME_DIR="$RUNTIME_BASE/neuroos-s04-$PID"
-PROBE_BIN="$RUNTIME_DIR/neuroos-s04-probe"
-ECHO_BIN="$RUNTIME_DIR/neuroos-echo"
+RUNTIME_DIR="$RUNTIME_BASE/octoplus-s04-$PID"
+PROBE_BIN="$RUNTIME_DIR/octoplus-s04-probe"
+ECHO_BIN="$RUNTIME_DIR/octoplus-echo"
 
 REPORTS_DIR="$REPO_ROOT/reports/spikes"
 OUT_JSON="$REPORTS_DIR/s04-hardening-$DATE_COMPACT.json"
@@ -28,7 +28,7 @@ cleanup() {
     # shellcheck disable=SC2317
     echo "Cleaning up transient units and runtime directories..."
     # shellcheck disable=SC2317
-    for unit in $(systemctl --user list-units "neuroos-s04-*" --all --no-legend 2>/dev/null | awk '{print $1}'); do
+    for unit in $(systemctl --user list-units "octoplus-s04-*" --all --no-legend 2>/dev/null | awk '{print $1}'); do
         systemctl --user stop "$unit" 2>/dev/null || true
         systemctl --user reset-failed "$unit" 2>/dev/null || true
     done
@@ -58,18 +58,18 @@ if command -v nvidia-smi >/dev/null 2>&1; then
 fi
 echo "NVIDIA Driver: $NVIDIA_DRIVER"
 
-echo "Building neuroos-testkit release binaries..."
+echo "Building octoplus-testkit release binaries..."
 cd "$REPO_ROOT"
-cargo build --release -p neuroos-testkit --bin neuroos-s04-probe --bin neuroos-echo
+cargo build --release -p octoplus-testkit --bin octoplus-s04-probe --bin octoplus-echo
 
 mkdir -p "$RUNTIME_DIR"
 chmod 0700 "$RUNTIME_DIR"
-cp "$REPO_ROOT/target/release/neuroos-s04-probe" "$PROBE_BIN"
-cp "$REPO_ROOT/target/release/neuroos-echo" "$ECHO_BIN"
+cp "$REPO_ROOT/target/release/octoplus-s04-probe" "$PROBE_BIN"
+cp "$REPO_ROOT/target/release/octoplus-echo" "$ECHO_BIN"
 chmod 0700 "$PROBE_BIN" "$ECHO_BIN"
 
 echo "--- 1. Full Architecture §8.1 Baseline ---"
-FULL_BASELINE_UNIT="neuroos-s04-full-$PID"
+FULL_BASELINE_UNIT="octoplus-s04-full-$PID"
 FULL_BASELINE_OUT=""
 FULL_BASELINE_OUT="$(systemd-run --user --wait --pipe --collect --unit="$FULL_BASELINE_UNIT" \
     -p "PrivateNetwork=yes" \
@@ -137,7 +137,7 @@ true > "$STANZA_LOG"
 for idx in "${!STANZAS[@]}"; do
     stanza="${STANZAS[$idx]}"
     prop_name="${stanza%%=*}"
-    unit_name="neuroos-s04-st-$idx-$PID"
+    unit_name="octoplus-s04-st-$idx-$PID"
     
     echo -n "Testing stanza [$stanza]... "
     
@@ -253,7 +253,7 @@ for idx in "${!STANZAS[@]}"; do
 done
 
 echo "--- 3. systemd-analyze security --user ---"
-SEC_UNIT="neuroos-s04-sec-eval-$PID"
+SEC_UNIT="octoplus-s04-sec-eval-$PID"
 systemd-run --user --unit="$SEC_UNIT" \
     -p "PrivateNetwork=yes" \
     -p "InaccessiblePaths=-/run/systemd/resolve" \
@@ -295,7 +295,7 @@ ISO_ROOT="$RUNTIME_DIR/iso"
 mkdir -p "$ISO_ROOT/a" "$ISO_ROOT/b" "$ISO_ROOT/c"
 chmod 0700 "$ISO_ROOT" "$ISO_ROOT/a" "$ISO_ROOT/b" "$ISO_ROOT/c"
 
-UNIT_B="neuroos-s04-iso-b-$PID"
+UNIT_B="octoplus-s04-iso-b-$PID"
 systemd-run --user --unit="$UNIT_B" "$ECHO_BIN" --runtime-dir "$ISO_ROOT/b" >/dev/null 2>&1
 
 B_SOCK="$ISO_ROOT/b/echo/echo.sock"
@@ -306,14 +306,14 @@ for _ in $(seq 1 50); do
     sleep 0.05
 done
 
-UNIT_A="neuroos-s04-iso-a-$PID"
+UNIT_A="octoplus-s04-iso-a-$PID"
 UNIT_A_OUT=""
 UNIT_A_OUT="$(systemd-run --user --wait --pipe --collect --unit="$UNIT_A" \
     -p "TemporaryFileSystem=$ISO_ROOT" \
     -p "BindPaths=$ISO_ROOT/a $ISO_ROOT/b $RUNTIME_DIR" \
     "$PROBE_BIN" connect "$B_SOCK" 2>&1 || true)"
 
-UNIT_C="neuroos-s04-iso-c-$PID"
+UNIT_C="octoplus-s04-iso-c-$PID"
 UNIT_C_OUT=""
 UNIT_C_OUT="$(systemd-run --user --wait --pipe --collect --unit="$UNIT_C" \
     -p "TemporaryFileSystem=$ISO_ROOT" \
@@ -335,7 +335,7 @@ else
 fi
 
 echo "--- 5. Peer-Unit Checks & Landlock Boundary ---"
-UNIT_ECHO="neuroos-s04-echo-$PID"
+UNIT_ECHO="octoplus-s04-echo-$PID"
 PEER_ROOT="$RUNTIME_DIR/peer"
 mkdir -p "$PEER_ROOT"
 chmod 0700 "$PEER_ROOT"
@@ -350,10 +350,10 @@ for _ in $(seq 1 50); do
     sleep 0.05
 done
 
-ALLOWED_CLIENT="neuroos-s04-allowed-client-$PID"
+ALLOWED_CLIENT="octoplus-s04-allowed-client-$PID"
 ALLOWED_OUT="$(systemd-run --user --wait --pipe --collect --unit="$ALLOWED_CLIENT" "$PROBE_BIN" connect "$ECHO_SOCK" 2>&1 || true)"
 
-OTHER_CLIENT="neuroos-s04-other-client-$PID"
+OTHER_CLIENT="octoplus-s04-other-client-$PID"
 OTHER_OUT="$(systemd-run --user --wait --pipe --collect --unit="$OTHER_CLIENT" "$PROBE_BIN" connect "$ECHO_SOCK" 2>&1 || true)"
 
 systemctl --user stop "$UNIT_ECHO" 2>/dev/null || true
@@ -379,7 +379,7 @@ done
 # Variant (i): Full baseline
 echo "Testing GPU Variant (i): Full baseline..."
 GPU_V1_OUT=""
-GPU_V1_OUT="$(systemd-run --user --wait --pipe --collect --unit="neuroos-s04-gpu-v1-$PID" \
+GPU_V1_OUT="$(systemd-run --user --wait --pipe --collect --unit="octoplus-s04-gpu-v1-$PID" \
     --setenv=DISPLAY= \
     --setenv=WAYLAND_DISPLAY= \
     -p "PrivateNetwork=yes" \
@@ -418,7 +418,7 @@ echo "Variant (i) NVIDIA detected: $GPU_V1_NVIDIA"
 # Variant (ii): PrivateDevices=no + DevicePolicy=closed + DeviceAllow for GPU nodes
 echo "Testing GPU Variant (ii): Minimal Device Allowlist..."
 GPU_V2_OUT=""
-GPU_V2_OUT="$(systemd-run --user --wait --pipe --collect --unit="neuroos-s04-gpu-v2-$PID" \
+GPU_V2_OUT="$(systemd-run --user --wait --pipe --collect --unit="octoplus-s04-gpu-v2-$PID" \
     --setenv=DISPLAY= \
     --setenv=WAYLAND_DISPLAY= \
     -p "PrivateNetwork=yes" \
@@ -459,7 +459,7 @@ echo "Variant (ii) NVIDIA detected: $GPU_V2_NVIDIA"
 # Variant (iii): Variant (ii) without MemoryDenyWriteExecute
 echo "Testing GPU Variant (iii): Variant (ii) without MemoryDenyWriteExecute..."
 GPU_V3_OUT=""
-GPU_V3_OUT="$(systemd-run --user --wait --pipe --collect --unit="neuroos-s04-gpu-v3-$PID" \
+GPU_V3_OUT="$(systemd-run --user --wait --pipe --collect --unit="octoplus-s04-gpu-v3-$PID" \
     --setenv=DISPLAY= \
     --setenv=WAYLAND_DISPLAY= \
     -p "PrivateNetwork=yes" \
@@ -499,7 +499,7 @@ echo "Variant (iii) NVIDIA detected: $GPU_V3_NVIDIA"
 # Variant (iv): Variant (ii) without SystemCallFilter
 echo "Testing GPU Variant (iv): Variant (ii) without SystemCallFilter..."
 GPU_V4_OUT=""
-GPU_V4_OUT="$(systemd-run --user --wait --pipe --collect --unit="neuroos-s04-gpu-v4-$PID" \
+GPU_V4_OUT="$(systemd-run --user --wait --pipe --collect --unit="octoplus-s04-gpu-v4-$PID" \
     --setenv=DISPLAY= \
     --setenv=WAYLAND_DISPLAY= \
     -p "PrivateNetwork=yes" \

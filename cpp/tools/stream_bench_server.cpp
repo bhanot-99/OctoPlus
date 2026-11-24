@@ -1,6 +1,6 @@
 // Stream benchmark server (P0-S09, Architecture §17).
 //
-// Usage: neuroos_stream_bench_server <socket path> [--inject-delay-us N]
+// Usage: octoplus_stream_bench_server <socket path> [--inject-delay-us N]
 //
 // Streams TokenChunk frames in response to GenerateRequest, measuring added
 // latency and testing cancellation. Prints READY on stdout when bound.
@@ -23,9 +23,9 @@
 #include <string_view>
 #include <thread>
 
-#include "neuroos/ipc/server.hpp"
-#include "neuroos/v1/envelope.pb.h"
-#include "neuroos/v1/inference.pb.h"
+#include "octoplus/ipc/server.hpp"
+#include "octoplus/v1/envelope.pb.h"
+#include "octoplus/v1/inference.pb.h"
 
 namespace {
 
@@ -55,7 +55,7 @@ void SignalHandler(int /*sig*/) { g_stop.store(true, std::memory_order_release);
   }
 }
 
-void SleepUs(std::uint64_t us, const neuroos::ipc::CancelToken& cancel) {
+void SleepUs(std::uint64_t us, const octoplus::ipc::CancelToken& cancel) {
   constexpr std::uint64_t kChunkUs = 100;
   while (us > 0 && !cancel.cancelled() && !g_stop.load(std::memory_order_relaxed)) {
     const auto step = std::min(us, kChunkUs);
@@ -64,11 +64,11 @@ void SleepUs(std::uint64_t us, const neuroos::ipc::CancelToken& cancel) {
   }
 }
 
-neuroos::Status Handle(const neuroos::ipc::Request& req, neuroos::ipc::StreamSink& sink,
-                       const neuroos::ipc::CancelToken& cancel, neuroos::v1::Envelope* reply,
+octoplus::Status Handle(const octoplus::ipc::Request& req, octoplus::ipc::StreamSink& sink,
+                       const octoplus::ipc::CancelToken& cancel, octoplus::v1::Envelope* reply,
                        std::uint64_t inject_delay_us) {
   if (!req.envelope.has_generate_request()) {
-    return neuroos::Error{"unsupported request", false, neuroos::v1::ERROR_CODE_INVALID_REQUEST};
+    return octoplus::Error{"unsupported request", false, octoplus::v1::ERROR_CODE_INVALID_REQUEST};
   }
 
   const auto& gen_req = req.envelope.generate_request();
@@ -93,7 +93,7 @@ neuroos::Status Handle(const neuroos::ipc::Request& req, neuroos::ipc::StreamSin
       }
     }
 
-    neuroos::v1::Envelope f;
+    octoplus::v1::Envelope f;
     auto* chunk = f.mutable_token_chunk();
     const auto ts = NowMonotonicNs();
     if (inject_delay_us > 0) {
@@ -110,17 +110,17 @@ neuroos::Status Handle(const neuroos::ipc::Request& req, neuroos::ipc::StreamSin
 
   if (!cancel.cancelled()) {
     auto* done = reply->mutable_generate_done();
-    done->set_reason(neuroos::v1::STOP_REASON_END_OF_TEXT);
+    done->set_reason(octoplus::v1::STOP_REASON_END_OF_TEXT);
     done->set_generated_tokens(sent);
   }
-  return neuroos::ok_status();
+  return octoplus::ok_status();
 }
 
 }  // namespace
 
 int main(int argc, char* argv[]) {
   if (argc < 2) {
-    std::cerr << "Usage: neuroos_stream_bench_server <socket path> [--inject-delay-us N]\n";
+    std::cerr << "Usage: octoplus_stream_bench_server <socket path> [--inject-delay-us N]\n";
     return 1;
   }
 
@@ -138,14 +138,14 @@ int main(int argc, char* argv[]) {
   ::sigaction(SIGTERM, &sa, nullptr);
   ::sigaction(SIGINT, &sa, nullptr);
 
-  neuroos::ipc::ServerConfig cfg;
+  octoplus::ipc::ServerConfig cfg;
   cfg.max_frame_bytes = 1024U * 1024U;
   cfg.deadline = std::chrono::seconds(60);
 
-  auto srv = neuroos::ipc::Server::Start(
+  auto srv = octoplus::ipc::Server::Start(
       sock_path, cfg,
-      [inject_delay_us](const neuroos::ipc::Request& req, neuroos::ipc::StreamSink& sink,
-                        const neuroos::ipc::CancelToken& cancel, neuroos::v1::Envelope* reply) {
+      [inject_delay_us](const octoplus::ipc::Request& req, octoplus::ipc::StreamSink& sink,
+                        const octoplus::ipc::CancelToken& cancel, octoplus::v1::Envelope* reply) {
         return Handle(req, sink, cancel, reply, inject_delay_us);
       });
 

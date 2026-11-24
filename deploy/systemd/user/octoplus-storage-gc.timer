@@ -1,0 +1,11 @@
+[Unit]
+Description=OctoPlus storage job timer: gc
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=60
+Unit=octoplus-storage-gc.service
+
+[Install]
+WantedBy=timers.target

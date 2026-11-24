@@ -44,14 +44,14 @@ report_json="$out_dir/soak-24h-$stamp.json"
 summary_md="$out_dir/soak-24h-$stamp.md"
 latest_json="$out_dir/soak-24h.json"
 
-ctl="$HOME/.local/opt/neuroos/bin/neuroosctl"
-say="$root/cpp/build/voice-release/neuroos-voice/neuroos-voice-say"
-vconf="$HOME/.config/neuroos/voice.conf"
+ctl="$HOME/.local/opt/octoplus/bin/octoplusctl"
+say="$root/cpp/build/voice-release/octoplus-voice/octoplus-voice-say"
+vconf="$HOME/.config/octoplus/voice.conf"
 
 work="$(mktemp -d)"
 tag="soak$$"
-mic="neuroos-test-mic-$tag"; sink="neuroos-test-sink-$tag"
-out_sink="neuroos-test-out-$tag"; out_mic="neuroos-test-outmic-$tag"
+mic="octoplus-test-mic-$tag"; sink="octoplus-test-sink-$tag"
+out_sink="octoplus-test-out-$tag"; out_mic="octoplus-test-outmic-$tag"
 pids=()
 
 had_conf=0
@@ -63,7 +63,7 @@ cleanup() {
   echo "Cleaning up soak runner resources..."
   for p in "${pids[@]}"; do kill "$p" 2>/dev/null || true; done
   if [[ "$had_conf" == 1 ]]; then cp "$work/voice.conf.orig" "$vconf"; else rm -f "$vconf"; fi
-  systemctl --user restart neuroos-voice || true
+  systemctl --user restart octoplus-voice || true
   rm -rf "$work"
 }
 trap cleanup EXIT
@@ -89,7 +89,7 @@ fi
 
 # 2. Start all services
 echo "Restarting the stack so peak memory belongs to this run..."
-systemctl --user restart neuroos.target
+systemctl --user restart octoplus.target
 ready=0
 for _ in $(seq 1 90); do
   if "$ctl" ask --once "Say OK" >/dev/null 2>&1; then ready=1; break; fi
@@ -99,13 +99,13 @@ if [[ "$ready" != 1 ]]; then echo "FAIL: the stack did not answer within 180 s o
 
 # Check initial units
 units=(
-  "neuroos-healthd"
-  "neuroos-storage"
-  "neuroos-inference"
-  "neuroos-monitor"
-  "neuroos-kernel"
-  "neuroos-knowledge"
-  "neuroos-voice"
+  "octoplus-healthd"
+  "octoplus-storage"
+  "octoplus-inference"
+  "octoplus-monitor"
+  "octoplus-kernel"
+  "octoplus-knowledge"
+  "octoplus-voice"
 )
 
 # Times a unit's cgroup reached MemoryMax (the kernel reclaimed or swapped it to stay under).
@@ -132,7 +132,7 @@ questions=(
   "Explain the difference between TCP and UDP."
   "How much disk space is left on this machine?"
   "What is the status of my memory?"
-  "Describe the system architecture of NeuroOS."
+  "Describe the system architecture of OctoPlus."
   "Remember that my favorite programming language is Rust."
   "What are the best practices for Linux service sandboxing?"
   "Summarize this bug: undefined symbol in main."
@@ -176,7 +176,7 @@ PROBE
 
   # B. Voice exchange if synthesizer is available (every 3rd iteration)
   if [[ -x "$say" ]] && (( iter % 3 == 0 )); then
-    "$say" "$HOME/.local/opt/neuroos/models/voice" am_michael "$work/soak_q.wav" "Hey Jarvis, $q" >/dev/null 2>&1 || true
+    "$say" "$HOME/.local/opt/octoplus/models/voice" am_michael "$work/soak_q.wav" "Hey Jarvis, $q" >/dev/null 2>&1 || true
     pw-play --target "$sink" "$work/soak_q.wav" 2>/dev/null || true
   fi
 
@@ -241,9 +241,9 @@ md_out = sys.argv[3]
 mem_path = sys.argv[4]
 
 # PRD §6.2 RSS budgets in MiB (steady state; the soak opens no approval dialog).
-BUDGET_MIB = {"neuroos-healthd": 15, "neuroos-storage": 320, "neuroos-inference": 2800,
-              "neuroos-monitor": 30, "neuroos-kernel": 15, "neuroos-knowledge": 60,
-              "neuroos-voice": 800}
+BUDGET_MIB = {"octoplus-healthd": 15, "octoplus-storage": 320, "octoplus-inference": 2800,
+              "octoplus-monitor": 30, "octoplus-kernel": 15, "octoplus-knowledge": 60,
+              "octoplus-voice": 800}
 mem = {}
 with open(mem_path) as f:
     for row in csv.DictReader(f):
@@ -260,7 +260,7 @@ with open(csv_path) as f:
              # footprint = resident + swapped (older CSVs have no swap column)
              "rss": float(row["rss_mib"]) + float(row.get("swap_mib") or 0),
              "restarts": int(row["restarts"])})
-        if row["unit"] == "neuroos-healthd":  # one probe value per iteration
+        if row["unit"] == "octoplus-healthd":  # one probe value per iteration
             probe.append((int(row["elapsed_secs"]), float(row["probe_first_chunk_ms"])))
 
 def p99(vals):

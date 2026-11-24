@@ -1,0 +1,49 @@
+[Unit]
+Description=OctoPlus Voice Interface
+PartOf=octoplus.target
+Requires=octoplus-runtime.service
+After=octoplus-runtime.service octoplus-healthd.service octoplus-storage.service octoplus-inference.service octoplus-monitor.service octoplus-kernel.service octoplus-knowledge.service
+
+[Service]
+PrivateNetwork=true
+InaccessiblePaths=-/run/systemd/resolve
+InaccessiblePaths=-/run/dbus/system_bus_socket
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=tmpfs
+BindReadOnlyPaths=%h/.local/opt/octoplus
+BindReadOnlyPaths=-%h/.config/octoplus/config.toml
+BindReadOnlyPaths=-%h/.config/octoplus/voice.conf
+BindPaths=-%t/pipewire-0
+InaccessiblePaths=-/run/octoplus-fetcher
+TemporaryFileSystem=%t/octoplus
+BindPaths=%t/octoplus/voice
+BindPaths=%t/octoplus/knowledge/knowledge
+PrivateTmp=true
+# C2: audio runs through the PipeWire socket in the runtime folder (no device files),
+# so PrivateDevices stays on; only real-time scheduling is exempt (Architecture §8.1).
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service landlock_create_ruleset landlock_add_rule landlock_restrict_self
+CapabilityBoundingSet=
+AmbientCapabilities=
+LimitCORE=0
+UMask=0077
+MemoryMax=960M
+Restart=on-failure
+RestartSec=2s
+ExecStart=%h/.local/opt/octoplus/bin/octoplus-voice --socket %t/octoplus/voice/voice/voice.sock=octoplus-knowledge.service --socket %t/octoplus/voice/control/control.sock=uid --health-socket %t/octoplus/voice/health/health.sock=octoplus-healthd.service --models-dir %h/.local/opt/octoplus/models/voice --voice-config %h/.config/octoplus/voice.conf
+
+[Install]
+WantedBy=octoplus.target

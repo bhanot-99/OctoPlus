@@ -1,8 +1,8 @@
-# MASTER PROMPT: SEMANTIC-NEUROOS CINEMATIC TRAILER & DEEP-DIVE EXPLAINER DEMO
+# MASTER PROMPT: SEMANTIC-OCTOPLUS CINEMATIC TRAILER & DEEP-DIVE EXPLAINER DEMO
 
 You are an elite Creative Director, Technical Narrative Architect, and Visual Producer specializing in groundbreaking developer keynotes, tech explainers, and high-octane cinematic trailers (in the aesthetic intersection of an Apple Keynote, a Stripe press release, and a grounded cyberpunk thriller like Mr. Robot meets Her).
 
-You have full access to the Semantic-NeuroOS source repository documentation (PRD.md, Architecture.md, design.md, security.md, rules.md, README.md). 
+You have full access to the OctoPlus source repository documentation (PRD.md, Architecture.md, design.md, security.md, rules.md, README.md). 
 
 Your mission is to generate the complete production blueprint for TWO distinct video assets:
 1. ASSET A: "The Ghost in the Machine" — A 75-second viral cinematic hype trailer.
@@ -54,9 +54,9 @@ Objective: Gripping emotional and technical hook. Contrast the dark, pervasive d
 - Visual: Sudden slam to black #0E1116. A blinding laser of Synapse Teal (#2DD4BF) cuts the red threads. We zoom into a physical 3D schematic of a motherboard. A glowing fortress wall drops around the CPU and RAM labeled: Linux Kernel Landlock & Network Namespaces.
 - Sound: Heavy mechanical thud, followed by a crisp, resonant bass drop. Clean, rhythmic synthesizer pulse begins.
 - Narrator (V.O.): 
-  "Meet Semantic-NeuroOS. The private laptop buddy for Linux. No cloud. No accounts. No telemetry. Enforced by the Linux kernel itself: zero bytes leave your machine without your physical signature."
+  "Meet OctoPlus. The private laptop buddy for Linux. No cloud. No accounts. No telemetry. Enforced by the Linux kernel itself: zero bytes leave your machine without your physical signature."
 - Fast Cuts: 
-  - Terminal executing: neuroosctl ask "what was on my screen before lunch?"
+  - Terminal executing: octoplusctl ask "what was on my screen before lunch?"
   - Instant streaming response from local llama.cpp inference engine running on CPU/AVX2.
 
 #### [0:35 - 0:55] — A BUDDY THAT SPEAKS FIRST (The Core Magic)
@@ -73,7 +73,7 @@ Objective: Gripping emotional and technical hook. Contrast the dark, pervasive d
 - Visual: The camera pulls out from a glowing bioluminescent neural synapse pulsing inside a laptop chassis into the sleek minimal logomark.
 - Sound: Resolving majestic chord, fading into a gentle heartbeat pulse.
 - On-Screen Text:
-  Semantic-NeuroOS
+  OctoPlus
   A private laptop buddy for Linux.
   Sense. Remember. Notice. Act Safely.
   100% Local • Kernel-Enforced • Open Source
@@ -86,16 +86,16 @@ Format: High-production interactive architecture walk-through + live desktop wor
 Structure: 6 distinct technical chapters, alternating between architectural x-rays and practical desktop scenarios.
 
 ### CHAPTER 1: THE MANIFESTO & THE 8 SERVICES (0:00 - 1:00)
-- Visual: An explosive 3D view of the Linux desktop stack (COSMIC / Wayland / PipeWire / systemd) breaking down into the 8 isolated Daemons of NeuroOS:
-  1. C1 neuroos-monitor: The silent watcher (Wayland focus, screen state, sensor rollups).
-  2. C2 neuroos-voice: PipeWire-integrated wake word and local Kokoro TTS.
-  3. C3 neuroos-storage: Pure local SQLite + sqlite-vec vector store.
-  4. C4 neuroos-inference: High-efficiency local LLM with GBNF grammar constraints.
-  5. C5 neuroos-knowledge: The turn router, prompt builder, and proactive nudge engine.
-  6. C6 neuroos-kernel: The safety policy gate and skill dispatcher.
-  7. C7 neuroos-fetcher: The solitary egress gateway (isolated network namespace).
-  8. C8 neuroos-healthd: The unkillable system watchdog.
-- Narrator Explanation: Explain why Semantic-NeuroOS is not a python script wrapped around an API, but an actual Operating System subsystem built in Rust for performance and verifiable security.
+- Visual: An explosive 3D view of the Linux desktop stack (COSMIC / Wayland / PipeWire / systemd) breaking down into the 8 isolated Daemons of OctoPlus:
+  1. C1 octoplus-monitor: The silent watcher (Wayland focus, screen state, sensor rollups).
+  2. C2 octoplus-voice: PipeWire-integrated wake word and local Kokoro TTS.
+  3. C3 octoplus-storage: Pure local SQLite + sqlite-vec vector store.
+  4. C4 octoplus-inference: High-efficiency local LLM with GBNF grammar constraints.
+  5. C5 octoplus-knowledge: The turn router, prompt builder, and proactive nudge engine.
+  6. C6 octoplus-kernel: The safety policy gate and skill dispatcher.
+  7. C7 octoplus-fetcher: The solitary egress gateway (isolated network namespace).
+  8. C8 octoplus-healthd: The unkillable system watchdog.
+- Narrator Explanation: Explain why OctoPlus is not a python script wrapped around an API, but an actual Operating System subsystem built in Rust for performance and verifiable security.
 
 ### CHAPTER 2: DEICTIC CONTEXT & EPISODIC MEMORY (1:00 - 2:00)
 - Concept to Demystify: How the buddy resolves words like "this", "that document", or "what was I doing yesterday".
@@ -135,19 +135,19 @@ Structure: 6 distinct technical chapters, alternating between architectural x-ra
 - Visual Walkthrough:
   - Terminal inspection: Show systemd unit files for C1 through C6 with PrivateNetwork=yes.
   - Try pinging google.com from the knowledge or LLM process -> Hard kernel refusal (ENETUNREACH).
-  - Show C7 (neuroos-fetcher): Isolated in a dedicated Linux network namespace. When a user approves a web search:
+  - Show C7 (octoplus-fetcher): Isolated in a dedicated Linux network namespace. When a user approves a web search:
     1. The exact query string is displayed in a confirmation popup.
     2. The user can manually edit the query before approving.
     3. C7 fetches the link, immediately logs the transaction into a human-readable SQLite egress_ledger, and returns the raw text.
 
 ### CHAPTER 6: THE COMMAND-LINE EXPERIENCE & LOCAL AUDITING (5:15 - 6:00)
-- Visual Demonstration of neuroosctl:
-  - neuroosctl ask "Summarize my day" (instant streaming markdown response).
-  - neuroosctl nudges list (shows enabled rules, snoozed states, last fired timestamps).
-  - neuroosctl status (real-time health matrix of all 8 daemons from neuroos-healthd).
-  - neuroosctl memory list (complete transparency into every fact remembered).
+- Visual Demonstration of octoplusctl:
+  - octoplusctl ask "Summarize my day" (instant streaming markdown response).
+  - octoplusctl nudges list (shows enabled rules, snoozed states, last fired timestamps).
+  - octoplusctl status (real-time health matrix of all 8 daemons from octoplus-healthd).
+  - octoplusctl memory list (complete transparency into every fact remembered).
 - Final Inspiring Outro:
-  - "Your computer was meant to be your bicycle for the mind. Not a wiretap. Semantic-NeuroOS restores the dignity of personal computing."
+  - "Your computer was meant to be your bicycle for the mind. Not a wiretap. OctoPlus restores the dignity of personal computing."
   - Final call to action: Link to Github, installation instructions (curl | bash or package manager), community invite.
 
 ---

@@ -1,5 +1,5 @@
 [package]
-name = "neuroos-bench-kernel-check"
+name = "octoplus-bench-kernel-check"
 description = "NFR-PERF-06: C6 capability-check latency against the running kernel"
 version.workspace = true
 edition.workspace = true
@@ -10,9 +10,9 @@ publish = false
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
-neuroos-common = { path = "../../crates/neuroos-common" }
-neuroos-ipc = { path = "../../crates/neuroos-ipc" }
-neuroos-proto = { path = "../../crates/neuroos-proto" }
+octoplus-common = { path = "../../crates/octoplus-common" }
+octoplus-ipc = { path = "../../crates/octoplus-ipc" }
+octoplus-proto = { path = "../../crates/octoplus-proto" }
 serde_json.workspace = true
 tokio.workspace = true
 

@@ -1,6 +1,6 @@
-# Runbook — Install Semantic-NeuroOS
+# Runbook — Install OctoPlus
 
-This runbook covers clean, production installation of Semantic-NeuroOS v1.0.0 on a supported Linux workstation (Architecture §13, phases.md §13.1).
+This runbook covers clean, production installation of OctoPlus v1.0.0 on a supported Linux workstation (Architecture §13, phases.md §13.1).
 
 ---
 
@@ -22,16 +22,16 @@ This runbook covers clean, production installation of Semantic-NeuroOS v1.0.0 on
 1. Build or download the release `.deb`:
    ```bash
    just deb
-   # Output placed in dist/semantic-neuroos_1.1.0_amd64.deb
+   # Output placed in dist/octoplus_1.1.0_amd64.deb
    ```
 2. Install the package using `apt` or `dpkg`:
    ```bash
-   sudo apt install -y ./dist/semantic-neuroos_1.1.0_amd64.deb
+   sudo apt install -y ./dist/octoplus_1.1.0_amd64.deb
    ```
 3. Verify installed binaries and system units:
    ```bash
-   neuroosctl --version
-   systemctl is-active neuroos-fetcher.service || systemctl status neuroos-fetcher.service
+   octoplusctl --version
+   systemctl is-active octoplus-fetcher.service || systemctl status octoplus-fetcher.service
    ```
 
 ### Method B: Standalone Production Script Installation
@@ -47,21 +47,21 @@ This runbook covers clean, production installation of Semantic-NeuroOS v1.0.0 on
 
 ---
 
-## 3. First-Run Initialization (`neuroosctl init`)
+## 3. First-Run Initialization (`octoplusctl init`)
 
 After installing the packages and binaries, initialize keys, configurations, and models for your user session:
 
 ```bash
-neuroosctl init
+octoplusctl init
 ```
 
 The setup wizard performs:
-1. **Key Generation:** Generates 32-byte cryptographic keys `~/.config/neuroos/hmac.key` and `~/.config/neuroos/fetch.key` with strict permissions (`0600`).
+1. **Key Generation:** Generates 32-byte cryptographic keys `~/.config/octoplus/hmac.key` and `~/.config/octoplus/fetch.key` with strict permissions (`0600`).
 2. **Model Integrity Check:** Downloads and verifies SHA-256 hashes against `models/manifest.toml`.
-3. **Configuration Provisioning:** Seeds `~/.config/neuroos/config.toml` and `~/.config/neuroos/nudges.toml` with default quiet hours (22:00–08:00).
-4. **Group Verification:** Ensures your user account belongs to the `neuroos` group. (If newly added, a logout/login is recommended).
+3. **Configuration Provisioning:** Seeds `~/.config/octoplus/config.toml` and `~/.config/octoplus/nudges.toml` with default quiet hours (22:00–08:00).
+4. **Group Verification:** Ensures your user account belongs to the `octoplus` group. (If newly added, a logout/login is recommended).
 5. **Full-Disk Encryption Notice:** Displays the LUKS advisory for local data protection.
-6. **Service Activation:** Enables and starts `neuroos.target`.
+6. **Service Activation:** Enables and starts `octoplus.target`.
 
 ---
 
@@ -71,17 +71,17 @@ Verify that all daemons have started and reached the healthy state:
 
 ```bash
 # 1. Check aggregate component health and RSS
-neuroosctl status
+octoplusctl status
 
 # 2. Check individual user services
-systemctl --user status neuroos.target
-systemctl --user status neuroos-healthd.service neuroos-storage.service neuroos-kernel.service
+systemctl --user status octoplus.target
+systemctl --user status octoplus-healthd.service octoplus-storage.service octoplus-kernel.service
 
 # 3. Test conversational interaction
-neuroosctl ask "hello buddy"
+octoplusctl ask "hello buddy"
 
 # 4. Check egress ledger transparency
-neuroosctl egress list
+octoplusctl egress list
 ```
 
 All 8 daemons should show status `OK` (green).

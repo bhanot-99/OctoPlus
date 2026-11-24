@@ -1,6 +1,6 @@
 # Runbook — When a Component Fails to Start
 
-This runbook guides operators through diagnosing and resolving issues when a Semantic-NeuroOS daemon fails to start, crashes on boot, or reports unhealthy status (PRD NFR-REL-01, rules.md §11).
+This runbook guides operators through diagnosing and resolving issues when an OctoPlus daemon fails to start, crashes on boot, or reports unhealthy status (PRD NFR-REL-01, rules.md §11).
 
 ---
 
@@ -10,44 +10,44 @@ Start with the highest-level diagnostic tool and drill down into individual serv
 
 ```bash
 # 1. Overall health check across all daemons
-neuroosctl status
+octoplusctl status
 
 # 2. Check systemd unit statuses
-systemctl --user status "neuroos-*.service"
+systemctl --user status "octoplus-*.service"
 
 # 3. Check fetcher system service (if network/search issue)
-sudo systemctl status neuroos-fetcher.service
+sudo systemctl status octoplus-fetcher.service
 ```
 
 ---
 
 ## 2. Common Failure Modes & Resolutions
 
-### Mode 1: Missing Model Check Failure (`neuroos-model-check.service` fails)
-- **Symptom:** `neuroos-inference.service` is inactive or fails dependency check.
+### Mode 1: Missing Model Check Failure (`octoplus-model-check.service` fails)
+- **Symptom:** `octoplus-inference.service` is inactive or fails dependency check.
 - **Root Cause:** One or more model files listed in `models/manifest.toml` are missing or corrupted.
 - **Diagnosis:**
   ```bash
-  systemctl --user status neuroos-model-check.service
-  journalctl --user -u neuroos-model-check.service -e
+  systemctl --user status octoplus-model-check.service
+  journalctl --user -u octoplus-model-check.service -e
   ```
 - **Resolution:**
   ```bash
   just fetch-models
-  systemctl --user restart neuroos-model-check.service
-  systemctl --user restart neuroos-inference.service
+  systemctl --user restart octoplus-model-check.service
+  systemctl --user restart octoplus-inference.service
   ```
 
 ### Mode 2: Socket Permission or Runtime Directory Denied
 - **Symptom:** Daemons log `ConnectionRefused` or `PermissionDenied` attempting to bind or reach sockets.
-- **Root Cause:** Socket directory `/run/user/$UID/neuroos/` not initialized or has incorrect ownership.
+- **Root Cause:** Socket directory `/run/user/$UID/octoplus/` not initialized or has incorrect ownership.
 - **Diagnosis:**
   ```bash
-  ls -la "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/neuroos/"
+  ls -la "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/octoplus/"
   ```
 - **Resolution:**
   ```bash
-  systemctl --user restart neuroos-runtime.service
+  systemctl --user restart octoplus-runtime.service
   ```
 
 ### Mode 3: Landlock / Seccomp Sandbox Denial
@@ -56,33 +56,33 @@ sudo systemctl status neuroos-fetcher.service
 - **Diagnosis:**
   ```bash
   dmesg -T | grep -E 'landlock|seccomp|audit' | tail -n 20
-  journalctl --user -u neuroos-kernel.service -e
+  journalctl --user -u octoplus-kernel.service -e
   ```
 - **Resolution:**
   Ensure the host kernel supports Landlock ABI $\ge 1$ (`dmesg | grep -i landlock`). If running in an unprivileged container or sandbox, ensure Landlock permissions are enabled.
 
 ### Mode 4: Group Membership Missing for Fetcher Communication
-- **Symptom:** `neuroos-confirm` or `neuroos-fetcher` rejects socket connections (`SO_PEERCRED` check fails).
+- **Symptom:** `octoplus-confirm` or `octoplus-fetcher` rejects socket connections (`SO_PEERCRED` check fails).
 - **Diagnosis:**
   ```bash
   groups $USER
   ```
 - **Resolution:**
-  User must belong to group `neuroos`:
+  User must belong to group `octoplus`:
   ```bash
-  sudo usermod -aG neuroos $USER
+  sudo usermod -aG octoplus $USER
   # Log out and log back in, or run:
-  newgrp neuroos
+  newgrp octoplus
   ```
 
 ### Mode 5: Out of Memory / cgroup MemoryMax Throttling
 - **Symptom:** Service killed by systemd OOM killer (`OOMKilled=yes` in systemctl status).
 - **Diagnosis:**
   ```bash
-  systemctl --user show neuroos-<service> -p MemoryCurrent,MemoryMax,OOMKilled
+  systemctl --user show octoplus-<service> -p MemoryCurrent,MemoryMax,OOMKilled
   ```
 - **Resolution:**
-  Review memory limits in `Architecture.md` §6. If working with large prompt contexts, adjust `MemoryMax` in the service drop-in (`~/.config/systemd/user/neuroos-<service>.service.d/override.conf`).
+  Review memory limits in `Architecture.md` §6. If working with large prompt contexts, adjust `MemoryMax` in the service drop-in (`~/.config/systemd/user/octoplus-<service>.service.d/override.conf`).
 
 ---
 
@@ -91,17 +91,17 @@ sudo systemctl status neuroos-fetcher.service
 If multiple components are stalled, restart them in dependency order:
 ```bash
 # Stop everything
-systemctl --user stop neuroos.target
+systemctl --user stop octoplus.target
 
 # Restart runtime and healthd first
-systemctl --user start neuroos-runtime.service neuroos-healthd.service
+systemctl --user start octoplus-runtime.service octoplus-healthd.service
 
 # Start core services
-systemctl --user start neuroos-storage.service neuroos-inference.service neuroos-kernel.service
+systemctl --user start octoplus-storage.service octoplus-inference.service octoplus-kernel.service
 
 # Start conversational services and monitors
-systemctl --user start neuroos-knowledge.service neuroos-voice.service neuroos-monitor.service
+systemctl --user start octoplus-knowledge.service octoplus-voice.service octoplus-monitor.service
 
 # Confirm full stack
-neuroosctl status
+octoplusctl status
 ```

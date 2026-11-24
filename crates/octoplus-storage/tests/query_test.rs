@@ -1,0 +1,525 @@
+//! W7: focus history, activity, health signals, profile, interactions and nudge log
+//! (FR-STO-07/08/09; PRD §5.3).
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+use std::sync::Arc;
+
+use octoplus_common::config::StorageConfig;
+use octoplus_health::Health;
+use octoplus_proto::v1::monitor_event::Event;
+use octoplus_proto::v1::{
+    Domain, FocusChanged, IdleChanged, MediaChanged, MonitorEvent, PlaybackState, ProfileAdd,
+    QueryActivity, QueryFocusHistory, QueryHealthSignals, ResourceSample, StoreInteraction,
+    StoreNudgeLog, Taint,
+};
+use octoplus_storage::db::DbError;
+use octoplus_storage::embed::HashEmbedder;
+use octoplus_storage::ingest::{FocusSegment, HealthPoint, Item, Output};
+use octoplus_storage::store::Store;
+use octoplus_taint::TaintFlags;
+
+const S: u64 = 1_000_000_000;
+
+async fn store() -> (Arc<Store>, tempfile::TempDir) {
+    let dir = tempfile::tempdir().unwrap();
+    let s = Store::open(
+        &octoplus_storage::store::StorePaths::under(dir.path()),
+        StorageConfig::default(),
+        Arc::new(HashEmbedder),
+        Health::new("octoplus-storage", "test"),
+    )
+    .await
+    .unwrap();
+    (Arc::new(s), dir)
+}
+
+fn seg(app: &str, title: &str, a: u64, b: u64) -> Output {
+    Output::Segment(FocusSegment {
+        app_id: app.into(),
+        title: title.into(),
+        pid: 1,
+        start_ns: a * S,
+        end_ns: b * S,
+        dwell_ns: (b - a) * S,
+    })
+}
+
+fn ev(at: u64, e: Event) -> MonitorEvent {
+    MonitorEvent {
+        observed_at_ns: at * S,
+        event: Some(e),
+    }
+}
+
+async fn focus_at(s: &Arc<Store>, at: u64, window: u64) -> Vec<(String, bool)> {
+    s.focus_history(QueryFocusHistory {
+        at_ns: at * S,
+        window_ns: window * S,
+    })
+    .await
+    .unwrap()
+    .windows
+    .into_iter()
+    .map(|w| (w.app_id, w.contains_instant))
+    .collect()
+}
+
+#[tokio::test]
+async fn focus_history_returns_the_window_containing_the_instant_else_the_nearest_edge() {
+    let (s, _d) = store().await;
+    s.ingest(vec![
+        seg("a", "A", 100, 200),
+        seg("b", "B", 200, 300),
+        seg("c", "C", 500, 600),
+    ])
+    .await
+    .unwrap();
+    assert_eq!(focus_at(&s, 150, 0).await, vec![("a".into(), true)]);
+    assert_eq!(
+        focus_at(&s, 200, 0).await,
+        vec![("b".into(), true)],
+        "on a boundary the later window wins"
+    );
+    assert_eq!(
+        focus_at(&s, 350, 100).await,
+        vec![("b".into(), false)],
+        "nearest edge within the window"
+    );
+    assert_eq!(
+        focus_at(&s, 450, 100).await,
+        vec![("c".into(), false)],
+        "c's start is 50 s away, b's end 150 s"
+    );
+    assert!(
+        focus_at(&s, 350, 10).await.is_empty(),
+        "nothing within ±10 s"
+    );
+    assert!(
+        focus_at(&s, 50, 0).await.is_empty(),
+        "before everything, no window"
+    );
+    assert!(focus_at(&s, 700, 50).await.is_empty());
+}
+
+#[tokio::test]
+async fn an_open_window_that_is_not_yet_history_still_answers() {
+    let (s, _d) = store().await;
+    s.ingest(vec![seg("old", "Old", 10, 20)]).await.unwrap();
+    s.observe(&ev(
+        100,
+        Event::Focus(FocusChanged {
+            app_id: "now".into(),
+            title: "Live".into(),
+            pid: 1,
+            fullscreen: false,
+            fullscreen_known: true,
+        }),
+    ));
+    assert_eq!(focus_at(&s, 120, 0).await, vec![("now".into(), true)]);
+    assert_eq!(
+        focus_at(&s, 15, 0).await,
+        vec![("old".into(), true)],
+        "earlier instants still use history"
+    );
+    s.observe(&ev(130, Event::Focus(FocusChanged::default())));
+    assert!(
+        focus_at(&s, 140, 0).await.is_empty(),
+        "an empty focus closes the open window"
+    );
+}
+
+#[tokio::test]
+async fn activity_lists_segments_and_chunks_in_time_order_inside_the_range() {
+    let (s, _d) = store().await;
+    let note = |at: u64, text: &str| {
+        Output::Promote(Item {
+            domain: Domain::Notes,
+            kind: "note".into(),
+            label: text.into(),
+            app_id: String::new(),
+            text: text.into(),
+            taint: TaintFlags::empty(),
+            at_ns: at * S,
+        })
+    };
+    s.ingest(vec![
+        seg("a", "A", 100, 200),
+        note(150, "Note x changed"),
+        note(900, "Note late changed"),
+        seg("b", "B", 300, 400),
+    ])
+    .await
+    .unwrap();
+    let r = s
+        .activity(QueryActivity {
+            from_ns: 90 * S,
+            to_ns: 350 * S,
+        })
+        .await
+        .unwrap();
+    let labels: Vec<_> = r.items.iter().map(|i| i.label.as_str()).collect();
+    assert_eq!(labels, vec!["Used a: A", "Note x changed", "Used b: B"]);
+    assert!(
+        r.items.iter().all(|i| i.taint.is_some()),
+        "taint is always present"
+    );
+    let none = s
+        .activity(QueryActivity {
+            from_ns: 1000 * S,
+            to_ns: 2000 * S,
+        })
+        .await
+        .unwrap();
+    assert!(none.items.is_empty());
+}
+
+/// Regression (audit A-18): with many short focus changes (about 20 a minute in real use)
+/// the answer is what took the time, not the oldest slice of the range; repeated windows
+/// with the same app and title are one item.
+#[tokio::test]
+async fn activity_keeps_what_took_the_time_and_merges_repeats() {
+    let (s, _d) = store().await;
+    let max = octoplus_storage::query::ACTIVITY_MAX as u64;
+    let mut segs: Vec<Output> = (0..max + 20)
+        .map(|i| seg("term", &format!("cmd {i}"), 1000 + i, 1001 + i))
+        .collect();
+    // One long piece of work after all the short ones, split by two brief switches away.
+    segs.push(seg("editor", "report.md", 5000, 5600));
+    segs.push(seg("chat", "x", 5600, 5601));
+    segs.push(seg("editor", "report.md", 5601, 6200));
+    s.ingest(segs).await.unwrap();
+    let r = s
+        .activity(QueryActivity {
+            from_ns: 0,
+            to_ns: 10_000 * S,
+        })
+        .await
+        .unwrap();
+    assert!(r.items.len() <= max as usize);
+    let editor: Vec<_> = r
+        .items
+        .iter()
+        .filter(|i| i.label == "Used editor: report.md")
+        .collect();
+    assert_eq!(editor.len(), 1, "repeats of one window are merged");
+    assert_eq!(editor[0].start_ns, 5000 * S);
+    assert_eq!(editor[0].end_ns, 6200 * S);
+    let starts: Vec<u64> = r.items.iter().map(|i| i.start_ns).collect();
+    assert!(starts.windows(2).all(|w| w[0] <= w[1]), "time-ordered");
+}
+
+#[tokio::test]
+async fn health_signals_carry_recent_samples_and_the_live_flags() {
+    let (s, _d) = store().await;
+    for t in [10, 20, 30] {
+        s.observe(&ev(
+            t,
+            Event::Resources(ResourceSample {
+                cpu_percent: f64::from(t as u32),
+                ..Default::default()
+            }),
+        ));
+    }
+    s.observe(&ev(31, Event::Idle(IdleChanged { idle: true })));
+    s.observe(&ev(
+        32,
+        Event::Media(MediaChanged {
+            player: "vlc".into(),
+            state: PlaybackState::Playing as i32,
+            ..Default::default()
+        }),
+    ));
+    s.observe(&ev(
+        33,
+        Event::Focus(FocusChanged {
+            app_id: "v".into(),
+            title: "x".into(),
+            pid: 0,
+            fullscreen: true,
+            fullscreen_known: true,
+        }),
+    ));
+    let h = s.health_signals(&QueryHealthSignals { since_ns: 15 * S });
+    assert_eq!(
+        h.samples.len(),
+        2,
+        "only samples since the cut-off, oldest first"
+    );
+    assert_eq!(h.samples[0].observed_at_ns, 20 * S);
+    assert!(h.idle && h.media_playing && h.fullscreen);
+    assert!(
+        !h.locked_known,
+        "lock state is unknown in v1.0 (ADR-0011) and the answer says so"
+    );
+    assert_eq!(h.active_since_ns, 0, "idle: not active");
+    s.observe(&ev(40, Event::Idle(IdleChanged { idle: false })));
+    assert_eq!(
+        s.health_signals(&QueryHealthSignals { since_ns: 0 })
+            .active_since_ns,
+        40 * S
+    );
+}
+
+#[tokio::test]
+async fn the_recent_sample_ring_is_bounded() {
+    let (s, _d) = store().await;
+    for t in 0..5000_u64 {
+        s.observe(&ev(t, Event::Resources(ResourceSample::default())));
+    }
+    let n = s
+        .health_signals(&QueryHealthSignals { since_ns: 0 })
+        .samples
+        .len();
+    assert_eq!(n, octoplus_storage::ingest::live::RING_CAP);
+}
+
+#[tokio::test]
+async fn health_points_are_stored_for_the_rollup() {
+    let (s, _d) = store().await;
+    s.ingest(vec![Output::Health(HealthPoint {
+        metric: "cpu_percent".into(),
+        value: 12.0,
+        at_ns: 5 * S,
+    })])
+    .await
+    .unwrap();
+    let n: i64 = s
+        .read(|c| {
+            Ok(c.query_row(
+                "SELECT COUNT(*) FROM health_samples WHERE metric = 'cpu_percent'",
+                [],
+                |r| r.get(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(n, 1);
+}
+
+#[tokio::test]
+async fn profile_facts_need_a_taint_and_can_be_listed_filtered_and_removed() {
+    let (s, _d) = store().await;
+    let user = Some(Taint {
+        flags: TaintFlags::USER_PROVIDED.bits(),
+    });
+    let a = s
+        .profile_add(
+            ProfileAdd {
+                text: "My dog is called Rex".into(),
+                taint: user,
+            },
+            5 * S,
+        )
+        .await
+        .unwrap();
+    let b = s
+        .profile_add(
+            ProfileAdd {
+                text: "I prefer tea".into(),
+                taint: user,
+            },
+            6 * S,
+        )
+        .await
+        .unwrap();
+    assert_ne!(a, b);
+    assert!(
+        matches!(
+            s.profile_add(
+                ProfileAdd {
+                    text: "x".into(),
+                    taint: None
+                },
+                1
+            )
+            .await,
+            Err(DbError::Taint)
+        ),
+        "a missing taint is an error, not clean"
+    );
+    assert!(
+        matches!(
+            s.profile_add(
+                ProfileAdd {
+                    text: "x".into(),
+                    taint: Some(Taint { flags: 1 << 20 })
+                },
+                1
+            )
+            .await,
+            Err(DbError::Taint)
+        ),
+        "unknown bits are an error"
+    );
+    assert_eq!(s.profile_list(String::new()).await.unwrap().len(), 2);
+    let rel = s.profile_list("what is my dog named".into()).await.unwrap();
+    assert_eq!(rel.len(), 1);
+    assert_eq!(rel[0].text, "My dog is called Rex");
+    assert_eq!(s.profile_remove(vec![a, 9999]).await.unwrap(), 1);
+    assert_eq!(s.profile_list(String::new()).await.unwrap().len(), 1);
+}
+
+#[tokio::test]
+async fn interactions_and_nudges_are_stored_with_their_taint() {
+    let (s, _d) = store().await;
+    let tainted = Some(Taint {
+        flags: TaintFlags::EXTERNAL_UNTRUSTED.bits() | TaintFlags::MODEL_GENERATED.bits(),
+    });
+    s.store_interaction(StoreInteraction {
+        question: "q".into(),
+        answer_summary: "a".into(),
+        taint: tainted,
+        at_ns: 7 * S,
+        origin: 0,
+    })
+    .await
+    .unwrap();
+    let t: i64 = s
+        .read(|c| {
+            Ok(c.query_row(
+                "SELECT taint FROM chunks WHERE domain = ?1",
+                [Domain::VoiceInteraction as i32],
+                |r| r.get(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(t, 5, "the turn's taint is kept");
+    assert!(matches!(
+        s.store_interaction(StoreInteraction {
+            question: "q".into(),
+            answer_summary: "a".into(),
+            taint: None,
+            at_ns: 1,
+            origin: 0
+        })
+        .await,
+        Err(DbError::Taint)
+    ));
+    s.store_nudge(StoreNudgeLog {
+        rule_id: "disk_low".into(),
+        outcome: 1,
+        at_ns: 9 * S,
+    })
+    .await
+    .unwrap();
+    let n: i64 = s
+        .read(|c| {
+            Ok(c.query_row(
+                "SELECT COUNT(*) FROM nudge_log WHERE rule_id = 'disk_low'",
+                [],
+                |r| r.get(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(n, 1);
+}
+
+/// The nudge engine rebuilds cooldowns, snoozes and switches from this log (ADR-0014).
+#[tokio::test]
+async fn the_nudge_log_fold_keeps_switches_past_retention_and_forget() {
+    use octoplus_proto::v1::{ForgetRequest, NudgeOutcome};
+    const DAY: u64 = 86_400 * S;
+    let (s, _d) = store().await;
+    let log = |rule: &str, outcome: NudgeOutcome, at: u64| {
+        let s = s.clone();
+        let rule = rule.to_string();
+        async move {
+            s.store_nudge(StoreNudgeLog {
+                rule_id: rule,
+                outcome: outcome as i32,
+                at_ns: at,
+            })
+            .await
+            .unwrap();
+        }
+    };
+    let now = 400 * DAY;
+    log("disk_nearly_full", NudgeOutcome::Disabled, 10 * DAY).await; // very old switch
+    log("disk_nearly_full", NudgeOutcome::Notified, 11 * DAY).await; // old history
+    log("running_hot", NudgeOutcome::Notified, now - 2 * DAY).await;
+    log("running_hot", NudgeOutcome::Snoozed, now - DAY).await;
+
+    // GC at 90-day retention drops old history but never a switch.
+    let st = s.gc(now).await.unwrap();
+    assert_eq!(st.nudge_rows, 1);
+    let all = s.nudge_log_since(0).await.unwrap();
+    let kinds: Vec<(&str, i32)> = all
+        .iter()
+        .map(|e| (e.rule_id.as_str(), e.outcome))
+        .collect();
+    assert_eq!(
+        kinds,
+        vec![
+            ("disk_nearly_full", NudgeOutcome::Disabled as i32),
+            ("running_hot", NudgeOutcome::Notified as i32),
+            ("running_hot", NudgeOutcome::Snoozed as i32),
+        ]
+    );
+    // `since` limits history but a switch from long ago still comes back, oldest first.
+    let recent = s.nudge_log_since(now - DAY).await.unwrap();
+    assert_eq!(recent.len(), 2);
+    assert_eq!(recent[0].outcome, NudgeOutcome::Disabled as i32);
+    assert_eq!(recent[1].outcome, NudgeOutcome::Snoozed as i32);
+
+    // Forgetting a stretch of history does not switch a nudge back on.
+    log("long_session", NudgeOutcome::Enabled, now - 3 * DAY).await;
+    s.forget(ForgetRequest {
+        from_ns: now - 5 * DAY,
+        to_ns: now,
+        app_id: String::new(),
+    })
+    .await
+    .unwrap();
+    let after = s.nudge_log_since(0).await.unwrap();
+    assert!(
+        after
+            .iter()
+            .any(|e| e.outcome == NudgeOutcome::Enabled as i32)
+    );
+    assert!(
+        after
+            .iter()
+            .any(|e| e.outcome == NudgeOutcome::Disabled as i32)
+    );
+    assert!(
+        !after
+            .iter()
+            .any(|e| e.outcome == NudgeOutcome::Snoozed as i32)
+    );
+}
+
+/// A log full of held and dropped rows cannot push a cooldown out of the restore answer.
+#[tokio::test]
+async fn a_flood_of_held_rows_never_hides_a_cooldown_or_a_snooze() {
+    use octoplus_proto::v1::NudgeOutcome;
+    let (s, _d) = store().await;
+    let log = |rule: &str, outcome: NudgeOutcome, at: u64| {
+        let s = s.clone();
+        let rule = rule.to_string();
+        async move {
+            s.store_nudge(StoreNudgeLog {
+                rule_id: rule,
+                outcome: outcome as i32,
+                at_ns: at,
+            })
+            .await
+            .unwrap();
+        }
+    };
+    log("disk_nearly_full", NudgeOutcome::Notified, 100 * S).await;
+    log("battery_low", NudgeOutcome::Snoozed, 110 * S).await;
+    for i in 0..6_000_u64 {
+        let o = if i % 2 == 0 {
+            NudgeOutcome::Held
+        } else {
+            NudgeOutcome::Dropped
+        };
+        log("running_hot", o, 200 * S + i).await;
+    }
+    let got = s.nudge_log_since(0).await.unwrap();
+    assert_eq!(got.len(), 2, "only the rows that are state: {}", got.len());
+    assert_eq!(got[0].rule_id, "disk_nearly_full");
+    assert_eq!(got[1].outcome, NudgeOutcome::Snoozed as i32);
+}

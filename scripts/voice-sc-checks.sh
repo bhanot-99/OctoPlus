@@ -11,14 +11,14 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ctl="$HOME/.local/opt/neuroos/bin/neuroosctl"
-conf="$HOME/.config/neuroos/voice.conf"
+ctl="$HOME/.local/opt/octoplus/bin/octoplusctl"
+conf="$HOME/.config/octoplus/voice.conf"
 work="$(mktemp -d)"
 had_conf=0
 [[ -f "$conf" ]] && { had_conf=1; cp "$conf" "$work/voice.conf.orig"; }
 cleanup() {
   if [[ "$had_conf" == 1 ]]; then cp "$work/voice.conf.orig" "$conf"; else rm -f "$conf"; fi
-  systemctl --user restart neuroos-voice || true
+  systemctl --user restart octoplus-voice || true
   rm -rf "$work"
 }
 trap cleanup EXIT
@@ -38,12 +38,12 @@ wait_voice() {
 
 echo "== 1. capture strictness: a microphone that does not exist"
 printf 'capture_node = this-microphone-does-not-exist\n' > "$conf"
-systemctl --user restart neuroos-voice
+systemctl --user restart octoplus-voice
 wait_voice || true
 sleep 8
 status_out="$("$ctl" voice status 2>/dev/null || true)"
 if grep -q "not listening" <<<"$status_out"; then ok "the service reports it is not listening"; else bad "the service claims to listen"; fi
-if pw-cli ls Node 2>/dev/null | grep -q "neuroos-voice-capture"; then
+if pw-cli ls Node 2>/dev/null | grep -q "octoplus-voice-capture"; then
   bad "a capture stream exists although the device was not found"
 else
   ok "no capture stream exists in the audio graph"
@@ -52,7 +52,7 @@ fi
 echo "== 2. no audio on disk during a spoken exchange"
 rm -f "$conf"
 [[ "$had_conf" == 1 ]] && cp "$work/voice.conf.orig" "$conf"
-systemctl --user restart neuroos-voice
+systemctl --user restart octoplus-voice
 wait_voice
 sleep 5
 stamp="$work/stamp"; touch "$stamp"
@@ -67,7 +67,7 @@ if [[ -z "$new" ]]; then ok "no audio file by extension was created under home o
 
 echo "== 3. the live voice process holds no writable file"
 wait_voice
-pid=$(systemctl --user show -p MainPID --value neuroos-voice)
+pid=$(systemctl --user show -p MainPID --value octoplus-voice)
 writable=$(for fd in /proc/"$pid"/fd/*; do
   t=$(readlink "$fd" 2>/dev/null || true)
   [[ -f "$t" ]] || continue
@@ -77,5 +77,5 @@ writable=$(for fd in /proc/"$pid"/fd/*; do
 done | head -5)
 if [[ -z "$writable" ]]; then ok "no open file descriptor is writable ($pid)"; else bad "writable files open: $writable"; fi
 # The write denial itself is the Landlock policy (no writable path but the socket folders and the
-# audio socket), proved by libneuroos's sandbox tests; this script proves what the live process holds.
+# audio socket), proved by liboctoplus's sandbox tests; this script proves what the live process holds.
 exit $fail

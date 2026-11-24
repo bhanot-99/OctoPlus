@@ -3,7 +3,7 @@
 //! `common::check`, so a redirect can never lead to a private address or another port.
 
 use libfuzzer_sys::fuzz_target;
-use neuroos_fetcher::ssrf::SafeUrl;
+use octoplus_fetcher::ssrf::SafeUrl;
 
 mod common;
 

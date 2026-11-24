@@ -672,7 +672,7 @@ fn main() -> Result<()> {
     let mic_in_use = probe_mic_in_use();
 
     let output = json!({
-        "probe": "neuroos-s05-sensors",
+        "probe": "octoplus-s05-sensors",
         "version": env!("CARGO_PKG_VERSION"),
         "timestamp_utc": chrono_like_now(),
         "sections": {

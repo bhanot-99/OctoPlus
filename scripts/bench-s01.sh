@@ -10,10 +10,10 @@ cd "$root"
 echo "=== Spike S-01: SQLite FTS5 + Exact Vector Scan Benchmark ==="
 
 # 1. Release build
-echo "Building neuroos-bench-storage-scan (release)..."
-cargo build --release -p neuroos-bench-storage-scan
+echo "Building octoplus-bench-storage-scan (release)..."
+cargo build --release -p octoplus-bench-storage-scan
 
-bench_bin="$root/target/release/neuroos-bench-storage-scan"
+bench_bin="$root/target/release/octoplus-bench-storage-scan"
 if [[ ! -x "$bench_bin" ]]; then
   echo "Error: Benchmark binary not found: $bench_bin" >&2
   exit 1
@@ -48,7 +48,7 @@ runtime_dir="${XDG_RUNTIME_DIR:-/tmp}"
 if [[ ! -w "$runtime_dir" ]]; then
   runtime_dir="/tmp"
 fi
-bench_tmp="$runtime_dir/neuroos-s01-$$"
+bench_tmp="$runtime_dir/octoplus-s01-$$"
 mkdir -p "$bench_tmp"
 chmod 0700 "$bench_tmp"
 
@@ -169,7 +169,7 @@ EOF
 # 7. Print human-readable summary table
 echo ""
 echo "================================================================================================================"
-echo "Semantic-NeuroOS Spike S-01 Benchmark Summary (NFR-PERF-04 Target: p50 <= 25 ms, p99 <= 50 ms)"
+echo "OctoPlus Spike S-01 Benchmark Summary (NFR-PERF-04 Target: p50 <= 25 ms, p99 <= 50 ms)"
 echo "================================================================================================================"
 python3 - <<EOF
 import json

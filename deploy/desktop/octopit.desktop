@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.1
+Name=OctoPit
+GenericName=OctoPlus Dashboard
+Comment=See and talk to OctoPlus: health, chat, voice, models and privacy
+Exec=octopit
+Icon=octopit
+Terminal=false
+Categories=System;Monitor;
+Keywords=OctoPlus;assistant;voice;dashboard;privacy;
+StartupNotify=true
+StartupWMClass=org.octoplus.OctoPit

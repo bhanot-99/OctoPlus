@@ -8,15 +8,15 @@
 #
 # The dump is anonymised before it is written (FR-MON-12): titles, media tags, paths and process
 # names become keyed placeholders and the key is thrown away. Dumps stay under
-# ~/.local/share/neuroos/recordings/ (mode 0700) and never go into git from there: only dumps that
+# ~/.local/share/octoplus/recordings/ (mode 0700) and never go into git from there: only dumps that
 # pass scripts/check-dump.sh are copied into tests/fixtures/. The --held-out dump is reserved for
 # evaluation and is never used for tuning (rules.md §8.8). Does not use sudo.
 set -euo pipefail
 
-data="$HOME/.local/share/neuroos/recordings"
+data="$HOME/.local/share/octoplus/recordings"
 state="$data/.current"
-dropin_dir="${XDG_RUNTIME_DIR:?}/systemd/user/neuroos-monitor.service.d"
-ctl="$HOME/.local/opt/neuroos/bin/neuroosctl"
+dropin_dir="${XDG_RUNTIME_DIR:?}/systemd/user/octoplus-monitor.service.d"
+ctl="$HOME/.local/opt/octoplus/bin/octoplusctl"
 
 cmd="${1:-status}"
 shift || true
@@ -36,22 +36,22 @@ case "$cmd" in
 [Service]
 BindPaths=$dir
 ExecStart=
-ExecStart=%h/.local/opt/neuroos/bin/neuroos-monitor --record $file
+ExecStart=%h/.local/opt/octoplus/bin/octoplus-monitor --record $file
 CONF
     systemctl --user daemon-reload
-    systemctl --user restart neuroos-healthd.service neuroos-monitor.service
+    systemctl --user restart octoplus-healthd.service octoplus-monitor.service
     printf '%s\n%s\n' "$file" "$label" >"$state"
-    systemd-run --user --unit=neuroos-record-sampler --collect "$0" sample "$label" >/dev/null
+    systemd-run --user --unit=octoplus-record-sampler --collect "$0" sample "$label" >/dev/null
     echo "recording to $file"
     ;;
   stop)
     [[ -e "$state" ]] || { echo "not recording" >&2; exit 1; }
     file="$(sed -n 1p "$state")"
-    systemctl --user stop neuroos-record-sampler.service 2>/dev/null || true
+    systemctl --user stop octoplus-record-sampler.service 2>/dev/null || true
     rm -f "$dropin_dir/record.conf"
     rmdir "$dropin_dir" 2>/dev/null || true
     systemctl --user daemon-reload
-    systemctl --user stop neuroos-monitor.service   # a clean stop writes the dump's end record
+    systemctl --user stop octoplus-monitor.service   # a clean stop writes the dump's end record
     rm -f "$state"
     if "$ctl" replay "$file" --speed 0 >/dev/null; then
       echo "dump is complete: $file ($(du -h "$file" | cut -f1))"
@@ -59,7 +59,7 @@ CONF
       echo "DUMP IS INCOMPLETE OR CORRUPT: $file" >&2
       exit 1
     fi
-    systemctl --user start neuroos-monitor.service
+    systemctl --user start octoplus-monitor.service
     ;;
   status)
     if [[ -e "$state" ]]; then echo "recording to $(sed -n 1p "$state")"; else echo "not recording"; fi
@@ -71,7 +71,7 @@ CONF
       "$ctl" status --json 2>/dev/null | python3 -c '
 import json, sys, time
 d = json.load(sys.stdin)
-m = next((c for c in d["components"] if c["name"] == "neuroos-monitor"), None)
+m = next((c for c in d["components"] if c["name"] == "octoplus-monitor"), None)
 if m:
     print(json.dumps({"t": int(time.time()), "rss_bytes": m["rss_bytes"], "p99_ns": m["p99_ns"],
                       "cpu_ns": m["cgroup_cpu_usage_ns"], "mem_bytes": m["cgroup_memory_bytes"],

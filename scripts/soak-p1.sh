@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Phase 1 mini-soak (phases.md §4.3 MS): repeated `neuroosctl ask` through the
+# Phase 1 mini-soak (phases.md §4.3 MS): repeated `octoplusctl ask` through the
 # real sandboxed chain for a fixed time, with healthd in soak mode.
 #
 #   scripts/soak-p1.sh [--duration SECS] [--interval SECS] [--out DIR]
@@ -13,7 +13,7 @@
 # last 10 min. Source: healthd's soak CSV (30 s scrape).
 #
 # Writes to DIR (default reports/bench, rules.md §9.6): soak-p1-<UTC>.{csv,asks.log,status.jsonl,json,md}.
-# Restores ~/.config/neuroos/config.toml and stops neuroos.target at the end.
+# Restores ~/.config/octoplus/config.toml and stops octoplus.target at the end.
 # Needs `just install-dev` first.
 set -euo pipefail
 
@@ -30,10 +30,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-ctl="$HOME/.local/opt/neuroos/bin/neuroosctl"
+ctl="$HOME/.local/opt/octoplus/bin/octoplusctl"
 [[ -x "$ctl" ]] || { echo "error: $ctl missing; run just install-dev" >&2; exit 1; }
-cfg="$HOME/.config/neuroos/config.toml"
-soak_dir="${XDG_DATA_HOME:-$HOME/.local/share}/neuroos/soak"
+cfg="$HOME/.config/octoplus/config.toml"
+soak_dir="${XDG_DATA_HOME:-$HOME/.local/share}/octoplus/soak"
 mkdir -p "$out" "$(dirname "$cfg")"
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 prefix="$out/soak-p1-$stamp"
@@ -42,7 +42,7 @@ backup=""
 if [[ -f "$cfg" ]]; then backup="$(mktemp)"; cp "$cfg" "$backup"; fi
 restore() {
   if [[ -n "$backup" ]]; then cp "$backup" "$cfg"; rm -f "$backup"; else rm -f "$cfg"; fi
-  systemctl --user stop neuroos.target 'neuroos-*.service' || true
+  systemctl --user stop octoplus.target 'octoplus-*.service' || true
 }
 trap restore EXIT
 if [[ -n "$backup" ]] && grep -q '^\[healthd\]' "$backup"; then
@@ -50,8 +50,8 @@ if [[ -n "$backup" ]] && grep -q '^\[healthd\]' "$backup"; then
 fi
 { [[ -n "$backup" ]] && cat "$backup"; printf '\n[healthd]\nscrape_interval_s = 30\nsoak = true\n'; } > "$cfg"
 
-systemctl --user stop neuroos.target 'neuroos-*.service' || true
-systemctl --user start neuroos.target
+systemctl --user stop octoplus.target 'octoplus-*.service' || true
+systemctl --user start octoplus.target
 start_epoch="$(date +%s)"
 
 python3 -I - "$ctl" "$duration" "$interval" "$prefix" "$soak_dir" "$start_epoch" <<'PY'

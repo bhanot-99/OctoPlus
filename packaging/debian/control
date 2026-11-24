@@ -1,11 +1,11 @@
-Package: semantic-neuroos
+Package: octoplus
 Version: 1.1.0
 Section: utils
 Priority: optional
 Architecture: amd64
 Depends: libgtk-4-1, libpipewire-0.3-0, libssl3, espeak-ng, systemd, nftables
-Maintainer: Semantic-NeuroOS Team <neuroos@local>
+Maintainer: OctoPlus Team <octoplus@local>
 Description: Local-first semantic operating system buddy
- Semantic-NeuroOS is an on-device semantic operating system daemon suite
+ OctoPlus is an on-device semantic operating system daemon suite
  featuring proactive contextual nudges, local speech-to-text and text-to-speech,
  local LLM inference, sandboxed safety kernel, and verifiable zero unapproved egress.

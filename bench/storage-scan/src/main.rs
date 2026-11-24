@@ -3,5 +3,5 @@
 use anyhow::Result;
 
 fn main() -> Result<()> {
-    neuroos_bench_storage_scan::run()
+    octoplus_bench_storage_scan::run()
 }

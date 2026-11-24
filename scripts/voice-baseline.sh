@@ -3,7 +3,7 @@
 # microphone one after another, records the virtual speaker, and prints the stage-by-stage
 # breakdown per question (scripts/voice-latency.py) plus the end-of-question to first-sound time.
 # Same safety as voice-real-stack.sh: two temporary virtual devices, a temporary voice.conf that is
-# restored at the end. Needs the stack running and NEUROOS_VOICE_TRACE=1 on neuroos-voice.
+# restored at the end. Needs the stack running and OCTOPLUS_VOICE_TRACE=1 on octoplus-voice.
 #
 #   voice-baseline.sh [QUESTIONS_FILE] [OUT_JSON]
 #     defaults: tests/eval/voice-latency-questions.txt, reports/bench/voice-baseline-<date>.json
@@ -12,16 +12,16 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-say="$root/cpp/build/voice-release/neuroos-voice/neuroos-voice-say"
-ctl="$HOME/.local/opt/neuroos/bin/neuroosctl"
-conf="$HOME/.config/neuroos/voice.conf"
+say="$root/cpp/build/voice-release/octoplus-voice/octoplus-voice-say"
+ctl="$HOME/.local/opt/octoplus/bin/octoplusctl"
+conf="$HOME/.config/octoplus/voice.conf"
 questions="${1:-$root/tests/eval/voice-latency-questions.txt}"
 out="${2:-$root/reports/bench/voice-baseline-$(date +%F-%H%M).json}"
 settle="${SETTLE_S:-8}"
 work="$(mktemp -d)"
 tag="base$$"
-mic="neuroos-test-mic-$tag"; sink="neuroos-test-sink-$tag"
-out_sink="neuroos-test-out-$tag"; out_mic="neuroos-test-outmic-$tag"
+mic="octoplus-test-mic-$tag"; sink="octoplus-test-sink-$tag"
+out_sink="octoplus-test-out-$tag"; out_mic="octoplus-test-outmic-$tag"
 pids=()
 had_conf=0
 if [[ -f "$conf" ]]; then had_conf=1; cp "$conf" "$work/voice.conf.orig"; fi
@@ -29,12 +29,12 @@ if [[ -f "$conf" ]]; then had_conf=1; cp "$conf" "$work/voice.conf.orig"; fi
 cleanup() {
   for p in "${pids[@]}"; do kill "$p" 2>/dev/null || true; done
   if [[ "$had_conf" == 1 ]]; then cp "$work/voice.conf.orig" "$conf"; else rm -f "$conf"; fi
-  systemctl --user restart neuroos-voice || true
+  systemctl --user restart octoplus-voice || true
   rm -rf "$work"
 }
 trap cleanup EXIT
 
-[[ -x "$say" ]] || { echo "build neuroos-voice-say first"; exit 2; }
+[[ -x "$say" ]] || { echo "build octoplus-voice-say first"; exit 2; }
 mkdir -p "$(dirname "$out")"
 
 pw-loopback -c 1 -m '[ MONO ]' --capture-props="media.class=Audio/Sink node.name=$sink" \
@@ -47,7 +47,7 @@ sleep 2
   if [[ "$had_conf" == 1 ]]; then grep -v -E '^[[:space:]]*(capture_node|playback_node)[[:space:]]*=' "$work/voice.conf.orig" || true; fi
   printf 'capture_node = %s\nplayback_node = %s\n' "$mic" "$out_sink"
 } > "$conf"
-systemctl --user restart neuroos-voice
+systemctl --user restart octoplus-voice
 for _ in $(seq 1 90); do
   rc=0; "$ctl" voice status >/dev/null 2>&1 || rc=$?
   [[ "$rc" == 0 ]] && break
@@ -60,7 +60,7 @@ n=0
 while IFS= read -r q; do
   [[ -z "$q" ]] && continue
   n=$((n + 1))
-  "$say" "$HOME/.local/opt/neuroos/models/voice" am_michael "$work/q$n.wav" "$q"
+  "$say" "$HOME/.local/opt/octoplus/models/voice" am_michael "$work/q$n.wav" "$q"
   rec_start=$(date +%s.%N)
   pw-record --target "$out_mic" --rate 24000 --channels 1 --format s16 "$work/a$n.wav" & rec=$!
   sleep 0.5

@@ -10,15 +10,15 @@ cd "$root"
 echo "=== Spike S-03: Stream Latency & Cancel Benchmark ==="
 
 # 1. Release builds
-echo "Building neuroos-bench-ipc-stream (release)..."
-cargo build --release -p neuroos-bench-ipc-stream
+echo "Building octoplus-bench-ipc-stream (release)..."
+cargo build --release -p octoplus-bench-ipc-stream
 
-echo "Building neuroos_stream_bench_server (release)..."
+echo "Building octoplus_stream_bench_server (release)..."
 cmake --preset release -B "$root/cpp/build/release" -S "$root/cpp" -DCMAKE_CXX_FLAGS="-Wno-error=unused-result"
-cmake --build "$root/cpp/build/release" --target neuroos_stream_bench_server --parallel
+cmake --build "$root/cpp/build/release" --target octoplus_stream_bench_server --parallel
 
-rust_bench="$root/target/release/neuroos-bench-ipc-stream"
-cpp_server="$root/cpp/build/release/tools/neuroos_stream_bench_server"
+rust_bench="$root/target/release/octoplus-bench-ipc-stream"
+cpp_server="$root/cpp/build/release/tools/octoplus_stream_bench_server"
 
 if [[ ! -x "$rust_bench" ]]; then
   echo "Error: Rust benchmark binary not found: $rust_bench" >&2
@@ -53,11 +53,11 @@ echo "  CPU MHz avg:  $cpu_mhz"
 echo "  Load before:  $loadavg_before"
 
 runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-bench_tmp="$runtime_dir/neuroos-s03-bench-$$"
+bench_tmp="$runtime_dir/octoplus-s03-bench-$$"
 mkdir -p "$bench_tmp"
 chmod 0700 "$bench_tmp"
 
-unit_name="neuroos-s03-bench-$$"
+unit_name="octoplus-s03-bench-$$"
 plain_pid=""
 neg_pid=""
 
@@ -114,7 +114,7 @@ echo "--- Running Setup 2: Hardened User Unit (systemd-run --user) ---"
 unit_dir="$bench_tmp/unit"
 mkdir -p "$unit_dir"
 chmod 0700 "$unit_dir"
-cp "$cpp_server" "$unit_dir/neuroos_stream_bench_server"
+cp "$cpp_server" "$unit_dir/octoplus_stream_bench_server"
 unit_sock="$unit_dir/bench.sock"
 unit_json="$bench_tmp/unit.json"
 
@@ -152,7 +152,7 @@ run_cmd=(systemd-run --user --quiet --collect --unit "$unit_name")
 for p in "${props[@]}"; do
   run_cmd+=(-p "$p")
 done
-run_cmd+=(-p "BindPaths=$unit_dir" "$unit_dir/neuroos_stream_bench_server" "$unit_sock")
+run_cmd+=(-p "BindPaths=$unit_dir" "$unit_dir/octoplus_stream_bench_server" "$unit_sock")
 "${run_cmd[@]}"
 
 wait_for_socket "$unit_sock"

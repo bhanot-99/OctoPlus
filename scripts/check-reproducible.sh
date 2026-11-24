@@ -8,15 +8,15 @@
 #    same locked dependencies, and requires every program to be byte-for-byte identical.
 # 2. Assembles the .deb twice from the same inputs and requires identical packages.
 # 3. Checks the programs for a non-executable stack and the units for network isolation.
-# NOT covered: the C++ programs (neuroos-inference, neuroos-voice). The script says so at the end.
+# NOT covered: the C++ programs (octoplus-inference, octoplus-voice). The script says so at the end.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=scripts/repro-env.sh
 source "$root/scripts/repro-env.sh"
 
-shipped=(neuroos-healthd neuroos-storage neuroos-monitor neuroos-kernel neuroos-confirm
-         neuroos-knowledge neuroos-fetcher neuroosctl neuroos-gen-units)
+shipped=(octoplus-healthd octoplus-storage octoplus-monitor octoplus-kernel octoplus-confirm
+         octoplus-knowledge octoplus-fetcher octoplusctl octoplus-gen-units)
 
 echo "=== 1. Locked dependencies ==="
 if [[ ! -f "$root/Cargo.lock" ]]; then
@@ -70,7 +70,7 @@ echo "=== 4. Threat-model review (security.md) ==="
 non_isolated=0
 for unit in "$root"/deploy/systemd/user/*.service; do
   name="$(basename "$unit")"
-  if [[ "$name" != "neuroos-model-check.service" && "$name" != "neuroos-runtime.service" ]]; then
+  if [[ "$name" != "octoplus-model-check.service" && "$name" != "octoplus-runtime.service" ]]; then
     if ! grep -q "PrivateNetwork=true" "$unit"; then
       echo "FAILED: $name does not have PrivateNetwork=true!" >&2
       non_isolated=$((non_isolated + 1))
@@ -82,14 +82,14 @@ if [[ "$non_isolated" -gt 0 ]]; then
   exit 1
 fi
 echo "Verified: all user service units enforce PrivateNetwork=true."
-if ! grep -q "RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6" "$root/deploy/systemd/system/neuroos-fetcher.service"; then
+if ! grep -q "RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6" "$root/deploy/systemd/system/octoplus-fetcher.service"; then
   echo "FAILED: fetcher service lacks address family restriction" >&2
   exit 1
 fi
 echo "Verified: the fetcher service restricts address families."
 
 echo "=== 5. The .deb assembled twice from the same inputs ==="
-deb="$root/dist/semantic-neuroos_1.1.0_amd64.deb"
+deb="$root/dist/octoplus_1.1.0_amd64.deb"
 sums=()
 for _ in 1 2; do
   "$root/scripts/package-deb.sh" --skip-build >/dev/null
@@ -105,4 +105,4 @@ echo "Package is identical across two assemblies: ${sums[0]}"
 
 echo ""
 echo "PASS: the Rust programs and the package assembly are reproducible."
-echo "NOT verified: the C++ programs (neuroos-inference, neuroos-voice) were not built twice."
+echo "NOT verified: the C++ programs (octoplus-inference, octoplus-voice) were not built twice."

@@ -12,18 +12,18 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-say="$root/cpp/build/voice-release/neuroos-voice/neuroos-voice-say"
-ctl="$HOME/.local/opt/neuroos/bin/neuroosctl"
-vconf="$HOME/.config/neuroos/voice.conf"
-nconf="$HOME/.config/neuroos/nudges.toml"
-cconf="$HOME/.config/neuroos/config.toml"
+say="$root/cpp/build/voice-release/octoplus-voice/octoplus-voice-say"
+ctl="$HOME/.local/opt/octoplus/bin/octoplusctl"
+vconf="$HOME/.config/octoplus/voice.conf"
+nconf="$HOME/.config/octoplus/nudges.toml"
+cconf="$HOME/.config/octoplus/config.toml"
 work="$(mktemp -d)"; tag="nudge$$"
-mic="neuroos-test-mic-$tag"; sink="neuroos-test-sink-$tag"
-out_sink="neuroos-test-out-$tag"; out_mic="neuroos-test-outmic-$tag"
+mic="octoplus-test-mic-$tag"; sink="octoplus-test-sink-$tag"
+out_sink="octoplus-test-out-$tag"; out_mic="octoplus-test-outmic-$tag"
 pids=()
-dropin="$HOME/.config/systemd/user/neuroos-voice.service.d/zz-nudge-check.conf"
+dropin="$HOME/.config/systemd/user/octoplus-voice.service.d/zz-nudge-check.conf"
 mkdir -p "$(dirname "$dropin")"
-printf '[Service]\nEnvironment=NEUROOS_VOICE_TRACE=1\n' > "$dropin"
+printf '[Service]\nEnvironment=OCTOPLUS_VOICE_TRACE=1\n' > "$dropin"
 systemctl --user daemon-reload
 for f in "$vconf" "$nconf" "$cconf"; do [[ -f "$f" ]] && cp "$f" "$work/$(basename "$f").orig"; done
 cleanup() {
@@ -32,11 +32,11 @@ cleanup() {
   for f in "$vconf" "$nconf" "$cconf"; do
     if [[ -f "$work/$(basename "$f").orig" ]]; then cp "$work/$(basename "$f").orig" "$f"; else rm -f "$f"; fi
   done
-  systemctl --user restart neuroos-voice neuroos-knowledge || true
+  systemctl --user restart octoplus-voice octoplus-knowledge || true
   rm -rf "$work"
 }
 trap cleanup EXIT
-[[ -x "$say" ]] || { echo "build neuroos-voice-say first"; exit 2; }
+[[ -x "$say" ]] || { echo "build octoplus-voice-say first"; exit 2; }
 
 pw-loopback -c 1 -m '[ MONO ]' --capture-props="media.class=Audio/Sink node.name=$sink" \
   --playback-props="media.class=Audio/Source node.name=$mic" & pids+=("$!")
@@ -58,14 +58,14 @@ if [[ -f "$cconf" ]]; then
 else
   printf '[nudges]\nquiet_start_min = 0\nquiet_end_min = 0\n' > "$cconf"
 fi
-systemctl --user restart neuroos-voice
+systemctl --user restart octoplus-voice
 for _ in $(seq 1 90); do
   rc=0; "$ctl" voice status >/dev/null 2>&1 || rc=$?
   [[ "$rc" == 0 ]] && break; sleep 1
 done
 "$ctl" voice status | head -1
 started_at="$(date +"%Y-%m-%d %H:%M:%S")"
-systemctl --user restart neuroos-knowledge   # its first evaluation now finds a voice that is ready
+systemctl --user restart octoplus-knowledge   # its first evaluation now finds a voice that is ready
 before=$("$ctl" audit tail 2>/dev/null | grep -c "system.disk_report" || true)
 echo "waiting up to 100 s for the nudge to be spoken..."
 # "last: 0 min ago" in `nudges list` means only that the engine decided about the rule: a held
@@ -73,7 +73,7 @@ echo "waiting up to 100 s for the nudge to be spoken..."
 spoken=0
 for _ in $(seq 1 20); do
   sleep 5
-  if journalctl --user -u neuroos-voice --since "$started_at" --no-pager 2>/dev/null \
+  if journalctl --user -u octoplus-voice --since "$started_at" --no-pager 2>/dev/null \
       | grep -q "voice: audio_written"; then spoken=1; break; fi
 done
 if [[ "$spoken" == 0 ]]; then
@@ -93,11 +93,11 @@ for _ in $(seq 1 120); do
   sleep 0.5
 done
 echo "follow-up window open: $opened"
-"$say" "$HOME/.local/opt/neuroos/models/voice" am_michael "$work/yes.wav" "Yes, show me."
+"$say" "$HOME/.local/opt/octoplus/models/voice" am_michael "$work/yes.wav" "Yes, show me."
 pw-play --target "$sink" "$work/yes.wav"
 sleep 20
 after=$("$ctl" audit tail 2>/dev/null | grep -c "system.disk_report" || true)
-trace="$(journalctl --user -u neuroos-voice --since "$started_at" --no-pager 2>/dev/null | grep -o 'voice: .*' || true)"
+trace="$(journalctl --user -u octoplus-voice --since "$started_at" --no-pager 2>/dev/null | grep -o 'voice: .*' || true)"
 written=$(grep -c "audio_written" <<<"$trace" || true)
 echo "voice trace: $(tr '\n' ' ' <<<"$trace" | sed 's/voice: //g' | cut -c1-300)"
 status=0

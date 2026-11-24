@@ -1,5 +1,5 @@
-Semantic-NeuroOS
-Copyright (C) 2026 Semantic-NeuroOS Contributors
+OctoPlus
+Copyright (C) 2026 OctoPlus Contributors
 
 This program is free software: you can redistribute it and/or modify it under the terms
 of the GNU General Public License as published by the Free Software Foundation, version 3
@@ -9,8 +9,8 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
 without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 See the GNU General Public License below for more details.
 
-Why GPL-3.0 (owner decision D-44, 2026-11-22): neuroos-monitor statically links the
-GPL-3.0-only cosmic-protocols crate and neuroos-voice uses the GPL-3.0 espeak-ng library,
+Why GPL-3.0 (owner decision D-44, 2026-11-22): octoplus-monitor statically links the
+GPL-3.0-only cosmic-protocols crate and octoplus-voice uses the GPL-3.0 espeak-ng library,
 so binaries built from this project are distributed under GPL-3.0. Third-party components
 and model weights keep their own licences: see docs/LICENSES.md and models/manifest.toml.
 

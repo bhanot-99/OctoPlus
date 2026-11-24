@@ -1,4 +1,4 @@
-# PRD — Semantic-NeuroOS
+# PRD — OctoPlus
 
 **Document type:** Product Requirements Document
 **Product version targeted:** v1.0
@@ -13,7 +13,7 @@
 
 ## 1. Product Summary
 
-Semantic-NeuroOS is a **private laptop buddy for Linux**. It runs entirely on your machine, knows what you are working on, remembers what you did, talks with you by voice, and **speaks first when something is worth saying** — for example when the disk is nearly full. It also chats about everyday questions and, only when you approve, looks things up on the web.
+OctoPlus is a **private laptop buddy for Linux**. It runs entirely on your machine, knows what you are working on, remembers what you did, talks with you by voice, and **speaks first when something is worth saying** — for example when the disk is nearly full. It also chats about everyday questions and, only when you approve, looks things up on the web.
 
 ### 1.1 One-sentence pitch
 
@@ -85,7 +85,7 @@ Semantic-NeuroOS is a **private laptop buddy for Linux**. It runs entirely on yo
 | **Primary — the private laptop user** | Someone who lives on a Linux laptop and wants a helpful companion without giving their life to a cloud. | The buddy tells them about a problem before it hurts, remembers their preferences, and they can see that nothing left the machine without a yes. |
 | **Secondary — the developer** | Engineer with terminals, builds, editors, docs, git and notes. | "What was that error?" and "what did I do yesterday?" get correct answers, hands-free. |
 | **Tertiary — the security-sensitive professional** | Researcher, journalist, legal or medical worker. | They can audit the action log, the egress ledger and the sandbox settings. |
-| **Internal — the operator** | The project owner, who builds, installs and debugs. | `neuroosctl status`, clear logs, reproducible builds. |
+| **Internal — the operator** | The project owner, who builds, installs and debugs. | `octoplusctl status`, clear logs, reproducible builds. |
 
 **Not designed for:** fleet administrators; people who want cloud-model reasoning quality; machines without AVX2.
 
@@ -102,7 +102,7 @@ Semantic-NeuroOS is a **private laptop buddy for Linux**. It runs entirely on yo
 | Audio | PipeWire ≥ 1.0 |
 | Init | systemd ≥ 255, user-scope units for everything except the fetcher |
 | Network | None for any part except the fetcher |
-| Models | Local files under `/opt/neuroos/models/`, verified by SHA-256; never downloaded by a service |
+| Models | Local files under `/opt/octoplus/models/`, verified by SHA-256; never downloaded by a service |
 | Languages | Rust and C++20 only |
 
 ---
@@ -127,13 +127,13 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | F-12 | Health monitoring and soak harness | P0 | healthd |
 | F-13 | Privacy controls | P0 | C1, C2, C3, C6 |
 | F-14 | Data lifecycle: retention, GC, backups, re-index | P0 | C3 |
-| F-15 | Operator CLI `neuroosctl` | P0 | CLI |
+| F-15 | Operator CLI `octoplusctl` | P0 | CLI |
 | F-16 | One consistent voice | P0 | C2 |
 | F-17 | Folder sensors: git, notes, calendar files | P1 | C1 |
 | F-18 | Calendar reminders as nudges | P1 | C5 |
 | F-19 | wlroots compositor support | P2 | C1 |
 
-### 5.1 Voice (C2 `neuroos-voice`)
+### 5.1 Voice (C2 `octoplus-voice`)
 
 | ID | Requirement |
 | :--- | :--- |
@@ -150,7 +150,7 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | FR-VOI-11 | Speak an unprompted line when C5 requests it (nudges), under the same barge-in rules. |
 | FR-VOI-12 | Idle CPU within §6.2, measured against a real microphone in a normal room. |
 
-### 5.2 Sensing (C1 `neuroos-monitor`)
+### 5.2 Sensing (C1 `octoplus-monitor`)
 
 | ID | Requirement |
 | :--- | :--- |
@@ -167,11 +167,11 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | FR-MON-11 | (P1) Watch configured folders (git repos, notes, calendar files) and emit file activity. |
 | FR-MON-12 | `--record <file>` writes the event stream to a dump; an anonymiser replaces personal text using a keyed HMAC with a per-run random key that is then discarded. |
 
-### 5.3 Memory (C3 `neuroos-storage`)
+### 5.3 Memory (C3 `octoplus-storage`)
 
 | ID | Requirement |
 | :--- | :--- |
-| FR-STO-01 | Run the four-stage ingest filter on every event: (1) collapse subprocesses into their root, (2) drop NeuroOS's own windows, (3) promote only after ≥ 3 occurrences or > 5 s of active dwell, (4) demote passive media. |
+| FR-STO-01 | Run the four-stage ingest filter on every event: (1) collapse subprocesses into their root, (2) drop OctoPlus's own windows, (3) promote only after ≥ 3 occurrences or > 5 s of active dwell, (4) demote passive media. |
 | FR-STO-02 | Map promoted events to a domain (Architecture §7.3) and attach taint flags. |
 | FR-STO-03 | Own the single embedding model. No other part loads one. |
 | FR-STO-04 | Keep **all** persistent data in one SQLite database (WAL mode): metadata, chunk text, full-text index, and vectors as blobs. No second storage engine. |
@@ -185,7 +185,7 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | FR-STO-12 | Record the embedding model id; on change, re-embed in the background without blocking queries. |
 | FR-STO-13 | "Forget" deletes every record in a time range or from an app — rows, text index, vectors — in one transaction, and removes them from backups at the next cycle. |
 
-### 5.4 Understanding (C5 `neuroos-knowledge`)
+### 5.4 Understanding (C5 `octoplus-knowledge`)
 
 | ID | Requirement |
 | :--- | :--- |
@@ -218,7 +218,7 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | FR-PRO-01 | Save a fact only when the user asks ("remember that…") or says yes to "want me to remember that?". Never save silently. |
 | FR-PRO-02 | `profile.remember` is SAFE in a clean context and REVIEW in a tainted one, so web content can never plant a fact unnoticed. |
 | FR-PRO-03 | Include only the facts relevant to the current question, inside the profile token budget. |
-| FR-PRO-04 | `neuroosctl profile list / add / remove`; "forget that" by voice routes to `profile.forget` (REVIEW). |
+| FR-PRO-04 | `octoplusctl profile list / add / remove`; "forget that" by voice routes to `profile.forget` (REVIEW). |
 | FR-PRO-05 | Personal facts are never spoken in a nudge and never placed in a search query unless the user leaves them there in the dialog. |
 
 ### 5.7 Proactive nudges (C5 nudge engine)
@@ -227,7 +227,7 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | :--- | :--- |
 | FR-NUD-01 | Evaluate nudge rules every 30 s against C3's health signals. |
 | FR-NUD-02 | Rules are declarative: signal, threshold with hysteresis, minimum duration, cooldown, priority (info / important / urgent), line templates, optional offered skill. |
-| FR-NUD-03 | v1.0 rule set: disk nearly full (≥ 90%, urgent at ≥ 95%); disk filling fast (projected full within 24 h); battery low on battery power (≤ 15%); sustained high temperature (≥ 90 °C for 2 min); sustained memory pressure (< 10% available for 2 min); long session without a break (≥ 90 min active); a NeuroOS part is degraded. (P1) upcoming calendar event. All thresholds configurable. |
+| FR-NUD-03 | v1.0 rule set: disk nearly full (≥ 90%, urgent at ≥ 95%); disk filling fast (projected full within 24 h); battery low on battery power (≤ 15%); sustained high temperature (≥ 90 °C for 2 min); sustained memory pressure (< 10% available for 2 min); long session without a break (≥ 90 min active); an OctoPlus part is degraded. (P1) upcoming calendar event. All thresholds configurable. |
 | FR-NUD-04 | **Lines come from fixed templates filled with numbers.** No model-written text and no web-derived text in a nudge. |
 | FR-NUD-05 | Stay silent, holding or downgrading to a notification, when: paused; quiet hours; the user is speaking or a turn is in progress; another app is using the microphone; media is playing; a fullscreen window is focused; the user is idle or the session is locked (deliver on return, merged). |
 | FR-NUD-06 | Rate limits: at most 3 spoken nudges per hour and 8 per day; each rule has its own cooldown (default 24 h). Urgent nudges may exceed the hourly limit once per rule. |
@@ -238,11 +238,11 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | FR-NUD-11 | Log every nudge and its outcome (accepted, dismissed, ignored, held) for KPI-9 and KPI-10. |
 | FR-NUD-12 | Notifications are rendered by C6 from a template id and numbers, never from free text. |
 
-### 5.8 Inference (C4 `neuroos-inference`)
+### 5.8 Inference (C4 `octoplus-inference`)
 
 | ID | Requirement |
 | :--- | :--- |
-| FR-INF-01 | Load the model chosen by ADR after spike S-02 from `/opt/neuroos/models/` via read-only `mmap`, after a SHA-256 check. The model is named in the manifest and can be swapped without code changes. |
+| FR-INF-01 | Load the model chosen by ADR after spike S-02 from `/opt/octoplus/models/` via read-only `mmap`, after a SHA-256 check. The model is named in the manifest and can be swapped without code changes. |
 | FR-INF-02 | Build on a pinned release of upstream llama.cpp. Prove correctness at pin time with a perplexity check against a reference. |
 | FR-INF-03 | Stream generated text to the requester as frames on `inference.sock`. Every stream ends with an explicit end frame, also on cancel and on error. |
 | FR-INF-04 | Cancel an in-flight generation within one decode step. One generation runs at a time; a new interactive request cancels the old one. |
@@ -251,14 +251,14 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | FR-INF-07 | Ship a benchmark mode that reports time to first token, prefill and decode speed, and RSS. |
 | FR-INF-08 | **Optional GPU offload (ADR-0008).** Off by default. Same model file and prompt layout as the CPU path. Fall back to the CPU when the GPU is missing, the driver fails, free VRAM is below the VRAM budget, or the machine is on battery (default). Report the path in use in health. Every target in §6 is met on the CPU alone. |
 
-### 5.9 SafetyGate (C6 `neuroos-kernel`)
+### 5.9 SafetyGate (C6 `octoplus-kernel`)
 
 | ID | Requirement |
 | :--- | :--- |
 | FR-KER-01 | Skill registry: each skill declares one capability, a base tier, an argument schema and a sandbox profile. |
 | FR-KER-02 | Tiers: **SAFE** (runs), **REVIEW** (needs dialog approval), **DANGEROUS** (dialog + typed phrase; disabled by default). |
 | FR-KER-03 | Taint escalation: `EXTERNAL_UNTRUSTED` in the context turns SAFE into REVIEW. Tiers never go down. |
-| FR-KER-04 | Approval is given only in the `neuroos-confirm` dialog and bound with HMAC-SHA256 over the action, its arguments, the decision and an expiry. Replayed, expired or forged tokens are rejected. Voice never approves. |
+| FR-KER-04 | Approval is given only in the `octoplus-confirm` dialog and bound with HMAC-SHA256 over the action, its arguments, the decision and an expiry. Replayed, expired or forged tokens are rejected. Voice never approves. |
 | FR-KER-05 | Run each skill in a sandboxed child process with its own filesystem and syscall rules, resource limits and a timeout. |
 | FR-KER-06 | Write hash-chained `ATTEMPT` and `RESULT` records to `actions.jsonl` for every dispatch, including rejections. An `ATTEMPT` that cannot be written denies the action. |
 | FR-KER-07 | Write every outbound request to the egress ledger `egress.jsonl`: time, host, exact text sent, bytes out and in. |
@@ -282,11 +282,11 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | `web.search` | REVIEW | Run one search and read up to N result pages (N shown in the dialog). |
 | `shell.exec` | DANGEROUS | Disabled by default. |
 
-### 5.10 Fetcher (C7 `neuroos-fetcher`)
+### 5.10 Fetcher (C7 `octoplus-fetcher`)
 
 | ID | Requirement |
 | :--- | :--- |
-| FR-FET-01 | Run as the dedicated system user `neuroos-fetcher`. |
+| FR-FET-01 | Run as the dedicated system user `octoplus-fetcher`. |
 | FR-FET-02 | Accept requests only from C6, and only with a valid approval token for exactly that request. |
 | FR-FET-03 | Anti-SSRF: resolve once, reject every non-public address range, pin the connection to the validated address, re-validate every redirect (max 3). |
 | FR-FET-04 | `https` and `GET` only; text content types only; body ≤ 5 MiB; total time ≤ 15 s. |
@@ -297,7 +297,7 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | FR-FET-09 | Report host, bytes out and bytes in for each request to C6 for the egress ledger. |
 | FR-FET-10 | Outbound connections limited by the kernel to TCP 443. |
 
-### 5.11 Health (`neuroos-healthd`)
+### 5.11 Health (`octoplus-healthd`)
 
 | ID | Requirement |
 | :--- | :--- |
@@ -305,7 +305,7 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | FR-HLT-02 | Scrape every health socket every 30 s. Each part reports real status: a stopped subsystem reports DEGRADED. |
 | FR-HLT-03 | Read each unit's cgroup memory and CPU. |
 | FR-HLT-04 | Soak mode: per-part baseline, RSS growth and p99 drift against NFR-REL-04. |
-| FR-HLT-05 | Serve the aggregate to `neuroosctl status`. |
+| FR-HLT-05 | Serve the aggregate to `octoplusctl status`. |
 
 ### 5.12 Privacy controls
 
@@ -315,10 +315,10 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | FR-PRV-02 | App exclusion list; defaults include common password managers and private browser windows. |
 | FR-PRV-03 | `forget --since / --until / --app` purges data through C6 (REVIEW). |
 | FR-PRV-04 | Audio is transcribed only after the wake word or inside a follow-up window. Raw audio lives only in a bounded in-memory buffer. |
-| FR-PRV-05 | `neuroosctl egress list` shows everything that ever left the machine. |
-| FR-PRV-06 | `neuroosctl purge --all` removes every byte of user data. |
+| FR-PRV-05 | `octoplusctl egress list` shows everything that ever left the machine. |
+| FR-PRV-06 | `octoplusctl purge --all` removes every byte of user data. |
 
-### 5.13 CLI (`neuroosctl`)
+### 5.13 CLI (`octoplusctl`)
 
 | ID | Requirement |
 | :--- | :--- |
@@ -383,7 +383,7 @@ The full plan is [security.md](security.md). Binding requirements:
 | NFR-SEC-09 | Dialog-fatigue limits: at most 6 REVIEW or DANGEROUS requests per rolling minute; a request the user denied is refused for 300 s; one dialog at a time. Label T (ADR-0010, proposed). |
 | NFR-SEC-10 | The dialog's approve button stays inactive for 1 s after the dialog appears and again each time it regains focus. Label T (ADR-0010, proposed). |
 | NFR-PRIV-01 | No raw audio, screenshots or keystrokes are ever stored. |
-| NFR-PRIV-02 | All user data lives under `~/.local/share/neuroos/` plus the spool, and `purge --all` removes it. |
+| NFR-PRIV-02 | All user data lives under `~/.local/share/octoplus/` plus the spool, and `purge --all` removes it. |
 | NFR-PRIV-03 | No personal content in logs at `info` or above. |
 | NFR-PRIV-04 | Nothing is sent to the network that the user did not see and approve for that request. |
 
@@ -430,7 +430,7 @@ The full plan is [security.md](security.md). Binding requirements:
 
 **UJ-4 Web content cannot act alone.** A fetched page contains hidden instructions. A later question touches that page; the context is tainted, so a normally SAFE skill needs approval and the dialog explains why.
 
-**UJ-5 Privacy control.** "Pause for an hour" stops sensing and listening. Next day the user runs `neuroosctl forget` for a time range and confirms. `neuroosctl egress list` shows the one search from UJ-3 and nothing else.
+**UJ-5 Privacy control.** "Pause for an hour" stops sensing and listening. Next day the user runs `octoplusctl forget` for a time range and confirms. `octoplusctl egress list` shows the one search from UJ-3 and nothing else.
 
 **UJ-6 Not now.** A break reminder arrives during focused work. The user says "not now"; that rule is silent for four hours.
 

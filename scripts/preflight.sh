@@ -6,7 +6,7 @@ set -euo pipefail
 
 # Tooling margin, not a product number: a clean debug + coverage build of the
 # workspace needs several GiB; keep headroom for the rest of the system.
-readonly MIN_FREE_GIB="${NEUROOS_MIN_FREE_GIB:-10}"
+readonly MIN_FREE_GIB="${OCTOPLUS_MIN_FREE_GIB:-10}"
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 free_kib="$(df --output=avail -k "$root" | tail -n 1 | tr -d ' ')"

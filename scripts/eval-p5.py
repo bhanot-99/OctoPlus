@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Phase 5 evaluation harness (KPI-1, KPI-12, NFR-PERF-03): asks each question of a JSONL file
-through the real `neuroosctl ask` and writes a transcript for the owner to grade.
+through the real `octoplusctl ask` and writes a transcript for the owner to grade.
 
     scripts/eval-p5.py --questions tests/eval/p5/kpi12_questions.jsonl --out reports/p5-kpi12.md
 
@@ -17,7 +17,7 @@ import subprocess
 import sys
 import time
 
-DEFAULT_CTL = os.path.expanduser("~/.local/opt/neuroos/bin/neuroosctl")
+DEFAULT_CTL = os.path.expanduser("~/.local/opt/octoplus/bin/octoplusctl")
 SESSION_GAP_NS = 3_600 * 1_000_000_000  # one hour: far beyond any follow-up window
 
 

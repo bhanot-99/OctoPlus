@@ -11,30 +11,30 @@
 set -euo pipefail
 hours="${1:-4}"; out="${2:-voice-soak.csv}"
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-say="$root/cpp/build/voice-release/neuroos-voice/neuroos-voice-say"
-ctl="$HOME/.local/opt/neuroos/bin/neuroosctl"
-conf="$HOME/.config/neuroos/voice.conf"
+say="$root/cpp/build/voice-release/octoplus-voice/octoplus-voice-say"
+ctl="$HOME/.local/opt/octoplus/bin/octoplusctl"
+conf="$HOME/.config/octoplus/voice.conf"
 work="$(mktemp -d)"; tag="soak$$"
-mic="neuroos-test-mic-$tag"; sink="neuroos-test-sink-$tag"; out_sink="neuroos-test-out-$tag"; out_mic="neuroos-test-outmic-$tag"
+mic="octoplus-test-mic-$tag"; sink="octoplus-test-sink-$tag"; out_sink="octoplus-test-out-$tag"; out_mic="octoplus-test-outmic-$tag"
 pids=(); had=0; [[ -f "$conf" ]] && { had=1; cp "$conf" "$work/orig"; }
 cleanup() { for p in "${pids[@]}"; do kill "$p" 2>/dev/null || true; done
   if [[ "$had" == 1 ]]; then cp "$work/orig" "$conf"; else rm -f "$conf"; fi
-  systemctl --user restart neuroos-voice || true; rm -rf "$work"; }
+  systemctl --user restart octoplus-voice || true; rm -rf "$work"; }
 trap cleanup EXIT
-[[ -x "$say" ]] || { echo "build neuroos-voice-say first"; exit 2; }
+[[ -x "$say" ]] || { echo "build octoplus-voice-say first"; exit 2; }
 pw-loopback -c 1 -m '[ MONO ]' --capture-props="media.class=Audio/Sink node.name=$sink" --playback-props="media.class=Audio/Source node.name=$mic" & pids+=("$!")
 pw-loopback -c 1 -m '[ MONO ]' --capture-props="media.class=Audio/Sink node.name=$out_sink" --playback-props="media.class=Audio/Source node.name=$out_mic" & pids+=("$!")
 sleep 2
 printf 'capture_node = %s\nplayback_node = %s\n' "$mic" "$out_sink" > "$conf"
-systemctl --user restart neuroos-voice
+systemctl --user restart octoplus-voice
 for _ in $(seq 1 90); do rc=0; "$ctl" voice status >/dev/null 2>&1 || rc=$?; [[ "$rc" == 0 ]] && break; sleep 1; done
 questions=("what time is it" "what is two plus two" "pause for one hour" "how much disk space is left"
            "what was I working on this morning" "remember that my favourite colour is green"
            "add milk to my shopping note" "what is the capital of France" "what is on my calendar today")
-models="$HOME/.local/opt/neuroos/models/voice"; voices=(am_michael af_bella af_nicole)
+models="$HOME/.local/opt/octoplus/models/voice"; voices=(am_michael af_bella af_nicole)
 echo "minutes,rss_mib,cpu_percent_since_last,turns" > "$out"
 end=$(( $(date +%s) + ${SOAK_SECONDS:-$(( hours * 3600 ))} )); next_sample=0; i=0
-pid=$(systemctl --user show -p MainPID --value neuroos-voice); first_pid=$pid
+pid=$(systemctl --user show -p MainPID --value octoplus-voice); first_pid=$pid
 last_ticks=$(awk '{print $14+$15}' /proc/"$pid"/stat); last_t=$(date +%s); start=$(date +%s)
 while (( $(date +%s) < end )); do
   q="${questions[$((i % ${#questions[@]}))]}"; v="${voices[$((i % ${#voices[@]}))]}"; i=$((i+1))
@@ -43,7 +43,7 @@ while (( $(date +%s) < end )); do
   sleep 100
   now=$(date +%s)
   if (( now >= next_sample )); then
-    pid=$(systemctl --user show -p MainPID --value neuroos-voice)
+    pid=$(systemctl --user show -p MainPID --value octoplus-voice)
     [[ "$pid" == "$first_pid" ]] || { echo "FAIL: the voice service restarted"; exit 1; }
     rss=$(awk '/VmRSS/ {print int($2/1024)}' /proc/"$pid"/status)
     ticks=$(awk '{print $14+$15}' /proc/"$pid"/stat)

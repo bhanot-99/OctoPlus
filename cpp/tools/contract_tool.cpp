@@ -1,8 +1,8 @@
 // Contract round-trip tool (P0-S02, phases.md §3.3 CT).
 //
-//   neuroos_contract_tool generate   writes one fully populated Envelope per body
+//   octoplus_contract_tool generate   writes one fully populated Envelope per body
 //                                    variant (and per nested oneof choice) to stdout
-//   neuroos_contract_tool echo       reads Envelopes from stdin, parses them, drops
+//   octoplus_contract_tool echo       reads Envelopes from stdin, parses them, drops
 //                                    unknown fields, re-serialises them to stdout
 //
 // Frames are a 4-byte little-endian length followed by the Envelope bytes, the
@@ -22,7 +22,7 @@
 #include <string>
 #include <string_view>
 
-#include "neuroos/v1/envelope.pb.h"
+#include "octoplus/v1/envelope.pb.h"
 
 namespace {
 
@@ -167,7 +167,7 @@ bool Serialize(const Message& m, std::string* out) {
 }
 
 int Generate() {
-  const Descriptor* env = neuroos::v1::Envelope::descriptor();
+  const Descriptor* env = octoplus::v1::Envelope::descriptor();
   const auto* body = env->FindOneofByName("body");
   if (body == nullptr) {
     std::cerr << "Envelope has no oneof body\n";
@@ -178,7 +178,7 @@ int Generate() {
     const FieldDescriptor* f = body->field(i);
     const int rotations = MaxOneofWidth(f->message_type(), 0);
     for (int c = 0; c < rotations; ++c) {
-      neuroos::v1::Envelope e;
+      octoplus::v1::Envelope e;
       e.set_schema_version(1);
       e.set_trace_id("trace-" + std::to_string(f->number()) + "-" + std::to_string(c));
       e.set_request_id(static_cast<std::uint64_t>(f->number()) * 1000U +
@@ -186,7 +186,7 @@ int Generate() {
       e.set_sent_at_ns(1'794'659'696'123'456'789ULL);
       e.set_end_of_stream(c % 2 == 0);
       const Filler filler{c};
-      filler.Fill(neuroos::v1::Envelope::GetReflection()->MutableMessage(&e, f), 1);
+      filler.Fill(octoplus::v1::Envelope::GetReflection()->MutableMessage(&e, f), 1);
       if (!Serialize(e, &bytes) || !WriteFrame(bytes)) {
         return 3;
       }
@@ -223,7 +223,7 @@ int Echo() {
       std::cerr << "truncated frame\n";
       return 6;
     }
-    neuroos::v1::Envelope e;
+    octoplus::v1::Envelope e;
     if (!e.ParseFromString(bytes)) {
       std::cerr << "parse failed\n";
       return 7;
@@ -249,6 +249,6 @@ int main(int argc, char** argv) {
   if (mode == "echo") {
     return Echo();
   }
-  std::cerr << "usage: neuroos_contract_tool generate|echo\n";
+  std::cerr << "usage: octoplus_contract_tool generate|echo\n";
   return 1;
 }

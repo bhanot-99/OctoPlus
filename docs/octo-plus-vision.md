@@ -12,7 +12,7 @@
 **Octo+** is a sovereign, spatially-aware cognitive operating system that integrates local systems architecture, novel neural mechanics, hybrid frontier intelligence, and an encrypted mobile remote link into a single, unified computing organism.
 
 Inspired by the cephalopod nervous system—where a central cognitive core works in harmony with semi-autonomous, highly adaptive limbs—**Octo+** blends:
-1. **The Physical Anatomy:** The deterministic, kernel-isolated daemons of **Semantic NeuroOS**.
+1. **The Physical Anatomy:** The deterministic, kernel-isolated daemons of **OctoPlus**.
 2. **The Biological Brain:** The ultra-compact, compute-reusing recurrent core of **PhaseLoopNN**.
 3. **Spatial Awareness:** Ambient physical dwell tracking and location-based proactive suggestions via GPS.
 4. **Orbital Cloud Uplink:** A cryptographically audited, sanitized bridge to frontier cloud models (**Claude**).
@@ -34,12 +34,12 @@ flowchart TD
 
     subgraph OctoCore ["Octo+ Core Substrate (Local Machine)"]
         direction TB
-        NeuroOS["Semantic NeuroOS Substrate<br/><i>(Sensing · Vector Storage · Safety Kernel)</i>"]
+        OctoPlus["OctoPlus Substrate<br/><i>(Sensing · Vector Storage · Safety Kernel)</i>"]
         PhaseLoop["PhaseLoopNN Cognitive Core<br/><i>(Always-on System 1 Instinct · < 50MB RAM)</i>"]
         AgentMesh["Open-Source Agent Mesh<br/><i>(Code Janitor · Research Scout · System Physician)</i>"]
         
-        NeuroOS <--> PhaseLoop
-        NeuroOS <--> AgentMesh
+        OctoPlus <--> PhaseLoop
+        OctoPlus <--> AgentMesh
     end
 
     subgraph SecurityGate ["Safety & Audit Boundary"]
@@ -55,7 +55,7 @@ flowchart TD
         Mobile["Mobile Neural Link (E2E Encrypted Phone App)"]
     end
 
-    PhysicalWorld --> NeuroOS
+    PhysicalWorld --> OctoPlus
     OctoCore --> Gate
     Gate -- "Approved Outbound Tokens" --> Claude
     OctoCore <--> Cockpit
@@ -66,7 +66,7 @@ flowchart TD
 
 ## 3. The Core Pillars of Octo+
 
-### Pillar 1: The OS Substrate (Semantic NeuroOS)
+### Pillar 1: The OS Substrate (OctoPlus)
 * **Zero-Network Isolation by Default:** Every core daemon touches user data under strict kernel isolation (`Landlock ABI v4` on Linux, `Seatbelt / App Sandbox` on macOS).
 * **Episodic Memory Matrix:** SQLite WAL database storing full-text search (FTS5) alongside dense 384-dimensional vector embeddings (`bge-small-en-v1.5`), strictly capped at 30,000 chunks (≤ 2 GB disk).
 * **Deterministic Safety Kernel (C6):** Actions are categorized into `SAFE`, `REVIEW`, and `DANGEROUS` tiers. Destructive actions require explicit visual confirmation dialogs.
@@ -182,7 +182,7 @@ An end-to-end encrypted remote bridge that turns your laptop into a sovereign, p
 | **Primary Target** | **Apple MacBook Air (M4 / M5 with 24 GB Unified Memory)** |
 | **Chassis Acoustics**| **100% Fanless & Silent** |
 | **Battery Life Target** | **15–18 Hours Continuous Operation** |
-| **Memory Allocation**| • PhaseLoopNN: ~50 MB<br>• NeuroOS Daemons + SQLite: ~400 MB<br>• Deep LLM (Standby): ~8.5 GB<br>• Free Workstation RAM: **> 14 GB** |
+| **Memory Allocation**| • PhaseLoopNN: ~50 MB<br>• OctoPlus Daemons + SQLite: ~400 MB<br>• Deep LLM (Standby): ~8.5 GB<br>• Free Workstation RAM: **> 14 GB** |
 | **Voice Latency** | **< 300 ms to First Spoken Word** |
 | **Network Default** | **Completely Offline (Air-Gapped by Kernel)** |
 
@@ -190,7 +190,7 @@ An end-to-end encrypted remote bridge that turns your laptop into a sovereign, p
 
 ## 9. Development Roadmap
 
-1. **Phase 1 (Foundations):** Complete Semantic NeuroOS baseline and PhaseLoopNN 3M–26M prototype.
+1. **Phase 1 (Foundations):** Complete OctoPlus baseline and PhaseLoopNN 3M–26M prototype.
 2. **Phase 2 (Packaging & Cockpit):** Build unified installer bundle and native visual dashboard.
 3. **Phase 3 (Mobile Bridge):** Implement Noise Protocol P2P socket bridge for iOS and Android.
 4. **Phase 4 (Frontier Uplink & GPS):** Integrate authenticated Claude bridge and GeoClue / CoreLocation hooks.

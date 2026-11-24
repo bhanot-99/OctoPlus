@@ -18,8 +18,8 @@ csvs=("$root"/reports/bench/soak-24h-*.csv)
 csv="${1:-${csvs[-1]}}"
 [[ -f "$csv" ]] || { echo "no soak CSV found; pass its path as the first argument" >&2; exit 2; }
 base="${csv%.csv}"
-units=(neuroos-healthd neuroos-storage neuroos-inference neuroos-monitor
-       neuroos-kernel neuroos-knowledge neuroos-voice)
+units=(octoplus-healthd octoplus-storage octoplus-inference octoplus-monitor
+       octoplus-kernel octoplus-knowledge octoplus-voice)
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT

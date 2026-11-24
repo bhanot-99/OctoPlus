@@ -1,0 +1,26 @@
+[package]
+name = "octopit"
+description = "OctoPit, the OctoPlus desktop dashboard (GTK4, ADR-0017)"
+version = "1.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "octopit"
+path = "src/main.rs"
+
+[dependencies]
+gtk4.workspace = true
+octoplus-common = { path = "../octoplus-common" }
+octopit-core = { path = "../octopit-core" }
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[build-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true

@@ -96,7 +96,7 @@ flowchart LR
 3. `justfile`: `build`, `test`, `lint`, `fmt`, `cov`, `bench`, `deny`, `ci`, `fetch-models`, `prune`, plus a disk-space pre-flight.
 4. Hosted CI workflow for format, lint, build, unit tests and `cargo deny`.
 5. Contracts v1: envelope, common, health, and first-cut messages for every part; code generation for Rust and C++.
-6. Shared libraries: `neuroos-common`, `-ipc` (framing, server, client, peer checks, deadlines, reconnect, streaming, accept-error handling), `-health`, `-taint`, `-sandbox`, `-testkit`; `cpp/libneuroos` with the same IPC and health behaviour.
+6. Shared libraries: `octoplus-common`, `-ipc` (framing, server, client, peer checks, deadlines, reconnect, streaming, accept-error handling), `-health`, `-taint`, `-sandbox`, `-testkit`; `cpp/liboctoplus` with the same IPC and health behaviour.
 7. `deny.toml` with the licence allowlist and the network-crate ban.
 8. `models/manifest.toml` and `scripts/fetch-models.sh` with hash verification.
 9. `BUGS.md`, `reports/_TEMPLATE.md`, ADR template.
@@ -135,7 +135,7 @@ flowchart LR
 
 - [ ] `just ci` green on a clean clone; hosted CI green.
 - [ ] Contracts generate and pass round-trip tests.
-- [ ] `neuroos-ipc` coverage gate met; every decision in framing and peer checking tested.
+- [ ] `octoplus-ipc` coverage gate met; every decision in framing and peer checking tested.
 - [ ] Spikes S-01 … S-05 complete; ADR-0001 … 0008 written and accepted by the owner.
 - [ ] PRD §6 updated from the spike results (labels changed from target to measured where applicable).
 - [ ] Models fetched and verified.
@@ -150,12 +150,12 @@ flowchart LR
 
 ### 4.1 Build
 
-1. Unit files for all parts with the full hardening baseline and socket-folder isolation; `neuroos.target`; the fetcher's system unit, user and spool.
+1. Unit files for all parts with the full hardening baseline and socket-folder isolation; `octoplus.target`; the fetcher's system unit, user and spool.
 2. Each service binary: loads config, applies its Landlock rules, serves health, connects to its peers. Feature logic is a stub that returns fixed data.
-3. `neuroos-healthd` complete: scrape, cgroup reader, aggregate, soak engine.
-4. `neuroosctl status` and `neuroosctl ask`.
+3. `octoplus-healthd` complete: scrape, cgroup reader, aggregate, soak engine.
+4. `octoplusctl status` and `octoplusctl ask`.
 5. C4 loads the chosen model for real and streams text.
-6. Thin path: `neuroosctl ask` → C5 → C6 `Evaluate` (static SAFE) → C3 (stub evidence) → C4 (real) → streamed text back.
+6. Thin path: `octoplusctl ask` → C5 → C6 `Evaluate` (static SAFE) → C3 (stub evidence) → C4 (real) → streamed text back.
 7. `scripts/check-egress.sh` and the socket-map probe test.
 
 ### 4.2 Stories
@@ -178,13 +178,13 @@ flowchart LR
 | FI | healthd against slow, crashing and garbage-sending mocks; C4 with a corrupt model file exits fatally; over-long prompt rejected. |
 | PF | C4 benchmark on the shipped unit; healthd RSS; skeleton RSS per part. |
 | MS | 2 h of repeated `ask` calls: no growth beyond 2%. |
-| E2E | `neuroosctl ask "hello"` returns streamed text; cancel stops within one decode step. |
+| E2E | `octoplusctl ask "hello"` returns streamed text; cancel stops within one decode step. |
 
 ### 4.4 Exit criteria
 
-- [ ] All units start under `neuroos.target` and report real health.
+- [ ] All units start under `octoplus.target` and report real health.
 - [ ] The three SC proofs pass, each with its negative control.
-- [ ] `neuroosctl ask` works end to end; C4 numbers recorded against ADR-0005.
+- [ ] `octoplusctl ask` works end to end; C4 numbers recorded against ADR-0005.
 - [ ] Kill-and-recover verified for every part.
 - [ ] Coverage gates met; phase report; owner sign-off.
 
@@ -200,7 +200,7 @@ flowchart LR
 1. Skill manifest format, registry and argument schemas.
 2. Tier evaluator with taint escalation.
 3. Key management, approval tokens, nonce set, expiry.
-4. `neuroos-confirm` GTK4 dialog per [design.md](design.md) §6, including the delayed Allow button and a test mode.
+4. `octoplus-confirm` GTK4 dialog per [design.md](design.md) §6, including the delayed Allow button and a test mode.
 5. Skill runner: sandboxed child per skill, limits, timeout.
 6. Audit log writer and verifier; egress ledger writer (used from Phase 8).
 7. Notification surface: `Notify(template id, numbers)`.
@@ -250,7 +250,7 @@ flowchart LR
 2. Sensors: window focus (with fullscreen where available), idle and lock, media players, CPU and memory, disk, battery, temperature, process tree, folders (P1).
 3. Event bus → `stream.sock` with a bounded buffer and a drop counter.
 4. Privacy layer: pause and exclusion list with defaults; `control.sock`.
-5. `--record`, `neuroosctl replay`, and the keyed anonymiser.
+5. `--record`, `octoplusctl replay`, and the keyed anonymiser.
 
 ### 6.2 Stories
 
@@ -352,7 +352,7 @@ flowchart LR
 4. Session history for follow-ups.
 5. General chat rules: honesty, professional-advice limits, the lookup offer (the search itself arrives in Phase 8; until then the offer is answered with "I can't look things up yet").
 6. Action route: grammar-limited skill calls to C6.
-7. Personal facts: `profile.remember`, `profile.forget`, relevance-based inclusion, `neuroosctl profile`.
+7. Personal facts: `profile.remember`, `profile.forget`, relevance-based inclusion, `octoplusctl profile`.
 8. Remaining skills: `memory.forget`, `notes.search`, `notes.append`, `calendar.read`.
 9. Evaluation harness for KPI-1, KPI-2, KPI-12, KPI-13; injection and control-token corpora v1.
 
@@ -374,7 +374,7 @@ flowchart LR
 | Level | Tests |
 | :--- | :--- |
 | UT / PT | Router fixtures; exact truncation; prompt never exceeds the budget; wrapper never split; output taint ⊇ union of inputs. |
-| IT | Real C3 + C4 + C6 in their units: `neuroosctl ask` for each route. |
+| IT | Real C3 + C4 + C6 in their units: `octoplusctl ask` for each route. |
 | PF | NFR-PERF-03 and NFR-PERF-05, at real deadlines. |
 | FI | C4 down → status answer within 250 ms; C3 slow → answer without evidence, flagged. |
 | SC | Injection corpus: zero unauthorised executions, zero unconfirmed saved facts; control-token corpus inert. |
@@ -402,7 +402,7 @@ flowchart LR
 3. Policy gate: hold rules, rate limits, quiet hours, delivery mode, merging of held nudges.
 4. Delivery by notification through C6; nudge log in C3.
 5. Nudge replies by text: yes, no, not now, stop; offered skills dispatched only from a reply.
-6. `neuroosctl nudges list / enable / disable / test`.
+6. `octoplusctl nudges list / enable / disable / test`.
 7. Replay harness: run recorded and synthetic dumps through the engine at speed.
 
 ### 9.2 Stories
@@ -481,7 +481,7 @@ flowchart LR
 ### 10.4 Exit criteria
 
 - [x] Performance, CPU and RSS within budget, measured per [rules.md](rules.md) §9. (Preamble < 0.25 ms, flush 0.036 ms, transcription 67 ms, idle CPU 2.3 %, RSS 560-600 MiB of 620; the 4 h settling run is the owner's.)
-- [ ] KPI-3/4/5 met on real audio. (Tool `neuroos-voice-eval` built; on synthetic voices KPI-4 0 of 8 missed, KPI-5 2.1 %; the owner's recordings are needed.)
+- [ ] KPI-3/4/5 met on real audio. (Tool `octoplus-voice-eval` built; on synthetic voices KPI-4 0 of 8 missed, KPI-5 2.1 %; the owner's recordings are needed.)
 - [x] UJ-1 and UJ-2 demonstrated by voice. (`scripts/voice-real-stack.sh`, `scripts/voice-nudge-check.sh`)
 - [x] No audio persisted; capture strictness proven. (`scripts/voice-sc-checks.sh`)
 - [ ] OQ-01 and OQ-04 closed. Phase report; owner sign-off. (Defaults "hey jarvis" and `af_heart`; the owner's listening test is `scripts/voice-listening-test.sh`.)
@@ -499,7 +499,7 @@ flowchart LR
 2. Search adapter for the chosen provider (OQ-02); result-page fetching up to N.
 3. Request hygiene: no cookies, state, referrer or identifying headers.
 4. `web.fetch` and `web.search` skills; the editable-query dialog; `fetch.key`.
-5. Egress ledger wired end to end; `neuroosctl egress list`.
+5. Egress ledger wired end to end; `octoplusctl egress list`.
 6. The lookup offer in C5 now leads to a real search; answers cite web use.
 7. SSRF corpus; URL-parser fuzzing.
 
@@ -530,7 +530,7 @@ flowchart LR
 > **Audit 2026-11-22** (`reports/hardening-audit-2026-11-22.md`): C7 shipped wired to a mock transport, so no page was ever fetched; the real transport now exists and is tested in a private network namespace. The boxes below say what is true now.
 
 - [~] SSRF corpus fully blocked (unit corpus, parser-differential cases, 8 real-transport tests in a private namespace with negative controls). **Fuzzing: not done** — no fuzz target existed; a 200 000-case property test stands in until `cargo-fuzz` is approved.
-- [~] Fetched content reaches C3 tainted (spool ingest tests); a later SAFE skill escalates (UJ-4 test). Not yet shown with a real fetched page on the installed stack (the system fetcher binary and `/etc/neuroos/fetch.key` need the owner's sudo).
+- [~] Fetched content reaches C3 tainted (spool ingest tests); a later SAFE skill escalates (UJ-4 test). Not yet shown with a real fetched page on the installed stack (the system fetcher binary and `/etc/octoplus/fetch.key` need the owner's sudo).
 - [~] Ledger equals what the server received for every request in the namespace test (hosts, approved query, redirects, refused hops). Packet capture on the installed stack not done.
 - [x] Injection corpus re-run with fetched pages: zero unauthorised executions or saved facts (`turn_test` injection corpus, evidence slot).
 - [ ] OQ-02 closed (D-39). Phase report written. **Owner sign-off needed for the real transport** (it did not exist when Phase 8 was accepted).
@@ -601,13 +601,13 @@ flowchart LR
 
 ## 14. Phase 11 — OctoPit, the desktop dashboard (v1.1)
 
-**Goal:** a professional desktop face for NeuroOS: health, chat, a mic button, models and GPU, activity and privacy. A client only; it can never approve anything.
+**Goal:** a professional desktop face for OctoPlus: health, chat, a mic button, models and GPU, activity and privacy. A client only; it can never approve anything.
 **Direction:** owner, 2026-11-23 (D-57). **Plan:** `docs/plans/phase-11-octopit-plan.md` · **Design:** `docs/design/octopit-ux.md` · **ADR:** 0017 · **Report:** `reports/phase-11-octopit.md`
 
 | Story | What |
 | :--- | :--- |
 | P11-S01 | Decision record, rule changes, `Client::OctoPit` in the socket map |
-| P11-S02 | `neuroos-octopit-core` (state, sockets, chat, voice, GPU) and the window shell, themes, icons, Overview |
+| P11-S02 | `octopit-core` (state, sockets, chat, voice, GPU) and the window shell, themes, icons, Overview |
 | P11-S03 | Chat with the plain-text rule |
 | P11-S04 | Mic button: C2 control messages and level, the voice dock |
 | P11-S05 | Backends and GPU |

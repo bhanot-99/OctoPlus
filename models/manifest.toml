@@ -1,4 +1,4 @@
-# models/manifest.toml — every model Semantic-NeuroOS may load (NFR-SEC-05, R0-9).
+# models/manifest.toml — every model OctoPlus may load (NFR-SEC-05, R0-9).
 #
 # `just fetch-models` (scripts/fetch-models.sh) downloads each entry over HTTPS and
 # verifies its SHA-256 before it is moved into place. A missing or wrong hash is fatal.
@@ -54,7 +54,7 @@ size_bytes = 711396
 license = "MIT"
 
 # --- ONNX Runtime 1.31.1 (CPU), loaded dynamically by C3 (ADR-0012). install-dev.sh unpacks
-# lib/libonnxruntime.so.1.31.1 into ~/.local/opt/neuroos/lib.
+# lib/libonnxruntime.so.1.31.1 into ~/.local/opt/octoplus/lib.
 
 [[model]]
 id = "runtime-onnxruntime-1.31.1-linux-x64"

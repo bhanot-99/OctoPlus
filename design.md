@@ -2,7 +2,7 @@
 
 **Document version:** 2.0 · **Date:** 2026-11-14 · **Status:** Baseline for the rebuild
 **Theme name:** **"Synapse"** — calm, dark-first, trustworthy.
-**Scope:** everything a person sees or hears from Semantic-NeuroOS.
+**Scope:** everything a person sees or hears from OctoPlus.
 
 > Product numbers (limits, windows, thresholds) live in [PRD.md](PRD.md). This file owns wording, look and behaviour.
 
@@ -27,9 +27,9 @@
 | Surface | Technology | Owner | Phase |
 | :--- | :--- | :--- | :--- |
 | S-1 Voice: answers, preambles, nudges, status lines | One Kokoro voice | C2 / C5 | 7 |
-| S-2 Confirmation dialog `neuroos-confirm` | GTK4 | C6 | 2 |
+| S-2 Confirmation dialog `octoplus-confirm` | GTK4 | C6 | 2 |
 | S-3 Desktop notifications | Desktop notification service | C6 | 2, 6 |
-| S-4 CLI `neuroosctl` | Terminal | CLI | 1+ |
+| S-4 CLI `octoplusctl` | Terminal | CLI | 1+ |
 | S-5 Reports and docs | Markdown | all | all |
 
 ---
@@ -128,7 +128,7 @@ The most important screen in the product. It must be impossible to misunderstand
 │  🛡  NEEDS YOUR OK                                        │  tier badge
 │                                                          │
 │  Clean up disk space                                     │  action title, plain words
-│  NeuroOS will permanently delete these. Apps recreate    │  exactly what will happen
+│  OctoPlus will permanently delete these. Apps recreate    │  exactly what will happen
 │  caches and build files when needed:                     │
 │                                                          │
 │    ~/projects/app/target            4.2 GiB              │  full list, mono, sizes
@@ -158,7 +158,7 @@ The most important screen in the product. It must be impossible to misunderstand
 │  └────────────────────────────────────────────────────┘  │
 │  You can edit it. Remove anything you don't want to send.│
 │                                                          │
-│  NeuroOS will then read up to 2 result pages.            │
+│  OctoPlus will then read up to 2 result pages.            │
 │  Nothing else is sent. This will be listed in your       │
 │  egress log.                                             │
 │                                                          │
@@ -182,19 +182,19 @@ The most important screen in the product. It must be impossible to misunderstand
 
 1. **Deny has default focus.** `Enter` on open never approves. `Esc` denies.
 2. **The approve button is inactive for the first moment** after the dialog appears, so a keystroke meant for another window cannot approve.
-3. The approve button says what it does: "Allow once", "Send search", "Delete". Never "OK" or "Yes". The exact wording per capability lives in `crates/neuroos-confirm/src/wording.rs` (ADR-0010).
+3. The approve button says what it does: "Allow once", "Send search", "Delete". Never "OK" or "Yes". The exact wording per capability lives in `crates/octoplus-confirm/src/wording.rs` (ADR-0010).
 4. DANGEROUS tier: the button is the solid danger colour and stays disabled until the user types the phrase shown.
 5. A countdown shows the expiry; at zero the dialog closes and the action is recorded as expired.
 6. Only one dialog at a time.
 7. **The dialog never shows model-written text or web-written text**, except the drafted search query, which is inside a plainly marked editable box.
 8. No remote content, images or links. Domains are plain monospace text.
 9. Screen readers announce: tier, egress badge, action title, taint warning, then the buttons.
-10. The window's `app_id` is `org.neuroos.Confirm`, excluded from sensing.
+10. The window's `app_id` is `org.octoplus.Confirm`, excluded from sensing.
 11. There is no spoken way to approve. When a dialog opens, the buddy says only: "I've put a confirmation on screen."
 
 ---
 
-## 7. CLI (S-4) — `neuroosctl`
+## 7. CLI (S-4) — `octoplusctl`
 
 | Element | Style |
 | :--- | :--- |
@@ -206,25 +206,25 @@ The most important screen in the product. It must be impossible to misunderstand
 | Errors | `error:` in the danger colour, one-line cause, then `hint:` |
 | Streaming answers | plain text as it arrives; sources listed after, dimmed |
 
-**Example — `neuroosctl status`** (layout only; figures are placeholders):
+**Example — `octoplusctl status`** (layout only; figures are placeholders):
 
 ```
-NeuroOS  v1.0.0  ·  healthy 7/8  ·  total RSS <used> / <budget> MiB
+OctoPlus  v1.0.0  ·  healthy 7/8  ·  total RSS <used> / <budget> MiB
 
 COMPONENT            STATUS       RSS / BUDGET     P99      UPTIME
-neuroos-healthd      ✔ OK          … /  … MiB      —        3d 04h
-neuroos-monitor      ✔ OK          … /  … MiB      … ms     3d 04h
-neuroos-voice        ✔ OK          … /  … MiB      … ms     3d 04h
-neuroos-storage      ✔ OK          … /  … MiB      … ms     3d 04h
-neuroos-inference    ✔ OK          … /  … MiB      … ms/tok 3d 04h
-neuroos-knowledge    ✔ OK          … /  … MiB      … ms     3d 04h
-neuroos-kernel       ✔ OK          … /  … MiB      … ms     3d 04h
-neuroos-fetcher      ▲ DEGRADED    —  /  … MiB     —        restarting (2)
+octoplus-healthd      ✔ OK          … /  … MiB      —        3d 04h
+octoplus-monitor      ✔ OK          … /  … MiB      … ms     3d 04h
+octoplus-voice        ✔ OK          … /  … MiB      … ms     3d 04h
+octoplus-storage      ✔ OK          … /  … MiB      … ms     3d 04h
+octoplus-inference    ✔ OK          … /  … MiB      … ms/tok 3d 04h
+octoplus-knowledge    ✔ OK          … /  … MiB      … ms     3d 04h
+octoplus-kernel       ✔ OK          … /  … MiB      … ms     3d 04h
+octoplus-fetcher      ▲ DEGRADED    —  /  … MiB     —        restarting (2)
 
-hint: run `neuroosctl logs neuroos-fetcher` for details
+hint: run `octoplusctl logs octoplus-fetcher` for details
 ```
 
-**Example — `neuroosctl egress list`:**
+**Example — `octoplusctl egress list`:**
 
 ```
 WHEN (local)        ACTION        HOST             SENT                                   OUT     IN
@@ -365,7 +365,7 @@ Two short tones: *listening* (rising two-note) and *cancelled* (single low note)
 - [ ] Full keyboard operation; visible focus ring.
 - [ ] Screen-reader names for every control; the dialog announces tier, egress and taint first.
 - [ ] Respects reduced motion and the desktop's colour scheme.
-- [ ] Every voice feature has a text equivalent: `neuroosctl ask`, notifications for nudges, `nudges list`.
+- [ ] Every voice feature has a text equivalent: `octoplusctl ask`, notifications for nudges, `nudges list`.
 - [ ] Every nudge can be delivered silently.
 
 ---
@@ -376,7 +376,7 @@ Two short tones: *listening* (rising two-note) and *cancelled* (single low note)
 
 ```json
 {
-  "$schema": "neuroos-tokens/v2",
+  "$schema": "octoplus-tokens/v2",
   "color": {
     "dark":  { "bg.canvas": "#0E1116", "text.primary": "#E6EDF3", "accent.primary": "#2DD4BF",
                "tier.safe": "#3FB950", "tier.review": "#D29922", "tier.dangerous": "#F85149",

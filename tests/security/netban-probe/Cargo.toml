@@ -2,7 +2,7 @@
 # This crate is NOT part of the build. `scripts/check-netban.sh` runs cargo-deny on it
 # with the real deny.toml and FAILS unless every banned crate below is reported.
 [package]
-name = "neuroos-netban-probe"
+name = "octoplus-netban-probe"
 version = "0.0.0"
 edition = "2024"
 publish = false

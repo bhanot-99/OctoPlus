@@ -1,0 +1,44 @@
+[package]
+name = "octoplus-kernel"
+description = "OctoPlus Safety Kernel (C6)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "octoplus-kernel"
+path = "src/main.rs"
+
+[dependencies]
+octoplus-common = { path = "../octoplus-common" }
+octoplus-health = { path = "../octoplus-health" }
+octoplus-ipc = { path = "../octoplus-ipc" }
+octoplus-proto = { path = "../octoplus-proto" }
+octoplus-taint = { path = "../octoplus-taint" }
+octoplus-sandbox = { path = "../octoplus-sandbox" }
+octoplus-confirm = { path = "../octoplus-confirm", default-features = false }
+octoplus-skill = { path = "../octoplus-skill" }
+getrandom = { workspace = true }
+uuid = { workspace = true }
+hmac = { workspace = true }
+rustix = { workspace = true }
+sha2 = { workspace = true }
+zeroize = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["sync", "time", "process", "io-util"] }
+toml = { workspace = true }
+tracing = { workspace = true }
+zbus = { workspace = true, features = ["proxy", "service", "p2p"] }
+
+[dev-dependencies]
+octoplus-health = { path = "../octoplus-health", features = ["test-support"] }
+proptest = { workspace = true }
+tempfile.workspace = true
+tokio.workspace = true
+
+[lints]
+workspace = true

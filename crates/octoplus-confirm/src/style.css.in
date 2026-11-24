@@ -1,0 +1,101 @@
+/* Generated into OUT_DIR by build.rs from ui/tokens/tokens.json. design.md §3–§6. */
+/*@COLORS@*/
+
+window.octoplus-confirm {
+  background-color: @bg_canvas;
+  color: @text_primary;
+  border-radius: @RADIUS_LG@px;
+}
+
+.octoplus-confirm .body {
+  padding: 24px;
+}
+
+.octoplus-confirm .badge {
+  font-size: 0.8em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: @RADIUS_SM@px;
+  border: 1px solid;
+}
+.octoplus-confirm .badge.review    { color: @tier_review;    border-color: @tier_review; }
+.octoplus-confirm .badge.dangerous { color: @tier_dangerous; border-color: @tier_dangerous; }
+.octoplus-confirm .badge.egress    { color: @egress;         border-color: @egress; }
+
+.octoplus-confirm .title {
+  font-size: 1.15em;
+  font-weight: 600;
+}
+.octoplus-confirm .lead,
+.octoplus-confirm .hint,
+.octoplus-confirm .countdown {
+  color: @text_secondary;
+}
+.octoplus-confirm .countdown,
+.octoplus-confirm .hint {
+  font-size: 0.86em;
+  font-weight: 500;
+}
+.octoplus-confirm .mono {
+  font-family: monospace;
+  font-size: 0.93em;
+}
+.octoplus-confirm .items {
+  background-color: @bg_surface;
+  border: 1px solid @border_subtle;
+  border-radius: @RADIUS_MD@px;
+  padding: 8px 12px;
+}
+.octoplus-confirm .size {
+  color: @text_secondary;
+}
+
+.octoplus-confirm .taint {
+  background-color: @bg_surface;
+  border-left: 4px solid @taint_external;
+  border-radius: @RADIUS_SM@px;
+  padding: 8px 12px;
+}
+.octoplus-confirm .taint .badge-text {
+  color: @taint_external;
+  font-size: 0.8em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.octoplus-confirm entry {
+  background-color: @bg_surface;
+  color: @text_primary;
+  border: 1px solid @border_strong;
+  border-radius: @RADIUS_SM@px;
+}
+
+.octoplus-confirm button {
+  border-radius: @RADIUS_MD@px;
+  padding: 6px 16px;
+  min-height: 24px;
+  min-width: 24px;
+  background-image: none;
+  background-color: @bg_raised;
+  color: @text_primary;
+  border: 1px solid @border_strong;
+}
+.octoplus-confirm button.approve {
+  background-color: @accent_primary;
+  color: @accent_primary_fg;
+  border-color: @accent_primary;
+}
+.octoplus-confirm button.approve.danger {
+  background-color: @tier_dangerous_solid;
+  color: @tier_dangerous_solid_fg;
+  border-color: @tier_dangerous_solid;
+}
+.octoplus-confirm button:disabled {
+  opacity: 0.45;
+}
+.octoplus-confirm button:focus-visible,
+.octoplus-confirm entry:focus-within {
+  outline: @FOCUS_W@px solid @accent_primary;
+  outline-offset: @FOCUS_OFF@px;
+}

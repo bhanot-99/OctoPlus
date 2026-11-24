@@ -3,14 +3,14 @@
 #
 #   scripts/check-dump.sh <dump>
 #
-# Passes only if `neuroosctl replay` reads the whole file (header, every event, end record) and
+# Passes only if `octoplusctl replay` reads the whole file (header, every event, end record) and
 # every title, artist and path piece is empty or a `t_<hex>` placeholder. App ids and process
 # names may stay readable only for the built-in public apps, so the script lists the DISTINCT
 # readable ones for a human to approve before the dump is committed (it cannot judge them).
 set -euo pipefail
 
 dump="${1:?usage: check-dump.sh <dump>}"
-ctl="${NEUROOSCTL:-$HOME/.local/opt/neuroos/bin/neuroosctl}"
+ctl="${OCTOPLUSCTL:-$HOME/.local/opt/octoplus/bin/octoplusctl}"
 
 "$ctl" replay "$dump" --speed 0 --json | python3 -c '
 import json, re, sys

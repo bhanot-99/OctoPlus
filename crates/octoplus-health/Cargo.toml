@@ -1,0 +1,36 @@
+[package]
+name = "octoplus-health"
+description = "Per-part health endpoint that reports real status (FR-HLT-02)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+clap = { workspace = true, features = ["derive"] }
+octoplus-common = { path = "../octoplus-common" }
+octoplus-ipc = { path = "../octoplus-ipc" }
+octoplus-proto = { path = "../octoplus-proto" }
+octoplus-sandbox = { path = "../octoplus-sandbox" }
+rustix.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["signal"] }
+tracing.workspace = true
+
+[features]
+# Test-only hooks (Landlock bypass for in-process tests). Never enabled by a
+# shipped binary; only by dev-dependencies (BUG-025).
+test-support = []
+
+[[test]]
+name = "service_test"
+required-features = ["test-support"]
+
+[dev-dependencies]
+proptest.workspace = true
+tempfile.workspace = true
+tokio.workspace = true
+
+[lints]
+workspace = true

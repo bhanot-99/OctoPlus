@@ -3,7 +3,7 @@
 #
 #   scripts/bench-p3.sh [seconds] [interval_s]      default 600 s, sampled every 10 s
 #
-# Samples `neuroosctl status --json` for the monitor while the user works normally: RSS, cgroup
+# Samples `octoplusctl status --json` for the monitor while the user works normally: RSS, cgroup
 # CPU time, and the capture-latency histogram (observation to enqueue). Writes JSON with the
 # conditions to reports/bench/p3-monitor-<UTC>.json. A run shorter than the curve needs is
 # reported as "not asserted" for steady state (rules.md §9.3). Does not use sudo.
@@ -12,18 +12,18 @@ set -euo pipefail
 seconds="${1:-600}"
 interval="${2:-10}"
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ctl="$HOME/.local/opt/neuroos/bin/neuroosctl"
+ctl="$HOME/.local/opt/octoplus/bin/octoplusctl"
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 out="$root/reports/bench/p3-monitor-$stamp.json"
 mkdir -p "$root/reports/bench"
 
-systemctl --user is-active --quiet neuroos-monitor.service || { echo "monitor is not running" >&2; exit 1; }
-systemctl --user is-active --quiet neuroos-healthd.service || { echo "healthd is not running" >&2; exit 1; }
+systemctl --user is-active --quiet octoplus-monitor.service || { echo "monitor is not running" >&2; exit 1; }
+systemctl --user is-active --quiet octoplus-healthd.service || { echo "healthd is not running" >&2; exit 1; }
 
 gov="$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor)"
 freq="$(awk '{printf "%.0f", $1/1000}' /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq)"
 commit="$(git -C "$root" rev-parse --short HEAD)"
-bin_sha="$(sha256sum "$HOME/.local/opt/neuroos/bin/neuroos-monitor" | cut -d' ' -f1)"
+bin_sha="$(sha256sum "$HOME/.local/opt/octoplus/bin/octoplus-monitor" | cut -d' ' -f1)"
 load1="$(cut -d' ' -f1 /proc/loadavg)"
 
 samples="$(mktemp)"
@@ -47,7 +47,7 @@ for chunk in open(samples_path).read().split("---\n"):
         d = json.loads(chunk)
     except json.JSONDecodeError:
         continue
-    m = next((c for c in d["components"] if c["name"] == "neuroos-monitor"), None)
+    m = next((c for c in d["components"] if c["name"] == "octoplus-monitor"), None)
     if m and m["reachable"]:
         rows.append(m)
 if len(rows) < 2:
@@ -57,7 +57,7 @@ cpu0, cpu1 = rows[0]["cgroup_cpu_usage_ns"], rows[-1]["cgroup_cpu_usage_ns"]
 wall = (rows[-1]["uptime_ns"] - rows[0]["uptime_ns"]) or 1
 hist = next((h for h in rows[-1].get("histograms", []) if h["name"] == "capture_latency"), None)
 result = {
-    "what": "C1 neuroos-monitor in its real sandboxed unit, release build, user working normally",
+    "what": "C1 octoplus-monitor in its real sandboxed unit, release build, user working normally",
     "conditions": {
         "date_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
         "commit": commit, "binary_sha256": sha, "governor": gov, "cpu0_mhz": int(freq),

@@ -1,6 +1,0 @@
-[Unit]
-Description=Semantic-NeuroOS Target
-Wants=neuroos-healthd.service neuroos-storage.service neuroos-inference.service neuroos-monitor.service neuroos-kernel.service neuroos-knowledge.service neuroos-voice.service
-
-[Install]
-WantedBy=default.target

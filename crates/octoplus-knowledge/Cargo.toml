@@ -1,0 +1,40 @@
+[package]
+name = "octoplus-knowledge"
+description = "OctoPlus Knowledge and Nudge Engine (C5)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "octoplus-knowledge"
+path = "src/main.rs"
+
+[[bin]]
+name = "nudge-replay"
+path = "src/bin/nudge-replay.rs"
+
+[dependencies]
+octoplus-common = { path = "../octoplus-common" }
+octoplus-health = { path = "../octoplus-health" }
+octoplus-ipc = { path = "../octoplus-ipc" }
+octoplus-proto = { path = "../octoplus-proto" }
+octoplus-taint = { path = "../octoplus-taint" }
+tokio = { workspace = true, features = ["sync", "time"] }
+jiff.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+toml.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+octoplus-health = { path = "../octoplus-health", features = ["test-support"] }
+octoplus-testkit = { path = "../octoplus-testkit" }
+tempfile.workspace = true
+tokio.workspace = true
+
+[lints]
+workspace = true

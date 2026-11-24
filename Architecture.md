@@ -1,4 +1,4 @@
-# Architecture — Semantic-NeuroOS
+# Architecture — OctoPlus
 
 **Document type:** System Architecture Specification
 **Document version:** 2.0 · **Date:** 2026-11-14 · **Status:** Baseline for the rebuild
@@ -36,21 +36,21 @@ flowchart LR
         DBus["Session bus<br/>(media players, notifications)"]
         Sys["/proc, /sys<br/>(CPU, memory, disk, battery, heat)"]
         FS["Local files<br/>(git, notes, calendar)"]
-        NeuroOS["Semantic-NeuroOS<br/>7 services + healthd"]
+        OctoPlus["OctoPlus<br/>7 services + healthd"]
     end
     Web[(Internet)]
 
     User -- voice --> PipeWire
     PipeWire -- speech --> User
     User -- works in --> Compositor
-    Compositor -- focus / idle --> NeuroOS
-    DBus -- media state --> NeuroOS
-    Sys -- health samples --> NeuroOS
-    FS -- file activity --> NeuroOS
-    PipeWire <--> NeuroOS
-    NeuroOS -- "nudge (voice or notification)" --> User
-    NeuroOS -- confirmation dialog --> User
-    NeuroOS -. "C7 only, one approved request" .-> Web
+    Compositor -- focus / idle --> OctoPlus
+    DBus -- media state --> OctoPlus
+    Sys -- health samples --> OctoPlus
+    FS -- file activity --> OctoPlus
+    PipeWire <--> OctoPlus
+    OctoPlus -- "nudge (voice or notification)" --> User
+    OctoPlus -- confirmation dialog --> User
+    OctoPlus -. "C7 only, one approved request" .-> Web
 ```
 
 ---
@@ -59,15 +59,15 @@ flowchart LR
 
 | ID | Service | Language | Runs as | Network | Owns |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| C1 | `neuroos-monitor` | Rust | user | none | Sensors only; nothing at rest |
-| C2 | `neuroos-voice` | C++20 | user | none | Microphone, speaker, speech-to-text, the one voice |
-| C3 | `neuroos-storage` | Rust | user | none | **All persistent user data**, embedding model |
-| C4 | `neuroos-inference` | C++20 | user | none | Language model, prompt cache |
-| C5 | `neuroos-knowledge` | Rust | user | none | Turn routing, prompt assembly, session history, **nudge engine** |
-| C6 | `neuroos-kernel` (+ `neuroos-confirm`, skill runner) | Rust, GTK4 | user | none | Skill registry, HMAC key, audit log, egress ledger, dialog, notifications |
-| C7 | `neuroos-fetcher` | Rust | **`neuroos-fetcher`** system user | **egress** | Spool folder |
-| D | `neuroos-healthd` | Rust | user | none | Health aggregate, soak baseline |
-| — | `neuroosctl` | Rust CLI | user, interactive | none | Nothing |
+| C1 | `octoplus-monitor` | Rust | user | none | Sensors only; nothing at rest |
+| C2 | `octoplus-voice` | C++20 | user | none | Microphone, speaker, speech-to-text, the one voice |
+| C3 | `octoplus-storage` | Rust | user | none | **All persistent user data**, embedding model |
+| C4 | `octoplus-inference` | C++20 | user | none | Language model, prompt cache |
+| C5 | `octoplus-knowledge` | Rust | user | none | Turn routing, prompt assembly, session history, **nudge engine** |
+| C6 | `octoplus-kernel` (+ `octoplus-confirm`, skill runner) | Rust, GTK4 | user | none | Skill registry, HMAC key, audit log, egress ledger, dialog, notifications |
+| C7 | `octoplus-fetcher` | Rust | **`octoplus-fetcher`** system user | **egress** | Spool folder |
+| D | `octoplus-healthd` | Rust | user | none | Health aggregate, soak baseline |
+| — | `octoplusctl` | Rust CLI | user, interactive | none | Nothing |
 
 Budgets: PRD §6.2. Latency targets: PRD §6.1.
 
@@ -129,30 +129,30 @@ flowchart TB
 
 ### 5.2 Socket map — enforced, not advisory
 
-Runtime root: `$XDG_RUNTIME_DIR/neuroos/` (mode 0700). **Every socket has its own folder**, `<part>/<name>/<name>.sock` (ADR-0009), so binding a folder into a client exposes exactly one socket. The folders are created before any part starts by `neuroos-runtime.service`. The map below is code (`neuroos-common::socketmap`); the unit files, the peer policies and the security probe are generated from it. Each unit sees an empty runtime root with only the sub-folders of the peers it may call bound in (`TemporaryFileSystem=` + `BindPaths=`). A part cannot open a socket it cannot see. Servers also check the peer's UID (`SO_PEERCRED`) and the peer's systemd unit; a server that checks units needs read access to `/proc/<pid>/cgroup` in its Landlock rules (§8.2, S-04).
+Runtime root: `$XDG_RUNTIME_DIR/octoplus/` (mode 0700). **Every socket has its own folder**, `<part>/<name>/<name>.sock` (ADR-0009), so binding a folder into a client exposes exactly one socket. The folders are created before any part starts by `octoplus-runtime.service`. The map below is code (`octoplus-common::socketmap`); the unit files, the peer policies and the security probe are generated from it. Each unit sees an empty runtime root with only the sub-folders of the peers it may call bound in (`TemporaryFileSystem=` + `BindPaths=`). A part cannot open a socket it cannot see. Servers also check the peer's UID (`SO_PEERCRED`) and the peer's systemd unit; a server that checks units needs read access to `/proc/<pid>/cgroup` in its Landlock rules (§8.2, S-04).
 
 | Socket | Server | May connect |
 | :--- | :--- | :--- |
 | `monitor/stream/stream.sock` | C1 | C3 |
-| `monitor/control/control.sock` | C1 | C6, `neuroosctl` |
+| `monitor/control/control.sock` | C1 | C6, `octoplusctl` |
 | `voice/voice/voice.sock` | C2 | C5 |
-| `voice/control/control.sock` | C2 | C6, `neuroosctl`, OctoPit (status, start/stop/cancel listening) |
-| `storage/storage/storage.sock` | C3 | C5, C6, `neuroosctl` |
+| `voice/control/control.sock` | C2 | C6, `octoplusctl`, OctoPit (status, start/stop/cancel listening) |
+| `storage/storage/storage.sock` | C3 | C5, C6, `octoplusctl` |
 | `inference/inference/inference.sock` | C4 | C5 |
-| `knowledge/knowledge/knowledge.sock` | C5 | C2, `neuroosctl`, OctoPit (typed questions) |
-| `kernel/kernel/kernel.sock` | C6 | C5, `neuroosctl`, OctoPit (read the audit and egress records) |
-| `healthd/healthd/healthd.sock` | healthd | `neuroosctl`, OctoPit |
+| `knowledge/knowledge/knowledge.sock` | C5 | C2, `octoplusctl`, OctoPit (typed questions) |
+| `kernel/kernel/kernel.sock` | C6 | C5, `octoplusctl`, OctoPit (read the audit and egress records) |
+| `healthd/healthd/healthd.sock` | healthd | `octoplusctl`, OctoPit |
 | `<part>/health/health.sock` | every part | healthd |
-| `/run/neuroos-fetcher/fetch/fetch.sock` | C7 | C6 only (group `neuroos`, 0660) |
-| `/run/neuroos-fetcher/health/health.sock` | C7 | healthd |
+| `/run/octoplus-fetcher/fetch/fetch.sock` | C7 | C6 only (group `octoplus`, 0660) |
+| `/run/octoplus-fetcher/health/health.sock` | C7 | healthd |
 
-OctoPit (`neuroos-octopit`, ADR-0017) is a second user-run client, the desktop dashboard. It is listed as `Client::OctoPit` in the socket map on exactly the four sockets above, never on a health socket, and it has no approval control. `neuroosctl` and OctoPit are ordinary user programs, so anything they can do, any program run by the user can do. Therefore every destructive or outward operation reachable from it goes through C6 and the dialog.
+OctoPit (`octopit`, ADR-0017) is a second user-run client, the desktop dashboard. It is listed as `Client::OctoPit` in the socket map on exactly the four sockets above, never on a health socket, and it has no approval control. `octoplusctl` and OctoPit are ordinary user programs, so anything they can do, any program run by the user can do. Therefore every destructive or outward operation reachable from it goes through C6 and the dialog.
 
-### 5.3 Envelope (`proto/neuroos/v1/envelope.proto`)
+### 5.3 Envelope (`proto/octoplus/v1/envelope.proto`)
 
 ```protobuf
 syntax = "proto3";
-package neuroos.v1;
+package octoplus.v1;
 
 message Envelope {
   uint32 schema_version = 1;
@@ -174,8 +174,8 @@ Field ranges: 10–19 common · 20–39 C1 · 40–59 C2 · 60–99 C3 · 100–
 
 ### 5.4 Versioning
 
-- `neuroos.v1` accepts additive changes only after Phase 1.
-- Removing, renumbering or changing meaning needs `neuroos.v2` and an ADR.
+- `octoplus.v1` accepts additive changes only after Phase 1.
+- Removing, renumbering or changing meaning needs `octoplus.v2` and an ADR.
 - Every contract change has a round-trip test across Rust and C++.
 
 ---
@@ -217,7 +217,7 @@ sequenceDiagram
     C5->>C3: store voice_interaction (question, answer summary, taint)
 ```
 
-The typed path (`neuroosctl ask`) is identical from step 3, without C2.
+The typed path (`octoplusctl ask`) is identical from step 3, without C2.
 
 ### 6.2 Ingest
 
@@ -238,7 +238,7 @@ flowchart LR
     C1 --> HS
 ```
 
-**Inside C1 (Phase 3, ADR-0011).** Each sensor is its own supervised task: a failure marks only that sensor DEGRADED (fixed-text detail, one health row per sensor in `neuroosctl status`) and restarts it after jittered backoff. Sensors publish to a bus through one gate — pause and the exclusion list, the only things that may stop or change an event (AB-5). An excluded window becomes a redacted focus event (empty app, title and pid) so the previous span still ends; a pause emits nothing at all and is followed by a snapshot of the current state. Each subscriber (C3's stream, the recorder) has a bounded queue that drops its oldest events and counts the loss; a reader that falls too far behind is cut loose by the IPC layer with a retryable error, and a new subscription starts from the latest state of each kind, so a reconnecting C3 is never blind. Blocking sources (Wayland, `/proc`, inotify) run on their own thread or the blocking pool. Window ids are C1's own and never reused; a lost compositor closes every open window before the sensor reconnects. `neuroos-monitor --record <file>` writes an anonymised dump (format in `neuroos-proto::dump`); `neuroosctl replay` prints it or serves it as a live stream for the Phase 4 harness.
+**Inside C1 (Phase 3, ADR-0011).** Each sensor is its own supervised task: a failure marks only that sensor DEGRADED (fixed-text detail, one health row per sensor in `octoplusctl status`) and restarts it after jittered backoff. Sensors publish to a bus through one gate — pause and the exclusion list, the only things that may stop or change an event (AB-5). An excluded window becomes a redacted focus event (empty app, title and pid) so the previous span still ends; a pause emits nothing at all and is followed by a snapshot of the current state. Each subscriber (C3's stream, the recorder) has a bounded queue that drops its oldest events and counts the loss; a reader that falls too far behind is cut loose by the IPC layer with a retryable error, and a new subscription starts from the latest state of each kind, so a reconnecting C3 is never blind. Blocking sources (Wayland, `/proc`, inotify) run on their own thread or the blocking pool. Window ids are C1's own and never reused; a lost compositor closes every open window before the sensor reconnects. `octoplus-monitor --record <file>` writes an anonymised dump (format in `octoplus-proto::dump`); `octoplusctl replay` prints it or serves it as a live stream for the Phase 4 harness.
 
 Machine-health samples (CPU, memory, disk, battery, heat) are numeric time series. They skip the promotion gate and embedding and go to the `health_samples` table.
 
@@ -326,26 +326,26 @@ healthd connects to each `health.sock` every 30 s and reads status, RSS, uptime,
 ### 7.1 Filesystem layout
 
 ```
-/opt/neuroos/
+/opt/octoplus/
 ├── bin/
 └── models/                      # read-only; manifest.toml holds every sha256
 
-~/.config/neuroos/
+~/.config/octoplus/
 ├── config.toml                  # one file, one section per part
 ├── nudges.toml                  # nudge rules (FR-NUD-02)
 └── hmac.key                     # 0600; visible only inside C6's unit
 
-~/.local/share/neuroos/          # ALL persistent user data
-├── storage/neuroos.sqlite3 (+ -wal)
+~/.local/share/octoplus/          # ALL persistent user data
+├── storage/octoplus.sqlite3 (+ -wal)
 ├── backups/<UTC timestamp>/
 ├── audit/                       # C6 only (ADR-0010)
 │   ├── actions.jsonl (+ rotations)  # audit log, hash-chained
 │   └── egress.jsonl  (+ rotations)  # everything sent to the network, hash-chained
 └── soak/
 
-/var/spool/neuroos-fetcher/      # 2770 neuroos-fetcher:neuroos
-$XDG_RUNTIME_DIR/neuroos/<part>/ # sockets, one folder per server
-/run/neuroos-fetcher/            # fetcher sockets
+/var/spool/octoplus-fetcher/      # 2770 octoplus-fetcher:octoplus
+$XDG_RUNTIME_DIR/octoplus/<part>/ # sockets, one folder per server
+/run/octoplus-fetcher/            # fetcher sockets
 ```
 
 ### 7.2 Storage model — one SQLite database
@@ -380,13 +380,13 @@ WAL mode, `synchronous=NORMAL`, `auto_vacuum=INCREMENTAL`, foreign keys on.
 
 **As built (Phase 4, ADR-0012).**
 
-- *Ingest.* C3 subscribes to C1's stream; a pure filter turns events into items (stage 1 folds a process tree to its root and marks a build; stage 2 drops NeuroOS's own windows; stage 3 promotes after the configured occurrences or active dwell, idle time not counted; stage 4 stores media only if its player was focused within the interaction window). Promoted items become an entity plus a chunk with a fixed-template text; the same (entity, text) is one chunk and taint is unioned in SQL. Focus segments go to `focus_history`, samples to `health_samples`, promotion counters to `event_counters` so a restart keeps its progress. A batch is one writer job: rows, text index and matrix change together, and the matrix is updated *before* the write is acknowledged.
+- *Ingest.* C3 subscribes to C1's stream; a pure filter turns events into items (stage 1 folds a process tree to its root and marks a build; stage 2 drops OctoPlus's own windows; stage 3 promotes after the configured occurrences or active dwell, idle time not counted; stage 4 stores media only if its player was focused within the interaction window). Promoted items become an entity plus a chunk with a fixed-template text; the same (entity, text) is one chunk and taint is unioned in SQL. Focus segments go to `focus_history`, samples to `health_samples`, promotion counters to `event_counters` so a restart keeps its progress. A batch is one writer job: rows, text index and matrix change together, and the matrix is updated *before* the write is acknowledged.
 - *Stale vectors.* The matrix holds only vectors made by the current model. Chunks from another model (or with no vector because embedding failed) stay searchable by text, are flagged `STALE_INDEX` in results, and are re-embedded in the background; each joins the matrix as it is finished.
 - *Deadlines.* The handler enforces the 150 ms query deadline on queries; the socket itself allows `deadlines.storage_job_ms` for forget, purge and lifecycle jobs.
 - *Peer checks per message.* Forget, personal facts and purge only from the kernel unit; turn summaries and the nudge log only from the knowledge unit; lifecycle jobs from anyone the socket admits except the knowledge part (purge: kernel only).
 - *Forget.* One transaction removes chunks (and with them text-index entries and vectors), history, counters, and, for a time range without an app, health samples and nudge-log rows; deleted content is overwritten (`secure_delete`), the text index is merged, and every existing backup is scrubbed the same way at once. Personal facts have their own remove.
 - *Spool format v1* (what C7 must write): one UTF-8 JSON object `{"version":1,"url","title","fetched_at_ns","text"}` in a file named `[A-Za-z0-9._-]{1,128}.json`, a regular file no larger than the configured limit, no other keys. C3 forces `EXTERNAL_UNTRUSTED`, stores the text in chunks of at most 1,200 characters, and deletes every file it looks at, accepted or not.
-- *Jobs.* `neuroos-storage-{gc,backup,rollup}.timer` run one-shot units that call `neuroosctl storage job <name>`; a backup is `VACUUM INTO` a temporary folder, fsync, atomic rename, keep the newest 8.
+- *Jobs.* `octoplus-storage-{gc,backup,rollup}.timer` run one-shot units that call `octoplusctl storage job <name>`; a backup is `VACUUM INTO` a temporary folder, fsync, atomic rename, keep the newest 8.
 - *Embedding.* ONNX Runtime is loaded before the Landlock sandbox is applied (its system libraries cannot be opened afterwards); the model's SHA-256 is checked against the pinned value at load.
 
 ### 7.3 Domains
@@ -451,8 +451,8 @@ InaccessiblePaths=-/run/dbus/system_bus_socket  # resolve1 on the system bus als
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=tmpfs                   # also masks /run/user/<uid> (S-04): runtime paths must come back via BindPaths=
-TemporaryFileSystem=%t/neuroos      # empty runtime root …
-BindPaths=%t/neuroos/<self> …       # … plus own folder and allowed peers (§5.2)
+TemporaryFileSystem=%t/octoplus      # empty runtime root …
+BindPaths=%t/octoplus/<self> …       # … plus own folder and allowed peers (§5.2)
 PrivateTmp=true
 PrivateDevices=true                 # C2 exempt as far as audio needs
 ProtectKernelTunables=true
@@ -479,7 +479,7 @@ RestartSec=2s
 ExecStart=…                         # exactly one exec line, nothing else (ADR-0002 addendum)
 ```
 
-**One exec per unit.** On systemd 255 in user scope, a unit with `ExecStartPre=` (or any second exec) silently runs its main process in the host network namespace despite `PrivateNetwork=yes` (measured, BUG-028). Every user unit therefore has exactly one `ExecStart=`. Work that must run first gets its own oneshot unit (C4's model hash check: `neuroos-model-check.service`). The generator tests this.
+**One exec per unit.** On systemd 255 in user scope, a unit with `ExecStartPre=` (or any second exec) silently runs its main process in the host network namespace despite `PrivateNetwork=yes` (measured, BUG-028). Every user unit therefore has exactly one `ExecStart=`. Work that must run first gets its own oneshot unit (C4's model hash check: `octoplus-model-check.service`). The generator tests this.
 
 Spike S-04 confirmed that every stanza above applies in user scope on the reference machine (ADR-0002, with the three additions marked S-04). A stanza that cannot be applied is recorded in an ADR with its replacement control; it is never dropped silently.
 
@@ -495,8 +495,8 @@ Spike S-04 confirmed that every stanza above applies in user scope on the refere
 | C4 | language model, config; GPU path only: `/dev/nvidia0` and `/dev/nvidiactl` bound into the private `/dev` (ADR-0008, S-02 addendum) | own runtime folder |
 | C5 | tokenizer, prompt templates, `nudges.toml`, config | own runtime folder |
 | C6 | `hmac.key`, `/usr`, `/etc/fonts`, dialog and skill binaries, Wayland and session-bus sockets, config (skill manifests are compiled in, ADR-0010) | `audit/`, cleanup roots (`~/.cache`, trash, configured build folders) for its skill children, own runtime folder |
-| skill child (`neuroos-skill`) | per-skill roots only, narrower than C6; never `hmac.key`, `audit/` or sockets. Plus rlimits and a seccomp allowlist (`neuroos-sandbox::child`) | per-skill (cleanup: its roots) |
-| C7 | CA bundle, config | spool, `/run/neuroos-fetcher`; network rule: connect TCP 443 only |
+| skill child (`octoplus-skill`) | per-skill roots only, narrower than C6; never `hmac.key`, `audit/` or sockets. Plus rlimits and a seccomp allowlist (`octoplus-sandbox::child`) | per-skill (cleanup: its roots) |
+| C7 | CA bundle, config | spool, `/run/octoplus-fetcher`; network rule: connect TCP 443 only |
 | healthd | cgroup files, config | `soak/`, own runtime folder |
 
 Any server that enforces a peer-unit policy (§5.2) also gets read-only `/proc` so it can read `/proc/<peer pid>/cgroup`; with only `/proc/self` the read fails with EACCES and the check fails closed (S-04).
@@ -518,16 +518,16 @@ any error on this path → DENY, audited
 ### 8.4 Approval protocol
 
 1. C6 creates `action_id` (UUIDv7) and a 128-bit nonce, and writes the `ATTEMPT` record. If that write fails, the action is denied.
-2. C6 starts `neuroos-confirm` as its own child, passing the structured request on stdin. The dialog shows it ([design.md](design.md) §6). For `web.search` the query is editable; the child returns the decision and the final arguments on stdout.
+2. C6 starts `octoplus-confirm` as its own child, passing the structured request on stdin. The dialog shows it ([design.md](design.md) §6). For `web.search` the query is editable; the child returns the decision and the final arguments on stdout.
 3. C6 computes `args_hash = SHA-256(canonical(final args))` and `token = HMAC-SHA256(key, action_id ‖ nonce ‖ capability ‖ args_hash ‖ decision ‖ expiry)`, expiry 120 s.
 4. The executor re-verifies with a constant-time compare: for skills, C6's own dispatch path immediately before it starts the skill child, rebuilding the approval from what will actually run (the child never holds a key, ADR-0010); for fetch and search, C7 with `fetch.key`. Each nonce is single use.
 5. The decision never travels over a socket another part can write to, and there is no voice path to approval.
 
-C7 holds a verification key delivered at install time (readable only by `neuroos-fetcher`), so it can check tokens without trusting the caller's word. Key handling: [security.md](security.md) §6.
+C7 holds a verification key delivered at install time (readable only by `octoplus-fetcher`), so it can check tokens without trusting the caller's word. Key handling: [security.md](security.md) §6.
 
 ### 8.5 Audit log and egress ledger
 
-Both are JSON lines, hash-chained (`prev_hash` = SHA-256 of the previous line), rotated at 10 MB × 5, verifiable with `neuroosctl audit verify`.
+Both are JSON lines, hash-chained (`prev_hash` = SHA-256 of the previous line), rotated at 10 MB × 5, verifiable with `octoplusctl audit verify`.
 
 - **`actions.jsonl`** — `ATTEMPT` and `RESULT` per dispatch. Arguments are hashed, not stored. Outcomes: `EXECUTED`, `REJECTED`, `DENIED_POLICY`, `EXPIRED`, `FAILED`.
 - **`egress.jsonl`** — one record per outbound request: time, action id, host, the exact text sent, bytes out, bytes in. This file does contain user content by design; it is 0600 and inside user data.
@@ -540,7 +540,7 @@ Both are JSON lines, hash-chained (`prev_hash` = SHA-256 of the previous line), 
 - Resolve once, validate every address, connect to the validated address with the original name for TLS: the client's resolver is C7's own validating resolver, which refuses the whole answer if any address is blocked; IP-literal hosts are validated by the URL gate.
 - Redirects: never followed by the client; each `Location` is re-validated as a new URL and counted, at most 3. No credentials in URLs. Default port only.
 - Every hop attempted is reported to C6 for the ledger, including those of a fetch that then fails and redirects to other hosts; a lost answer leaves an `unconfirmed` ledger line.
-- The search provider host is fixed in one place (`neuroos-common::search`), which C6's dialog also reads; result pages are validated like any other link.
+- The search provider host is fixed in one place (`octoplus-common::search`), which C6's dialog also reads; result pages are validated like any other link.
 - Known gap (FR-FET-10): no kernel rule yet limits C7 to TCP 443 (systemd has no connect-port filter; an nftables rule needs root, owner item).
 
 ---
@@ -621,8 +621,8 @@ One generation per turn. The router never trusts model output to choose a route.
 | :--- | :--- |
 | Logs | Structured, to journald, with component and trace id. No user content at `info` or above. |
 | Metrics | In each `HealthResponse`: latency histograms, counters, gauges, RSS, real status. |
-| Traces | A trace id is created at C2 or `neuroosctl` and carried in every envelope. |
-| Health | healthd aggregate → `neuroosctl status`. |
+| Traces | A trace id is created at C2 or `octoplusctl` and carried in every envelope. |
+| Health | healthd aggregate → `octoplusctl status`. |
 | Benchmarks | `bench/` writes JSON to `reports/bench/`, with machine conditions recorded. |
 
 ---
@@ -631,11 +631,11 @@ One generation per turn. The router never trusts model output to choose a route.
 
 | Artifact | Location |
 | :--- | :--- |
-| User units | `~/.config/systemd/user/neuroos-<part>.service`, grouped by `neuroos.target`; plus `neuroos-runtime.service` (creates the socket folders) and `neuroos-model-check.service` (C4's model hash check, re-run on every C4 start). Generated by `just units` from the socket map. |
-| Fetcher unit | `/etc/systemd/system/neuroos-fetcher.service` (system scope, own user) |
-| Timers | `neuroos-gc.timer`, `neuroos-backup.timer`, `neuroos-rollup.timer` |
-| sysusers / tmpfiles | group `neuroos`, user `neuroos-fetcher`, spool and fetcher runtime folders |
-| Install | Development (until Phase 10): `just install-dev` (user parts under `~/.local/opt/neuroos`, no root) and `sudo scripts/install-fetcher.sh` (fetcher user, group, folders, system unit) — ADR-0009. Later `scripts/install.sh` and a `.deb`: verifies model hashes, creates keys, enables the target |
+| User units | `~/.config/systemd/user/octoplus-<part>.service`, grouped by `octoplus.target`; plus `octoplus-runtime.service` (creates the socket folders) and `octoplus-model-check.service` (C4's model hash check, re-run on every C4 start). Generated by `just units` from the socket map. |
+| Fetcher unit | `/etc/systemd/system/octoplus-fetcher.service` (system scope, own user) |
+| Timers | `octoplus-gc.timer`, `octoplus-backup.timer`, `octoplus-rollup.timer` |
+| sysusers / tmpfiles | group `octoplus`, user `octoplus-fetcher`, spool and fetcher runtime folders |
+| Install | Development (until Phase 10): `just install-dev` (user parts under `~/.local/opt/octoplus`, no root) and `sudo scripts/install-fetcher.sh` (fetcher user, group, folders, system unit) — ADR-0009. Later `scripts/install.sh` and a `.deb`: verifies model hashes, creates keys, enables the target |
 
 Start order: healthd → storage, inference → monitor, kernel → knowledge → voice → fetcher. Every client tolerates an absent server.
 
@@ -685,7 +685,7 @@ Start order: healthd → storage, inference → monitor, kernel → knowledge �
 ## 16. Repository Structure
 
 ```
-Semantic-NeuroOS/
+OctoPlus/
 ├── README.md  PRD.md  Architecture.md  security.md  rules.md  phases.md  design.md  memory.md
 ├── justfile  Cargo.toml  Cargo.lock  rust-toolchain.toml  deny.toml
 ├── .github/workflows/              # hosted CI
@@ -694,24 +694,24 @@ Semantic-NeuroOS/
 │   ├── runbooks/
 │   └── lessons-from-v1.md          # what an earlier prototype taught us
 ├── reports/                        # one report per finished phase; bench/ for JSON
-├── proto/neuroos/v1/               # envelope, common, health, one file per part
+├── proto/octoplus/v1/               # envelope, common, health, one file per part
 ├── crates/
-│   ├── neuroos-common/             # config, paths, time, logging init
-│   ├── neuroos-proto/  neuroos-ipc/  neuroos-taint/  neuroos-health/  neuroos-sandbox/
-│   ├── neuroos-testkit/            # mocks, fixture loaders, replay
-│   ├── neuroos-healthd/            # [D]
-│   ├── neuroos-monitor/            # [C1] sensors/{cosmic,idle,mpris,resources,disk,battery,thermal,proc,folders}
-│   ├── neuroos-storage/            # [C3] ingest/, adapters/, embed, db (writer + readers), vectors, lifecycle/, migrations/
-│   ├── neuroos-knowledge/          # [C5] router, deictic, evidence, assemble, taint_wrap, session, nudge/{rules,policy,engine}
-│   ├── neuroos-kernel/             # [C6] registry, tier, hmac, audit, egress, runner, notify, skills/
-│   ├── neuroos-confirm/            # [C6] GTK4 dialog
-│   ├── neuroos-fetcher/            # [C7] ssrf, fetch, search/, extract, spool
-│   └── neuroosctl/
+│   ├── octoplus-common/             # config, paths, time, logging init
+│   ├── octoplus-proto/  octoplus-ipc/  octoplus-taint/  octoplus-health/  octoplus-sandbox/
+│   ├── octoplus-testkit/            # mocks, fixture loaders, replay
+│   ├── octoplus-healthd/            # [D]
+│   ├── octoplus-monitor/            # [C1] sensors/{cosmic,idle,mpris,resources,disk,battery,thermal,proc,folders}
+│   ├── octoplus-storage/            # [C3] ingest/, adapters/, embed, db (writer + readers), vectors, lifecycle/, migrations/
+│   ├── octoplus-knowledge/          # [C5] router, deictic, evidence, assemble, taint_wrap, session, nudge/{rules,policy,engine}
+│   ├── octoplus-kernel/             # [C6] registry, tier, hmac, audit, egress, runner, notify, skills/
+│   ├── octoplus-confirm/            # [C6] GTK4 dialog
+│   ├── octoplus-fetcher/            # [C7] ssrf, fetch, search/, extract, spool
+│   └── octoplusctl/
 ├── cpp/
 │   ├── third_party/                # llama.cpp, whisper.cpp (pinned submodules)
-│   ├── libneuroos/                 # framing, sockets, health server, sandbox
-│   ├── neuroos-inference/          # [C4]
-│   └── neuroos-voice/              # [C2]
+│   ├── liboctoplus/                 # framing, sockets, health server, sandbox
+│   ├── octoplus-inference/          # [C4]
+│   └── octoplus-voice/              # [C2]
 ├── models/manifest.toml
 ├── deploy/{systemd,sysusers.d,tmpfiles.d}/
 ├── config/{config.example.toml,nudges.example.toml}

@@ -34,7 +34,7 @@ voice_build="$root/cpp/build/voice"
 core_units=(); voice_units=()
 for u in "${units[@]}"; do
   case "$u" in
-    */neuroos-voice/src/engines/*|*/neuroos-voice/tests/engines/*|*/neuroos-voice/tools/*) voice_units+=("$u") ;;
+    */octoplus-voice/src/engines/*|*/octoplus-voice/tests/engines/*|*/octoplus-voice/tools/*) voice_units+=("$u") ;;
     *) core_units+=("$u") ;;
   esac
 done

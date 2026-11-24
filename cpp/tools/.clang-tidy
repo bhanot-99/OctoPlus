@@ -1,5 +1,5 @@
 # Test fixtures (contract and IPC peer tools), never shipped: same relaxations as
-# libneuroos/tests, plus exceptions may end main() (a crash fails the calling test).
+# liboctoplus/tests, plus exceptions may end main() (a crash fails the calling test).
 InheritParentConfig: true
 Checks: >
   -readability-function-cognitive-complexity,

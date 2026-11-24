@@ -5,11 +5,11 @@
 #   tests/scripts/live-input-test.sh
 #
 # Each check prints PASS or FAIL with its time; the script exits 1 if any check failed.
-# It uses the real neuroosctl, knowledge, kernel, storage and inference units.
+# It uses the real octoplusctl, knowledge, kernel, storage and inference units.
 set -uo pipefail
 
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-ctl="$HOME/.local/opt/neuroos/bin/neuroosctl"
+ctl="$HOME/.local/opt/octoplus/bin/octoplusctl"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 pass=0
@@ -47,7 +47,7 @@ print(text)
 units_active() {
   local u
   for u in healthd storage inference monitor kernel knowledge voice; do
-    [[ "$(systemctl --user is-active "neuroos-$u.service")" == active ]] || { echo "neuroos-$u down"; return 1; }
+    [[ "$(systemctl --user is-active "octoplus-$u.service")" == active ]] || { echo "octoplus-$u down"; return 1; }
   done
 }
 

@@ -1,0 +1,29 @@
+[package]
+name = "octoplus-healthd"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "octoplus-healthd"
+path = "src/main.rs"
+
+[dependencies]
+jiff = { workspace = true }
+rustix = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+
+octoplus-common = { path = "../octoplus-common" }
+octoplus-proto = { path = "../octoplus-proto" }
+octoplus-ipc = { path = "../octoplus-ipc" }
+octoplus-health = { path = "../octoplus-health" }
+
+[dev-dependencies]
+octoplus-health = { path = "../octoplus-health", features = ["test-support"] }
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

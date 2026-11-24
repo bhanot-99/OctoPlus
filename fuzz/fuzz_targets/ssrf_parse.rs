@@ -3,7 +3,7 @@
 //! and the client parsing the raw text directly names the same host.
 
 use libfuzzer_sys::fuzz_target;
-use neuroos_fetcher::ssrf::SafeUrl;
+use octoplus_fetcher::ssrf::SafeUrl;
 
 mod common;
 

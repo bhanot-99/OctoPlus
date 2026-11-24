@@ -1,0 +1,38 @@
+[package]
+name = "octoplus-fetcher"
+description = "OctoPlus Network Fetcher (C7)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "octoplus-fetcher"
+path = "src/main.rs"
+
+[dependencies]
+octoplus-common = { path = "../octoplus-common" }
+octoplus-health = { path = "../octoplus-health" }
+octoplus-ipc = { path = "../octoplus-ipc" }
+octoplus-proto = { path = "../octoplus-proto" }
+hickory-resolver = { workspace = true }
+hmac = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["sync", "time", "net", "io-util"] }
+tracing = { workspace = true }
+url = { workspace = true }
+zeroize = { workspace = true }
+
+[dev-dependencies]
+octoplus-health = { path = "../octoplus-health", features = ["test-support"] }
+proptest = { workspace = true }
+tempfile.workspace = true
+tokio.workspace = true
+
+[lints]
+workspace = true

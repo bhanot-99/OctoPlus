@@ -1554,351 +1554,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "27b02d87554356db9e9a873add8782d4ea6e3e58ea071a9adb9a2e8ddb884a8b"
 
 [[package]]
-name = "neuroos-bench-ipc-stream"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "neuroos-ipc",
- "neuroos-proto",
- "rustix",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
-name = "neuroos-bench-kernel-check"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "neuroos-common",
- "neuroos-ipc",
- "neuroos-proto",
- "serde_json",
- "tokio",
-]
-
-[[package]]
-name = "neuroos-bench-storage-scan"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "rusqlite",
- "serde",
- "serde_json",
- "tempfile",
-]
-
-[[package]]
-name = "neuroos-common"
-version = "0.1.0"
-dependencies = [
- "jiff",
- "proptest",
- "serde",
- "tempfile",
- "thiserror",
- "toml",
- "tracing-journald",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "neuroos-confirm"
-version = "0.1.0"
-dependencies = [
- "gtk4",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
-name = "neuroos-deploy"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "neuroos-common",
- "serde",
- "tempfile",
- "thiserror",
- "toml",
-]
-
-[[package]]
-name = "neuroos-fetcher"
-version = "0.1.0"
-dependencies = [
- "hickory-resolver",
- "hmac",
- "neuroos-common",
- "neuroos-health",
- "neuroos-ipc",
- "neuroos-proto",
- "proptest",
- "reqwest",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "thiserror",
- "tokio",
- "tracing",
- "url",
- "zeroize",
-]
-
-[[package]]
-name = "neuroos-health"
-version = "0.1.0"
-dependencies = [
- "clap",
- "neuroos-common",
- "neuroos-ipc",
- "neuroos-proto",
- "neuroos-sandbox",
- "proptest",
- "rustix",
- "tempfile",
- "thiserror",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "neuroos-healthd"
-version = "0.1.0"
-dependencies = [
- "jiff",
- "neuroos-common",
- "neuroos-health",
- "neuroos-ipc",
- "neuroos-proto",
- "rustix",
- "tempfile",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "neuroos-ipc"
-version = "0.1.0"
-dependencies = [
- "getrandom 0.4.3",
- "neuroos-proto",
- "proptest",
- "rustix",
- "tempfile",
- "thiserror",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "neuroos-kernel"
-version = "0.1.0"
-dependencies = [
- "getrandom 0.4.3",
- "hmac",
- "neuroos-common",
- "neuroos-confirm",
- "neuroos-health",
- "neuroos-ipc",
- "neuroos-proto",
- "neuroos-sandbox",
- "neuroos-skill",
- "neuroos-taint",
- "proptest",
- "rustix",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "thiserror",
- "tokio",
- "toml",
- "tracing",
- "uuid",
- "zbus",
- "zeroize",
-]
-
-[[package]]
-name = "neuroos-knowledge"
-version = "0.1.0"
-dependencies = [
- "jiff",
- "neuroos-common",
- "neuroos-health",
- "neuroos-ipc",
- "neuroos-proto",
- "neuroos-taint",
- "neuroos-testkit",
- "proptest",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror",
- "tokio",
- "toml",
- "tracing",
-]
-
-[[package]]
-name = "neuroos-monitor"
-version = "0.1.0"
-dependencies = [
- "clap",
- "cosmic-protocols",
- "getrandom 0.4.3",
- "hmac",
- "neuroos-common",
- "neuroos-health",
- "neuroos-ipc",
- "neuroos-monitor",
- "neuroos-proto",
- "proptest",
- "rustix",
- "sha2",
- "tempfile",
- "thiserror",
- "tokio",
- "tracing",
- "wayland-client",
- "wayland-protocols",
- "zbus",
- "zeroize",
-]
-
-[[package]]
-name = "neuroos-octopit"
-version = "1.1.0"
-dependencies = [
- "gtk4",
- "neuroos-common",
- "neuroos-octopit-core",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "neuroos-octopit-core"
-version = "1.1.0"
-dependencies = [
- "neuroos-common",
- "neuroos-ipc",
- "neuroos-proto",
- "proptest",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
-]
-
-[[package]]
-name = "neuroos-proto"
-version = "0.1.0"
-dependencies = [
- "proptest",
- "prost",
- "prost-build",
- "thiserror",
-]
-
-[[package]]
-name = "neuroos-sandbox"
-version = "0.1.0"
-dependencies = [
- "landlock",
- "rustix",
- "seccompiler",
- "tempfile",
- "thiserror",
-]
-
-[[package]]
-name = "neuroos-skill"
-version = "0.1.0"
-dependencies = [
- "neuroos-sandbox",
- "proptest",
- "rustix",
- "serde_json",
- "tempfile",
- "thiserror",
-]
-
-[[package]]
-name = "neuroos-storage"
-version = "0.1.0"
-dependencies = [
- "neuroos-common",
- "neuroos-health",
- "neuroos-ipc",
- "neuroos-proto",
- "neuroos-storage",
- "neuroos-taint",
- "ort",
- "proptest",
- "rusqlite",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "thiserror",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "neuroos-taint"
-version = "0.1.0"
-dependencies = [
- "bitflags",
- "proptest",
- "thiserror",
-]
-
-[[package]]
-name = "neuroos-testkit"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "neuroos-common",
- "neuroos-deploy",
- "neuroos-health",
- "neuroos-ipc",
- "neuroos-proto",
- "neuroos-sandbox",
- "rustix",
- "tempfile",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "neuroosctl"
-version = "0.1.0"
-dependencies = [
- "clap",
- "getrandom 0.4.3",
- "jiff",
- "neuroos-common",
- "neuroos-ipc",
- "neuroos-proto",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
-]
-
-[[package]]
 name = "num-complex"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1923,6 +1578,351 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "octopit"
+version = "1.1.0"
+dependencies = [
+ "gtk4",
+ "octopit-core",
+ "octoplus-common",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "octopit-core"
+version = "1.1.0"
+dependencies = [
+ "octoplus-common",
+ "octoplus-ipc",
+ "octoplus-proto",
+ "proptest",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "octoplus-bench-ipc-stream"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "octoplus-ipc",
+ "octoplus-proto",
+ "rustix",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "octoplus-bench-kernel-check"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "octoplus-common",
+ "octoplus-ipc",
+ "octoplus-proto",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "octoplus-bench-storage-scan"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "octoplus-common"
+version = "0.1.0"
+dependencies = [
+ "jiff",
+ "proptest",
+ "serde",
+ "tempfile",
+ "thiserror",
+ "toml",
+ "tracing-journald",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "octoplus-confirm"
+version = "0.1.0"
+dependencies = [
+ "gtk4",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "octoplus-deploy"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "octoplus-common",
+ "serde",
+ "tempfile",
+ "thiserror",
+ "toml",
+]
+
+[[package]]
+name = "octoplus-fetcher"
+version = "0.1.0"
+dependencies = [
+ "hickory-resolver",
+ "hmac",
+ "octoplus-common",
+ "octoplus-health",
+ "octoplus-ipc",
+ "octoplus-proto",
+ "proptest",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "url",
+ "zeroize",
+]
+
+[[package]]
+name = "octoplus-health"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "octoplus-common",
+ "octoplus-ipc",
+ "octoplus-proto",
+ "octoplus-sandbox",
+ "proptest",
+ "rustix",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "octoplus-healthd"
+version = "0.1.0"
+dependencies = [
+ "jiff",
+ "octoplus-common",
+ "octoplus-health",
+ "octoplus-ipc",
+ "octoplus-proto",
+ "rustix",
+ "tempfile",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "octoplus-ipc"
+version = "0.1.0"
+dependencies = [
+ "getrandom 0.4.3",
+ "octoplus-proto",
+ "proptest",
+ "rustix",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "octoplus-kernel"
+version = "0.1.0"
+dependencies = [
+ "getrandom 0.4.3",
+ "hmac",
+ "octoplus-common",
+ "octoplus-confirm",
+ "octoplus-health",
+ "octoplus-ipc",
+ "octoplus-proto",
+ "octoplus-sandbox",
+ "octoplus-skill",
+ "octoplus-taint",
+ "proptest",
+ "rustix",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "toml",
+ "tracing",
+ "uuid",
+ "zbus",
+ "zeroize",
+]
+
+[[package]]
+name = "octoplus-knowledge"
+version = "0.1.0"
+dependencies = [
+ "jiff",
+ "octoplus-common",
+ "octoplus-health",
+ "octoplus-ipc",
+ "octoplus-proto",
+ "octoplus-taint",
+ "octoplus-testkit",
+ "proptest",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "toml",
+ "tracing",
+]
+
+[[package]]
+name = "octoplus-monitor"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "cosmic-protocols",
+ "getrandom 0.4.3",
+ "hmac",
+ "octoplus-common",
+ "octoplus-health",
+ "octoplus-ipc",
+ "octoplus-monitor",
+ "octoplus-proto",
+ "proptest",
+ "rustix",
+ "sha2",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "wayland-client",
+ "wayland-protocols",
+ "zbus",
+ "zeroize",
+]
+
+[[package]]
+name = "octoplus-proto"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+ "prost",
+ "prost-build",
+ "thiserror",
+]
+
+[[package]]
+name = "octoplus-sandbox"
+version = "0.1.0"
+dependencies = [
+ "landlock",
+ "rustix",
+ "seccompiler",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
+name = "octoplus-skill"
+version = "0.1.0"
+dependencies = [
+ "octoplus-sandbox",
+ "proptest",
+ "rustix",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
+name = "octoplus-storage"
+version = "0.1.0"
+dependencies = [
+ "octoplus-common",
+ "octoplus-health",
+ "octoplus-ipc",
+ "octoplus-proto",
+ "octoplus-storage",
+ "octoplus-taint",
+ "ort",
+ "proptest",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "octoplus-taint"
+version = "0.1.0"
+dependencies = [
+ "bitflags",
+ "proptest",
+ "thiserror",
+]
+
+[[package]]
+name = "octoplus-testkit"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "octoplus-common",
+ "octoplus-deploy",
+ "octoplus-health",
+ "octoplus-ipc",
+ "octoplus-proto",
+ "octoplus-sandbox",
+ "rustix",
+ "tempfile",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "octoplusctl"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "getrandom 0.4.3",
+ "jiff",
+ "octoplus-common",
+ "octoplus-ipc",
+ "octoplus-proto",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]

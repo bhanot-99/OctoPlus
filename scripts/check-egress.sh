@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Check network namespace isolation for running Semantic-NeuroOS units (P1-S01, P1-S02).
+# Check network namespace isolation for running OctoPlus units (P1-S01, P1-S02).
 #
 #   scripts/check-egress.sh [--pid <PID>]
 #
@@ -70,11 +70,11 @@ if [[ "${1:-}" == "--pid" ]]; then
   exit $?
 fi
 
-# Otherwise query all running neuroos-*.service user units
-units=$(systemctl --user list-units 'neuroos-*.service' --state=running --no-legend --plain 2>/dev/null | awk '{print $1}')
+# Otherwise query all running octoplus-*.service user units
+units=$(systemctl --user list-units 'octoplus-*.service' --state=running --no-legend --plain 2>/dev/null | awk '{print $1}')
 
 if [[ -z "$units" ]]; then
-  echo "error: no running neuroos user units found" >&2
+  echo "error: no running octoplus user units found" >&2
   exit 1
 fi
 

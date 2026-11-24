@@ -21,7 +21,7 @@
 | R0-8 | **Personal facts are saved only on the user's word.** |
 | R0-9 | **No runtime downloads.** Only the operator script fetches models, and it verifies hashes. |
 | R0-10 | **No personal content in logs** at `info` or above. |
-| R0-11 | **Contracts first.** Parts talk only through `proto/neuroos/v1`. |
+| R0-11 | **Contracts first.** Parts talk only through `proto/octoplus/v1`. |
 | R0-12 | **One phase at a time.** The owner may direct work on a later phase; that direction is recorded in [memory.md](memory.md) before the work starts. Nobody else may. |
 
 ---
@@ -41,7 +41,7 @@
 1. Code complete, formatted, zero lint warnings.
 2. Tests written with the code and passing; coverage gate met for touched modules.
 3. **It runs as a real service** inside its real sandboxed unit, started the way a user would start it — not only as a library under test.
-4. **It reports real health** and shows correctly in `neuroosctl status`.
+4. **It reports real health** and shows correctly in `octoplusctl status`.
 5. Contract tests updated when an interface changed.
 6. **Checked by someone other than the builder:** diff read, checks rerun, result recorded with both names in [memory.md](memory.md).
 7. No rule in this file broken; [security.md](security.md) §8 updated if a boundary was touched.
@@ -69,7 +69,7 @@
 
 | Rule | Detail |
 | :--- | :--- |
-| AB-1 | Parts MUST NOT link each other's crates. Shared code lives only in `neuroos-common`, `-proto`, `-ipc`, `-taint`, `-health`, `-sandbox` (Rust) and `cpp/libneuroos` (C++). A dev-dependency on another part, used only by a test that drives the real thing, is allowed with a comment naming the test. |
+| AB-1 | Parts MUST NOT link each other's crates. Shared code lives only in `octoplus-common`, `-proto`, `-ipc`, `-taint`, `-health`, `-sandbox` (Rust) and `cpp/liboctoplus` (C++). A dev-dependency on another part, used only by a test that drives the real thing, is allowed with a comment naming the test. |
 | AB-2 | C3 is the only writer of persistent user data and the only loader of the embedding model. Inside C3, one writer thread owns the only read-write connection. |
 | AB-3 | C4 is the only loader of the language model, and C5 is its only client. |
 | AB-4 | C6 is the only holder of the keys, the only writer of the audit log and egress ledger, the only part that talks to C7, and the only part that shows approvals and notifications on screen. OctoPit (ADR-0017) is a client, not a part: it may show status and chat, never an approval control. |
@@ -105,7 +105,7 @@
 | C++ memory | RAII, `unique_ptr`, `span`, `string_view` | raw `new`/`delete` |
 | C++ threads | `std::jthread`; lock-free queue for audio | locks, allocation or logging in the audio callback |
 | Storage | parameterised SQL; migrations in one folder | string-built SQL; schema changes outside migrations |
-| Config | one `config.toml` plus `nudges.toml`, validated at start, unknown keys are fatal | environment variables for behaviour (only `NEUROOS_LOG`, `NEUROOS_CONFIG`) |
+| Config | one `config.toml` plus `nudges.toml`, validated at start, unknown keys are fatal | environment variables for behaviour (only `OCTOPLUS_LOG`, `OCTOPLUS_CONFIG`) |
 | Crypto | `hmac`, `sha2`, `subtle`, `getrandom`, `zeroize` | hand-rolled crypto; `==` on MACs |
 | UI | GTK4 dialog; notifications from templates | any remote asset; rendering free text from another part (exception: OctoPit chat answers, as plain text only, ADR-0017) |
 | Tests | `nextest`, `proptest`, `insta`, GoogleTest | tests that need the internet; sleeping instead of waiting on an event |
@@ -130,7 +130,7 @@
 | Area | Standard |
 | :--- | :--- |
 | Formatting and linting | `rustfmt`, `clippy -D warnings`, `clang-format`, `clang-tidy`, `shellcheck`. Warnings are errors. |
-| `unsafe` | Only in `neuroos-sandbox` and FFI shims; each block has a `// SAFETY:` comment and a test. Denied everywhere else. |
+| `unsafe` | Only in `octoplus-sandbox` and FFI shims; each block has a `// SAFETY:` comment and a test. Denied everywhere else. |
 | Functions | Prefer ≤ 60 lines and ≤ 5 parameters. |
 | Comments | Explain why. Security- and performance-critical functions name the requirement they satisfy. |
 | Numbers | Budgets and thresholds are config or named constants citing the PRD ID. **No product number is written in any document except PRD.md.** |

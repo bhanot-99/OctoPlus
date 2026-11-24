@@ -1,11 +1,11 @@
 // Cross-language IPC peer (P0-S03, phases.md §3.3 CT).
 //
-//   neuroos_ipc_peer serve <socket> <deadline_ms>   C++ server; prints READY, stops on stdin EOF
-//   neuroos_ipc_peer client <socket>                C++ client; runs every stream case against
+//   octoplus_ipc_peer serve <socket> <deadline_ms>   C++ server; prints READY, stops on stdin EOF
+//   octoplus_ipc_peer client <socket>                C++ client; runs every stream case against
 //                                                   a server (e.g. the Rust one), prints one
 //                                                   "OK <case>" line each, exits non-zero on a miss
 //
-// The request language matches crates/neuroos-ipc/tests: a Ping payload of
+// The request language matches crates/octoplus-ipc/tests: a Ping payload of
 // "echo:x", "stream:N", "slowstream:MS", "sleep:MS" or "fail".
 
 #include <chrono>
@@ -15,16 +15,16 @@
 #include <thread>
 #include <vector>
 
-#include "neuroos/ipc/client.hpp"
-#include "neuroos/ipc/server.hpp"
+#include "octoplus/ipc/client.hpp"
+#include "octoplus/ipc/server.hpp"
 
 namespace {
 
-using neuroos::Status;
-using neuroos::ipc::CancelToken;
-using neuroos::ipc::Request;
-using neuroos::ipc::StreamSink;
-using neuroos::v1::Envelope;
+using octoplus::Status;
+using octoplus::ipc::CancelToken;
+using octoplus::ipc::Request;
+using octoplus::ipc::StreamSink;
+using octoplus::v1::Envelope;
 using std::chrono::milliseconds;
 
 constexpr std::uint32_t kMax = 64U * 1024U;
@@ -36,7 +36,7 @@ int Arg(const std::string& cmd) {
 
 Status Handle(const Request& req, StreamSink& sink, const CancelToken& cancel, Envelope* reply) {
   if (!req.envelope.has_ping()) {
-    return neuroos::Error{"unsupported request", false, neuroos::v1::ERROR_CODE_INVALID_REQUEST};
+    return octoplus::Error{"unsupported request", false, octoplus::v1::ERROR_CODE_INVALID_REQUEST};
   }
   const std::string cmd = req.envelope.ping().payload();
   const std::string verb = cmd.substr(0, cmd.find(':'));
@@ -67,18 +67,18 @@ Status Handle(const Request& req, StreamSink& sink, const CancelToken& cancel, E
     }
     reply->mutable_pong();
   } else if (verb == "fail") {
-    return neuroos::Error{"no such thing", false, neuroos::v1::ERROR_CODE_NOT_FOUND};
+    return octoplus::Error{"no such thing", false, octoplus::v1::ERROR_CODE_NOT_FOUND};
   } else {
-    return neuroos::Error{"unsupported request", false, neuroos::v1::ERROR_CODE_INVALID_REQUEST};
+    return octoplus::Error{"unsupported request", false, octoplus::v1::ERROR_CODE_INVALID_REQUEST};
   }
-  return neuroos::ok_status();
+  return octoplus::ok_status();
 }
 
 int Serve(const std::string& path, int deadline_ms) {
-  neuroos::ipc::ServerConfig cfg;
+  octoplus::ipc::ServerConfig cfg;
   cfg.max_frame_bytes = kMax;
   cfg.deadline = milliseconds(deadline_ms);
-  auto srv = neuroos::ipc::Server::Start(path, cfg, Handle);
+  auto srv = octoplus::ipc::Server::Start(path, cfg, Handle);
   if (!srv) {
     std::cerr << "start failed: " << srv.error().message << "\n";
     return 2;
@@ -98,7 +98,7 @@ Envelope Ping(const std::string& s) {
 }
 
 // Drains a stream; returns the terminal error code (0 for a clean end) and counts pongs.
-int Drain(neuroos::ipc::ResponseStream& s, int* pongs, bool* clean_end) {
+int Drain(octoplus::ipc::ResponseStream& s, int* pongs, bool* clean_end) {
   for (;;) {
     auto f = s.Next();
     if (!f) {
@@ -120,7 +120,7 @@ bool Report(bool ok, const char* name) {
 }
 
 int Client(const std::string& path) {
-  auto c = neuroos::ipc::Client::Connect(path, kMax);
+  auto c = octoplus::ipc::Client::Connect(path, kMax);
   if (!c) {
     std::cerr << "connect failed\n";
     return 2;
@@ -143,7 +143,7 @@ int Client(const std::string& path) {
     int pongs = 0;
     bool clean = false;
     const int code = s ? Drain(*s.value(), &pongs, &clean) : -1;
-    all &= Report(code == neuroos::v1::ERROR_CODE_NOT_FOUND, "stream-error");
+    all &= Report(code == octoplus::v1::ERROR_CODE_NOT_FOUND, "stream-error");
   }
   {
     auto s = client.Open(Ping("slowstream:5"), milliseconds(5000));
@@ -158,12 +158,12 @@ int Client(const std::string& path) {
       s.value()->Cancel();
     }
     const int code = ok ? Drain(*s.value(), &pongs, &clean) : -1;
-    all &= Report(code == neuroos::v1::ERROR_CODE_CANCELLED, "stream-cancel");
+    all &= Report(code == octoplus::v1::ERROR_CODE_CANCELLED, "stream-cancel");
   }
   {
     // The server under test runs with a short deadline.
     auto r = client.Call(Ping("sleep:3000"), milliseconds(2500));
-    all &= Report(!r.ok() && r.error().code == neuroos::v1::ERROR_CODE_DEADLINE_EXCEEDED,
+    all &= Report(!r.ok() && r.error().code == octoplus::v1::ERROR_CODE_DEADLINE_EXCEEDED,
                   "server-deadline");
   }
   return all ? 0 : 1;
@@ -180,6 +180,6 @@ int main(int argc, char** argv) {
   if (args.size() == 3 && args[1] == "client") {
     return Client(args[2]);
   }
-  std::cerr << "usage: neuroos_ipc_peer serve <socket> <deadline_ms> | client <socket>\n";
+  std::cerr << "usage: octoplus_ipc_peer serve <socket> <deadline_ms> | client <socket>\n";
   return 1;
 }

@@ -1,7 +1,7 @@
 //! NFR-PERF-06: C6 capability check `< 0.5 ms p99` (PRD §6.1).
 //!
 //! Sends `EvaluateRequest`s to the **running** kernel over its real socket
-//! (`neuroosctl`'s path: the same peer policy, framing and handler), one at a
+//! (`octoplusctl`'s path: the same peer policy, framing and handler), one at a
 //! time, and reports round-trip latency percentiles as JSON (rules.md §9.6).
 //! The round trip includes the client side and the socket, so it is an upper
 //! bound on the kernel's own check time.
@@ -13,10 +13,10 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use neuroos_common::paths::{self, Part};
-use neuroos_ipc::Client;
-use neuroos_proto::v1::envelope::Body;
-use neuroos_proto::v1::{EvaluateRequest, Taint};
+use octoplus_common::paths::{self, Part};
+use octoplus_ipc::Client;
+use octoplus_proto::v1::envelope::Body;
+use octoplus_proto::v1::{EvaluateRequest, Taint};
 
 #[derive(Debug, Parser)]
 struct Args {
@@ -26,7 +26,7 @@ struct Args {
     /// Warm-up requests (not measured).
     #[arg(long, default_value_t = 1_000)]
     warmup: usize,
-    /// Runtime root (default `$XDG_RUNTIME_DIR/neuroos`).
+    /// Runtime root (default `$XDG_RUNTIME_DIR/octoplus`).
     #[arg(long)]
     runtime_dir: Option<PathBuf>,
 }

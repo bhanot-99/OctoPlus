@@ -21,12 +21,12 @@ done
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 manifest="$root/models/manifest.toml"
-models_dir="${NEUROOS_MODELS_DIR:-$root/models}"
+models_dir="${OCTOPLUS_MODELS_DIR:-$root/models}"
 verify_only=0
 ids=()
 # Tests set this to allow file:// sources; never set it for real downloads.
 protocols="=https"
-if [[ "${NEUROOS_FETCH_ALLOW_FILE:-0}" == "1" ]]; then
+if [[ "${OCTOPLUS_FETCH_ALLOW_FILE:-0}" == "1" ]]; then
   protocols="=https,file"
 fi
 
@@ -107,7 +107,7 @@ while IFS=$'\t' read -r id file url sha size license; do
     failures=$((failures + 1))
     continue
   fi
-  headroom="${NEUROOS_FETCH_HEADROOM_BYTES:-1073741824}"
+  headroom="${OCTOPLUS_FETCH_HEADROOM_BYTES:-1073741824}"
   free_bytes="$(df --output=avail -B1 "$models_dir" | tail -n 1 | tr -d ' ')"
   if ((free_bytes < size + headroom)); then
     echo "NOSPACE  $id needs $size bytes plus headroom; $free_bytes free" >&2

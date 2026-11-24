@@ -21,11 +21,11 @@ echo "=== Phase 9 Step 1: E2E User Journeys Verification (UJ-1..UJ-6) ==="
 echo "Target consecutive successful runs: $runs"
 
 # Ensure user services are started
-echo "Starting neuroos.target..."
-systemctl --user start neuroos.target || true
+echo "Starting octoplus.target..."
+systemctl --user start octoplus.target || true
 
 # Wait for sockets
-runtime_dir="${XDG_RUNTIME_DIR}/neuroos"
+runtime_dir="${XDG_RUNTIME_DIR}/octoplus"
 k_sock="$runtime_dir/knowledge/knowledge/knowledge.sock"
 inf_sock="$runtime_dir/inference/inference/inference.sock"
 kern_sock="$runtime_dir/kernel/kernel/kernel.sock"
@@ -42,7 +42,7 @@ done
 for i in $(seq 1 "$runs"); do
   echo ""
   echo ">>> [Run $i / $runs] Executing E2E Journeys Suite..."
-  cargo test -p neuroos-testkit --test local_e2e_uj_journeys -- --nocapture
+  cargo test -p octoplus-testkit --test local_e2e_uj_journeys -- --nocapture
   echo ">>> [Run $i / $runs] PASSED"
 done
 

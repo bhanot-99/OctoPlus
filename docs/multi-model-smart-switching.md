@@ -1,7 +1,7 @@
 # Hierarchical Multi-Model Architecture & Smart Fast-Switching
 
 **Document Type:** Architecture & Design RFC  
-**Target Subsystems:** C4 (`neuroos-inference`), C5 (`neuroos-knowledge`), C2 (`neuroos-voice`)  
+**Target Subsystems:** C4 (`octoplus-inference`), C5 (`octoplus-knowledge`), C2 (`octoplus-voice`)  
 **Status:** Proposed / Future Roadmap  
 **File Location:** `docs/multi-model-smart-switching.md`  
 
@@ -9,13 +9,13 @@
 
 ## 1. Executive Summary
 
-Semantic NeuroOS currently utilizes a single, balanced local language model (**Qwen3-4B-Instruct-2507 Q4_K_M**) pinned in [`models/manifest.toml`](../models/manifest.toml). 
+OctoPlus currently utilizes a single, balanced local language model (**Qwen3-4B-Instruct-2507 Q4_K_M**) pinned in [`models/manifest.toml`](../models/manifest.toml). 
 
 While a 4B model achieves an optimal balance on standard CPU hardware (sub-3.5s latency to speech, < 3,000 MiB RSS footprint), production workloads naturally present two conflicting demands:
 1. **Low-Latency Voice Interactions:** Real-time conversational responsiveness requiring token generation in < 1–2 seconds.
 2. **Deep Analytical Reasoning:** Complex code debugging, multi-hop document retrieval, and robust grammar-constrained tool arguments that benefit significantly from larger models (12B–14B parameters).
 
-This document outlines the **Hierarchical Multi-Model Architecture** and **Smart Fast-Switching** mechanism for Semantic NeuroOS, detailing how diverse model tiers can be dynamically selected per query, how hardware memory bottlenecks are solved (including on unified memory architectures), and the platform abstraction required for cross-platform deployment.
+This document outlines the **Hierarchical Multi-Model Architecture** and **Smart Fast-Switching** mechanism for OctoPlus, detailing how diverse model tiers can be dynamically selected per query, how hardware memory bottlenecks are solved (including on unified memory architectures), and the platform abstraction required for cross-platform deployment.
 
 ---
 
@@ -127,7 +127,7 @@ On Apple Silicon hardware with 24 GB Unified Memory:
 
 ## 6. macOS Platform Adaptation Map
 
-While Semantic NeuroOS is built natively for Linux kernel interfaces (Landlock, systemd, Wayland, PipeWire), its modular Unix Domain Socket (UDS) architecture allows clean platform targeting for a future macOS adaptation:
+While OctoPlus is built natively for Linux kernel interfaces (Landlock, systemd, Wayland, PipeWire), its modular Unix Domain Socket (UDS) architecture allows clean platform targeting for a future macOS adaptation:
 
 | Subsystem | Linux Baseline (Current) | macOS Target Architecture |
 | :--- | :--- | :--- |
@@ -143,7 +143,7 @@ While Semantic NeuroOS is built natively for Linux kernel interfaces (Landlock, 
 
 ## 7. Implementation Roadmap
 
-1. **Phase A (C4 Multi-Instance Pool):** Extend `neuroos-inference` to manage multiple `llama_model` pointers behind a unified IPC protocol.
+1. **Phase A (C4 Multi-Instance Pool):** Extend `octoplus-inference` to manage multiple `llama_model` pointers behind a unified IPC protocol.
 2. **Phase B (C5 Router Tier Mapping):** Update `crates/knowledge/src/router.rs` to output a `ModelTier` tag (`Tier1_Fast`, `Tier2_Standard`, `Tier3_Reasoning`) alongside route intent.
-3. **Phase C (Preamble Engine):** Implement overlapping audio streaming in `neuroos-voice` (C2) to play acknowledgments during Tier 3 model prefill.
+3. **Phase C (Preamble Engine):** Implement overlapping audio streaming in `octoplus-voice` (C2) to play acknowledgments during Tier 3 model prefill.
 4. **Phase D (Metal Engine Profile):** Add a CMake build preset for `GGML_METAL` alongside the existing CPU and Vulkan targets.

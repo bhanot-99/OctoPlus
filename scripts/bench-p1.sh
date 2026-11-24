@@ -4,12 +4,12 @@
 #   scripts/bench-p1.sh [--reps N] [--out DIR]
 #
 # 1. C4 benchmark inside C4's real sandbox (FR-INF-07): the installed
-#    neuroos-inference.service with only ExecStart replaced by the one-shot
+#    octoplus-inference.service with only ExecStart replaced by the one-shot
 #    `--bench` mode (and Restart=no), so every hardening line is the shipped one.
 #    Prompt sizes 208 (ADR-0005 uncached part) and 384 (whole layout); 64 new
 #    tokens; N repetitions after one warm-up. The real C4 is stopped first so
 #    two models are never loaded at once.
-# 2. C4 cold start: `systemctl start neuroos.target` from stopped to C4 health OK,
+# 2. C4 cold start: `systemctl start octoplus.target` from stopped to C4 health OK,
 #    which includes the model hash check unit (ADR-0009). 3 runs.
 # Per-part RSS, healthd RSS and end-to-end time to first chunk come from the
 # mini-soak (scripts/soak-p1.sh).
@@ -29,12 +29,12 @@ while [[ $# -gt 0 ]]; do
 done
 mkdir -p "$out"
 unit_dir="$HOME/.config/systemd/user"
-src_unit="$unit_dir/neuroos-inference.service"
+src_unit="$unit_dir/octoplus-inference.service"
 [[ -f "$src_unit" ]] || { echo "error: run just install-dev first" >&2; exit 1; }
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 json="$out/bench-p1-$stamp.json"
-bench_unit="neuroos-p1-bench.service"
-cfg="$HOME/.config/neuroos/config.toml"
+bench_unit="octoplus-p1-bench.service"
+cfg="$HOME/.config/octoplus/config.toml"
 cfg_backup=""
 if [[ -f "$cfg" ]]; then cfg_backup="$(mktemp)"; cp "$cfg" "$cfg_backup"; fi
 cleanup() {
@@ -43,7 +43,7 @@ cleanup() {
   systemctl --user reset-failed "$bench_unit" 2>/dev/null || true
   rm -f "$unit_dir/$bench_unit"
   systemctl --user daemon-reload
-  systemctl --user stop neuroos.target 'neuroos-*.service' || true
+  systemctl --user stop octoplus.target 'octoplus-*.service' || true
 }
 trap cleanup EXIT
 
@@ -53,7 +53,7 @@ maxf="$(cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq 2>/dev/null ||
 ac="$(cat /sys/class/power_supply/AC*/online 2>/dev/null | head -n1 || echo unknown)"
 commit="$(git -C "$root" rev-parse --short HEAD)"
 
-systemctl --user stop neuroos.target 'neuroos-*.service' || true
+systemctl --user stop octoplus.target 'octoplus-*.service' || true
 results=()
 for prompt in 208 384; do
   orig_exec="$(grep '^ExecStart=' "$src_unit")"
@@ -82,13 +82,13 @@ mkdir -p "$(dirname "$cfg")"
 { [[ -n "$cfg_backup" ]] && cat "$cfg_backup"; printf '\n[healthd]\nscrape_interval_s = 1\n'; } > "$cfg"
 cold=()
 for _ in 1 2 3; do
-  systemctl --user stop neuroos.target 'neuroos-*.service' || true
+  systemctl --user stop octoplus.target 'octoplus-*.service' || true
   t0="$(date +%s%N)"
-  systemctl --user start neuroos.target
+  systemctl --user start octoplus.target
   # status exits 3 while any part is not OK (C7 is DOWN until installed), so its
   # exit code is ignored here; only C4's entry in the JSON matters.
-  until { "$HOME/.local/opt/neuroos/bin/neuroosctl" status --json --color never 2>/dev/null || true; } \
-      | python3 -I -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if any(c["name"]=="neuroos-inference" and c["status"]=="OK" for c in d["components"]) else 1)'; do
+  until { "$HOME/.local/opt/octoplus/bin/octoplusctl" status --json --color never 2>/dev/null || true; } \
+      | python3 -I -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if any(c["name"]=="octoplus-inference" and c["status"]=="OK" for c in d["components"]) else 1)'; do
     (( ($(date +%s%N) - t0) / 1000000000 < 180 )) || { echo "error: C4 not OK in 180 s" >&2; exit 1; }
     sleep 0.5
   done
@@ -103,7 +103,7 @@ summaries = [json.loads(s) for s in sys.argv[8:]]
 out = {"date_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "commit": commit,
        "conditions": {"governor": gov, "cpu_max_khz": int(maxf), "ac_online": ac,
                       "build": "release", "threads": 8, "ctx": 2048, "batch": 512,
-                      "repacking": "off", "where": "neuroos-inference.service sandbox, ExecStart replaced"},
+                      "repacking": "off", "where": "octoplus-inference.service sandbox, ExecStart replaced"},
        "c4_bench": [dict(s, prompt_tokens_requested=p) for s, p in zip(summaries, (208, 384))],
        "reps_after_warmup": int(reps),
        "cold_start_to_c4_ok_ms": [int(x) for x in cold.split()],

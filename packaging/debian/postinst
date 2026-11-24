@@ -5,25 +5,25 @@ case "$1" in
   configure)
     # 1. Provision sysusers
     if command -v systemd-sysusers >/dev/null 2>&1; then
-      systemd-sysusers /usr/lib/sysusers.d/neuroos.conf || true
+      systemd-sysusers /usr/lib/sysusers.d/octoplus.conf || true
     fi
 
     # 2. Provision tmpfiles
     if command -v systemd-tmpfiles >/dev/null 2>&1; then
-      systemd-tmpfiles --create /usr/lib/tmpfiles.d/neuroos-fetcher.conf || true
+      systemd-tmpfiles --create /usr/lib/tmpfiles.d/octoplus-fetcher.conf || true
     fi
 
     # 3. Create default directory structure
-    install -d -m 0755 /opt/neuroos/bin
-    install -d -m 0755 /opt/neuroos/models
-    install -d -m 0755 /etc/neuroos
-    install -d -m 0770 -o neuroos-fetcher -g neuroos /var/spool/neuroos-fetcher 2>/dev/null || true
+    install -d -m 0755 /opt/octoplus/bin
+    install -d -m 0755 /opt/octoplus/models
+    install -d -m 0755 /etc/octoplus
+    install -d -m 0770 -o octoplus-fetcher -g octoplus /var/spool/octoplus-fetcher 2>/dev/null || true
 
     # 4. Generate system fetch.key if missing
-    if [[ ! -f /etc/neuroos/fetch.key ]]; then
-      dd if=/dev/urandom of=/etc/neuroos/fetch.key bs=32 count=1 status=none
-      chmod 0640 /etc/neuroos/fetch.key
-      chown root:neuroos /etc/neuroos/fetch.key 2>/dev/null || true
+    if [[ ! -f /etc/octoplus/fetch.key ]]; then
+      dd if=/dev/urandom of=/etc/octoplus/fetch.key bs=32 count=1 status=none
+      chmod 0640 /etc/octoplus/fetch.key
+      chown root:octoplus /etc/octoplus/fetch.key 2>/dev/null || true
     fi
 
     # 4b. The fetcher only answers one user: the person who installed (sudo), or else the first
@@ -36,10 +36,10 @@ case "$1" in
     if [[ -n "$owner" ]]; then
       owner_uid="$(id -u "$owner" 2>/dev/null || true)"
     fi
-    if [[ -n "$owner_uid" && -f /lib/systemd/system/neuroos-fetcher.service ]]; then
-      sed -i "s/@OWNER_UID@/${owner_uid}/g" /lib/systemd/system/neuroos-fetcher.service
+    if [[ -n "$owner_uid" && -f /lib/systemd/system/octoplus-fetcher.service ]]; then
+      sed -i "s/@OWNER_UID@/${owner_uid}/g" /lib/systemd/system/octoplus-fetcher.service
     else
-      echo "warning: could not tell which user may use the fetcher; edit /lib/systemd/system/neuroos-fetcher.service (@OWNER_UID@)" >&2
+      echo "warning: could not tell which user may use the fetcher; edit /lib/systemd/system/octoplus-fetcher.service (@OWNER_UID@)" >&2
     fi
 
     # 5. Reload systemd daemon
@@ -47,9 +47,9 @@ case "$1" in
       systemctl daemon-reload || true
     fi
 
-    version="$(dpkg-query -W -f='${Version}' semantic-neuroos 2>/dev/null || true)"
-    echo "Semantic-NeuroOS${version:+ $version} installed successfully."
-    echo "To complete user setup, run: neuroosctl init"
+    version="$(dpkg-query -W -f='${Version}' octoplus 2>/dev/null || true)"
+    echo "OctoPlus${version:+ $version} installed successfully."
+    echo "To complete user setup, run: octoplusctl init"
     ;;
   abort-upgrade|abort-remove|abort-deconfigure)
     ;;

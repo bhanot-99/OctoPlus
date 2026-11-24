@@ -7,14 +7,14 @@ This runbook guides operators through an immediate, irreversible data wipe ("for
 ## 1. Scope of the Wipe
 
 Executing "forget everything" permanently destroys:
-1. **Long-Term Memory & Vector Index:** `~/.local/share/neuroos/storage/storage.db` (and all WAL/SHM files).
+1. **Long-Term Memory & Vector Index:** `~/.local/share/octoplus/storage/storage.db` (and all WAL/SHM files).
 2. **Conversation Transcripts:** Any stored chat sessions, prompt caches, and context windows.
-3. **Sensor Telemetry Dumps:** `~/.local/share/neuroos/recordings/` and `~/.local/share/neuroos/soak/`.
+3. **Sensor Telemetry Dumps:** `~/.local/share/octoplus/recordings/` and `~/.local/share/octoplus/soak/`.
 4. **Action & Egress Ledgers:** `actions.jsonl` and `egress.jsonl`.
-5. **Network Fetcher Spool:** `/var/spool/neuroos-fetcher/`.
-6. **Backups:** `~/.local/share/neuroos/backups/`.
+5. **Network Fetcher Spool:** `/var/spool/octoplus-fetcher/`.
+6. **Backups:** `~/.local/share/octoplus/backups/`.
 
-It **preserves** installed binaries (`/opt/neuroos/bin`) and base configuration templates so the buddy can restart fresh without reinstalling.
+It **preserves** installed binaries (`/opt/octoplus/bin`) and base configuration templates so the buddy can restart fresh without reinstalling.
 
 ---
 
@@ -29,62 +29,62 @@ scripts/uninstall.sh --purge --yes
 
 ## 3. In-Place Privacy Purge (Reset Without Uninstall)
 
-If you wish to keep Semantic-NeuroOS running but wipe all memory and history back to day 1:
+If you wish to keep OctoPlus running but wipe all memory and history back to day 1:
 
 ### Step 1: Stop Services
 ```bash
-systemctl --user stop neuroos.target
+systemctl --user stop octoplus.target
 ```
 
 ### Step 2: Delete All Databases, Embeddings & Logs
 ```bash
 # Wipe storage and databases
-rm -rf ~/.local/share/neuroos/storage/*
-rm -rf ~/.local/share/neuroos/backups/*
-rm -rf ~/.local/share/neuroos/recordings/*
-rm -rf ~/.local/share/neuroos/soak/*
-rm -rf ~/.local/share/neuroos/kernel/*
+rm -rf ~/.local/share/octoplus/storage/*
+rm -rf ~/.local/share/octoplus/backups/*
+rm -rf ~/.local/share/octoplus/recordings/*
+rm -rf ~/.local/share/octoplus/soak/*
+rm -rf ~/.local/share/octoplus/kernel/*
 
 # Wipe ephemeral spool (requires sudo if clearing system fetcher spool)
-if [[ -d /var/spool/neuroos-fetcher ]]; then
-  sudo rm -rf /var/spool/neuroos-fetcher/*
+if [[ -d /var/spool/octoplus-fetcher ]]; then
+  sudo rm -rf /var/spool/octoplus-fetcher/*
 fi
 
 # Clear user cache & runtime sockets
-rm -rf ~/.cache/neuroos/*
-rm -rf "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/neuroos"
+rm -rf ~/.cache/octoplus/*
+rm -rf "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/octoplus"
 ```
 
 ### Step 3: Re-create Clean Storage Directories
 ```bash
-mkdir -p ~/.local/share/neuroos/storage
-mkdir -p ~/.local/share/neuroos/backups
-chmod 0700 ~/.local/share/neuroos ~/.local/share/neuroos/storage ~/.local/share/neuroos/backups
+mkdir -p ~/.local/share/octoplus/storage
+mkdir -p ~/.local/share/octoplus/backups
+chmod 0700 ~/.local/share/octoplus ~/.local/share/octoplus/storage ~/.local/share/octoplus/backups
 ```
 
 ### Step 4: Restart with Blank Memory
 ```bash
-systemctl --user start neuroos.target
+systemctl --user start octoplus.target
 ```
 
 ### Step 5: Verification
 1. Check that storage starts with a brand new, empty database:
    ```bash
-   sqlite3 ~/.local/share/neuroos/storage/storage.db "SELECT count(*) FROM chunks;"
+   sqlite3 ~/.local/share/octoplus/storage/storage.db "SELECT count(*) FROM chunks;"
    # Expected: 0
    ```
 2. Verify profile facts are empty:
    ```bash
-   neuroosctl profile list
+   octoplusctl profile list
    # Expected: empty
    ```
 3. Check egress ledger is clean:
    ```bash
-   neuroosctl egress list
+   octoplusctl egress list
    # Expected: empty
    ```
 4. Verify overall system health:
    ```bash
-   neuroosctl status
+   octoplusctl status
    # Expected: all OK
    ```

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Per-question voice latency breakdown from the neuroos-voice journal (voice upgrade, Step 0).
+"""Per-question voice latency breakdown from the octoplus-voice journal (voice upgrade, Step 0).
 
-The service prints event names when NEUROOS_VOICE_TRACE is set. This reads those lines with their
+The service prints event names when OCTOPLUS_VOICE_TRACE is set. This reads those lines with their
 microsecond timestamps and prints, for every question, how long each stage took:
 
   stt           speech_ended   -> transcribed
@@ -18,7 +18,7 @@ real-stack script adds it by measuring from the end of the played question.
 
 Usage:
   scripts/voice-latency.py [--since "5 min ago"] [--json OUT.json]
-  journalctl --user -u neuroos-voice -o short-precise | scripts/voice-latency.py --stdin
+  journalctl --user -u octoplus-voice -o short-precise | scripts/voice-latency.py --stdin
 """
 import argparse
 import json
@@ -28,7 +28,7 @@ import subprocess
 import sys
 from datetime import datetime
 
-LINE = re.compile(r"^(\w{3} +\d+ \d\d:\d\d:\d\d\.\d+) \S+ neuroos-voice\[\d+\]: voice: (\S+)$")
+LINE = re.compile(r"^(\w{3} +\d+ \d\d:\d\d:\d\d\.\d+) \S+ octoplus-voice\[\d+\]: voice: (\S+)$")
 
 
 def parse(text):
@@ -95,11 +95,11 @@ def main():
         text = sys.stdin.read()
     else:
         text = subprocess.run(
-            ["journalctl", "--user", "-u", "neuroos-voice", "-o", "short-precise", "--no-pager",
+            ["journalctl", "--user", "-u", "octoplus-voice", "-o", "short-precise", "--no-pager",
              "--since", a.since], capture_output=True, text=True, check=False).stdout
     rows = [breakdown(t) for t in turns(parse(text)) if "transcribed" in t]
     if not rows:
-        print("no turns found (is NEUROOS_VOICE_TRACE set on neuroos-voice?)")
+        print("no turns found (is OCTOPLUS_VOICE_TRACE set on octoplus-voice?)")
         return 1
     keys = list(rows[0])
     print("seconds  " + "  ".join(f"{k:>11}" for k in keys))

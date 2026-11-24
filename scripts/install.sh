@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Production installer for Semantic-NeuroOS (Phase 10, P10-S02).
+# Production installer for OctoPlus (Phase 10, P10-S02).
 #
 # Usage:
-#   scripts/install.sh [--user] [--system] [--prefix /opt/neuroos]
+#   scripts/install.sh [--user] [--system] [--prefix /opt/octoplus]
 #
 # Defaults to full installation if run with sudo/root, or user-space installation
 # if run as normal user.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-prefix="/opt/neuroos"
+prefix="/opt/octoplus"
 mode="auto"
 destdir=""
 skip_build=0
@@ -50,15 +50,15 @@ while [[ $# -gt 0 ]]; do
       ;;
     -h|--help)
       cat << 'EOF'
-Semantic-NeuroOS Production Installer
+OctoPlus Production Installer
 
 Usage:
   scripts/install.sh [OPTIONS]
 
 Options:
-  --user              Install user services and binaries only (~/.local/opt/neuroos)
+  --user              Install user services and binaries only (~/.local/opt/octoplus)
   --system            Install system-scope services (fetcher, sysusers, tmpfiles; requires sudo)
-  --prefix <PATH>     Base installation path (default: /opt/neuroos)
+  --prefix <PATH>     Base installation path (default: /opt/octoplus)
   --destdir <PATH>    Staging root directory for testing or packaging
   --skip-build        Skip automatic cargo release build if binaries already exist
   -h, --help          Show this help message
@@ -80,13 +80,13 @@ if [[ "$mode" == "auto" ]]; then
   fi
 fi
 
-if [[ "$skip_build" -eq 0 && ! -f "$root/target/release/neuroosctl" ]]; then
+if [[ "$skip_build" -eq 0 && ! -f "$root/target/release/octoplusctl" ]]; then
   echo "=== 0. Building Rust release binaries ==="
   cargo build --release --workspace --locked
 fi
 
 echo "================================================="
-echo " Installing Semantic-NeuroOS (Mode: $mode, Prefix: $prefix, Destdir: ${destdir:-/})"
+echo " Installing OctoPlus (Mode: $mode, Prefix: $prefix, Destdir: ${destdir:-/})"
 echo "================================================="
 
 # Detect target user for system unit allow-uid
@@ -105,21 +105,21 @@ if [[ "$mode" == "all" || "$mode" == "system" ]]; then
   fi
 
   echo "=== [System] 1. Installing sysusers & tmpfiles ==="
-  install -d -m 0755 "$destdir/etc/sysusers.d" "$destdir/etc/tmpfiles.d" "$destdir/etc/neuroos"
-  install -m 0644 "$root/deploy/sysusers.d/neuroos.conf" "$destdir/etc/sysusers.d/neuroos.conf"
-  install -m 0644 "$root/deploy/tmpfiles.d/neuroos-fetcher.conf" "$destdir/etc/tmpfiles.d/neuroos-fetcher.conf"
+  install -d -m 0755 "$destdir/etc/sysusers.d" "$destdir/etc/tmpfiles.d" "$destdir/etc/octoplus"
+  install -m 0644 "$root/deploy/sysusers.d/octoplus.conf" "$destdir/etc/sysusers.d/octoplus.conf"
+  install -m 0644 "$root/deploy/tmpfiles.d/octoplus-fetcher.conf" "$destdir/etc/tmpfiles.d/octoplus-fetcher.conf"
 
   if [[ -z "$destdir" ]]; then
     if command -v systemd-sysusers >/dev/null 2>&1; then
-      systemd-sysusers /etc/sysusers.d/neuroos.conf || true
+      systemd-sysusers /etc/sysusers.d/octoplus.conf || true
     fi
     if command -v systemd-tmpfiles >/dev/null 2>&1; then
-      systemd-tmpfiles --create /etc/tmpfiles.d/neuroos-fetcher.conf || true
+      systemd-tmpfiles --create /etc/tmpfiles.d/octoplus-fetcher.conf || true
     fi
 
     if id "$target_user" >/dev/null 2>&1; then
-      usermod -aG neuroos "$target_user" || true
-      echo "Added $target_user to group 'neuroos'."
+      usermod -aG octoplus "$target_user" || true
+      echo "Added $target_user to group 'octoplus'."
     fi
   fi
 
@@ -128,28 +128,28 @@ if [[ "$mode" == "all" || "$mode" == "system" ]]; then
   install -d -m 0755 "$destdir/usr/local/bin"
 
   candidates=(
-    "neuroos-healthd"
-    "neuroos-storage"
-    "neuroos-inference"
-    "neuroos-monitor"
-    "neuroos-kernel"
-    "neuroos-confirm"
-    "neuroos-knowledge"
-    "neuroos-voice"
-    "neuroos-fetcher"
-    "neuroosctl"
-    "neuroos-octopit"
-    "neuroos-gen-units"
+    "octoplus-healthd"
+    "octoplus-storage"
+    "octoplus-inference"
+    "octoplus-monitor"
+    "octoplus-kernel"
+    "octoplus-confirm"
+    "octoplus-knowledge"
+    "octoplus-voice"
+    "octoplus-fetcher"
+    "octoplusctl"
+    "octopit"
+    "octoplus-gen-units"
   )
 
   for bin in "${candidates[@]}"; do
     src=""
-    if [[ "$bin" == "neuroos-voice" && -f "$root/cpp/build/voice-release/neuroos-voice/neuroos-voice" ]]; then
-      src="$root/cpp/build/voice-release/neuroos-voice/neuroos-voice"
-    elif [[ "$bin" == "neuroos-inference" && -f "$root/cpp/build/voice-release/neuroos-inference/neuroos-inference" ]]; then
-      src="$root/cpp/build/voice-release/neuroos-inference/neuroos-inference"
-    elif [[ "$bin" == "neuroos-inference" && -f "$root/cpp/build/release/neuroos-inference/neuroos-inference" ]]; then
-      src="$root/cpp/build/release/neuroos-inference/neuroos-inference"
+    if [[ "$bin" == "octoplus-voice" && -f "$root/cpp/build/voice-release/octoplus-voice/octoplus-voice" ]]; then
+      src="$root/cpp/build/voice-release/octoplus-voice/octoplus-voice"
+    elif [[ "$bin" == "octoplus-inference" && -f "$root/cpp/build/voice-release/octoplus-inference/octoplus-inference" ]]; then
+      src="$root/cpp/build/voice-release/octoplus-inference/octoplus-inference"
+    elif [[ "$bin" == "octoplus-inference" && -f "$root/cpp/build/release/octoplus-inference/octoplus-inference" ]]; then
+      src="$root/cpp/build/release/octoplus-inference/octoplus-inference"
     elif [[ -f "$root/target/release/$bin" ]]; then
       src="$root/target/release/$bin"
     elif [[ -f "$root/cpp/build/release/bin/$bin" ]]; then
@@ -166,25 +166,25 @@ if [[ "$mode" == "all" || "$mode" == "system" ]]; then
     fi
   done
 
-  # Symlink neuroosctl to /usr/local/bin
-  if [[ -f "$destdir$prefix/bin/neuroosctl" ]]; then
-    ln -sf "$prefix/bin/neuroosctl" "$destdir/usr/local/bin/neuroosctl"
+  # Symlink octoplusctl to /usr/local/bin
+  if [[ -f "$destdir$prefix/bin/octoplusctl" ]]; then
+    ln -sf "$prefix/bin/octoplusctl" "$destdir/usr/local/bin/octoplusctl"
   fi
 
   # OctoPit, the dashboard (ADR-0017): launcher entry, icons, and a command on the path.
-  if [[ -f "$destdir$prefix/bin/neuroos-octopit" ]]; then
-    ln -sf "$prefix/bin/neuroos-octopit" "$destdir/usr/local/bin/neuroos-octopit"
+  if [[ -f "$destdir$prefix/bin/octopit" ]]; then
+    ln -sf "$prefix/bin/octopit" "$destdir/usr/local/bin/octopit"
     install -d -m 0755 "$destdir/usr/share/applications" "$destdir/usr/share/icons/hicolor/scalable/apps" "$destdir/usr/share/icons/hicolor/symbolic/apps"
-    install -m 0644 "$root/deploy/desktop/neuroos-octopit.desktop" "$destdir/usr/share/applications/neuroos-octopit.desktop"
-    install -m 0644 "$root/crates/neuroos-octopit/assets/icons/hicolor/scalable/apps/neuroos-octopit.svg" "$destdir/usr/share/icons/hicolor/scalable/apps/neuroos-octopit.svg"
-    install -m 0644 "$root/crates/neuroos-octopit/assets/icons/hicolor/symbolic/apps/neuroos-octopit-symbolic.svg" "$destdir/usr/share/icons/hicolor/symbolic/apps/neuroos-octopit-symbolic.svg"
+    install -m 0644 "$root/deploy/desktop/octopit.desktop" "$destdir/usr/share/applications/octopit.desktop"
+    install -m 0644 "$root/crates/octopit/assets/icons/hicolor/scalable/apps/octopit.svg" "$destdir/usr/share/icons/hicolor/scalable/apps/octopit.svg"
+    install -m 0644 "$root/crates/octopit/assets/icons/hicolor/symbolic/apps/octopit-symbolic.svg" "$destdir/usr/share/icons/hicolor/symbolic/apps/octopit-symbolic.svg"
   fi
 
   echo "=== [System] 2b. Installing shared libraries to $destdir$prefix/lib ==="
   install -d -m 0755 "$destdir$prefix/lib"
   if [[ -d "$root/cpp/build/release" ]]; then
     cp -P --remove-destination "$root"/cpp/build/release/bin/*.so* "$destdir$prefix/lib/" 2>/dev/null || true
-    cp -P --remove-destination "$root"/cpp/build/release/libneuroos/*.so* "$destdir$prefix/lib/" 2>/dev/null || true
+    cp -P --remove-destination "$root"/cpp/build/release/liboctoplus/*.so* "$destdir$prefix/lib/" 2>/dev/null || true
   fi
   if [[ -d "$root/cpp/build/voice-release" ]]; then
     cp -P --remove-destination "$root"/cpp/build/voice-release/bin/*.so* "$destdir$prefix/lib/" 2>/dev/null || true
@@ -193,30 +193,30 @@ if [[ "$mode" == "all" || "$mode" == "system" ]]; then
 
   echo "=== [System] 3. Installing fetcher system unit ==="
   install -d -m 0755 "$destdir/etc/systemd/system"
-  sed "s/@OWNER_UID@/$target_uid/g" "$root/deploy/systemd/system/neuroos-fetcher.service" > "$destdir/etc/systemd/system/neuroos-fetcher.service"
-  chmod 0644 "$destdir/etc/systemd/system/neuroos-fetcher.service"
+  sed "s/@OWNER_UID@/$target_uid/g" "$root/deploy/systemd/system/octoplus-fetcher.service" > "$destdir/etc/systemd/system/octoplus-fetcher.service"
+  chmod 0644 "$destdir/etc/systemd/system/octoplus-fetcher.service"
 
   echo "=== [System] 4. Provisioning system fetch.key ==="
-  if [[ ! -f "$destdir/etc/neuroos/fetch.key" ]]; then
-    dd if=/dev/urandom of="$destdir/etc/neuroos/fetch.key" bs=32 count=1 status=none
-    chmod 0640 "$destdir/etc/neuroos/fetch.key"
+  if [[ ! -f "$destdir/etc/octoplus/fetch.key" ]]; then
+    dd if=/dev/urandom of="$destdir/etc/octoplus/fetch.key" bs=32 count=1 status=none
+    chmod 0640 "$destdir/etc/octoplus/fetch.key"
     if [[ -z "$destdir" ]]; then
-      chown root:neuroos /etc/neuroos/fetch.key || true
+      chown root:octoplus /etc/octoplus/fetch.key || true
     fi
-    echo "Generated 32-byte $destdir/etc/neuroos/fetch.key (mode 0640)"
+    echo "Generated 32-byte $destdir/etc/octoplus/fetch.key (mode 0640)"
   fi
 
   # Copy fetch.key to user's config folder if user folder exists
-  user_cfg="$target_home/.config/neuroos"
+  user_cfg="$target_home/.config/octoplus"
   if [[ -d "$user_cfg" && ! -f "$user_cfg/fetch.key" ]]; then
-    install -m 0600 "$destdir/etc/neuroos/fetch.key" "$user_cfg/fetch.key"
+    install -m 0600 "$destdir/etc/octoplus/fetch.key" "$user_cfg/fetch.key"
     echo "Provisioned $user_cfg/fetch.key"
   fi
 
   # Pipewire echo cancellation
-  if [[ -f "$root/deploy/pipewire/neuroos-echo-cancel.conf" ]]; then
+  if [[ -f "$root/deploy/pipewire/octoplus-echo-cancel.conf" ]]; then
     install -d -m 0755 "$destdir/etc/pipewire/pipewire.conf.d"
-    install -m 0644 "$root/deploy/pipewire/neuroos-echo-cancel.conf" "$destdir/etc/pipewire/pipewire.conf.d/neuroos-echo-cancel.conf"
+    install -m 0644 "$root/deploy/pipewire/octoplus-echo-cancel.conf" "$destdir/etc/pipewire/pipewire.conf.d/octoplus-echo-cancel.conf"
   fi
 
   if [[ -z "$destdir" ]] && command -v systemctl >/dev/null 2>&1; then
@@ -227,38 +227,38 @@ fi
 # --- 2. User-scope Installation ---
 if [[ "$mode" == "all" || "$mode" == "user" ]]; then
   echo "=== [User] 1. Setting up user environment for $target_user ==="
-  u_opt="$target_home/.local/opt/neuroos"
-  u_share="$target_home/.local/share/neuroos"
-  u_cfg="$target_home/.config/neuroos"
+  u_opt="$target_home/.local/opt/octoplus"
+  u_share="$target_home/.local/share/octoplus"
+  u_cfg="$target_home/.config/octoplus"
   u_units="$target_home/.config/systemd/user"
 
   install -d -m 0755 "$u_opt/bin" "$u_opt/models" "$u_opt/lib"
   install -d -m 0700 "$u_share" "$u_share/storage" "$u_share/backups" "$u_share/soak" "$u_cfg"
   install -d -m 0755 "$u_units"
 
-  # Install binaries into ~/.local/opt/neuroos/bin
+  # Install binaries into ~/.local/opt/octoplus/bin
   candidates=(
-    "neuroos-healthd"
-    "neuroos-storage"
-    "neuroos-inference"
-    "neuroos-monitor"
-    "neuroos-kernel"
-    "neuroos-confirm"
-    "neuroos-knowledge"
-    "neuroos-voice"
-    "neuroos-fetcher"
-    "neuroosctl"
-    "neuroos-octopit"
-    "neuroos-gen-units"
+    "octoplus-healthd"
+    "octoplus-storage"
+    "octoplus-inference"
+    "octoplus-monitor"
+    "octoplus-kernel"
+    "octoplus-confirm"
+    "octoplus-knowledge"
+    "octoplus-voice"
+    "octoplus-fetcher"
+    "octoplusctl"
+    "octopit"
+    "octoplus-gen-units"
   )
   for bin in "${candidates[@]}"; do
     src=""
     if [[ -f "$root/target/release/$bin" ]]; then
       src="$root/target/release/$bin"
-    elif [[ "$bin" == "neuroos-voice" && -f "$root/cpp/build/voice-release/neuroos-voice/neuroos-voice" ]]; then
-      src="$root/cpp/build/voice-release/neuroos-voice/neuroos-voice"
-    elif [[ "$bin" == "neuroos-inference" && -f "$root/cpp/build/voice-release/neuroos-inference/neuroos-inference" ]]; then
-      src="$root/cpp/build/voice-release/neuroos-inference/neuroos-inference"
+    elif [[ "$bin" == "octoplus-voice" && -f "$root/cpp/build/voice-release/octoplus-voice/octoplus-voice" ]]; then
+      src="$root/cpp/build/voice-release/octoplus-voice/octoplus-voice"
+    elif [[ "$bin" == "octoplus-inference" && -f "$root/cpp/build/voice-release/octoplus-inference/octoplus-inference" ]]; then
+      src="$root/cpp/build/voice-release/octoplus-inference/octoplus-inference"
     elif [[ -f "$destdir$prefix/bin/$bin" ]]; then
       src="$destdir$prefix/bin/$bin"
     fi
@@ -268,22 +268,22 @@ if [[ "$mode" == "all" || "$mode" == "user" ]]; then
     fi
   done
 
-  # Copy libraries to ~/.local/opt/neuroos/lib
+  # Copy libraries to ~/.local/opt/octoplus/lib
   if [[ -d "$destdir$prefix/lib" && "$(ls -A "$destdir$prefix/lib" 2>/dev/null)" ]]; then
     cp -P --remove-destination "$destdir$prefix/lib/"*.so* "$u_opt/lib/" 2>/dev/null || true
   elif [[ -d "$root/cpp/build/release" ]]; then
     cp -P --remove-destination "$root"/cpp/build/release/bin/*.so* "$u_opt/lib/" 2>/dev/null || true
-    cp -P --remove-destination "$root"/cpp/build/release/libneuroos/*.so* "$u_opt/lib/" 2>/dev/null || true
+    cp -P --remove-destination "$root"/cpp/build/release/liboctoplus/*.so* "$u_opt/lib/" 2>/dev/null || true
   fi
 
   echo "=== [User] 2. Installing user systemd units ==="
   if [[ -d "$root/deploy/systemd/user" ]]; then
     cp -a "$root/deploy/systemd/user/". "$u_units/"
-    # Files 0644, drop-in folders 0755: a plain `chmod 0644 neuroos*` also hit the
+    # Files 0644, drop-in folders 0755: a plain `chmod 0644 octoplus*` also hit the
     # *.service.d folders and took their search bit away, so systemd ignored the
     # drop-ins (audit A-17).
-    find "$u_units" -maxdepth 2 -path "$u_units/neuroos*" -type f -exec chmod 0644 {} +
-    find "$u_units" -maxdepth 1 -name 'neuroos*.d' -type d -exec chmod 0755 {} +
+    find "$u_units" -maxdepth 2 -path "$u_units/octoplus*" -type f -exec chmod 0644 {} +
+    find "$u_units" -maxdepth 1 -name 'octoplus*.d' -type d -exec chmod 0755 {} +
   fi
 
   # Link models if available
@@ -293,16 +293,16 @@ if [[ "$mode" == "all" || "$mode" == "user" ]]; then
 
   # Ensure user has CLI in PATH via ~/.local/bin
   install -d -m 0755 "$target_home/.local/bin"
-  if [[ -f "$u_opt/bin/neuroosctl" ]]; then
-    ln -sf "$u_opt/bin/neuroosctl" "$target_home/.local/bin/neuroosctl"
+  if [[ -f "$u_opt/bin/octoplusctl" ]]; then
+    ln -sf "$u_opt/bin/octoplusctl" "$target_home/.local/bin/octoplusctl"
   fi
-  if [[ -f "$u_opt/bin/neuroos-octopit" ]]; then
-    ln -sf "$u_opt/bin/neuroos-octopit" "$target_home/.local/bin/neuroos-octopit"
+  if [[ -f "$u_opt/bin/octopit" ]]; then
+    ln -sf "$u_opt/bin/octopit" "$target_home/.local/bin/octopit"
     install -d -m 0755 "$target_home/.local/share/applications" "$target_home/.local/share/icons/hicolor/scalable/apps" "$target_home/.local/share/icons/hicolor/symbolic/apps"
-    sed "s|^Exec=.*|Exec=$u_opt/bin/neuroos-octopit|" "$root/deploy/desktop/neuroos-octopit.desktop" > "$target_home/.local/share/applications/neuroos-octopit.desktop"
-    chmod 0644 "$target_home/.local/share/applications/neuroos-octopit.desktop"
-    install -m 0644 "$root/crates/neuroos-octopit/assets/icons/hicolor/scalable/apps/neuroos-octopit.svg" "$target_home/.local/share/icons/hicolor/scalable/apps/neuroos-octopit.svg"
-    install -m 0644 "$root/crates/neuroos-octopit/assets/icons/hicolor/symbolic/apps/neuroos-octopit-symbolic.svg" "$target_home/.local/share/icons/hicolor/symbolic/apps/neuroos-octopit-symbolic.svg"
+    sed "s|^Exec=.*|Exec=$u_opt/bin/octopit|" "$root/deploy/desktop/octopit.desktop" > "$target_home/.local/share/applications/octopit.desktop"
+    chmod 0644 "$target_home/.local/share/applications/octopit.desktop"
+    install -m 0644 "$root/crates/octopit/assets/icons/hicolor/scalable/apps/octopit.svg" "$target_home/.local/share/icons/hicolor/scalable/apps/octopit.svg"
+    install -m 0644 "$root/crates/octopit/assets/icons/hicolor/symbolic/apps/octopit-symbolic.svg" "$target_home/.local/share/icons/hicolor/symbolic/apps/octopit-symbolic.svg"
   fi
 
   if [[ -z "$destdir" && "${EUID}" -ne 0 ]] && command -v systemctl >/dev/null 2>&1; then
@@ -312,4 +312,4 @@ fi
 
 echo ""
 echo "Installation complete."
-echo "Next step: run 'neuroosctl init' to initialize keys, configs, and services."
+echo "Next step: run 'octoplusctl init' to initialize keys, configs, and services."

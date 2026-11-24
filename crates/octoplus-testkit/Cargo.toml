@@ -1,0 +1,43 @@
+[package]
+name = "octoplus-testkit"
+description = "Test fixtures: the octoplus-echo service and helpers for running real units"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "octoplus-echo"
+path = "src/bin/octoplus-echo.rs"
+
+[[bin]]
+name = "octoplus-monitor-tail"
+path = "src/bin/octoplus-monitor-tail.rs"
+
+[[bin]]
+name = "octoplus-synth-dump"
+path = "src/bin/octoplus-synth-dump.rs"
+
+[[bin]]
+name = "octoplus-s04-probe"
+path = "src/bin/octoplus-s04-probe.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+octoplus-common = { path = "../octoplus-common" }
+octoplus-health = { path = "../octoplus-health" }
+octoplus-ipc = { path = "../octoplus-ipc" }
+octoplus-proto = { path = "../octoplus-proto" }
+octoplus-sandbox = { path = "../octoplus-sandbox" }
+rustix = { workspace = true, features = ["mm", "net", "thread"] }
+tokio = { workspace = true, features = ["signal"] }
+tracing.workspace = true
+
+[dev-dependencies]
+octoplus-deploy = { path = "../octoplus-deploy" }
+tempfile.workspace = true
+
+[lints]
+workspace = true

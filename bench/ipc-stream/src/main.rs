@@ -9,9 +9,9 @@ use std::time::Duration;
 
 use anyhow::Context;
 use clap::Parser;
-use neuroos_ipc::{Client, IpcError};
-use neuroos_proto::v1::envelope::Body;
-use neuroos_proto::v1::{ErrorCode, GenerateRequest};
+use octoplus_ipc::{Client, IpcError};
+use octoplus_proto::v1::envelope::Body;
+use octoplus_proto::v1::{ErrorCode, GenerateRequest};
 use serde::{Deserialize, Serialize};
 
 const MAX_FRAME_BYTES: u32 = 1024 * 1024;

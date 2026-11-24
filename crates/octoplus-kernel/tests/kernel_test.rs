@@ -1,0 +1,644 @@
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+use std::sync::Arc;
+use std::time::Duration;
+
+use octoplus_ipc::server::{ServerConfig, ensure_private_dir};
+use octoplus_ipc::{Client, Server};
+use octoplus_kernel::{KernelHandler, Registry};
+use octoplus_proto::v1::envelope::Body;
+use octoplus_proto::v1::{ErrorCode, EvaluateRequest, Ping, Taint, Tier};
+use octoplus_taint::TaintFlags;
+
+#[tokio::test]
+async fn test_kernel_evaluation_and_taint_enforcement() {
+    let registry = Arc::new(Registry::load().unwrap());
+    let handler = Arc::new(KernelHandler::new(registry));
+    let temp_dir = tempfile::tempdir().unwrap();
+    let sock_dir = temp_dir.path().join("kernel");
+    ensure_private_dir(&sock_dir).unwrap();
+    let sock = sock_dir.join("kernel.sock");
+
+    let server = Server::bind(
+        &sock,
+        ServerConfig::new(1024 * 1024, Duration::from_secs(1)),
+    )
+    .await
+    .unwrap();
+
+    let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);
+    let wait = |mut rx: tokio::sync::watch::Receiver<bool>| async move {
+        let _ = rx.wait_for(|s| *s).await;
+    };
+    let handle = tokio::spawn(server.serve(handler, wait(stop_rx)));
+
+    let client = Client::connect(&sock, 1024 * 1024).await.unwrap();
+
+    // 1. SAFE skill clean -> SAFE / true
+    let res = client
+        .call(
+            Body::EvaluateRequest(EvaluateRequest {
+                capability: "system.read_metadata".into(),
+                context_taint: Some(Taint { flags: 0 }),
+            }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap();
+
+    match res {
+        Body::EvaluateResult(res) => {
+            assert_eq!(res.tier, Tier::Safe as i32);
+            assert!(res.allowed_without_dialog);
+        }
+        other => panic!("unexpected body {other:?}"),
+    }
+
+    // 2. SAFE skill + EXTERNAL_UNTRUSTED -> REVIEW / false
+    let res = client
+        .call(
+            Body::EvaluateRequest(EvaluateRequest {
+                capability: "system.read_metadata".into(),
+                context_taint: Some(Taint {
+                    flags: TaintFlags::EXTERNAL_UNTRUSTED.bits(),
+                }),
+            }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap();
+
+    match res {
+        Body::EvaluateResult(res) => {
+            assert_eq!(res.tier, Tier::Review as i32);
+            assert!(!res.allowed_without_dialog);
+        }
+        other => panic!("unexpected body {other:?}"),
+    }
+
+    // 3. REVIEW skill -> REVIEW / false
+    let res = client
+        .call(
+            Body::EvaluateRequest(EvaluateRequest {
+                capability: "system.cleanup".into(),
+                context_taint: Some(Taint { flags: 0 }),
+            }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap();
+
+    match res {
+        Body::EvaluateResult(res) => {
+            assert_eq!(res.tier, Tier::Review as i32);
+            assert!(!res.allowed_without_dialog);
+        }
+        other => panic!("unexpected body {other:?}"),
+    }
+
+    // 4. Unknown capability -> PermissionDenied error
+    let err = client
+        .call(
+            Body::EvaluateRequest(EvaluateRequest {
+                capability: "unknown.capability".into(),
+                context_taint: Some(Taint { flags: 0 }),
+            }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap_err();
+    let wire = err.to_wire();
+    assert_eq!(
+        ErrorCode::try_from(wire.code).unwrap(),
+        ErrorCode::PermissionDenied,
+        "unknown capability must be rejected with PermissionDenied"
+    );
+
+    // 5. shell.exec (disabled) -> PermissionDenied error
+    let err = client
+        .call(
+            Body::EvaluateRequest(EvaluateRequest {
+                capability: "shell.exec".into(),
+                context_taint: Some(Taint { flags: 0 }),
+            }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap_err();
+    let wire = err.to_wire();
+    assert_eq!(
+        ErrorCode::try_from(wire.code).unwrap(),
+        ErrorCode::PermissionDenied,
+        "disabled shell.exec must be rejected with PermissionDenied"
+    );
+
+    // 6. Missing context_taint MUST be rejected with InvalidRequest (rules.md §6.4)
+    let err = client
+        .call(
+            Body::EvaluateRequest(EvaluateRequest {
+                capability: "system.read_metadata".into(),
+                context_taint: None,
+            }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap_err();
+    let wire = err.to_wire();
+    assert_eq!(
+        ErrorCode::try_from(wire.code).unwrap(),
+        ErrorCode::InvalidRequest,
+        "missing context_taint must be rejected with InvalidRequest"
+    );
+
+    // 7. Invalid body (Ping)
+    let err = client
+        .call(
+            Body::Ping(Ping {
+                payload: b"ping".to_vec(),
+            }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap_err();
+    let wire = err.to_wire();
+    assert_eq!(
+        ErrorCode::try_from(wire.code).unwrap(),
+        ErrorCode::InvalidRequest
+    );
+
+    let _ = stop_tx.send(true);
+    let _ = handle.await;
+}
+
+#[tokio::test]
+async fn test_kernel_service_init_and_run() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let runtime_dir = temp_dir.path().join("octoplus");
+    let config_file = temp_dir.path().join("config.toml");
+    std::fs::write(&config_file, b"").unwrap();
+    // Never the user's real home: key, audit log and cleanup roots all live in the temp dir.
+    let kpaths = octoplus_kernel::KernelPaths {
+        home: temp_dir.path().to_path_buf(),
+        config_dir: temp_dir.path().join("config"),
+        data_dir: temp_dir.path().join("data"),
+    };
+    std::fs::create_dir_all(&kpaths.config_dir).unwrap();
+    let key = kpaths.config_dir.join("hmac.key");
+    std::fs::write(&key, [5u8; 32]).unwrap();
+    std::fs::set_permissions(&key, std::os::unix::fs::PermissionsExt::from_mode(0o600)).unwrap();
+
+    let args = octoplus_health::CommonArgs {
+        runtime_dir: Some(runtime_dir.clone()),
+        config: Some(config_file),
+        allow_uid: Some(octoplus_ipc::peer::current_uid()),
+        soak: false,
+    };
+
+    let (stop_tx, stop_rx) = tokio::sync::oneshot::channel();
+
+    let thread = std::thread::spawn(move || {
+        octoplus_health::ServiceBuilder::new(
+            octoplus_common::paths::Part::Kernel,
+            "octoplus-kernel",
+            "0.1.0",
+        )
+        .skip_restrict(true)
+        .args(args)
+        .external_stop(stop_rx)
+        .run(move |ctx| octoplus_kernel::init_with(ctx, &kpaths))
+    });
+
+    let kernel_sock = runtime_dir.join("kernel/kernel/kernel.sock");
+    for _ in 0..50 {
+        if kernel_sock.exists() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+
+    assert!(kernel_sock.exists());
+    let client = Client::connect(&kernel_sock, 1024 * 1024).await.unwrap();
+    let res = client
+        .call(
+            Body::EvaluateRequest(EvaluateRequest {
+                capability: "system.read_metadata".into(),
+                context_taint: Some(Taint { flags: 0 }),
+            }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap();
+
+    match res {
+        Body::EvaluateResult(res) => {
+            assert_eq!(res.tier, Tier::Safe as i32);
+            assert!(res.allowed_without_dialog);
+        }
+        other => panic!("unexpected body {other:?}"),
+    }
+
+    let _ = stop_tx.send(());
+    let res = thread.join().unwrap();
+    assert!(res.is_ok());
+}
+
+#[tokio::test]
+async fn test_kernel_audit_tail_verify_and_tamper() {
+    let registry = Arc::new(Registry::load().unwrap());
+    let temp_dir = tempfile::tempdir().unwrap();
+    let audit_dir = temp_dir.path().join("audit");
+    let audit_actor = octoplus_kernel::AuditActor::start(&audit_dir).unwrap();
+
+    let handler = Arc::new(KernelHandler::with_audit(registry, audit_actor.clone()));
+    let sock_dir = temp_dir.path().join("kernel");
+    ensure_private_dir(&sock_dir).unwrap();
+    let sock = sock_dir.join("kernel.sock");
+
+    let server = Server::bind(
+        &sock,
+        ServerConfig::new(1024 * 1024, Duration::from_secs(1)),
+    )
+    .await
+    .unwrap();
+
+    let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);
+    let wait = |mut rx: tokio::sync::watch::Receiver<bool>| async move {
+        let _ = rx.wait_for(|s| *s).await;
+    };
+    let handle = tokio::spawn(server.serve(handler, wait(stop_rx)));
+
+    let client = Client::connect(&sock, 1024 * 1024).await.unwrap();
+
+    // 1. Initial audit tail and verify on empty log
+    let tail_res = client
+        .call(
+            Body::AuditTailRequest(octoplus_proto::v1::AuditTailRequest { limit: 10 }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap();
+
+    match tail_res {
+        Body::AuditRecords(rec) => assert!(rec.records.is_empty()),
+        other => panic!("unexpected body {other:?}"),
+    }
+
+    let verify_res = client
+        .call(
+            Body::AuditVerifyRequest(octoplus_proto::v1::AuditVerifyRequest {}),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap();
+
+    match verify_res {
+        Body::AuditVerifyResult(rep) => {
+            assert!(rep.chain_ok);
+            assert_eq!(rep.records_checked, 0);
+        }
+        other => panic!("unexpected body {other:?}"),
+    }
+
+    // 2. Append ATTEMPT and RESULT records through the actor
+    let action_id = "018f2f67-8e4a-7bc9-93e8-112233445566";
+    let args_hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
+    audit_actor
+        .attempt(
+            1_000_000,
+            action_id,
+            "system.read_metadata",
+            octoplus_kernel::ActionTier::Safe,
+            0,
+            octoplus_kernel::ActionOrigin::Cli,
+            args_hash,
+        )
+        .await
+        .unwrap();
+
+    audit_actor
+        .result(
+            2_000_000,
+            action_id,
+            "system.read_metadata",
+            octoplus_kernel::ActionTier::Safe,
+            0,
+            octoplus_kernel::ActionOrigin::Cli,
+            args_hash,
+            octoplus_kernel::ActionStatus::Executed,
+        )
+        .await
+        .unwrap();
+
+    let action_id_tainted = uuid::Uuid::now_v7().to_string();
+    audit_actor
+        .attempt(
+            3_000_000,
+            action_id_tainted.clone(),
+            "system.read_metadata",
+            octoplus_kernel::ActionTier::Review,
+            1,
+            octoplus_kernel::ActionOrigin::Voice,
+            "args_hash_2",
+        )
+        .await
+        .unwrap();
+    audit_actor
+        .result(
+            3_100_000,
+            action_id_tainted,
+            "system.read_metadata",
+            octoplus_kernel::ActionTier::Review,
+            1,
+            octoplus_kernel::ActionOrigin::Voice,
+            "args_hash_2",
+            octoplus_kernel::ActionStatus::DeniedPolicy,
+        )
+        .await
+        .unwrap();
+
+    // 3. Tail records via client
+    let tail_res = client
+        .call(
+            Body::AuditTailRequest(octoplus_proto::v1::AuditTailRequest { limit: 10 }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap();
+
+    match tail_res {
+        Body::AuditRecords(rec) => {
+            assert_eq!(rec.records.len(), 4);
+            assert_eq!(rec.records[0].seq, 1);
+            assert_eq!(rec.records[0].kind, "ATTEMPT");
+            assert_eq!(rec.records[0].skill, "system.read_metadata");
+            assert_eq!(rec.records[0].tier, "SAFE");
+            assert_eq!(rec.records[0].origin, "CLI");
+            assert_eq!(rec.records[0].taint, 0);
+            assert!(!rec.records[0].record_hash.is_empty());
+
+            assert_eq!(rec.records[1].seq, 2);
+            assert_eq!(rec.records[1].kind, "RESULT");
+            assert_eq!(rec.records[1].status, "EXECUTED");
+            assert_eq!(rec.records[1].tier, "SAFE");
+            assert_eq!(rec.records[1].origin, "CLI");
+            assert_eq!(rec.records[1].taint, 0);
+            assert!(!rec.records[1].record_hash.is_empty());
+
+            // Tainted read_metadata request: logged as REVIEW, origin VOICE, taint 1
+            assert_eq!(rec.records[2].seq, 3);
+            assert_eq!(rec.records[2].kind, "ATTEMPT");
+            assert_eq!(rec.records[2].skill, "system.read_metadata");
+            assert_eq!(rec.records[2].tier, "REVIEW");
+            assert_eq!(rec.records[2].origin, "VOICE");
+            assert_eq!(rec.records[2].taint, 1);
+
+            assert_eq!(rec.records[3].seq, 4);
+            assert_eq!(rec.records[3].kind, "RESULT");
+            assert_eq!(rec.records[3].status, "DENIED_POLICY");
+            assert_eq!(rec.records[3].tier, "REVIEW");
+            assert_eq!(rec.records[3].origin, "VOICE");
+            assert_eq!(rec.records[3].taint, 1);
+        }
+        other => panic!("unexpected body {other:?}"),
+    }
+
+    // 4. Verify integrity via client
+    let verify_res = client
+        .call(
+            Body::AuditVerifyRequest(octoplus_proto::v1::AuditVerifyRequest {}),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap();
+
+    match verify_res {
+        Body::AuditVerifyResult(rep) => {
+            assert!(rep.chain_ok);
+            assert_eq!(rep.records_checked, 4);
+            assert_eq!(rep.first_bad_seq, 0);
+        }
+        other => panic!("unexpected body {other:?}"),
+    }
+
+    // 5. Append egress record and query via client
+    audit_actor
+        .egress_append(
+            3_000_000,
+            action_id,
+            "api.example.com",
+            "search query",
+            128,
+            512,
+        )
+        .await
+        .unwrap();
+
+    let egress_res = client
+        .call(
+            Body::EgressListRequest(octoplus_proto::v1::EgressListRequest { limit: 10 }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap();
+
+    match egress_res {
+        Body::EgressRecords(rec) => {
+            assert_eq!(rec.records.len(), 1);
+            assert_eq!(rec.records[0].host, "api.example.com");
+            assert_eq!(rec.records[0].sent_text, "search query");
+            assert_eq!(rec.records[0].bytes_out, 128);
+            assert_eq!(rec.records[0].bytes_in, 512);
+        }
+        other => panic!("unexpected body {other:?}"),
+    }
+
+    // 6. Tamper with the action audit log on disk -> verify must report chain broken
+    let action_log_file = audit_dir.join("actions.jsonl");
+    let content = std::fs::read_to_string(&action_log_file).unwrap();
+    // Tamper by mutating a character in line 1
+    let tampered = content.replacen("system.read_metadata", "system.disk_report", 1);
+    std::fs::write(&action_log_file, tampered).unwrap();
+
+    let verify_tampered = client
+        .call(
+            Body::AuditVerifyRequest(octoplus_proto::v1::AuditVerifyRequest {}),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap();
+
+    match verify_tampered {
+        Body::AuditVerifyResult(rep) => {
+            assert!(!rep.chain_ok, "verification must fail after file tampering");
+            assert_eq!(
+                rep.first_bad_seq, 2,
+                "line 2 prev_hash will mismatch tampered line 1"
+            );
+        }
+        other => panic!("unexpected body {other:?}"),
+    }
+
+    let _ = stop_tx.send(true);
+    let _ = handle.await;
+}
+
+#[derive(Clone, Default)]
+struct MockDbusNotificationServer {
+    calls: Arc<tokio::sync::Mutex<Vec<(String, String, String)>>>,
+}
+
+#[zbus::interface(name = "org.freedesktop.Notifications")]
+impl MockDbusNotificationServer {
+    #[allow(clippy::too_many_arguments)]
+    async fn notify(
+        &self,
+        app_name: String,
+        _replaces_id: u32,
+        _app_icon: String,
+        summary: String,
+        body: String,
+        _actions: Vec<String>,
+        hints: std::collections::HashMap<String, zbus::OwnedVariant>,
+        expire_timeout: i32,
+    ) -> u32 {
+        assert_eq!(app_name, "OctoPlus");
+        assert_eq!(expire_timeout, -1);
+        assert_eq!(
+            hints.get("urgency").and_then(|v| u8::try_from(v).ok()),
+            Some(1u8)
+        );
+        assert_eq!(
+            hints
+                .get("desktop-entry")
+                .and_then(|v| <&str>::try_from(v).ok()),
+            Some("org.octoplus.Confirm")
+        );
+        self.calls.lock().await.push((app_name, summary, body));
+        42
+    }
+}
+
+#[tokio::test]
+async fn test_kernel_notify_request_handling() {
+    let registry = Arc::new(Registry::load().unwrap());
+
+    // Setup fake D-Bus notification server over P2P unix stream
+    let (client_stream, server_stream) = std::os::unix::net::UnixStream::pair().unwrap();
+    let dbus_server = MockDbusNotificationServer::default();
+    let calls = dbus_server.calls.clone();
+
+    let guid = zbus::Guid::generate();
+    let (_server_conn, client_conn) = tokio::try_join!(
+        zbus::connection::Builder::unix_stream(server_stream)
+            .server(guid)
+            .p2p()
+            .serve_at("/org/freedesktop/Notifications", dbus_server)
+            .build(),
+        zbus::connection::Builder::unix_stream(client_stream)
+            .p2p()
+            .build()
+    )
+    .unwrap();
+
+    let notifier = octoplus_kernel::Notifier::with_connection(client_conn);
+    let handler = Arc::new(KernelHandler::new(registry).with_notifier(notifier));
+
+    let temp_dir = tempfile::tempdir().unwrap();
+    let sock_dir = temp_dir.path().join("kernel");
+    ensure_private_dir(&sock_dir).unwrap();
+    let sock = sock_dir.join("kernel.sock");
+
+    let server = Server::bind(
+        &sock,
+        ServerConfig::new(1024 * 1024, Duration::from_secs(1)),
+    )
+    .await
+    .unwrap();
+
+    let (stop_tx, stop_rx) = tokio::sync::watch::channel(false);
+    let wait = |mut rx: tokio::sync::watch::Receiver<bool>| async move {
+        let _ = rx.wait_for(|s| *s).await;
+    };
+    let handle = tokio::spawn(server.serve(handler, wait(stop_rx)));
+
+    let client = Client::connect(&sock, 1024 * 1024).await.unwrap();
+
+    // 1. Invalid template -> InvalidRequest
+    let err = client
+        .call(
+            Body::NotifyRequest(octoplus_proto::v1::NotifyRequest {
+                template_id: "unknown.template".into(),
+                args: vec![],
+                silent: false,
+            }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap_err();
+    let wire = err.to_wire();
+    assert_eq!(
+        ErrorCode::try_from(wire.code).unwrap(),
+        ErrorCode::InvalidRequest
+    );
+    assert!(wire.message.contains("unknown template or bad arguments"));
+
+    // 2. Bad arguments (missing required percent for disk.nearly_full) -> InvalidRequest
+    let err = client
+        .call(
+            Body::NotifyRequest(octoplus_proto::v1::NotifyRequest {
+                template_id: "disk.nearly_full".into(),
+                args: vec![],
+                silent: false,
+            }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap_err();
+    let wire = err.to_wire();
+    assert_eq!(
+        ErrorCode::try_from(wire.code).unwrap(),
+        ErrorCode::InvalidRequest
+    );
+    assert!(wire.message.contains("unknown template or bad arguments"));
+
+    // 3. Valid notification -> Ack and delivered to D-Bus mock
+    let res = client
+        .call(
+            Body::NotifyRequest(octoplus_proto::v1::NotifyRequest {
+                template_id: "disk.nearly_full".into(),
+                args: vec![octoplus_proto::v1::TemplateArg {
+                    name: "percent".into(),
+                    value: 92.0,
+                }],
+                silent: false,
+            }),
+            Duration::from_millis(500),
+        )
+        .await
+        .unwrap();
+
+    match res {
+        Body::Ack(_) => {}
+        other => panic!("expected Ack, got {other:?}"),
+    }
+
+    let recorded = calls.lock().await;
+    assert_eq!(recorded.len(), 1);
+    assert_eq!(recorded[0].0, "OctoPlus");
+    assert_eq!(recorded[0].1, "Disk nearly full");
+    assert_eq!(recorded[0].2, "Your disk is 92 percent full.");
+
+    let _ = stop_tx.send(true);
+    let _ = handle.await;
+}
+
+/// BUG-114: the Landlock read list must hold both keys C6 loads at start, or a key that
+/// exists cannot be opened and C6 exits.
+#[test]
+fn landlock_reads_both_keys_c6_loads() {
+    let dir = std::path::Path::new("/home/u/.config/octoplus");
+    let keys = octoplus_kernel::key_files(dir);
+    assert!(keys.contains(&dir.join("hmac.key")));
+    assert!(keys.contains(&dir.join("fetch.key")));
+}

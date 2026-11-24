@@ -1,0 +1,11 @@
+[Unit]
+Description=OctoPlus storage job timer: rollup
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=60
+Unit=octoplus-storage-rollup.service
+
+[Install]
+WantedBy=timers.target
