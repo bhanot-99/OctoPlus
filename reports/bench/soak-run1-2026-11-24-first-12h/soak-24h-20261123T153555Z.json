@@ -1,0 +1,84 @@
+{
+  "verdict": "FAIL",
+  "duration_s": 43674,
+  "asserted": true,
+  "probe": {
+    "p99_first_quarter_ms": 6171.9,
+    "p99_last_quarter_ms": 4228.6,
+    "drift_pct": -31.49,
+    "failed_probes": 0,
+    "samples": 1205
+  },
+  "units": {
+    "neuroos-healthd": {
+      "baseline_rss_mib": 3.5,
+      "final_rss_mib": 3.6,
+      "rss_growth_pct": 2.94,
+      "peak_rss_mib": 5.1,
+      "budget_mib": 15,
+      "memory_max_hits": 0,
+      "restarts": 0,
+      "within_limits": true
+    },
+    "neuroos-storage": {
+      "baseline_rss_mib": 126.7,
+      "final_rss_mib": 155.5,
+      "rss_growth_pct": 22.79,
+      "peak_rss_mib": 260.6,
+      "budget_mib": 320,
+      "memory_max_hits": 0,
+      "restarts": 0,
+      "within_limits": false
+    },
+    "neuroos-inference": {
+      "baseline_rss_mib": 2712.0,
+      "final_rss_mib": 2709.7,
+      "rss_growth_pct": -0.09,
+      "peak_rss_mib": 2778.2,
+      "budget_mib": 2800,
+      "memory_max_hits": 0,
+      "restarts": 0,
+      "within_limits": true
+    },
+    "neuroos-monitor": {
+      "baseline_rss_mib": 5.8,
+      "final_rss_mib": 5.8,
+      "rss_growth_pct": -0.69,
+      "peak_rss_mib": 7.7,
+      "budget_mib": 30,
+      "memory_max_hits": 0,
+      "restarts": 0,
+      "within_limits": true
+    },
+    "neuroos-kernel": {
+      "baseline_rss_mib": 3.7,
+      "final_rss_mib": 3.9,
+      "rss_growth_pct": 3.58,
+      "peak_rss_mib": 5.7,
+      "budget_mib": 15,
+      "memory_max_hits": 0,
+      "restarts": 0,
+      "within_limits": true
+    },
+    "neuroos-knowledge": {
+      "baseline_rss_mib": 4.1,
+      "final_rss_mib": 4.1,
+      "rss_growth_pct": 0.96,
+      "peak_rss_mib": 6.0,
+      "budget_mib": 60,
+      "memory_max_hits": 0,
+      "restarts": 0,
+      "within_limits": true
+    },
+    "neuroos-voice": {
+      "baseline_rss_mib": 63.5,
+      "final_rss_mib": 430.9,
+      "rss_growth_pct": 578.77,
+      "peak_rss_mib": 759.8,
+      "budget_mib": 800,
+      "memory_max_hits": 0,
+      "restarts": 0,
+      "within_limits": false
+    }
+  }
+}
