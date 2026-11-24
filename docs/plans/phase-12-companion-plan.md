@@ -1,4 +1,6 @@
-# Phase 13 plan — The Companion: a friend that talks, jokes and chats (voice only)
+# Phase 12 plan — The Companion: a friend that talks, jokes and chats (voice first)
+
+> **Renumbered 2026-11-24 (roadmap v2, D-63):** this was Phase 13; it is now **Phase 12** and comes right after the OctoPlus rename (Phase 11.5). See `roadmap-v2.md`. The owner's "voice only" answer in §1 still holds for this phase; in Phase 16 OctoPit becomes the one interface, and Laila's text chat and controls are added there. The review file is `phase-12-companion-review.md`.
 
 **Status:** PLANNED, NOT STARTED. The owner answered the decisions in §1 on 2026-11-23 and said: build the whole plan now, then wait for the instruction of what to work on. No code until the owner names a story. **Refined on paper 2026-11-23 (during the second 24 h soak, nothing built, nothing run):** story C-S05 made to match the memory decision in §6, story order fixed, start order and budget notes added (§7a), two risks added (§9). 
 **Branch:** `companion-plan` (docs only). **ADR:** 0019 (Proposed).
@@ -89,7 +91,7 @@ Decides **when** to start a talk. Target 2 to 4 talks an hour while the owner is
 - Audio is processed in memory only and never written (unchanged).
 - Session text is kept only as short summaries through C3 (already the case for voice turns), with a retention period (default 90 days, configurable) and the "forget" commands. Raw transcripts are not stored.
 - The companion's "feelings" about you (preferences, rhythm) are small numbers and counters, no content.
-- With the optional cloud plan (Phase 12, on hold) none of this changes: the privacy gate would classify companion text too.
+- With the optional cloud plan (Phase 13, taken off hold) none of this changes: the privacy gate would classify companion text too.
 
 ## 6. Memory of you (owner decision 2026-11-23)
 
@@ -136,7 +138,7 @@ Rough size: a few weeks of focused work in total; S01 to S03 are the core. The M
 
 ## 9. Risks and open questions
 
-- **Joke and warmth quality** with a small local model may disappoint. This is the strongest case for the optional cloud plan (Phase 12) or a bigger Mac model; decide after a week of real use.
+- **Joke and warmth quality** with a small local model may disappoint. This is the strongest case for the optional cloud plan (Phase 13) or a bigger Mac model; decide after a week of real use.
 - **Annoyance** is the main product risk: mitigated by the caps, the quiet rules and the learning, and by the owner's "not now".
 - **Open-mic false triggers and others' speech:** limited by directedness, the actions guard, guest mode and not storing audio. Guests should be told.
 - **CPU and battery:** always-on VAD already exists; sessions add speech to text only while active. Measure on battery.
@@ -151,7 +153,7 @@ Rough size: a few weeks of focused work in total; S01 to S03 are the core. The M
 The honest picture: **good Hinglish conversation is the hardest part of this plan.** A fluent friend in Hinglish needs three things to work together, and today only the third is close.
 1. **Hearing it (speech to text).** The current model (whisper-tiny, English only) cannot. Candidates: Whisper fine-tunes for Hinglish ([Trelis whisper-hinglish-preview](https://huggingface.co/Trelis/whisper-hinglish-preview), Shunya Labs hinglish-whisper-medium) and Indian speech APIs such as Sarvam. The fine-tunes are medium or large models (about 1.5 GB or more), so they do not fit the voice memory budget (800 MiB) on this laptop; on the MacBook's shared memory they should.
 2. **Saying it (text to speech).** Kokoro (the current voice) has a Hindi mode of unproven quality. Candidates: Dhvani TTS (one voice, accepts Roman and Devanagari mixed text), an IndicF5-based Hinglish pipeline, Indic Parler-TTS. Mixed Roman Hinglish text sounds wrong in an English voice, so the pipeline must turn the Hindi words into Devanagari (transliteration) before speaking.
-3. **Thinking in it (the language model).** The small local model writes weak Hinglish. Cloud models (Gemini, Claude) write good Hinglish. This is one more argument for the optional cloud plan (Phase 12) or a larger Mac model.
+3. **Thinking in it (the language model).** The small local model writes weak Hinglish. Cloud models (Gemini, Claude) write good Hinglish. This is one more argument for the optional cloud plan (Phase 13) or a larger Mac model.
 
 **Plan:** ship English first. Then run a one-day **Hinglish spike** (story C-S10): the owner records about 30 minutes of normal Hinglish speech and sample lines; we compare the candidate speech-to-text and text-to-speech models on those recordings (accuracy, speed, memory) and write the result down; only then decide the Hinglish language pack. Until then the companion can already speak Hinglish-flavoured English (it mixes in a few Hindi words in the persona) without needing new models.
 

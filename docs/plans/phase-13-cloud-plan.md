@@ -1,6 +1,8 @@
-# Phase 12 strategy — Cloud-first answers, local model as the offline fallback, private by construction
+# Phase 13 strategy — Cloud models with a switch: encrypted storage, a privacy gate, local by default and when offline
 
-**Status:** OPTIONAL, ON HOLD (owner, 2026-11-23): this plan is only used if a week of real use on the MacBook shows the local model is not good or fast enough (see §0a). PLANNED, NOT STARTED. The owner answered the decisions in §10 on 2026-11-23 and said: plan everything, wait for the start instruction. No code until the owner says start. It changes rules R0-1/R0-2 in a controlled way (ADR-0018, Proposed).
+> **Renumbered and re-scoped 2026-11-24 (roadmap v2, D-63):** this was Phase 12 and was ON HOLD. The owner took it off hold and changed the shape: **not cloud-first.** OctoPit gets a **priority switch (Local, Cloud, Auto)**; the **local model is the default**, and it is the automatic choice when there is no internet. Everything else below (encrypted storage S01, the privacy gate, C7 as the only network door, the egress ledger, provider adapters) stays. Where the text below says "cloud-first" or "cloud answers by default", read "cloud when the switch says Cloud, or Auto with the gate's approval". It is built **on the Mac** (Phase 15), so key sealing uses the Secure Enclave directly, with a `KeySealer` interface (TPM only if this is ever built on Linux first). See `roadmap-v2.md` §2. **No TPM is ever built:** the Linux laptop will be sold, so 13A seals keys with a passphrase sealer only (keys stay movable), and 13B re-seals them to the Secure Enclave. Where this plan says "TPM", read "passphrase now, Secure Enclave on the Mac". **Split:** 13A (privacy gate, adapters, switch logic, encrypted storage behind a `KeySealer` interface) can be built on Linux before the Mac arrives; 13B (Secure Enclave sealing, Keychain) is built on the Mac.
+
+**Status (old, superseded by the note above):** OPTIONAL, ON HOLD (owner, 2026-11-23): this plan was only to be used if a week of real use on the MacBook shows the local model is not good or fast enough (see §0a). PLANNED, NOT STARTED. The owner answered the decisions in §10 on 2026-11-23 and said: plan everything, wait for the start instruction. No code until the owner says start. It changes rules R0-1/R0-2 in a controlled way (ADR-0018, Proposed).
 **Origin:** owner, 2026-11-23: "make NeuroOS completely depend on free cloud AI like Claude, agy or Perplexity, keep the local LLM only for when the laptop is offline, and be confident about privacy." Personal use only; no business goals.
 **Branch:** `cloud-strategy` (docs only).
 
@@ -92,7 +94,7 @@ Today every request needs a dialog. For a cloud-first assistant that is unusable
 - **Offline detection:** C7 reports reachability; no network or all providers failing means switch to the local model and say so in plain words.
 - **Local model optional:** C4 loads on demand (only offline, or for P2). That frees about 2.7 GiB of the memory budget while online, and lets you try a smaller model. Start-up time of the local model is a cost to measure.
 
-## 6. Encrypted storage (Phase 12-S01, can ship first)
+## 6. Encrypted storage (Phase 13-S01, can ship first)
 
 - Standard authenticated encryption (AES-256-GCM or XChaCha20-Poly1305). No home-made algorithm, and **hardware readings are never the key** (they are guessable and can't be recreated).
 - **Key from the OS secure random source**, wrapped (sealed) by the laptop's TPM (this machine has one) plus an optional passphrase. A copied disk or database file is useless elsewhere.
@@ -117,14 +119,14 @@ What we can claim honestly: *we control and can prove what leaves your laptop; w
 
 | Phase | What | Exit |
 | :--- | :--- | :--- |
-| 12-S00 | ADR-0018, rule and PRD changes (R0-1/R0-2 standing policy, scope), owner decisions §10 | Owner signs the decisions |
-| 12-S01 | Encrypted storage (§6), key sealing, rotation, restore test | A copied database cannot be read; crash-safe rotation test; restore guide followed once |
-| 12-S02 | Privacy Gate library (§3) with the redaction corpus and class tests | All §7 items 3 and 4 green |
-| 12-S03 | C7 provider adapters (fake provider first, then Gemini, Perplexity, Claude), keys sealed, spend cap | Ledger equals capture on the fake; one real round trip per provider |
-| 12-S04 | C5 router: cloud-first, offline fallback, policy file, plain-language status; OctoPit: Privacy page shows each sent text, a "Cloud" switch, daily spend | Canary test (7.1) green; owner can read every sent text |
-| 12-S05 | C4 on demand, smaller local model, memory budget revised | Offline answer works; memory table updated |
-| 12-S06 | Verification: injection tests, log scan, 24 h soak in cloud mode, two-week owner trial | Report with measured answer quality, latency, spend |
-| 12-S07 | Runbooks (providers, keys, rotation, offline), docs | Followed once by the owner |
+| 13-S00 | ADR-0018, rule and PRD changes (R0-1/R0-2 standing policy, scope), owner decisions §10 | Owner signs the decisions |
+| 13-S01 | Encrypted storage (§6), key sealing, rotation, restore test | A copied database cannot be read; crash-safe rotation test; restore guide followed once |
+| 13-S02 | Privacy Gate library (§3) with the redaction corpus and class tests | All §7 items 3 and 4 green |
+| 13-S03 | C7 provider adapters (fake provider first, then Gemini, Perplexity, Claude), keys sealed, spend cap | Ledger equals capture on the fake; one real round trip per provider |
+| 13-S04 | C5 router: cloud-first, offline fallback, policy file, plain-language status; OctoPit: Privacy page shows each sent text, a "Cloud" switch, daily spend | Canary test (7.1) green; owner can read every sent text |
+| 13-S05 | C4 on demand, smaller local model, memory budget revised | Offline answer works; memory table updated |
+| 13-S06 | Verification: injection tests, log scan, 24 h soak in cloud mode, two-week owner trial | Report with measured answer quality, latency, spend |
+| 13-S07 | Runbooks (providers, keys, rotation, offline), docs | Followed once by the owner |
 
 ## 9. Costs and risks
 

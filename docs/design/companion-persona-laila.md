@@ -1,6 +1,6 @@
 # Companion persona: Laila
 
-**Status:** the owner's persona, received 2026-11-23 and converted the same day at the owner's request: **the companion is a woman, and the person she loved is a man.** It is the content of the `persona.toml` file described in `docs/plans/phase-13-companion-plan.md` §4.1. Nothing is built; §2 to §7 say how each part will be implemented when the owner starts the Companion stories.
+**Status:** the owner's persona, received 2026-11-23 and converted the same day at the owner's request: **the companion is a woman, and the person she loved is a man.** It is the content of the `persona.toml` file described in `docs/plans/phase-12-companion-plan.md` §4.1. Nothing is built; §2 to §7 say how each part will be implemented when the owner starts the Companion stories.
 
 **Changes made on conversion (owner, 2026-11-23):** the companion is a girl named **Laila** (renamed from the first draft, "Arin Vale"); her past love is a man (his name is **Kabir**, chosen by the owner); the wake word stays "hey jarvis"; the look is kept very simple (an avatar or mascot is an optional extra for later). Everything else is as written by the owner.
 
