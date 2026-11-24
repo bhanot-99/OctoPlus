@@ -26,7 +26,7 @@ As of 2026-11-24 evening:
 - **Built and signed off:** Phases 0 to 7 (foundation, walking skeleton, safety kernel, monitor, storage, knowledge and
   conversation, nudges, voice).
 - **Built, owner items open:** Phases 8 to 10 (fetcher and search, integration and soak, packaging) and Phase 11
-  (OctoPit, the GTK4 dashboard, on branch `cockpit`, not merged).
+  (OctoPit, the GTK4 dashboard, already merged into `main`; its app mark, a live mic test and the gate run are owner items).
 - **Soak run 2:** a clean 12 h run of the memory fix is in progress and ends about 22:30 IST on 2026-11-24. Run 1
   failed on measurement artefacts (the kernel swaps idle memory; the soak only counted resident memory) and one
   real cost (the storage embedder's ONNX memory arena, fixed: 76 MiB less, same results). Everything is in
