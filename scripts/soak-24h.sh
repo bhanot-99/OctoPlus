@@ -124,7 +124,7 @@ for u in "${units[@]}"; do
   echo "  $u: PID $pid"
 done
 
-echo "timestamp_utc,elapsed_secs,unit,rss_mib,probe_first_chunk_ms,restarts" > "$csv_file"
+echo "timestamp_utc,elapsed_secs,unit,rss_mib,probe_first_chunk_ms,restarts,swap_mib" > "$csv_file"
 
 questions=(
   "What is two plus two?"
@@ -200,15 +200,19 @@ PROBE
   for u in "${units[@]}"; do
     curr_pid=$(systemctl --user show -p MainPID --value "$u.service" 2>/dev/null || echo "0")
     rss=0
+    swap=0
     if [[ "$curr_pid" != "0" && -d "/proc/$curr_pid" ]]; then
       rss=$(awk '/VmRSS/ {printf "%.2f", $2/1024}' "/proc/$curr_pid/status" 2>/dev/null || echo "0")
+      # Pages the kernel moved to swap still belong to the part; without them an idle part
+      # looks small and then "grows" when its pages come back (the 2026-11-24 false alarm).
+      swap=$(awk '/VmSwap/ {printf "%.2f", $2/1024}' "/proc/$curr_pid/status" 2>/dev/null || echo "0")
     fi
     restarts=$(systemctl --user show -p NRestarts --value "$u.service" 2>/dev/null || echo 0)
     restarts=$(( restarts - ${initial_restarts[$u]:-0} ))
     if [[ "$curr_pid" != "${initial_pids[$u]}" ]] && (( restarts == 0 )); then
       restarts=1
     fi
-    echo "$now_iso,$elapsed,$u,$rss,$lat_ms,$restarts" >> "$csv_file"
+    echo "$now_iso,$elapsed,$u,$rss,$lat_ms,$restarts,$swap" >> "$csv_file"
   done
 
   sleep "$interval"
@@ -252,7 +256,9 @@ probe = []
 with open(csv_path) as f:
     for row in csv.DictReader(f):
         by_unit.setdefault(row["unit"], []).append(
-            {"elapsed": int(row["elapsed_secs"]), "rss": float(row["rss_mib"]),
+            {"elapsed": int(row["elapsed_secs"]),
+             # footprint = resident + swapped (older CSVs have no swap column)
+             "rss": float(row["rss_mib"]) + float(row.get("swap_mib") or 0),
              "restarts": int(row["restarts"])})
         if row["unit"] == "neuroos-healthd":  # one probe value per iteration
             probe.append((int(row["elapsed_secs"]), float(row["probe_first_chunk_ms"])))

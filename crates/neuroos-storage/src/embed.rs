@@ -301,6 +301,22 @@ impl OnnxEmbedder {
         tokenizer: &Path,
         threads: usize,
     ) -> Result<Self, EmbedError> {
+        Self::load_tuned(lib, model, tokenizer, threads, true)
+    }
+
+    /// Like [`OnnxEmbedder::load`]; `lean` turns off ONNX Runtime's CPU memory arena and memory
+    /// pattern so memory stays flat when input lengths vary. `false` is the old behaviour and
+    /// exists only so a test can measure the difference.
+    ///
+    /// # Errors
+    /// Same as [`OnnxEmbedder::load`].
+    pub fn load_tuned(
+        lib: &Path,
+        model: &Path,
+        tokenizer: &Path,
+        threads: usize,
+        lean: bool,
+    ) -> Result<Self, EmbedError> {
         let bytes = std::fs::read(model).map_err(|_| EmbedError::Load("model file unreadable"))?;
         if hex(&Sha256::digest(&bytes)) != MODEL_SHA256 {
             return Err(EmbedError::HashMismatch);
@@ -321,6 +337,15 @@ impl OnnxEmbedder {
         let mut builder = builder
             .with_intra_threads(threads.max(1))
             .map_err(|_| OPEN)?;
+        if lean {
+            builder = builder
+                .with_execution_providers([ort::ep::CPU::default()
+                    .with_arena_allocator(false)
+                    .build()])
+                .map_err(|_| OPEN)?
+                .with_memory_pattern(false)
+                .map_err(|_| OPEN)?;
+        }
         let session = builder.commit_from_file(model).map_err(|_| OPEN)?;
         Ok(Self {
             session: Mutex::new(session),
