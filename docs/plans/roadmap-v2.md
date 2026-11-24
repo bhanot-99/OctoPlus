@@ -2,6 +2,7 @@
 
 **Status:** PLANNED, NOT STARTED. Written 2026-11-24 from the owner's directive (D-63). Paper only: no code
 until the owner names the phase to start. **Branch:** `roadmap-v2` (docs only).
+**Complete single-file version of everything below: `master-plan-11-5-to-20.md`.**
 **Origin:** owner, 2026-11-24: "it still does not feel alive". Order given: rename to OctoPlus, Companion,
 cloud models with a local/cloud switch, OctoPit as the only interface, final polish and security testing, and a
 full plan to make the project a Mac-only app because the owner moves to a MacBook Air next month.
