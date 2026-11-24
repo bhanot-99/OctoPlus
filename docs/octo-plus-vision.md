@@ -1,7 +1,7 @@
-# Octo+: The Sovereign Cognitive Operating System
+# OctoPlus: The Sovereign Cognitive Operating System
 
 **Document Type:** Vision, Architecture & Master Roadmap RFC  
-**System Designation:** `Octo+` (Next-Generation AI Operating System)  
+**System Designation:** `OctoPlus` (Next-Generation AI Operating System)  
 **File Location:** `docs/octo-plus-vision.md`  
 **Status:** Vision, not approved scope (2026-11-23). Several items conflict with the PRD scope and with rules R0-1, R0-7 and AB-4 and each needs its own decision record (ADR) before any work starts.  
 
@@ -9,9 +9,9 @@
 
 ## 1. Executive Summary
 
-**Octo+** is a sovereign, spatially-aware cognitive operating system that integrates local systems architecture, novel neural mechanics, hybrid frontier intelligence, and an encrypted mobile remote link into a single, unified computing organism.
+**OctoPlus** is a sovereign, spatially-aware cognitive operating system that integrates local systems architecture, novel neural mechanics, hybrid frontier intelligence, and an encrypted mobile remote link into a single, unified computing organism.
 
-Inspired by the cephalopod nervous system—where a central cognitive core works in harmony with semi-autonomous, highly adaptive limbs—**Octo+** blends:
+Inspired by the cephalopod nervous system—where a central cognitive core works in harmony with semi-autonomous, highly adaptive limbs—**OctoPlus** blends:
 1. **The Physical Anatomy:** The deterministic, kernel-isolated daemons of **OctoPlus**.
 2. **The Biological Brain:** The ultra-compact, compute-reusing recurrent core of **PhaseLoopNN**.
 3. **Spatial Awareness:** Ambient physical dwell tracking and location-based proactive suggestions via GPS.
@@ -32,7 +32,7 @@ flowchart TD
         Display["Desktop Focus (Wayland / NSWorkspace)"]
     end
 
-    subgraph OctoCore ["Octo+ Core Substrate (Local Machine)"]
+    subgraph OctoCore ["OctoPlus Core Substrate (Local Machine)"]
         direction TB
         OctoPlus["OctoPlus Substrate<br/><i>(Sensing · Vector Storage · Safety Kernel)</i>"]
         PhaseLoop["PhaseLoopNN Cognitive Core<br/><i>(Always-on System 1 Instinct · < 50MB RAM)</i>"]
@@ -51,7 +51,7 @@ flowchart TD
     end
 
     subgraph UserSurfaces ["User Interfaces"]
-        Cockpit["Octo+ Cockpit (Native GUI Dashboard)"]
+        Cockpit["OctoPlus Cockpit (Native GUI Dashboard)"]
         Mobile["Mobile Neural Link (E2E Encrypted Phone App)"]
     end
 
@@ -64,7 +64,7 @@ flowchart TD
 
 ---
 
-## 3. The Core Pillars of Octo+
+## 3. The Core Pillars of OctoPlus
 
 ### Pillar 1: The OS Substrate (OctoPlus)
 * **Zero-Network Isolation by Default:** Every core daemon touches user data under strict kernel isolation (`Landlock ABI v4` on Linux, `Seatbelt / App Sandbox` on macOS).
@@ -84,7 +84,7 @@ flowchart TD
 
 ### Pillar 4: Sovereign Orbital Uplink (Secure Claude Bridge)
 * **Isolated Egress DMZ:** All external network access is restricted to the dedicated Fetcher daemon (`C7`).
-* **Sanitized Token Payloads:** When a task exceeds local parameter capacity, Octo+ automatically strips private credentials and personal identifiers.
+* **Sanitized Token Payloads:** When a task exceeds local parameter capacity, OctoPlus automatically strips private credentials and personal identifiers.
 * **Explicit User Approval:** A visual confirmation prompt shows the exact prompt tokens and endpoint before any data leaves the device.
 * **Cryptographic Egress Ledger:** Every outbound byte is logged to an immutable, inspectable audit trail.
 
@@ -98,9 +98,9 @@ flowchart TD
 
 ## 4. Hermetic Native Packaging
 
-Rather than an open folder of loosely managed scripts, **Octo+ is packaged as a monolithic, self-contained distribution**:
+Rather than an open folder of loosely managed scripts, **OctoPlus is packaged as a monolithic, self-contained distribution**:
 
-* **macOS Distribution (`Octo+.app` / `.dmg`):**
+* **macOS Distribution (`OctoPlus.app` / `.dmg`):**
   * Single drag-and-drop installation into `/Applications`.
   * Automatically provisions background `launchd` LaunchAgents.
   * Self-verifying SHA-256 integrity checks for all pinned model files on first launch.
@@ -111,7 +111,7 @@ Rather than an open folder of loosely managed scripts, **Octo+ is packaged as a 
 
 ---
 
-## 5. The Octo+ Cockpit (Native GUI Dashboard)
+## 5. The OctoPlus Cockpit (Native GUI Dashboard)
 
 > **Status 2026-11-23:** built as **OctoPit** with GTK4 (not Slint), as a client that cannot approve anything: ADR-0017, `docs/design/octopit-ux.md`. The 3D Memory Galaxy and the cognitive dials below are not built.
 
@@ -130,22 +130,22 @@ A sleek, hardware-accelerated dashboard (built with Slint / Metal / SwiftUI) tha
 
 ## 6. Interaction Modalities: Hands-Free Voice & Stealth Silent Chat
 
-Octo+ adapts dynamically to the user's physical environment, offering two interchangeable interaction paradigms that share the exact same cognitive memory and desktop context:
+OctoPlus adapts dynamically to the user's physical environment, offering two interchangeable interaction paradigms that share the exact same cognitive memory and desktop context:
 
 ### 6.1 Hands-Free Voice Mode (Private & Open Environments)
 * **Trigger:** Wake word (*"Hey Jarvis"* / *"Hey Octo"*).
 * **Delivery:** Full-duplex voice streaming via Whisper ASR and Kokoro TTS.
-* **Barge-In:** Hardware audio loopback permits speaking over Octo+ to redirect or interrupt answers instantly.
+* **Barge-In:** Hardware audio loopback permits speaking over OctoPlus to redirect or interrupt answers instantly.
 * **Spoken Proactive Nudges:** Chimes aloud when important hardware or context events occur (*"Heads up, your disk is 92% full..."*).
 
 ### 6.2 Stealth Silent Chat Mode (Libraries, Quiet Cafes, Meetings, Public Transit)
-When speaking aloud is impossible or socially inappropriate, Octo+ pivots seamlessly into a quiet, full-featured text chat interface:
+When speaking aloud is impossible or socially inappropriate, OctoPlus pivots seamlessly into a quiet, full-featured text chat interface:
 
 1. **Instant Global Access (HUD / Spotlight Style):**
    * A single global hotkey (`Cmd + Space` on macOS, `Super + Space` on Linux) summons a minimalist floating drawer directly centered over your active workspace.
    * Immediately silences TTS audio output and pauses microphone listening to prevent accidental audio triggers or eavesdropping.
 2. **Full Desktop Context Preserved (No Copy-Pasting):**
-   * Even in silent text mode, Octo+ retains full sensory vision of your desktop.
+   * Even in silent text mode, OctoPlus retains full sensory vision of your desktop.
    * You can type:
      * *"Why is this compile failing?"* (Resolves *"this"* to your active IDE/terminal).
      * *"Summarize this document."* (Extracts text from your focused PDF or browser tab).
@@ -155,11 +155,11 @@ When speaking aloud is impossible or socially inappropriate, Octo+ pivots seamle
    * Answers stream in clean markdown with syntax-highlighted code snippets and 1-click copy buttons.
    * Proactive nudges (low battery, runaway processes, full disk) switch silently from spoken voice to subtle, interactive desktop notification banners.
 5. **Mobile Silent Synchronization:**
-   * When your mobile phone is set to silent or vibrate mode, the Octo+ Mobile Link automatically defaults to an encrypted text messaging interface, allowing you to quietly interact with your laptop brain from your phone under a conference table.
+   * When your mobile phone is set to silent or vibrate mode, the OctoPlus Mobile Link automatically defaults to an encrypted text messaging interface, allowing you to quietly interact with your laptop brain from your phone under a conference table.
 
 ---
 
-## 7. Octo+ Mobile Neural Link (Remote P2P Bridge)
+## 7. OctoPlus Mobile Neural Link (Remote P2P Bridge)
 
 An end-to-end encrypted remote bridge that turns your laptop into a sovereign, pocket-accessible private intelligence:
 
@@ -169,9 +169,9 @@ An end-to-end encrypted remote bridge that turns your laptop into a sovereign, p
 
 ### 7.2 Mobile Capabilities
 * **Remote Voice & Silent Chat:** Talk through your phone/earbuds when walking, or seamlessly switch to quiet text messaging in meetings.
-* **Anywhere Task Dispatch:** Trigger heavy tasks remotely (*"Octo+, pull branch `v2-refactor`, run all unit tests, and ping me with results"*).
+* **Anywhere Task Dispatch:** Trigger heavy tasks remotely (*"OctoPlus, pull branch `v2-refactor`, run all unit tests, and ping me with results"*).
 * **Remote Safety Confirmations:** Sensitive actions (deleting cache, sending queries to Claude) send a push notification with a 1-tap confirmation dialog.
-* **Ambient Sensor Synchronization:** Streams phone GPS coordinates to the laptop so Octo+ maintains physical environmental context on the go.
+* **Ambient Sensor Synchronization:** Streams phone GPS coordinates to the laptop so OctoPlus maintains physical environmental context on the go.
 
 ---
 

@@ -1,5 +1,7 @@
 # OctoPlus
 
+> **Renamed from Semantic NeuroOS to OctoPlus on 2026-11-25** (Phase 11.5). Dated reports, decision records (ADRs), `memory.md`, `BUGS.md` history and the old phase plans keep the old name, because it was true when they were written. The old-to-new name table is in `reports/rename-inventory.md`. The GitHub repository keeps its old address until the owner renames it.
+
 **A Sovereign, Ambient, Zero-Egress Cognitive Operating System Companion for Linux.**
 
 > *"A buddy that lives in your laptop: it notices things, remembers things, talks like a person, and nothing leaves your machine unless you say yes."*
