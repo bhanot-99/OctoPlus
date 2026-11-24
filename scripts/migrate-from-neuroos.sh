@@ -88,6 +88,16 @@ if [[ $use_systemd == 1 ]]; then
   for t in "$units_dir"/neuroos-*.timer; do sysd stop "$(basename "$t")"; done
 fi
 
+if [[ $apply == 1 && $use_systemd == 1 ]]; then
+  for part in healthd storage inference monitor kernel knowledge voice; do
+    if systemctl --user is-active --quiet "neuroos-$part.service"; then
+      say "refusing: neuroos-$part.service is still running after the stop; nothing was moved"
+      exit 1
+    fi
+  done
+  say "   all parts are stopped"
+fi
+
 step "3. backup (copy, not move): data and config; the install folder is rebuilt, not backed up"
 run mkdir -p "$backup_dir"
 [[ ! -d $old_data ]] || run cp -a "$old_data" "$backup_dir/data"
@@ -141,14 +151,11 @@ fi
 
 step "9. what is left for you (needs sudo, NOT run by this script)"
 cat <<'EOF'
-   a. sudo systemctl disable --now neuroos-fetcher.service
-   b. sudo mv /etc/neuroos /etc/octoplus
-   c. Install the new fetcher the same way you installed the old one (scripts/install-fetcher.sh): it creates the
-      octoplus group and octoplus-fetcher user, the new unit and the firewall rule. Then remove the old ones:
-      sudo rm /etc/systemd/system/neuroos-fetcher.service; sudo nft delete rule ... (the script prints the handle);
-      sudo userdel neuroos-fetcher; sudo groupdel neuroos; and add yourself to the new group: sudo usermod -aG octoplus $USER
-   d. Log out and in again (new group), then:  scripts/install-dev.sh && systemctl --user start octoplus.target
-   e. Check:  octoplusctl status ; octoplusctl audit verify ; scripts/migrate-from-neuroos.sh --verify
+   1. sudo scripts/migrate-from-neuroos-system.sh stage1 --apply     (old fetcher, /etc folder, old rules and files)
+   2. scripts/install-dev.sh                                          (installs the new binaries, units, links, desktop entry)
+   3. sudo scripts/migrate-from-neuroos-system.sh stage2 --apply     (new fetcher: group, user, unit, firewall rule)
+   4. systemctl --user start octoplus.target
+   5. octoplusctl status ; octoplusctl audit verify ; scripts/migrate-from-neuroos.sh --verify
 EOF
 [[ $apply == 1 ]] && say "
 Done. Backup is at $backup_dir"
