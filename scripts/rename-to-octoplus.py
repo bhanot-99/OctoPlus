@@ -18,7 +18,7 @@ import sys
 # Never rewritten: history, evidence, plans that describe the rename, generated files, binary fixtures,
 # and the two tools that must keep the old name.
 SKIP_PREFIXES = ("reports/", "docs/adr/", "docs/design/patches/", "docs/plans/")
-SKIP_FILES = {"memory.md", "BUGS.md", "scripts/rename-to-octoplus.py", "scripts/migrate-from-neuroos.sh"}
+SKIP_FILES = {"memory.md", "BUGS.md", "scripts/rename-to-octoplus.py", "scripts/migrate-from-neuroos.sh", "scripts/migrate-from-neuroos-system.sh"}
 SKIP_SUFFIXES = (".lock", ".dump")  # lock files are regenerated with cargo; dumps with the project's generator
 
 # The GitHub address keeps its old name until the owner renames the repository (inventory decision 13).
