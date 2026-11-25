@@ -8,11 +8,17 @@
 //! - [`kabir`]: backstory gate with cooldown and chance roll for past relationship mentions.
 //! - [`dependence`]: session duration and frequency monitoring to prevent unhealthy reliance.
 //! - [`repeat`]: 64-bit FNV-1a ring buffer preventing repeated conversational lines.
+//! - [`prompt`]: companion ChatML prompt assembly and cacheable system block.
+//! - [`session`]: conversational memory with rolling summary and turn retention.
+//! - [`filter`]: streamed sentence validation and safety scrubbing before speech synthesis.
 
 pub mod dependence;
+pub mod filter;
 pub mod guards;
 pub mod kabir;
 pub mod mode;
 pub mod persona;
+pub mod prompt;
 pub mod repeat;
 pub mod rng;
+pub mod session;

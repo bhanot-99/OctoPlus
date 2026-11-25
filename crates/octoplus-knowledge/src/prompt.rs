@@ -90,7 +90,7 @@ pub fn system_block() -> String {
 }
 
 /// Neutralises, then cuts to a token budget.
-fn fit(text: &str, budget: u32, bpt: u32) -> String {
+pub(crate) fn fit(text: &str, budget: u32, bpt: u32) -> String {
     let clean = neutralise(text);
     truncate_to(&clean, budget, bpt).to_string()
 }
