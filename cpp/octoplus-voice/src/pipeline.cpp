@@ -481,9 +481,15 @@ void VoicePipeline::Transcribe() {
     bool wake_only = false;
     if (!failed) {
       text = CollapseRepeats(text);
-      if (after_wake) {
+      // The wake phrase is never part of the command. It may open the capture (after_wake), or
+      // it may come in the middle of an open chat, where the capture starts at the first sound
+      // and the detector fires a moment later: strip it in both cases (found by speaking
+      // "Hey Jarvis, what is ..." into an open chat: only "Hey Jarvis." was sent).
+      const std::string stripped = StripWakePhrase(text);
+      const bool phrase_present = stripped != text;
+      if (after_wake || phrase_present) {
         const bool heard_something = !Blank(text) && !NoiseTranscript(text);
-        text = StripWakePhrase(text);
+        text = stripped;
         wake_only = heard_something && Blank(text);
       }
     }

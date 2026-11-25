@@ -1789,3 +1789,78 @@ async fn a_fact_that_is_answered_in_one_sentence_stops_there() {
     let (said, _) = s.ask_companion("who wrote Hamlet", T0).await.unwrap();
     assert_eq!(said, "William Shakespeare wrote Hamlet.");
 }
+
+#[tokio::test]
+async fn after_a_one_word_fact_a_rambling_second_sentence_is_not_spoken() {
+    // Found by voice: "Paris. It's the only city that's both a capital and a place where people
+    // still go to see the Eiffel Tower and not just take photos."
+    let s = Stack::start(Opts {
+        default_answer: vec![
+            "Paris. ".to_string(),
+            "It is the only city that is both a capital and a place where people still go to see the Eiffel Tower and not just take photos. ".to_string(),
+        ],
+        ..Opts::default()
+    })
+    .await;
+    let (said, _) = s
+        .ask_companion("what is the capital of France", T0)
+        .await
+        .unwrap();
+    assert_eq!(said, "Paris.");
+    // A short added remark is fine.
+    let s2 = Stack::start(Opts {
+        default_answer: vec!["Paris. ".to_string(), "A lovely city. ".to_string()],
+        ..Opts::default()
+    })
+    .await;
+    let (said, _) = s2
+        .ask_companion("what is the capital of France", T0)
+        .await
+        .unwrap();
+    assert_eq!(said, "Paris. A lovely city.");
+}
+
+#[tokio::test]
+async fn a_joke_on_request_is_a_new_clean_one_each_time_and_never_lost() {
+    // Found by voice: the model told the same joke twice, the repeat guard dropped it, and she
+    // said "I lost my words".
+    let s = Stack::start(Opts {
+        default_answer: vec!["Why did the coffee file a report? It got mugged.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+    let mut seen = std::collections::HashSet::new();
+    for (i, text) in ["tell me a joke", "make me laugh", "say something funny"]
+        .iter()
+        .enumerate()
+    {
+        let (said, _) = s
+            .ask_companion(text, T0 + (i as u64) * 3_600_000_000_000)
+            .await
+            .unwrap();
+        assert!(!said.contains("lost my words"), "{said}");
+        assert!(seen.insert(said.clone()), "a repeated joke: {said}");
+    }
+    assert!(
+        s.rec.lock().unwrap().prompts.is_empty(),
+        "no model call for a joke"
+    );
+}
+
+#[tokio::test]
+async fn a_plain_statement_right_after_the_wake_phrase_gets_an_answer() {
+    // Found by voice: "so tired right now" was ignored as room noise and she stayed silent.
+    let s = Stack::start(Opts {
+        default_answer: vec!["I'm sorry you're tired.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+    let (frames, _) = s
+        .voice_ask("so tired right now", true, 1_000_000_000)
+        .await
+        .unwrap();
+    assert!(
+        frames.iter().any(|f| matches!(f, Body::SpeakChunk(_))),
+        "an answer after the wake phrase"
+    );
+}

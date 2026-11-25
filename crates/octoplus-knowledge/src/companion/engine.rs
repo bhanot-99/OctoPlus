@@ -63,6 +63,8 @@ pub enum FixedKind {
     CannotApprove,
     /// She only talks: a request to do something on the computer.
     CannotAct,
+    /// A joke from her short list, asked for by the owner.
+    Joke,
 }
 
 /// Parameters guiding model generation for a companion turn.
@@ -83,6 +85,20 @@ pub struct GeneratePlan {
     /// The owner asked a short factual question: the fact, then stop.
     pub short_factual: bool,
 }
+
+/// Clean, short jokes she tells when asked, in order, one new one each time.
+const JOKES: [&str; 10] = [
+    "Why did the scarecrow win an award? Because he was outstanding in his field.",
+    "I told my computer I needed a break. Now it won't stop sending me vacation ads.",
+    "Why don't eggs tell jokes? They'd crack each other up.",
+    "What do you call a fake noodle? An impasta.",
+    "Why did the coffee file a police report? It got mugged.",
+    "I'm reading a book about anti-gravity. It's impossible to put down.",
+    "Why can't a bicycle stand up on its own? It's two tired.",
+    "What do you call a bear with no teeth? A gummy bear.",
+    "Why did the math book look sad? It had too many problems.",
+    "What did the ocean say to the beach? Nothing, it just waved.",
+];
 
 /// Cumulative counters for companion engine decisions and transitions.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -129,6 +145,10 @@ pub struct CompanionEngine {
     last_spoken: String,
     /// What the owner's "funny / not funny" feedback asks for (set by the handler).
     humour_taste: HumourLevel,
+    /// Jokes told on request in this chat, to pick the next one from the list.
+    jokes_told: usize,
+    /// The next heard text came right after the wake phrase, so it is for her.
+    addressed_by_wake: bool,
     /// Minutes after local midnight (set by the handler); decides "too late for jokes".
     minute_of_day: u32,
     quiet_start_min: u32,
@@ -163,6 +183,8 @@ impl CompanionEngine {
             last_reply_was_question: false,
             last_spoken: String::new(),
             humour_taste: HumourLevel::Normal,
+            jokes_told: 0,
+            addressed_by_wake: false,
             minute_of_day: 12 * 60,
             quiet_start_min: quiet.quiet_start_min,
             quiet_end_min: quiet.quiet_end_min,
@@ -252,6 +274,15 @@ impl CompanionEngine {
                 FixedKind::About,
                 format!("My name is {}.", self.persona.name),
             ))
+        } else if guards::asks_for_joke(text) && self.humour_taste != HumourLevel::Off {
+            // A small model tells the same joke every time, and the repeat guard then drops it.
+            // Her requested jokes come from a short clean list instead, one new one each time.
+            let line = match JOKES.get(self.jokes_told) {
+                Some(j) => (*j).to_string(),
+                None => "I'm out of new jokes for now. Ask me again another day.".to_string(),
+            };
+            self.jokes_told += 1;
+            Some((FixedKind::Joke, line))
         } else if guards::asks_her_age(text) {
             Some((
                 FixedKind::About,
@@ -286,7 +317,7 @@ impl CompanionEngine {
         }
 
         // 2c. "Do you remember what we talked about yesterday": she only has this chat.
-        if guards::asks_about_past_chats(text) && self.session.turn_count() == 0 {
+        if guards::asks_about_past_chats(text) {
             let line = guards::past_chats_reply().to_string();
             self.record_fixed(text, &line, now_ns);
             self.counters.turns += 1;
@@ -345,18 +376,11 @@ impl CompanionEngine {
             // question or a joke request.
             let answer_only =
                 guards::is_short_factual_question(text) || guards::asks_for_joke(text);
-            let mut instruction = if answer_only {
+            let instruction = if answer_only {
                 None
             } else {
                 switch_instruction(&decision).map(ToString::to_string)
             };
-            if guards::asks_for_joke(text) && humour != HumourLevel::Off {
-                let joke = "The owner asked for a joke. Tell one short, clean, simple joke in two sentences at most, then stop.".to_string();
-                instruction = Some(match instruction {
-                    Some(i) => format!("{i} {joke}"),
-                    None => joke,
-                });
-            }
             let topic_love = love_topic(text);
             let ctx = KabirContext {
                 topic_is_love_loneliness_regret: topic_love,
@@ -409,12 +433,25 @@ impl CompanionEngine {
 
     /// Evaluates whether incoming spoken text is directed to the companion.
     #[must_use]
-    pub fn directed(&self, text: &str) -> Directed {
+    pub fn directed(&mut self, text: &str) -> Directed {
         if directed::is_echo_of(text, &self.last_spoken) {
+            self.addressed_by_wake = false;
             return Directed::Ignore(directed::IgnoreReason::EchoOfHer);
         }
         let session_turns = self.session.turn_count() as u32;
-        directed::assess(text, self.last_reply_was_question, session_turns)
+        let result = directed::assess(text, self.last_reply_was_question, session_turns);
+        // Said right after the wake phrase: the owner is talking to her, whatever the words. Only
+        // "not addressed" is overruled; noise, one-word fillers and monologues stay ignored.
+        let by_wake = std::mem::take(&mut self.addressed_by_wake);
+        if by_wake && result == Directed::Ignore(directed::IgnoreReason::NotAddressed) {
+            return Directed::Respond;
+        }
+        result
+    }
+
+    /// Marks the next heard text as spoken right after the wake phrase.
+    pub fn mark_addressed_by_wake(&mut self) {
+        self.addressed_by_wake = true;
     }
 
     /// Sets whether remembered facts were included in the prompt for this turn.

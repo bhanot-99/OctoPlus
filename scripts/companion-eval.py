@@ -244,7 +244,7 @@ def run_speak() -> list[dict]:
             print(f"{'PASS' if not fails else 'FAIL'}  {case[0]:3s} heard={'ok ' if ok else 'BAD'} {heard[:44]!r:46s} -> {reply[:60]!r}", flush=True)
             for f in fails:
                 print(f"        - {f}", flush=True)
-            time.sleep(8)
+            wait_until_listening()
     finally:
         for p in procs:
             p.terminate()
@@ -256,7 +256,22 @@ def run_speak() -> list[dict]:
     return results
 
 
-EVAL_LINE = re.compile(r'companion_eval: heard="(.*?)" reply="(.*)"$')
+def wait_until_listening(limit: int = 60) -> None:
+    """Waits until she has finished speaking (a person waits for her to stop), then a short beat."""
+    end = time.time() + limit
+    time.sleep(3)
+    quiet = 0
+    while time.time() < end:
+        out = subprocess.run([CTL, "voice", "status"], capture_output=True, text=True).stdout
+        busy = any(w in out for w in ("speaking", "in a turn", "thinking", "transcrib"))
+        quiet = 0 if busy else quiet + 1
+        if quiet >= 2:
+            break
+        time.sleep(1.5)
+    time.sleep(2)
+
+
+EVAL_LINE = re.compile(r'heard="(.*?)" reply="(.*)"$')
 
 
 def wait_for_turn(since: str, timeout: int) -> tuple[str, str]:

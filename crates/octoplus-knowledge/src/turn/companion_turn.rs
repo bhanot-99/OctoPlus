@@ -41,6 +41,8 @@ const MAX_REPLY_SENTENCES: usize = 3;
 const MAX_REPLY_WORDS: usize = 50;
 /// Most words for a short factual answer: the fact, and at most one more short sentence.
 const MAX_FACT_WORDS: usize = 30;
+/// Most words of an added sentence after a one-word fact ("Paris." and then a short remark).
+const MAX_FACT_EXTRA_WORDS: usize = 14;
 
 /// Whether what has been said so far is enough: three finished sentences or about 70 words.
 fn reply_is_long_enough(
@@ -115,6 +117,9 @@ impl KnowledgeHandler {
                 let engine = state
                     .companion
                     .get_or_insert_with(|| CompanionEngine::new(Arc::clone(&persona), now, now));
+                if std::mem::take(&mut state.wake_addressed) {
+                    engine.mark_addressed_by_wake();
+                }
                 engine.directed(text)
             });
             if let Directed::Ignore(_) = directed {
@@ -379,6 +384,14 @@ impl KnowledgeHandler {
                             )
                         });
                         for s in filtered {
+                            // A fact question: a second sentence that goes on and on is rambling.
+                            if plan_generate.short_factual
+                                && any_spoken
+                                && s.split_whitespace().count() > MAX_FACT_EXTRA_WORDS
+                            {
+                                capped = true;
+                                break;
+                            }
                             let to_say = if any_spoken {
                                 format!(" {s}")
                             } else {
@@ -388,12 +401,14 @@ impl KnowledgeHandler {
                             said_pieces.push(s);
                             any_spoken = true;
                         }
-                        if reply_is_long_enough(
-                            &said_pieces,
-                            max_sentences,
-                            max_words,
-                            plan_generate.short_factual,
-                        ) {
+                        if capped
+                            || reply_is_long_enough(
+                                &said_pieces,
+                                max_sentences,
+                                max_words,
+                                plan_generate.short_factual,
+                            )
+                        {
                             // Enough said: stop the generation (dropping the stream cancels it).
                             capped = true;
                             break;

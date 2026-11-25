@@ -765,10 +765,12 @@ fn parse_core(words: &[String]) -> Option<PulseCommand> {
         "not now" | "not right now" | "no not now" | "maybe later" => {
             return Some(PulseCommand::NotNow);
         }
-        "chat more" | "talk more" | "talk to me more" | "be more chatty" | "chat with me more" => {
+        "chat more" | "chatmore" | "chant more" | "check more" | "talk more"
+        | "talk to me more" | "be more chatty" | "chat with me more" => {
             return Some(PulseCommand::ChatMore);
         }
-        "chat less" | "talk less" | "talk to me less" | "be less chatty" | "chat with me less" => {
+        "chat less" | "chatless" | "chant less" | "check less" | "talk less"
+        | "talk to me less" | "be less chatty" | "chat with me less" => {
             return Some(PulseCommand::ChatLess);
         }
         "pause the companion" | "pause companion" | "pause laila" | "pause the chat" => {

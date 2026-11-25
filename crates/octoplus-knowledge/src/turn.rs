@@ -143,6 +143,8 @@ struct State {
     pending: Pending,
     #[allow(dead_code)] // used by task 5b
     companion: Option<crate::companion::engine::CompanionEngine>,
+    /// The next companion turn came right after the wake phrase (set by the voice route).
+    wake_addressed: bool,
 }
 
 /// An offer the last answer made, waiting for a plain yes or no.
@@ -263,6 +265,7 @@ impl KnowledgeHandler {
                 session,
                 pending: Pending::None,
                 companion: None,
+                wake_addressed: false,
             }),
             persona: crate::companion::persona::Persona::default_packaged()
                 .ok()
@@ -378,6 +381,10 @@ impl KnowledgeHandler {
                     .send(Body::PreambleRequest(PreambleRequest { kind: kind as i32 }))
                     .await;
             }
+        }
+        // Right after the wake phrase (not a follow-up) the words are for her, whatever they are.
+        if cmd.in_session && !cmd.in_follow_up {
+            self.with_state(|state| state.wake_addressed = true);
         }
         let ask = AskRequest {
             text: cmd.text,

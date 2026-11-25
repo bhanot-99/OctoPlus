@@ -1345,3 +1345,56 @@ TEST(VoicePipelineEchoGuard, WithTheGuardOffNothingChanges) {
 
 }  // namespace
 }  // namespace octoplus::voice
+
+namespace octoplus::voice {
+namespace {
+
+// In an open chat the capture starts at the first sound and the wake detector fires a moment
+// later, so the wake phrase can end up in the transcript. It must never be sent as the command.
+TEST(VoicePipelineOpenChat, AWakePhraseInTheMiddleOfAChatIsStrippedFromTheCommand) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.AskByVoice();
+  ASSERT_EQ(r.link.commands.size(), 1U);
+  r.link.Receiver()->OnSpeak("Answer.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  r.Settle();
+  ASSERT_TRUE(r.p->status().follow_up_open);
+
+  // Speech without the wake detector firing, but the transcript carries the phrase.
+  r.stt.text = "Hey Jarvis, what is the capital of France?";
+  r.Frames(1000, 30);
+  r.Frames(0, 25);
+  r.Settle();
+  ASSERT_EQ(r.link.commands.size(), 2U);
+  EXPECT_EQ(r.link.commands[1].text, "what is the capital of France?");
+}
+
+TEST(VoicePipelineOpenChat, OnlyTheWakePhraseInAChatKeepsListeningInsteadOfSendingIt) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.AskByVoice();
+  r.link.Receiver()->OnSpeak("Answer.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  r.Settle();
+
+  r.stt.text = "Hey Jarvis.";
+  r.Frames(1000, 20);
+  r.Frames(0, 25);
+  r.Settle();
+  EXPECT_EQ(r.link.commands.size(), 1U) << "the phrase alone is not a command";
+  EXPECT_TRUE(r.p->status().turn_in_progress) << "she keeps listening for the command";
+}
+
+}  // namespace
+}  // namespace octoplus::voice
