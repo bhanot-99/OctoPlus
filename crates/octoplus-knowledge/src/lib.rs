@@ -9,6 +9,7 @@
 
 pub mod action;
 pub mod chat;
+pub mod companion;
 pub mod deictic;
 pub mod evidence;
 pub mod facts;
