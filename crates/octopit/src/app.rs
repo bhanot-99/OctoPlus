@@ -42,6 +42,7 @@ pub struct Window {
     brand_label: gtk::Label,
     narrow: Cell<bool>,
     compact: Cell<bool>,
+    chat_page: ChatPage,
     pages: Vec<(PageId, Box<dyn Page>)>,
     pill_dot: gtk::Box,
     pill_text: gtk::Label,
@@ -199,7 +200,7 @@ impl Window {
 
         let pages: Vec<(PageId, Box<dyn Page>)> = vec![
             (PageId::Overview, Box::new(OverviewPage::new(&ctx))),
-            (PageId::Chat, Box::new(chat_page)),
+            (PageId::Chat, Box::new(chat_page.clone())),
             (PageId::Companion, Box::new(CompanionPage::new(&ctx))),
             (PageId::Backends, Box::new(BackendsPage::new(&ctx))),
             (PageId::Activity, Box::new(ActivityPage::new(&ctx))),
@@ -359,6 +360,7 @@ impl Window {
             brand_label,
             narrow: Cell::new(false),
             compact: Cell::new(false),
+            chat_page,
             pages,
             pill_dot,
             pill_text,
@@ -420,7 +422,9 @@ impl Window {
         }
         win.apply_settings(&loaded);
         win.build_palette();
-        if !loaded.welcome_done && !std::env::args().any(|a| a == "--screenshots") {
+        if !loaded.welcome_done
+            && !std::env::args().any(|a| a == "--screenshots" || a == "--verify-chat")
+        {
             let w = Rc::clone(&win);
             glib::idle_add_local_once(move || {
                 let w2 = Rc::clone(&w);
@@ -552,6 +556,37 @@ impl Window {
             });
             let _ = self.controller.send(Command::Ask { text: q, mode });
         }
+    }
+
+    /// Switches Chat mode through the real ChatPage toggle.
+    pub fn switch_chat_mode(&self, mode: octopit_core::chat::ChatMode) {
+        self.chat_page.switch_mode(mode);
+    }
+
+    /// Types `text` into the real ChatPage composer and clicks Send.
+    pub fn send_typed_chat(&self, text: &str) {
+        self.chat_page.send_typed(text);
+    }
+
+    /// Whether a chat turn is still streaming.
+    #[must_use]
+    pub fn chat_busy(&self) -> bool {
+        self.state.borrow().conversation.busy()
+    }
+
+    /// Returns `(question, answer, label)` for the most recent chat turn.
+    #[must_use]
+    pub fn last_chat_turn(&self) -> Option<(String, String, String)> {
+        use octopit_core::chat::TurnState;
+        let st = self.state.borrow();
+        let t = st.conversation.turns().last()?;
+        let lbl = match &t.state {
+            TurnState::Done(info) => info.route.to_owned(),
+            TurnState::Streaming => "streaming".to_owned(),
+            TurnState::Cancelled => "cancelled".to_owned(),
+            TurnState::Failed(w) => format!("failed: {w}"),
+        };
+        Some((t.question.clone(), t.answer(), lbl))
     }
 
     /// Scrolls the visible page down by most of a screen; returns false at the end (or when it

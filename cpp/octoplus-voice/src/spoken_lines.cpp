@@ -104,8 +104,7 @@ std::string SpokenMinutes(double m) {
 }
 
 const std::vector<std::string>& PreamblePhrases(int kind) {
-  static const std::vector<std::string> kThinking = {"One moment.", "Let me think.",
-                                                     "Let me see."};
+  static const std::vector<std::string> kThinking = {"One moment.", "Let me think.", "Let me see."};
   static const std::vector<std::string> kLooking = {"Let me look.", "Checking.",
                                                     "Looking at that now."};
   static const std::vector<std::string> kAcknowledge = {"Okay.", "Got it.", "Sure."};

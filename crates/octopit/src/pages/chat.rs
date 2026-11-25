@@ -248,6 +248,8 @@ pub type ModeCallback = Box<dyn Fn(ChatMode)>;
 struct ChatPageInner {
     root: gtk::Box,
     vadjustment: gtk::Adjustment,
+    want_bottom: Cell<bool>,
+    auto_scrolling: Rc<Cell<bool>>,
     conv_box: gtk::Box,
     empty_state: gtk::Box,
     empty_heading: gtk::Label,
@@ -347,14 +349,18 @@ impl ChatPageInner {
 
         self.empty_state.set_visible(false);
 
-        let stick = should_stick_to_bottom(
-            self.vadjustment.value(),
-            self.vadjustment.page_size(),
-            self.vadjustment.upper(),
-        );
-
         let mut widgets = self.turns_widgets.borrow_mut();
         let current_len = widgets.len();
+        let added_turn = turns.len() > current_len;
+        if added_turn {
+            self.want_bottom.set(true);
+        }
+        let stick = self.want_bottom.get()
+            || should_stick_to_bottom(
+                self.vadjustment.value(),
+                self.vadjustment.page_size(),
+                self.vadjustment.upper(),
+            );
 
         for turn in turns.iter().skip(current_len) {
             let tw = Self::create_turn_widgets(turn);
@@ -370,9 +376,12 @@ impl ChatPageInner {
 
         if stick {
             let vadj = self.vadjustment.clone();
+            let auto = Rc::clone(&self.auto_scrolling);
             glib::idle_add_local_once(move || {
+                auto.set(true);
                 let target = (vadj.upper() - vadj.page_size()).max(0.0);
                 vadj.set_value(target);
+                auto.set(false);
             });
         }
 
@@ -450,6 +459,7 @@ impl ChatPageInner {
 }
 
 /// The Chat page.
+#[derive(Clone)]
 pub struct ChatPage {
     inner: Rc<ChatPageInner>,
 }
@@ -581,7 +591,9 @@ impl ChatPage {
 
         let inner = Rc::new(ChatPageInner {
             root,
-            vadjustment,
+            vadjustment: vadjustment.clone(),
+            want_bottom: Cell::new(true),
+            auto_scrolling: Rc::new(Cell::new(false)),
             conv_box,
             empty_state,
             empty_heading: empty_heading_label,
@@ -598,6 +610,34 @@ impl ChatPage {
             ctx: ctx.clone(),
         });
         inner.apply_mode_ui(initial_mode);
+
+        // Keep scrolled to bottom when new content grows the list after GTK lays out the frame.
+        {
+            let inner_weak = Rc::downgrade(&inner);
+            vadjustment.connect_notify_local(Some("upper"), move |adj, _| {
+                if let Some(inner) = inner_weak.upgrade()
+                    && inner.want_bottom.get()
+                {
+                    inner.auto_scrolling.set(true);
+                    adj.set_value((adj.upper() - adj.page_size()).max(0.0));
+                    inner.auto_scrolling.set(false);
+                }
+            });
+        }
+        {
+            let inner_weak = Rc::downgrade(&inner);
+            vadjustment.connect_value_changed(move |adj| {
+                if let Some(inner) = inner_weak.upgrade()
+                    && !inner.auto_scrolling.get()
+                {
+                    inner.want_bottom.set(should_stick_to_bottom(
+                        adj.value(),
+                        adj.page_size(),
+                        adj.upper(),
+                    ));
+                }
+            });
+        }
 
         // Mode switch handlers
         {
@@ -688,6 +728,20 @@ impl ChatPage {
     /// Registers a callback invoked whenever the user switches the chat mode.
     pub fn on_mode_change(&self, cb: ModeCallback) {
         self.inner.mode_callbacks.borrow_mut().push(cb);
+    }
+
+    /// Switches the Laila/Assistant toggle in the real UI.
+    pub fn switch_mode(&self, mode: ChatMode) {
+        match mode {
+            ChatMode::Laila => self.inner.btn_laila.set_active(true),
+            ChatMode::Assistant => self.inner.btn_assistant.set_active(true),
+        }
+    }
+
+    /// Types `text` into the composer and clicks the Send button.
+    pub fn send_typed(&self, text: &str) {
+        self.inner.text_view.buffer().set_text(text);
+        self.inner.send_button.emit_clicked();
     }
 }
 
