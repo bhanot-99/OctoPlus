@@ -1,10 +1,18 @@
-//! Companion persona, mode machine, and RNG core (Phase 12).
+//! Companion persona, mode machine, RNG core, and fixed safety behaviors (Phase 12).
 //!
 //! Provides pure components for Laila:
 //! - [`persona`]: configuration file structures, validation, and defaults.
 //! - [`rng`]: deterministic splitmix64 PRNG for controlled switching and chance rules.
 //! - [`mode`]: two-mode switching state machine (logic and heart).
+//! - [`guards`]: crisis detection, reality inquiries, and forbidden phrase scrubbing.
+//! - [`kabir`]: backstory gate with cooldown and chance roll for past relationship mentions.
+//! - [`dependence`]: session duration and frequency monitoring to prevent unhealthy reliance.
+//! - [`repeat`]: 64-bit FNV-1a ring buffer preventing repeated conversational lines.
 
+pub mod dependence;
+pub mod guards;
+pub mod kabir;
 pub mod mode;
 pub mod persona;
+pub mod repeat;
 pub mod rng;
