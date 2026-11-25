@@ -191,7 +191,7 @@ fi
 cat << 'EOF' > "$staging/usr/share/doc/octoplus/copyright"
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: OctoPlus
-Source: https://github.com/bhanot-99/Semantic-NeuroOS
+Source: https://github.com/bhanot-99/OctoPlus
 
 Files: *
 Copyright: 2026 OctoPlus Contributors

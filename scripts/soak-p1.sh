@@ -4,8 +4,9 @@
 #
 #   scripts/soak-p1.sh [--duration SECS] [--interval SECS] [--out DIR]
 #
-# Pass (phases.md §4.3): every part's RSS grows <= 2 % from the post-warm-up
-# baseline to the end, zero restarts, zero failed asks. A part whose RSS is still
+# Pass (phases.md §4.3, rule v2 of 2026-11-25): every part's RSS grows from the post-warm-up
+# baseline to the end by <= 2 %, or <= 1 MiB, or <= 5 % while settled over the last 30 min
+# (rising < 0.5 % or < 0.1 MiB); zero restarts, zero failed asks. A part whose RSS is still
 # rising over the last 30 min is reported "not asserted" (rules.md §9.3).
 #
 # Baseline = median RSS in minutes 10-15 (C4 allocates its KV cache on the first
@@ -155,8 +156,14 @@ for part in sorted({r["part"] for r in rows}):
     den = sum((x - mx) ** 2 for x in xs) or 1
     slope = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / den
     rising = slope * 1800 / b * 100
-    settled = rising <= 0.5
-    ok = growth <= 2.0 and restarts == 0
+    grew_mib = (f - b) / 2**20
+    rose_mib = slope * 1800 / 2**20
+    # Rule v2 (owner, 2026-11-25, D-75): the 2 % rule was written for ~4 MiB skeleton parts. Growth passes
+    # if it is within 2 %, or within 1 MiB in absolute terms (small parts), or within 5 % while the last
+    # 30 min are settled (large parts). Settled = rising under 0.5 % or under 0.1 MiB per 30 min.
+    settled = rising <= 0.5 or rose_mib <= 0.1
+    within = growth <= 2.0 or grew_mib <= 1.0 or (growth <= 5.0 and settled)
+    ok = within and restarts == 0
     verdict = ("pass" if ok and settled else "not asserted (still rising)" if ok else "FAIL")
     all_pass = all_pass and verdict == "pass"
     result["parts"][part] = {"baseline_mib": round(b / 2**20, 1), "final_mib": round(f / 2**20, 1),
