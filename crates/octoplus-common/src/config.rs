@@ -1059,7 +1059,7 @@ mod tests {
         assert!(c.enabled);
         assert_eq!(c.history_tokens, 200);
         assert_eq!(c.facts_tokens, 48);
-        assert_eq!(c.max_reply_tokens, 110);
+        assert_eq!(c.max_reply_tokens, 80);
         assert_eq!(c.session_max_minutes, 15);
 
         for bad in [
