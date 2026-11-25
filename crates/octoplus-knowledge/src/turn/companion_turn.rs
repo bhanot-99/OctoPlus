@@ -148,6 +148,15 @@ struct CompanionStreamed {
     cut_short: bool,
 }
 
+/// Borrowed context passed into one streamed companion generation pass.
+struct CompanionStreamCtx<'a> {
+    prompt: &'a Prompt,
+    plan: &'a GeneratePlan,
+    question: &'a str,
+    persona: &'a crate::companion::persona::Persona,
+    started: Instant,
+}
+
 impl KnowledgeHandler {
     /// Handles one typed companion dialogue turn.
     pub(super) async fn companion_turn(
@@ -361,10 +370,14 @@ impl KnowledgeHandler {
                 }
 
                 let started = Instant::now();
-                let Some(streamed) = self
-                    .stream_companion_answer(&prompt, &plan_generate, started, sink)
-                    .await?
-                else {
+                let ctx = CompanionStreamCtx {
+                    prompt: &prompt,
+                    plan: &plan_generate,
+                    question: text,
+                    persona: &persona,
+                    started,
+                };
+                let Some(streamed) = self.stream_companion_answer(&ctx, sink).await? else {
                     return self.c4_down(sink).await;
                 };
 
@@ -414,11 +427,14 @@ impl KnowledgeHandler {
     /// Streams generation tokens from inference engine and applies sentence-level safety filtering.
     async fn stream_companion_answer(
         &self,
-        prompt: &Prompt,
-        plan_generate: &GeneratePlan,
-        started: Instant,
+        ctx: &CompanionStreamCtx<'_>,
         sink: &StreamSink,
     ) -> Result<Option<CompanionStreamed>, HandlerError> {
+        let prompt = ctx.prompt;
+        let plan_generate = ctx.plan;
+        let question = ctx.question;
+        let persona = ctx.persona;
+        let started = ctx.started;
         let client =
             match tokio::time::timeout(self.timing.control, self.peers.inference.get()).await {
                 Ok(Ok(c)) => c,
@@ -440,6 +456,7 @@ impl KnowledgeHandler {
         let mut first = true;
         let mut cut_short = false;
         let mut capped = false;
+        let defer_emit = plan_generate.identity_question || plan_generate.joke_requested;
         // A short factual question gets the fact and one more sentence at most.
         let (max_sentences, max_words) = if plan_generate.short_factual {
             (2, MAX_FACT_WORDS)
@@ -472,7 +489,7 @@ impl KnowledgeHandler {
                                 max_sentences,
                                 max_words,
                             );
-                            if let Some(text) = to_say {
+                            if !defer_emit && let Some(text) = to_say {
                                 Self::say(sink, &text).await?;
                             }
                             if hit_cap {
@@ -525,7 +542,7 @@ impl KnowledgeHandler {
                     max_sentences,
                     max_words,
                 );
-                if let Some(text) = to_say {
+                if !defer_emit && let Some(text) = to_say {
                     Self::say(sink, &text).await?;
                 }
                 if hit_cap {
@@ -534,7 +551,44 @@ impl KnowledgeHandler {
             }
         }
 
-        let said = if said_pieces.is_empty() {
+        let said = if plan_generate.identity_question {
+            let candidate = said_pieces.join(" ");
+            let low = candidate.to_lowercase();
+            let valid = !candidate.trim().is_empty()
+                && (!(crate::companion::guards::asks_her_name(question)
+                    || crate::companion::guards::asks_about_her(question))
+                    || low.contains(&persona.name.to_lowercase()))
+                && (!crate::companion::guards::asks_her_age(question)
+                    || low.contains(&persona.age.to_string())
+                    || low.contains("twenty-five")
+                    || low.contains("twenty five"));
+            let out = if valid {
+                candidate
+            } else {
+                persona.introduction_text()
+            };
+            Self::say(sink, &out).await?;
+            out
+        } else if plan_generate.joke_requested {
+            let candidate = said_pieces.join(" ");
+            let valid =
+                candidate.split_whitespace().count() >= 5 && !candidate.trim_end().ends_with(':');
+            let out = if valid {
+                candidate
+            } else {
+                self.with_state(|state| {
+                    state.companion.as_mut().map_or_else(
+                        || {
+                            "Why did the scarecrow win an award? Because he was outstanding in his field."
+                                .to_string()
+                        },
+                        CompanionEngine::next_unseen_joke,
+                    )
+                })
+            };
+            Self::say(sink, &out).await?;
+            out
+        } else if said_pieces.is_empty() {
             let fallback = "Sorry, I lost my words for a second. Say that again?";
             Self::say(sink, fallback).await?;
             fallback.to_string()

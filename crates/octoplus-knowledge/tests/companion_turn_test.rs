@@ -1687,32 +1687,65 @@ async fn machinery_talk_from_the_model_is_dropped_before_it_is_spoken() {
 }
 
 #[tokio::test]
-async fn who_she_is_her_name_and_her_age_are_answered_from_her_persona_not_by_the_model() {
-    let s = Stack::start(Opts {
-        default_answer: vec!["I'm an AI designed to help with questions.".to_string()],
+async fn identity_questions_use_model_with_persona_and_fail_closed_to_intro() {
+    // 1. Model gives warm in-character answers -> kept as-is with persona facts in prompt.
+    let s_ok = Stack::start(Opts {
+        scripted_answers: vec![
+            vec!["I'm Laila, 25. I studied computer science and cognitive science, and my head and heart still argue over coffee.".to_string()],
+            vec!["I'm Laila.".to_string()],
+            vec!["I'm 25, though my curiosity feels older.".to_string()],
+        ],
         ..Opts::default()
     })
     .await;
-    let (said, _) = s.ask_companion("tell me about yourself", T0).await.unwrap();
-    assert!(said.starts_with("I'm Laila, 25."), "{said}");
-    assert!(
-        said.contains("computer science and cognitive science"),
-        "{said}"
-    );
-    let (said, _) = s
+    let (said, _) = s_ok
+        .ask_companion("tell me about yourself", T0)
+        .await
+        .unwrap();
+    assert!(said.contains("Laila"), "{said}");
+    assert!(said.contains("over coffee"), "{said}");
+    let (said_name, _) = s_ok
         .ask_companion("what is your name", T0 + 3_600_000_000_000)
         .await
         .unwrap();
-    assert_eq!(said, "My name is Laila.");
-    let (said, _) = s
+    assert_eq!(said_name, "I'm Laila.");
+    let (said_age, _) = s_ok
         .ask_companion("how old are you", T0 + 7_200_000_000_000)
         .await
         .unwrap();
-    assert!(said.starts_with("I'm 25, as a character."), "{said}");
-    assert!(
-        s.rec.lock().unwrap().prompts.is_empty(),
-        "no model call for any of them"
+    assert!(said_age.contains("25"), "{said_age}");
+    assert_eq!(
+        s_ok.rec.lock().unwrap().prompts.len(),
+        3,
+        "identity questions are now model-driven"
     );
+    assert!(s_ok.rec.lock().unwrap().prompts[0].contains("cognitive-science reading notes"));
+
+    // 2. Fail-closed: bad model replies (AI assistant, language model, no feelings, Luna)
+    //    are dropped by the filters and fall back to persona.introduction_text().
+    let intro = Persona::default_packaged().unwrap().introduction_text();
+    for (i, bad) in [
+        "I'm an AI assistant designed to help you.",
+        "As a language model, I don't have feelings.",
+        "I'm Luna, your laptop buddy.",
+    ]
+    .iter()
+    .enumerate()
+    {
+        let s_bad = Stack::start(Opts {
+            default_answer: vec![(*bad).to_string()],
+            ..Opts::default()
+        })
+        .await;
+        let (said_bad, _) = s_bad
+            .ask_companion("who are you", T0 + (i as u64 + 1) * 3_600_000_000_000)
+            .await
+            .unwrap();
+        assert_eq!(
+            said_bad, intro,
+            "bad reply '{bad}' must fail closed to intro"
+        );
+    }
 }
 
 #[tokio::test]
@@ -1833,29 +1866,31 @@ async fn after_a_one_word_fact_a_rambling_second_sentence_is_not_spoken() {
 
 #[tokio::test]
 async fn a_joke_on_request_is_a_new_clean_one_each_time_and_never_lost() {
-    // Found by voice: the model told the same joke twice, the repeat guard dropped it, and she
-    // said "I lost my words".
+    // Model tries in her own voice first; when it repeats the same joke, the repeat guard drops
+    // it and fails closed onto a distinct clean joke from the 32-item list without repeating.
     let s = Stack::start(Opts {
-        default_answer: vec!["Why did the coffee file a report? It got mugged.".to_string()],
+        default_answer: vec!["Why did the coffee file a police report? It got mugged.".to_string()],
         ..Opts::default()
     })
     .await;
     let mut seen = std::collections::HashSet::new();
-    for (i, text) in ["tell me a joke", "make me laugh", "say something funny"]
-        .iter()
-        .enumerate()
+    for (i, text) in [
+        "tell me a joke",
+        "make me laugh",
+        "say something funny",
+        "another one",
+    ]
+    .iter()
+    .enumerate()
     {
         let (said, _) = s
-            .ask_companion(text, T0 + (i as u64) * 3_600_000_000_000)
+            .ask_companion(text, T0 + (i as u64) * 60_000_000_000)
             .await
             .unwrap();
         assert!(!said.contains("lost my words"), "{said}");
         assert!(seen.insert(said.clone()), "a repeated joke: {said}");
     }
-    assert!(
-        s.rec.lock().unwrap().prompts.is_empty(),
-        "no model call for a joke"
-    );
+    assert_eq!(seen.len(), 4);
 }
 
 #[tokio::test]

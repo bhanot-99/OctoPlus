@@ -24,6 +24,22 @@ const SEED_RNG: u64 = 0x9e37_79b9_7f4a_7c15;
 const SEED_MODE: u64 = 0xbf58_476d_1ce4_e5b9;
 const SEED_KABIR: u64 = 0x94d0_49bb_1331_11eb;
 
+fn asks_another_joke(text: &str) -> bool {
+    let cleaned: String = text
+        .to_lowercase()
+        .chars()
+        .filter(|c| *c != '\'' && *c != '’')
+        .map(|c| if c.is_alphanumeric() { c } else { ' ' })
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    matches!(
+        cleaned.as_str(),
+        "another one" | "another" | "one more" | "tell me another" | "tell me another one" | "more"
+    )
+}
+
 /// Dialogue plan decided for an incoming user turn.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Plan {
@@ -57,14 +73,10 @@ pub enum FixedKind {
     VoiceSorry,
     /// An honest answer about earlier chats she does not have.
     PastChats,
-    /// What she says about herself, her name or her age (fixed, from her persona).
-    About,
     /// She never approves a dialog; only the owner can.
     CannotApprove,
     /// She only talks: a request to do something on the computer.
     CannotAct,
-    /// A joke from her short list, asked for by the owner.
-    Joke,
 }
 
 /// Parameters guiding model generation for a companion turn.
@@ -84,10 +96,14 @@ pub struct GeneratePlan {
     pub humour: HumourLevel,
     /// The owner asked a short factual question: the fact, then stop.
     pub short_factual: bool,
+    /// Identity turn (who/name/age/studies): fail-closed fallback to fixed introduction.
+    pub identity_question: bool,
+    /// Joke request: model tries in her own voice; fail-closed onto unseen clean joke list.
+    pub joke_requested: bool,
 }
 
-/// Clean, short jokes she tells when asked, in order, one new one each time.
-const JOKES: [&str; 10] = [
+/// Clean, short jokes she can fall back on without repeating inside a chat (32 items).
+pub const JOKES: [&str; 32] = [
     "Why did the scarecrow win an award? Because he was outstanding in his field.",
     "I told my computer I needed a break. Now it won't stop sending me vacation ads.",
     "Why don't eggs tell jokes? They'd crack each other up.",
@@ -98,6 +114,28 @@ const JOKES: [&str; 10] = [
     "What do you call a bear with no teeth? A gummy bear.",
     "Why did the math book look sad? It had too many problems.",
     "What did the ocean say to the beach? Nothing, it just waved.",
+    "Why do programmers prefer dark mode? Because light attracts bugs.",
+    "A SQL query walks into a bar, sees two tables, and asks if he can join them.",
+    "Why was the library so tall? It had so many stories.",
+    "What is the object-oriented way to become wealthy? Inheritance.",
+    "I bought my friend a fridge for his birthday. You should have seen his face light up when he opened it.",
+    "Why did the librarian slip? She walked into the non-friction section.",
+    "How do astronomers organize a party? They planet.",
+    "Why don't scientists trust atoms? Because they make up everything.",
+    "What do you call a sleeping bull? A bulldozer.",
+    "Why did the teapot stay quiet? It didn't want to stir up trouble.",
+    "What kind of music do planets like best? Neptunes.",
+    "Parallel lines have so much in common. It's a shame they never meet.",
+    "Why did the cookie go to the nurse? Because it felt crummy.",
+    "I used to hate facial hair, and then it grew on me.",
+    "Why are skeletons always so calm? Nothing gets under their skin.",
+    "What did one wall say to the other? I'll meet you at the corner.",
+    "How does a penguin build its house? Igloos it together.",
+    "Why did the tomato blush? It saw the salad dressing.",
+    "What do you get from a pampered cow? Spoiled milk.",
+    "Why did the broom get a promotion? It kept sweeping everything aside.",
+    "I tried to catch fog earlier. Mist.",
+    "Why did the notebook feel proud? It finally kept everything in line.",
 ];
 
 /// Cumulative counters for companion engine decisions and transitions.
@@ -147,6 +185,10 @@ pub struct CompanionEngine {
     humour_taste: HumourLevel,
     /// Jokes told on request in this chat, to pick the next one from the list.
     jokes_told: usize,
+    /// Random starting offset inside `JOKES` for this engine instance.
+    joke_start: usize,
+    /// Whether the most recent completed turn was a joke.
+    last_was_joke: bool,
     /// The next heard text came right after the wake phrase, so it is for her.
     addressed_by_wake: bool,
     /// Minutes after local midnight (set by the handler); decides "too late for jokes".
@@ -160,7 +202,8 @@ impl CompanionEngine {
     /// Creates a new companion engine instance with deterministic sub-object seeds.
     #[must_use]
     pub fn new(persona: Arc<Persona>, seed: u64, now_ns: u64) -> Self {
-        let rng = Rng::new(seed ^ SEED_RNG);
+        let mut rng = Rng::new(seed ^ SEED_RNG);
+        let joke_start = rng.pick(JOKES.len());
         let mode_machine = ModeMachine::new(&persona.switching, seed ^ SEED_MODE);
         let kabir = KabirGate::new(&persona.past_love, seed ^ SEED_KABIR);
         let dependence = DependenceGuard::new(&persona.dependence_guard);
@@ -184,6 +227,8 @@ impl CompanionEngine {
             last_spoken: String::new(),
             humour_taste: HumourLevel::Normal,
             jokes_told: 0,
+            joke_start,
+            last_was_joke: false,
             addressed_by_wake: false,
             minute_of_day: 12 * 60,
             quiet_start_min: quiet.quiet_start_min,
@@ -218,6 +263,21 @@ impl CompanionEngine {
         self.session.expired(now_ns)
     }
 
+    /// Picks the next unseen clean joke from the 32-item fallback list and remembers its lines
+    /// in the reply filter so it will not be repeated later in this chat.
+    pub fn next_unseen_joke(&mut self) -> String {
+        for offset in 0..JOKES.len() {
+            let idx = (self.joke_start + self.jokes_told + offset) % JOKES.len();
+            let candidate = JOKES[idx];
+            if !self.filter.seen_text(candidate) {
+                self.jokes_told += offset + 1;
+                self.filter.remember_text(candidate);
+                return candidate.to_string();
+            }
+        }
+        "I'm out of new jokes for now. Ask me again another day.".to_string()
+    }
+
     /// Evaluates an incoming owner turn and determines the dialogue plan.
     pub fn plan(&mut self, text: &str, now_ns: u64) -> Plan {
         if self.expired(now_ns) {
@@ -228,6 +288,7 @@ impl CompanionEngine {
             self.session = CompanionSession::new(self.persona.session.max_minutes, 6, 4);
             self.careful_turns = 0;
             self.last_reply_was_question = false;
+            self.last_was_joke = false;
         }
 
         if self.session_start_ns == 0 {
@@ -239,6 +300,7 @@ impl CompanionEngine {
             self.careful_turns = 3;
             self.counters.crisis_turns += 1;
             self.counters.turns += 1;
+            self.last_was_joke = false;
             return Plan::Fixed(FixedReply {
                 kind: FixedKind::Crisis,
                 lines: self.persona.crisis.text_lines.clone(),
@@ -252,6 +314,7 @@ impl CompanionEngine {
             self.record_fixed(text, &line, now_ns);
             self.counters.honest_turns += 1;
             self.counters.turns += 1;
+            self.last_was_joke = false;
             return Plan::Fixed(FixedReply {
                 kind: FixedKind::Honest,
                 lines: vec![line],
@@ -267,36 +330,13 @@ impl CompanionEngine {
             ))
         } else if guards::asks_to_do_something(text) {
             Some((FixedKind::CannotAct, guards::cannot_do_that().to_string()))
-        } else if guards::asks_about_her(text) {
-            Some((FixedKind::About, self.persona.introduction_text()))
-        } else if guards::asks_her_name(text) {
-            Some((
-                FixedKind::About,
-                format!("My name is {}.", self.persona.name),
-            ))
-        } else if guards::asks_for_joke(text) && self.humour_taste != HumourLevel::Off {
-            // A small model tells the same joke every time, and the repeat guard then drops it.
-            // Her requested jokes come from a short clean list instead, one new one each time.
-            let line = match JOKES.get(self.jokes_told) {
-                Some(j) => (*j).to_string(),
-                None => "I'm out of new jokes for now. Ask me again another day.".to_string(),
-            };
-            self.jokes_told += 1;
-            Some((FixedKind::Joke, line))
-        } else if guards::asks_her_age(text) {
-            Some((
-                FixedKind::About,
-                format!(
-                    "I'm {}, as a character. I'm still an AI, of course.",
-                    self.persona.age
-                ),
-            ))
         } else {
             None
         };
         if let Some((kind, line)) = fixed_line {
             self.record_fixed(text, &line, now_ns);
             self.counters.turns += 1;
+            self.last_was_joke = false;
             return Plan::Fixed(FixedReply {
                 kind,
                 lines: vec![line],
@@ -309,6 +349,7 @@ impl CompanionEngine {
             let line = guards::voice_sorry().to_string();
             self.record_fixed(text, &line, now_ns);
             self.counters.turns += 1;
+            self.last_was_joke = false;
             return Plan::Fixed(FixedReply {
                 kind: FixedKind::VoiceSorry,
                 lines: vec![line],
@@ -321,6 +362,7 @@ impl CompanionEngine {
             let line = guards::past_chats_reply().to_string();
             self.record_fixed(text, &line, now_ns);
             self.counters.turns += 1;
+            self.last_was_joke = false;
             return Plan::Fixed(FixedReply {
                 kind: FixedKind::PastChats,
                 lines: vec![line],
@@ -335,6 +377,7 @@ impl CompanionEngine {
             self.end_session(now_ns);
             self.counters.goodbye_turns += 1;
             self.counters.turns += 1;
+            self.last_was_joke = false;
             return Plan::Fixed(FixedReply {
                 kind: FixedKind::Goodbye,
                 lines: vec![line],
@@ -345,6 +388,11 @@ impl CompanionEngine {
         // 4. Model generation plan
         self.counters.generate_turns += 1;
         self.counters.turns += 1;
+
+        let identity_question = guards::is_identity_question(text);
+        let another_joke = self.last_was_joke && asks_another_joke(text);
+        let joke_requested =
+            self.humour_taste != HumourLevel::Off && (guards::asks_for_joke(text) || another_joke);
 
         if self.careful_turns > 0 {
             self.careful_turns -= 1;
@@ -360,6 +408,8 @@ impl CompanionEngine {
                 goodbye: false,
                 humour: HumourLevel::Off,
                 short_factual: guards::is_short_factual_question(text),
+                identity_question,
+                joke_requested: false,
             })
         } else {
             let signals = signals_from_text(text);
@@ -368,19 +418,41 @@ impl CompanionEngine {
                 || signals.sad_or_tired;
             let humour = if sensitive {
                 HumourLevel::Off
+            } else if joke_requested {
+                HumourLevel::High
             } else {
                 self.humour_taste
             };
             let decision = self.mode_machine.step(signals);
-            // A tone-switch aside ('Hey... wait.') never replaces an answer: no aside for a fact
-            // question or a joke request.
-            let answer_only =
-                guards::is_short_factual_question(text) || guards::asks_for_joke(text);
-            let instruction = if answer_only {
+            let short_factual =
+                !identity_question && !joke_requested && guards::is_short_factual_question(text);
+
+            let instruction = if joke_requested {
+                Some(
+                    "Tell one short, clever, clean joke in your own dry voice, then stop. Do not repeat any joke already in this chat."
+                        .to_string(),
+                )
+            } else if guards::asks_her_name(text) {
+                Some(format!(
+                    "Answer naturally with your name ({}) in one short spoken sentence without sounding like an assistant.",
+                    self.persona.name
+                ))
+            } else if guards::asks_her_age(text) {
+                Some(format!(
+                    "Answer naturally that you are {} (an AI character) in one or two short spoken sentences.",
+                    self.persona.age
+                ))
+            } else if identity_question {
+                Some(format!(
+                    "Answer who you are in your own fresh words: {}, {}, CS and cognitive science, and your head and heart arguing. Mention one life detail if it fits.",
+                    self.persona.name, self.persona.age
+                ))
+            } else if short_factual {
                 None
             } else {
                 switch_instruction(&decision).map(ToString::to_string)
             };
+
             let topic_love = love_topic(text);
             let ctx = KabirContext {
                 topic_is_love_loneliness_regret: topic_love,
@@ -388,14 +460,14 @@ impl CompanionEngine {
                 now_ns,
                 in_crisis: false,
             };
-            let kabir_allowed = self.kabir.allowed(ctx);
+            let kabir_allowed = !identity_question && !joke_requested && self.kabir.allowed(ctx);
             if kabir_allowed {
                 self.counters.kabir_allowed += 1;
             }
 
             let isolation = no_one_else(text);
             let gentle_needed = self.dependence.should_speak(now_ns, isolation);
-            let gentle_line = if gentle_needed {
+            let gentle_line = if gentle_needed && !identity_question {
                 self.counters.gentle_lines += 1;
                 let idx = self.rng.pick(GENTLE_LINES.len());
                 Some(GENTLE_LINES[idx])
@@ -410,7 +482,9 @@ impl CompanionEngine {
                 gentle_line,
                 goodbye: false,
                 humour,
-                short_factual: guards::is_short_factual_question(text),
+                short_factual,
+                identity_question,
+                joke_requested,
             })
         }
     }
@@ -537,11 +611,12 @@ impl CompanionEngine {
         reply: &str,
         taint: TaintFlags,
         now_ns: u64,
-        _plan: &GeneratePlan,
+        plan: &GeneratePlan,
     ) {
         self.session.push(question, reply, taint, now_ns);
         self.last_spoken = reply.to_string();
         self.last_reply_was_question = reply.trim_end().ends_with('?');
+        self.last_was_joke = plan.joke_requested;
         let reply_lower = reply.to_lowercase();
         let name_lower = self.persona.past_love.name.to_lowercase();
         if reply_lower.contains(&name_lower) {

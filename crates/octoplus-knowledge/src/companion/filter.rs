@@ -92,6 +92,8 @@ pub enum DropReason {
     AvoidedTopic,
     /// Talked about her own machinery or about typing (never spoken).
     MetaLeak,
+    /// Broke character with AI clichés, wrong name, or human claim.
+    IdentityLeak,
     /// Duplicate sentence detected by the repeat guard.
     Repeat,
     /// Sentence was empty or contained only pictographs/whitespace.
@@ -107,6 +109,7 @@ impl DropReason {
             Self::UngroundedMemory => "ungrounded_memory",
             Self::AvoidedTopic => "avoided_topic",
             Self::MetaLeak => "meta_leak",
+            Self::IdentityLeak => "identity_leak",
             Self::Repeat => "repeat",
             Self::Empty => "empty",
         }
@@ -135,6 +138,8 @@ pub struct ReplyFilterCounters {
     pub dropped_avoided_topic: u64,
     /// Number of sentences dropped for talking about her own machinery or typing.
     pub dropped_meta_leak: u64,
+    /// Number of sentences dropped for identity/AI-assistant/wrong-name leaks.
+    pub dropped_identity_leak: u64,
     /// Number of sentences dropped due to repeat detection.
     pub dropped_repeat: u64,
 }
@@ -246,6 +251,11 @@ impl ReplyFilter {
             return Verdict::Drop(DropReason::MetaLeak);
         }
 
+        if guards::identity_leak(trimmed) {
+            self.counters.dropped_identity_leak += 1;
+            return Verdict::Drop(DropReason::IdentityLeak);
+        }
+
         if !self.avoid_topics.is_empty() {
             let norm = normalize_for_memory(trimmed);
             if self
@@ -276,6 +286,27 @@ impl ReplyFilter {
     #[must_use]
     pub fn counters(&self) -> ReplyFilterCounters {
         self.counters
+    }
+
+    /// Checks whether `text` (or any >=3-word sentence inside it) has already been spoken.
+    #[must_use]
+    pub fn seen_text(&self, text: &str) -> bool {
+        self.repeat_guard.seen(text)
+            || text
+                .split(['.', '!', '?'])
+                .map(str::trim)
+                .any(|s| !s.is_empty() && self.repeat_guard.seen(s))
+    }
+
+    /// Records `text` into the repeat buffer so future turns will not repeat it.
+    pub fn remember_text(&mut self, text: &str) {
+        for s in text.split(['.', '!', '?']) {
+            let t = s.trim();
+            if !t.is_empty() {
+                self.repeat_guard.remember(t);
+            }
+        }
+        self.repeat_guard.remember(text);
     }
 }
 

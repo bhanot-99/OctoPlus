@@ -184,7 +184,7 @@ fn history_block(input: &CompanionPromptInput<'_>, b: &Budgets, question_tokens:
 }
 
 /// Maximum token budget allowed for per-turn companion life snippets in the user block.
-pub const MAX_LIFE_TOKENS: u32 = 110;
+pub const MAX_LIFE_TOKENS: u32 = 135;
 
 /// Token ceiling allocated to life snippets given `budgets`.
 #[must_use]

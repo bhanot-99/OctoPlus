@@ -386,3 +386,32 @@ fn voice_complaints_past_chat_questions_and_joke_requests_are_recognised() {
         assert!(!asks_for_joke(t), "{t}");
     }
 }
+
+#[test]
+fn identity_leak_catches_ai_cliches_and_wrong_names_but_keeps_laila() {
+    use octoplus_knowledge::companion::guards::identity_leak;
+    for bad in [
+        "I'm an AI assistant designed to help.",
+        "As a language model, I don't have feelings.",
+        "I'm Luna, your laptop buddy.",
+        "My name is Aria.",
+        "I'm Alex, nice to meet you.",
+        "I am human just like you.",
+        "You can call me Nova.",
+    ] {
+        assert!(identity_leak(bad), "expected leak to be caught: {bad}");
+    }
+    for ok in [
+        "I'm Laila, 25.",
+        "My name is Laila.",
+        "No. I'm an AI character, a program running on your computer.",
+        "I'm not human, I'm an AI character.",
+        "I'm reading The Dispossessed tonight over tea.",
+        "I'm glad we talked about it.",
+    ] {
+        assert!(
+            !identity_leak(ok),
+            "expected clean Laila line to pass: {ok}"
+        );
+    }
+}

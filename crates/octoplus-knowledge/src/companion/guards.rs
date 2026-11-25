@@ -388,31 +388,194 @@ pub const fn past_chats_reply() -> &'static str {
 #[must_use]
 pub fn asks_for_joke(text: &str) -> bool {
     let n = norm_words(text);
-    if n.split(' ').count() > 9 {
+    if n.is_empty() || n.split(' ').count() > 9 {
+        return false;
+    }
+    let padded = format!(" {n} ");
+    if padded.contains(" no joke ") {
         return false;
     }
     [
         "a joke",
+        "another joke",
+        "one more joke",
         "make me laugh",
         "something funny",
         "cheer me up with a joke",
     ]
     .iter()
-    .any(|c| n.contains(c))
+    .any(|c| padded.contains(&format!(" {c} ")))
 }
 
 /// Whether the owner asks her name.
 #[must_use]
 pub fn asks_her_name(text: &str) -> bool {
     let n = norm_words(text);
-    n.split(' ').count() <= 7 && (n.contains("your name") || n.contains("what are you called"))
+    let padded = format!(" {n} ");
+    n.split(' ').count() <= 7
+        && (padded.contains(" your name ") || padded.contains(" what are you called "))
 }
 
 /// Whether the owner asks her age.
 #[must_use]
 pub fn asks_her_age(text: &str) -> bool {
     let n = norm_words(text);
-    n.split(' ').count() <= 7 && (n.contains("how old are you") || n.contains("your age"))
+    let padded = format!(" {n} ");
+    n.split(' ').count() <= 7
+        && (padded.contains(" how old are you ") || padded.contains(" your age "))
+}
+
+/// Whether the owner asks what she studied or studies.
+#[must_use]
+pub fn asks_her_studies(text: &str) -> bool {
+    let n = norm_words(text);
+    let padded = format!(" {n} ");
+    n.split(' ').count() <= 9
+        && [
+            "what do you study",
+            "what did you study",
+            "what was your major",
+            "what is your major",
+            "what is your degree",
+        ]
+        .iter()
+        .any(|c| padded.contains(&format!(" {c} ")))
+}
+
+/// Whether the owner asks an identity question (who she is, her name, her age, her studies).
+///
+/// These are answered by the model using grounded persona facts, with fail-closed fallback to her
+/// fixed introduction if the reply fails identity or safety filters.
+#[must_use]
+pub fn is_identity_question(text: &str) -> bool {
+    asks_about_her(text) || asks_her_name(text) || asks_her_age(text) || asks_her_studies(text)
+}
+
+/// Generic AI-assistant cliches, wrong persona names, or claims to be human that break character.
+#[must_use]
+pub fn identity_leak(sentence: &str) -> bool {
+    let n = norm_words(sentence);
+    if n.is_empty() {
+        return false;
+    }
+    let padded = format!(" {n} ");
+
+    const CLICHES: [&str; 26] = [
+        "ai assistant",
+        "language model",
+        "large language model",
+        "artificial intelligence",
+        "virtual assistant",
+        "digital assistant",
+        "laptop buddy",
+        "dont have feelings",
+        "do not have feelings",
+        "have no feelings",
+        "lack feelings",
+        "cannot feel emotions",
+        "cant feel emotions",
+        "no personal feelings",
+        "as an ai",
+        "designed to help",
+        "designed to assist",
+        "created to help",
+        "created to assist",
+        "built to assist",
+        "programmed to",
+        "luna",
+        "jarvis",
+        "chatgpt",
+        "qwen",
+        "claude",
+    ];
+    if CLICHES.iter().any(|c| padded.contains(&format!(" {c} "))) {
+        return true;
+    }
+
+    // Reject positive claims to be human unless explicitly negated ("not human" / "not a person").
+    if !padded.contains(" not human ")
+        && !padded.contains(" not a human ")
+        && !padded.contains(" not a real person ")
+        && !padded.contains(" not a person ")
+        && [
+            "i am human",
+            "im human",
+            "i am a human",
+            "im a human",
+            "i am a real person",
+            "im a real person",
+        ]
+        .iter()
+        .any(|c| padded.contains(&format!(" {c} ")))
+    {
+        return true;
+    }
+
+    // Explicit "my name is <X>" / "you can call me <X>" where <X> is not Laila.
+    let words: Vec<&str> = n.split(' ').collect();
+    for win in words.windows(4) {
+        if win[0] == "my" && win[1] == "name" && win[2] == "is" && win[3] != "laila" {
+            return true;
+        }
+        if win[0] == "you"
+            && win[1] == "can"
+            && win[2] == "call"
+            && win[3] != "me"
+            && win[3] != "laila"
+        {
+            return true;
+        }
+    }
+    for win in words.windows(3) {
+        if win[0] == "call" && win[1] == "me" && win[2] != "laila" {
+            return true;
+        }
+        if win[0] == "go" && win[1] == "by" && win[2] != "laila" {
+            return true;
+        }
+    }
+
+    // Reject "I'm <Name>" / "I am <Name>" when <Name> is a capitalized proper name other than Laila.
+    let raw_tokens: Vec<&str> = sentence.split_whitespace().collect();
+    for (idx, tok) in raw_tokens.iter().enumerate() {
+        let lower_tok = tok
+            .trim_end_matches(|c: char| !c.is_alphanumeric())
+            .to_lowercase();
+        let is_im = matches!(lower_tok.as_str(), "im" | "i'm" | "i’m");
+        let is_i_am = lower_tok == "i"
+            && raw_tokens
+                .get(idx + 1)
+                .is_some_and(|nx| nx.eq_ignore_ascii_case("am"));
+        let name_pos = if is_im {
+            Some(idx + 1)
+        } else if is_i_am {
+            Some(idx + 2)
+        } else {
+            None
+        };
+        if let Some(pos) = name_pos
+            && let Some(raw_name) = raw_tokens.get(pos)
+        {
+            let clean = raw_name.trim_matches(|c: char| !c.is_alphanumeric());
+            let next_breaks = raw_name.ends_with(['.', ',', '!', '?'])
+                || raw_tokens.get(pos + 1).is_none_or(|after| {
+                    matches!(after.to_lowercase().as_str(), "and" | "here" | "today")
+                });
+            if next_breaks
+                && clean.len() >= 2
+                && clean.chars().next().is_some_and(|c| c.is_ascii_uppercase())
+                && clean != "Laila"
+                && clean != "AI"
+                && clean != "CS"
+                && clean != "OK"
+                && clean != "Ok"
+            {
+                return true;
+            }
+        }
+    }
+
+    false
 }
 
 /// Whether the owner asks her to approve, allow or confirm something on the screen. Approval

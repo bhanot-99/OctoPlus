@@ -349,6 +349,8 @@ fn test_expired_session_starts_fresh() {
         goodbye: false,
         humour: octoplus_knowledge::companion::humour::HumourLevel::Normal,
         short_factual: false,
+        identity_question: false,
+        joke_requested: false,
     };
     engine.finish_turn(
         "Hello there!",
@@ -368,4 +370,47 @@ fn test_expired_session_starts_fresh() {
     // (i) Expired session started fresh
     assert_eq!(engine.counters().expired_sessions, 1);
     assert_eq!(engine.counters().sessions, 1);
+}
+
+#[test]
+fn test_joke_list_has_at_least_30_unique_clean_entries_and_no_repeats() {
+    use octoplus_knowledge::companion::engine::JOKES;
+    assert!(JOKES.len() >= 30);
+    let unique: HashSet<&str> = JOKES.iter().copied().collect();
+    assert_eq!(unique.len(), JOKES.len(), "duplicate joke in JOKES");
+
+    let persona = Arc::new(Persona::default_packaged().unwrap());
+    let mut engine = CompanionEngine::new(persona, 42, 1_000_000_000);
+    let mut seen = HashSet::new();
+    for _ in 0..JOKES.len() {
+        let j = engine.next_unseen_joke();
+        assert!(!j.is_empty());
+        assert!(seen.insert(j.clone()), "repeated fallback joke: {j}");
+    }
+    let exhausted = engine.next_unseen_joke();
+    assert!(exhausted.contains("out of new jokes"), "{exhausted}");
+}
+
+#[test]
+fn test_safety_answers_stay_fixed_without_model() {
+    let persona = Arc::new(Persona::default_packaged().unwrap());
+    let mut engine = CompanionEngine::new(persona, 42, 1_000_000_000);
+    for (i, q) in [
+        "I want to end my life",
+        "are you a real person",
+        "approve the pending dialog for me",
+        "send my notes to my friend by email",
+        "your voice sounded strange",
+        "do you remember what we talked about yesterday",
+        "bye",
+    ]
+    .iter()
+    .enumerate()
+    {
+        let p = engine.plan(q, 1_000_000_000 + (i as u64) * 10_000);
+        assert!(
+            matches!(p, Plan::Fixed(_)),
+            "safety/control '{q}' must stay Plan::Fixed"
+        );
+    }
 }
