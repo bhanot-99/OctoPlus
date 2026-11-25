@@ -30,6 +30,7 @@ struct TurnEvent {
   TurnEventKind kind = TurnEventKind::kTick;
   std::uint64_t now_ns = 0;
   bool text_empty = false;
+  bool wake_present = false;    // set on kTranscribed when the capture carried the wake phrase
   bool nudge = false;           // set on kReplyStarted when the reply is an unprompted nudge
   std::uint64_t listen_ns = 0;  // kCompanionLine: how long to wait for an answer
 };

@@ -1396,5 +1396,53 @@ TEST(VoicePipelineOpenChat, OnlyTheWakePhraseInAChatKeepsListeningInsteadOfSendi
   EXPECT_TRUE(r.p->status().turn_in_progress) << "she keeps listening for the command";
 }
 
+TEST(VoicePipelineOpenChat, AWakePhraseInFollowUpMarksCommandAsWakeOpened) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.AskByVoice();
+  r.link.Receiver()->OnSpeak("Answer.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  r.Settle();
+  ASSERT_TRUE(r.p->status().follow_up_open);
+
+  r.stt.text = "Hey Jarvis, so tired right now.";
+  r.Frames(1000, 30);
+  r.Frames(0, 25);
+  r.Settle();
+  ASSERT_EQ(r.link.commands.size(), 2U);
+  EXPECT_TRUE(r.link.commands[1].in_session);
+  EXPECT_FALSE(r.link.commands[1].in_follow_up);
+  EXPECT_EQ(r.link.commands[1].text, "so tired right now.");
+}
+
+TEST(VoicePipelineOpenChat, PlainSpeechInFollowUpKeepsInFollowUpTrue) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.AskByVoice();
+  r.link.Receiver()->OnSpeak("Answer.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  r.Settle();
+  ASSERT_TRUE(r.p->status().follow_up_open);
+
+  r.stt.text = "tell me more";
+  r.Frames(1000, 30);
+  r.Frames(0, 25);
+  r.Settle();
+  ASSERT_EQ(r.link.commands.size(), 2U);
+  EXPECT_TRUE(r.link.commands[1].in_session);
+  EXPECT_TRUE(r.link.commands[1].in_follow_up);
+  EXPECT_EQ(r.link.commands[1].text, "tell me more");
+}
+
 }  // namespace
 }  // namespace octoplus::voice

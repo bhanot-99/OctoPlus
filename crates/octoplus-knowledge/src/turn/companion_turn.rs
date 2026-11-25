@@ -44,6 +44,36 @@ const MAX_FACT_WORDS: usize = 30;
 /// Most words of an added sentence after a one-word fact ("Paris." and then a short remark).
 const MAX_FACT_EXTRA_WORDS: usize = 14;
 
+/// Whether `s` ends like a spoken sentence (ignoring trailing closing quotes or parentheses).
+fn ends_sentence(s: &str) -> bool {
+    let t = s.trim_end().trim_end_matches(['"', '”', '’', '\'', ')']);
+    t.ends_with(['.', '!', '?'])
+}
+
+/// Trims an oversized piece to at most `max_words` words, ending cleanly like a sentence.
+fn trim_to_sentence_words(s: &str, max_words: usize) -> String {
+    let words: Vec<&str> = s.split_whitespace().collect();
+    let take = max_words.max(1);
+    if words.len() < take || (words.len() == take && ends_sentence(s)) {
+        return s.to_string();
+    }
+    let head = &words[..take.min(words.len())];
+    let min_clause = (head.len() / 2).max(1);
+    let cut = (min_clause..head.len())
+        .rev()
+        .find(|&i| head[i].ends_with([',', ';', ':']))
+        .map_or(head.len(), |i| i + 1);
+    let mut out = head[..cut].join(" ");
+    out = out
+        .trim_end_matches([',', ';', ':', '-', '\u{2014}', '\u{2013}'])
+        .trim_end()
+        .to_string();
+    if !ends_sentence(&out) {
+        out.push('.');
+    }
+    out
+}
+
 /// Whether what has been said so far is enough: three finished sentences or about 70 words.
 fn reply_is_long_enough(
     said: &[String],
@@ -51,17 +81,65 @@ fn reply_is_long_enough(
     max_words: usize,
     factual: bool,
 ) -> bool {
-    let sentences = said
-        .iter()
-        .filter(|p| p.trim_end().ends_with(['.', '!', '?']))
-        .count();
+    let sentences = said.iter().filter(|p| ends_sentence(p)).count();
     let words: usize = said.iter().map(|p| p.split_whitespace().count()).sum();
     // A fact question: once one real sentence (three words or more) has answered it, stop.
     let answered = factual
         && said
             .iter()
-            .any(|p| p.trim_end().ends_with(['.', '!', '?']) && p.split_whitespace().count() >= 3);
+            .any(|p| ends_sentence(p) && p.split_whitespace().count() >= 3);
     answered || sentences >= max_sentences || words >= max_words
+}
+
+/// Applies reply caps to one filtered piece before it is spoken, trimming an oversized first
+/// sentence (or its mid-sentence continuation) and dropping later pieces past the cap.
+fn prepare_spoken_piece(
+    said_pieces: &mut Vec<String>,
+    s: String,
+    short_factual: bool,
+    max_sentences: usize,
+    max_words: usize,
+) -> (Option<String>, bool) {
+    if reply_is_long_enough(said_pieces, max_sentences, max_words, short_factual) {
+        return (None, true);
+    }
+    let used_words: usize = said_pieces
+        .iter()
+        .map(|p| p.split_whitespace().count())
+        .sum();
+    let piece_words = s.split_whitespace().count();
+    let any_spoken = !said_pieces.is_empty();
+    let mid_sentence = said_pieces.last().is_some_and(|p| !ends_sentence(p));
+    let piece = if mid_sentence {
+        let remaining = max_words.saturating_sub(used_words);
+        if remaining == 0 {
+            return (None, true);
+        }
+        if piece_words >= remaining {
+            trim_to_sentence_words(&s, remaining)
+        } else {
+            s
+        }
+    } else if any_spoken {
+        if (short_factual && piece_words > MAX_FACT_EXTRA_WORDS)
+            || used_words + piece_words > max_words
+        {
+            return (None, true);
+        }
+        s
+    } else if piece_words >= max_words {
+        trim_to_sentence_words(&s, max_words)
+    } else {
+        s
+    };
+    let to_say = if any_spoken {
+        format!(" {piece}")
+    } else {
+        piece.clone()
+    };
+    said_pieces.push(piece);
+    let capped = reply_is_long_enough(said_pieces, max_sentences, max_words, short_factual);
+    (Some(to_say), capped)
 }
 
 /// Results captured from streamed companion reply generation.
@@ -89,9 +167,13 @@ impl KnowledgeHandler {
             }
         };
 
-        // A spoken control for the scheduler ("not now", "quiet for an hour") is always meant for
-        // her, whatever the directedness check would say about so short a sentence.
-        let is_control = crate::companion::pulse::parse_pulse_command(text).is_some();
+        // A spoken control, feedback, or fixed-answer request is always meant for her, whatever
+        // the directedness check would say about a short sentence.
+        let is_control = crate::companion::pulse::parse_pulse_command(text).is_some()
+            || crate::companion::humour::parse_feedback(text).is_some()
+            || crate::companion::guards::asks_to_do_something(text)
+            || crate::companion::guards::asks_to_approve(text)
+            || crate::companion::guards::asks_about_past_chats(text);
         let hub = self.hub.clone();
         let minute = crate::nudge::signals::local_minute(now, &crate::nudge::boot::time_zone());
         // If she started this chat herself, her opening line is the first thing in the history.
@@ -357,7 +439,6 @@ impl KnowledgeHandler {
         let mut said_pieces = Vec::new();
         let mut first = true;
         let mut cut_short = false;
-        let mut any_spoken = false;
         let mut capped = false;
         // A short factual question gets the fact and one more sentence at most.
         let (max_sentences, max_words) = if plan_generate.short_factual {
@@ -384,33 +465,23 @@ impl KnowledgeHandler {
                             )
                         });
                         for s in filtered {
-                            // A fact question: a second sentence that goes on and on is rambling.
-                            if plan_generate.short_factual
-                                && any_spoken
-                                && s.split_whitespace().count() > MAX_FACT_EXTRA_WORDS
-                            {
+                            let (to_say, hit_cap) = prepare_spoken_piece(
+                                &mut said_pieces,
+                                s,
+                                plan_generate.short_factual,
+                                max_sentences,
+                                max_words,
+                            );
+                            if let Some(text) = to_say {
+                                Self::say(sink, &text).await?;
+                            }
+                            if hit_cap {
                                 capped = true;
                                 break;
                             }
-                            let to_say = if any_spoken {
-                                format!(" {s}")
-                            } else {
-                                s.clone()
-                            };
-                            Self::say(sink, &to_say).await?;
-                            said_pieces.push(s);
-                            any_spoken = true;
                         }
-                        if capped
-                            || reply_is_long_enough(
-                                &said_pieces,
-                                max_sentences,
-                                max_words,
-                                plan_generate.short_factual,
-                            )
-                        {
+                        if capped {
                             // Enough said: stop the generation (dropping the stream cancels it).
-                            capped = true;
                             break;
                         }
                     }
@@ -447,14 +518,19 @@ impl KnowledgeHandler {
                 )
             });
             for s in filtered {
-                let to_say = if any_spoken {
-                    format!(" {s}")
-                } else {
-                    s.clone()
-                };
-                Self::say(sink, &to_say).await?;
-                said_pieces.push(s);
-                any_spoken = true;
+                let (to_say, hit_cap) = prepare_spoken_piece(
+                    &mut said_pieces,
+                    s,
+                    plan_generate.short_factual,
+                    max_sentences,
+                    max_words,
+                );
+                if let Some(text) = to_say {
+                    Self::say(sink, &text).await?;
+                }
+                if hit_cap {
+                    break;
+                }
             }
         }
 

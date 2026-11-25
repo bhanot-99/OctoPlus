@@ -271,7 +271,17 @@ def wait_until_listening(limit: int = 60) -> None:
     time.sleep(2)
 
 
-EVAL_LINE = re.compile(r'heard="(.*?)" reply="(.*)"$')
+EVAL_LINE = re.compile(r'heard="((?:\\.|[^"\\])*)" reply="((?:\\.|[^"\\])*)"$')
+
+
+def unescape_rust_debug(s: str) -> str:
+    """Decode Rust `{:?}` string escapes while keeping real UTF-8 characters intact."""
+    escapes = {"n": "\n", "r": "\r", "t": "\t", "\\": "\\", '"': '"', "'": "'"}
+    return re.sub(
+        r'\\(n|r|t|\\|"|\'|u\{([0-9a-fA-F]+)\})',
+        lambda m: escapes[m.group(1)] if m.group(1) in escapes else chr(int(m.group(2), 16)),
+        s,
+    )
 
 
 def wait_for_turn(since: str, timeout: int) -> tuple[str, str]:
@@ -282,7 +292,7 @@ def wait_for_turn(since: str, timeout: int) -> tuple[str, str]:
         found = [m for m in (EVAL_LINE.search(l) for l in out.splitlines()) if m]
         if found:
             m = found[0]
-            return m.group(1).encode().decode("unicode_escape"), m.group(2).encode().decode("unicode_escape")
+            return unescape_rust_debug(m.group(1)), unescape_rust_debug(m.group(2))
         time.sleep(2)
     return "", ""
 

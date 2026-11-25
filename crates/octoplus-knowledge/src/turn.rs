@@ -366,7 +366,10 @@ impl KnowledgeHandler {
                 cutoff,
             });
             let will_be_companion = cmd.in_session
-                && !(first.route == RouteKind::Action && first.action_hint.is_some())
+                && !(first.route == RouteKind::Action
+                    && first
+                        .action_hint
+                        .is_some_and(|h| h != crate::router::ActionHint::Unsupported))
                 && !(first.route == RouteKind::Desktop
                     && crate::companion::guards::is_interrogative(&cmd.text));
 
@@ -497,11 +500,12 @@ impl KnowledgeHandler {
             retrieval_best_score: None,
             cutoff,
         });
-        // In companion chat a rhythm control ("be quiet for an hour", "not now") is for the
-        // companion, even when the same words would pause the monitor in plain chat.
+        // In companion chat a rhythm control ("be quiet for an hour", "not now") or an
+        // unsupported computer-task request stays with the companion, who only talks.
         let companion_control = ask.companion
             && (crate::companion::pulse::parse_pulse_command(&text).is_some()
-                || crate::companion::humour::parse_feedback(&text).is_some());
+                || crate::companion::humour::parse_feedback(&text).is_some()
+                || first.action_hint == Some(crate::router::ActionHint::Unsupported));
         if !companion_control
             && let (RouteKind::Action, Some(hint)) = (first.route, first.action_hint)
         {

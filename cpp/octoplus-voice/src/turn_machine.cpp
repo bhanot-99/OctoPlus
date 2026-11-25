@@ -260,10 +260,13 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& event) {
           state_entered_ns_ = e.now_ns;
           reply_is_nudge_ = false;
           reply_finished_ = false;
+          if (e.wake_present) {
+            consecutive_follow_ups_ = 0;
+          }
           TurnAction act;
           act.kind = TurnActionKind::kSendCommand;
           act.with_backlog = false;
-          act.in_follow_up = utterance_is_follow_up_;
+          act.in_follow_up = utterance_is_follow_up_ && !e.wake_present;
           return {act};
         }
         if (session_active_) {

@@ -479,6 +479,7 @@ void VoicePipeline::Transcribe() {
       }
     }
     bool wake_only = false;
+    bool phrase_present = false;
     if (!failed) {
       text = CollapseRepeats(text);
       // The wake phrase is never part of the command. It may open the capture (after_wake), or
@@ -486,7 +487,7 @@ void VoicePipeline::Transcribe() {
       // and the detector fires a moment later: strip it in both cases (found by speaking
       // "Hey Jarvis, what is ..." into an open chat: only "Hey Jarvis." was sent).
       const std::string stripped = StripWakePhrase(text);
-      const bool phrase_present = stripped != text;
+      phrase_present = stripped != text;
       if (after_wake || phrase_present) {
         const bool heard_something = !Blank(text) && !NoiseTranscript(text);
         text = stripped;
@@ -514,6 +515,7 @@ void VoicePipeline::Transcribe() {
     e.kind = wake_only ? TurnEventKind::kWakeOnly : TurnEventKind::kTranscribed;
     e.now_ns = d_.mono_ns();
     e.text_empty = empty;
+    e.wake_present = after_wake || phrase_present;
     if (wake_only && d_.on_trace) {
       d_.on_trace("wake_only");
     }

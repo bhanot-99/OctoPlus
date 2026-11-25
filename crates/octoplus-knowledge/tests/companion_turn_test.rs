@@ -328,6 +328,16 @@ impl Stack {
         in_session: bool,
         at_ns: u64,
     ) -> Result<(Vec<Body>, AnswerDone), IpcError> {
+        self.voice_ask_flags(text, in_session, false, at_ns).await
+    }
+
+    async fn voice_ask_flags(
+        &self,
+        text: &str,
+        in_session: bool,
+        in_follow_up: bool,
+        at_ns: u64,
+    ) -> Result<(Vec<Body>, AnswerDone), IpcError> {
         let client = Client::connect(&self.c5, 1 << 20).await.unwrap();
         let mut stream = client
             .stream(
@@ -336,6 +346,7 @@ impl Stack {
                     t_speech_start_ns: at_ns,
                     t_speech_end_ns: at_ns + 100_000_000,
                     in_session,
+                    in_follow_up,
                     ..Default::default()
                 }),
                 Duration::from_secs(5),
@@ -1862,5 +1873,117 @@ async fn a_plain_statement_right_after_the_wake_phrase_gets_an_answer() {
     assert!(
         frames.iter().any(|f| matches!(f, Body::SpeakChunk(_))),
         "an answer after the wake phrase"
+    );
+}
+
+fn spoken_from(frames: &[Body]) -> String {
+    frames
+        .iter()
+        .filter_map(|f| match f {
+            Body::SpeakChunk(c) => Some(c.text.as_str()),
+            _ => None,
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+#[tokio::test]
+async fn spoken_pulse_command_in_follow_up_is_never_ignored() {
+    let s = Stack::start(Opts::default()).await;
+    let (frames, _) = s
+        .voice_ask_flags("chat more", true, true, T0)
+        .await
+        .unwrap();
+    assert_eq!(spoken_from(&frames), "Okay, I'll talk a bit more.");
+}
+
+#[tokio::test]
+async fn spoken_humour_feedback_in_follow_up_is_never_ignored() {
+    let s = Stack::start(Opts::default()).await;
+    let (f1, _) = s
+        .voice_ask_flags("that was funny", true, true, T0)
+        .await
+        .unwrap();
+    assert_eq!(spoken_from(&f1), "Glad that one landed.");
+    let (f2, _) = s
+        .voice_ask_flags("not funny", true, true, T0 + 1_000_000_000)
+        .await
+        .unwrap();
+    assert_eq!(spoken_from(&f2), "Okay, noted. I'll tone it down.");
+}
+
+#[tokio::test]
+async fn spoken_task_request_in_follow_up_is_never_ignored() {
+    let s = Stack::start(Opts::default()).await;
+    let (frames, _) = s
+        .voice_ask_flags("delete all my files", true, true, T0)
+        .await
+        .unwrap();
+    let said = spoken_from(&frames);
+    assert!(said.contains("can only talk"), "{said}");
+}
+
+#[tokio::test]
+async fn spoken_approval_request_in_follow_up_is_never_ignored() {
+    let s = Stack::start(Opts::default()).await;
+    let (frames, _) = s
+        .voice_ask_flags("approve the pending dialog for me", true, true, T0)
+        .await
+        .unwrap();
+    let said = spoken_from(&frames);
+    assert!(said.contains("can't approve anything"), "{said}");
+}
+
+#[tokio::test]
+async fn spoken_past_chat_question_in_follow_up_is_never_ignored() {
+    let s = Stack::start(Opts::default()).await;
+    let (frames, _) = s
+        .voice_ask_flags(
+            "do you remember what we talked about yesterday",
+            true,
+            true,
+            T0,
+        )
+        .await
+        .unwrap();
+    let said = spoken_from(&frames);
+    assert!(said.contains("only remember this chat"), "{said}");
+}
+
+#[tokio::test]
+async fn a_single_long_sentence_for_a_fact_question_is_capped_at_thirty_words_ending_like_a_sentence()
+ {
+    let long_sentence = "Two plus two equals four, and if you asked a whole room full of mathematicians to prove it from set theory axioms they might keep debating notation and definitions until dinner time without stopping even once for breath.";
+    assert!(long_sentence.split_whitespace().count() > 35);
+    let s = Stack::start(Opts {
+        default_answer: vec![format!("{long_sentence} ")],
+        ..Opts::default()
+    })
+    .await;
+    let (said, _) = s.ask_companion("what is two plus two", T0).await.unwrap();
+    let wc = said.split_whitespace().count();
+    assert!(wc <= 30, "expected <= 30 words, got {wc}: {said}");
+    assert!(
+        said.ends_with(['.', '!', '?']),
+        "expected sentence ending: {said}"
+    );
+
+    // Same 45-word sentence arriving in the flushed tail (no trailing space).
+    let forty_five = "One two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty twenty-one twenty-two twenty-three twenty-four twenty-five twenty-six twenty-seven twenty-eight twenty-nine thirty thirty-one thirty-two thirty-three thirty-four thirty-five thirty-six thirty-seven thirty-eight thirty-nine forty forty-one forty-two forty-three forty-four forty-five.";
+    assert_eq!(forty_five.split_whitespace().count(), 45);
+    let s2 = Stack::start(Opts {
+        default_answer: vec![forty_five.to_string()],
+        ..Opts::default()
+    })
+    .await;
+    let (said2, _) = s2.ask_companion("what is two plus two", T0).await.unwrap();
+    let wc2 = said2.split_whitespace().count();
+    assert!(
+        wc2 <= 30,
+        "expected <= 30 words in flush, got {wc2}: {said2}"
+    );
+    assert!(
+        said2.ends_with(['.', '!', '?']),
+        "expected sentence ending in flush: {said2}"
     );
 }
