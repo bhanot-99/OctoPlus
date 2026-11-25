@@ -263,6 +263,7 @@ impl Gateway {
             text: question,
             origin: Origin::Cli as i32,
             at_ns: 0,
+            companion: false,
         };
         let Ok(mut stream) = client.stream(Body::AskRequest(req), ASK_DEADLINE).await else {
             return ChatEvent::Failed("Could not send the question.".to_owned());

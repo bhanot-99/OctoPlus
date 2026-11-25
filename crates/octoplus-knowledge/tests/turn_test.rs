@@ -349,6 +349,7 @@ impl Stack {
             route_action: counter(),
             route_desktop: counter(),
             route_general: counter(),
+            route_companion: counter(),
             evidence_no_taint: counter(),
             barge_ins: counter(),
         };
@@ -420,6 +421,7 @@ impl Stack {
                     text: text.to_string(),
                     origin: Origin::Cli as i32,
                     at_ns,
+                    companion: false,
                 }),
                 Duration::from_secs(5),
             )
@@ -1448,6 +1450,7 @@ async fn a_client_that_cancels_stops_the_generation_at_c4() {
                 text: "tell me a long story".into(),
                 origin: Origin::Cli as i32,
                 at_ns: 1_000_000_000_000,
+                companion: false,
             }),
             Duration::from_secs(5),
         )
@@ -1502,6 +1505,7 @@ async fn the_real_service_starts_serves_and_reports_missing_peers() {
                 text: "tell me a joke".into(),
                 origin: Origin::Cli as i32,
                 at_ns: 0,
+                companion: false,
             }),
             Duration::from_secs(2),
         )

@@ -12,7 +12,9 @@
 //! - [`session`]: conversational memory with rolling summary and turn retention.
 //! - [`filter`]: streamed sentence validation and safety scrubbing before speech synthesis.
 //! - [`engine`]: unified dialogue orchestrator managing per-conversation state.
+//! - [`boot`]: preloading and fallback resolution for the persona configuration.
 
+pub mod boot;
 pub mod dependence;
 pub mod engine;
 pub mod filter;

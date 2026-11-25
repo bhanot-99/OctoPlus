@@ -953,3 +953,42 @@ async fn conversation_loop_ends_on_eof() {
     .await;
     assert_eq!(code, 0);
 }
+
+#[test]
+fn test_companion_cli_parsing_and_route() {
+    use clap::Parser;
+    use octoplusctl::ask::route_name;
+    use octoplusctl::{Cli, Commands};
+
+    // Route name test
+    assert_eq!(route_name(Route::Companion as i32), "companion");
+
+    // CLI parse ask with --companion
+    let cli = Cli::try_parse_from(["octoplusctl", "ask", "--companion", "hello", "there"]).unwrap();
+    match cli.command {
+        Commands::Ask {
+            companion,
+            question,
+            ..
+        } => {
+            assert!(companion);
+            assert_eq!(question, vec!["hello", "there"]);
+        }
+        _ => panic!("expected Commands::Ask"),
+    }
+
+    // CLI parse chat subcommand
+    let cli_chat = Cli::try_parse_from(["octoplusctl", "chat", "--explain", "hi"]).unwrap();
+    match cli_chat.command {
+        Commands::Chat {
+            explain,
+            question,
+            json,
+        } => {
+            assert!(explain);
+            assert!(!json);
+            assert_eq!(question, vec!["hi"]);
+        }
+        _ => panic!("expected Commands::Chat"),
+    }
+}

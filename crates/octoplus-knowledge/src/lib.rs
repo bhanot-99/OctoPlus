@@ -124,17 +124,17 @@ pub fn init(
         route_action: h.counter("route_action"),
         route_desktop: h.counter("route_desktop"),
         route_general: h.counter("route_general"),
+        route_companion: h.counter("route_companion"),
         evidence_no_taint: h.counter("evidence_dropped_no_taint"),
         barge_ins: h.counter("voice_barge_ins"),
     };
+    let persona = companion::boot::persona()
+        .map_err(|e| octoplus_health::ServiceError::Custom(format!("persona: {e}")))?;
     let nudge = start_nudges(ctx, &peers, voice)?;
-    let handler = Arc::new(KnowledgeHandler::new(
-        peers,
-        ctx.config.knowledge.clone(),
-        timing,
-        metrics,
-        nudge,
-    ));
+    let handler = Arc::new(
+        KnowledgeHandler::new(peers, ctx.config.knowledge.clone(), timing, metrics, nudge)
+            .with_companion(persona, ctx.config.companion.clone()),
+    );
     ctx.spawn_server("knowledge", handler)?;
     ctx.health.set_ready();
     Ok(())

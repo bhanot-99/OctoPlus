@@ -9,6 +9,7 @@ message AskRequest {
   string text = 1;
   Origin origin = 2;
   uint64 at_ns = 3;   // when the user spoke or typed; 0 means now (FR-KNO-01, ADR-0013)
+  bool companion = 4; // this turn is companion chat (Phase 12)
 }
 
 message AnswerChunk {
@@ -21,6 +22,7 @@ enum Route {
   ROUTE_DESKTOP_ANSWER = 2;
   ROUTE_GENERAL_CHAT = 3;
   ROUTE_NUDGE_REPLY = 4;
+  ROUTE_COMPANION = 5;
 }
 
 message AnswerDone {

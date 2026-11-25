@@ -70,6 +70,9 @@ pub struct Config {
     /// Nudge engine options (C5, FR-NUD-01…12).
     #[serde(default)]
     pub nudges: NudgesConfig,
+    /// Companion options (Phase 12, ADR-0019).
+    #[serde(default)]
+    pub companion: CompanionConfig,
     /// Verification hooks (SC proof 3). Read-only probes; they never widen anything.
     #[serde(default)]
     pub debug: DebugConfig,
@@ -740,6 +743,60 @@ impl NudgesConfig {
     }
 }
 
+/// `[companion]` section (Phase 12, ADR-0019, design.md §12).
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields, default)]
+pub struct CompanionConfig {
+    /// Master switch for companion mode.
+    pub enabled: bool,
+    /// Session-history block budget in tokens.
+    pub history_tokens: u32,
+    /// Personal-facts block budget in tokens.
+    pub facts_tokens: u32,
+    /// Longest companion reply asked of C4, in tokens.
+    pub max_reply_tokens: u32,
+    /// Session duration timeout in minutes (fallback when persona file does not specify).
+    pub session_max_minutes: u32,
+}
+
+impl Default for CompanionConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            history_tokens: 320,
+            facts_tokens: 48,
+            max_reply_tokens: 160,
+            session_max_minutes: 15,
+        }
+    }
+}
+
+impl CompanionConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        let nonzero = [
+            ("companion.history_tokens", u64::from(self.history_tokens)),
+            ("companion.facts_tokens", u64::from(self.facts_tokens)),
+            (
+                "companion.max_reply_tokens",
+                u64::from(self.max_reply_tokens),
+            ),
+            (
+                "companion.session_max_minutes",
+                u64::from(self.session_max_minutes),
+            ),
+        ];
+        for (key, v) in nonzero {
+            if v == 0 {
+                return Err(ConfigError::Invalid {
+                    key,
+                    reason: "must be greater than zero",
+                });
+            }
+        }
+        Ok(())
+    }
+}
+
 impl Config {
     /// Parses and validates config text.
     ///
@@ -772,6 +829,7 @@ impl Config {
         self.storage.validate()?;
         self.knowledge.validate()?;
         self.nudges.validate()?;
+        self.companion.validate()?;
         let frame = self.ipc.max_frame_bytes;
         if frame == 0 || frame > FRAME_BYTES_CEILING {
             return Err(ConfigError::Invalid {
@@ -986,5 +1044,29 @@ mod tests {
         assert_eq!(Config::load_from(&p).unwrap().deadlines.generation_ms, 1000);
         std::fs::write(&p, "bogus = true\n").unwrap();
         assert!(Config::load_from(&p).is_err());
+    }
+
+    #[test]
+    fn companion_defaults_and_validation() {
+        let c = Config::default().companion;
+        assert!(c.enabled);
+        assert_eq!(c.history_tokens, 320);
+        assert_eq!(c.facts_tokens, 48);
+        assert_eq!(c.max_reply_tokens, 160);
+        assert_eq!(c.session_max_minutes, 15);
+
+        for bad in [
+            "[companion]\nhistory_tokens = 0\n",
+            "[companion]\nfacts_tokens = 0\n",
+            "[companion]\nmax_reply_tokens = 0\n",
+            "[companion]\nsession_max_minutes = 0\n",
+            "[companion]\nunknown_key = 1\n",
+        ] {
+            assert!(Config::from_toml_str(bad).is_err(), "accepted: {bad}");
+        }
+        let ok = "[companion]\nenabled = false\nhistory_tokens = 500\n";
+        let parsed = Config::from_toml_str(ok).unwrap();
+        assert!(!parsed.companion.enabled);
+        assert_eq!(parsed.companion.history_tokens, 500);
     }
 }

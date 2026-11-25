@@ -122,6 +122,8 @@ pub struct Metrics {
     pub route_desktop: Arc<AtomicU64>,
     /// General chat answers.
     pub route_general: Arc<AtomicU64>,
+    /// Companion chat answers (Phase 12).
+    pub route_companion: Arc<AtomicU64>,
     /// Evidence items dropped for a missing taint (R0-4).
     pub evidence_no_taint: Arc<AtomicU64>,
     /// Times the user spoke over a spoken answer (FR-VOI-07).
@@ -133,6 +135,8 @@ pub struct Metrics {
 struct State {
     session: Session,
     pending: Pending,
+    #[allow(dead_code)] // used by task 5b
+    companion: Option<crate::companion::engine::CompanionEngine>,
 }
 
 /// An offer the last answer made, waiting for a plain yes or no.
@@ -206,6 +210,10 @@ pub struct KnowledgeHandler {
     metrics: Metrics,
     nudge: NudgeHandle,
     state: Mutex<State>,
+    #[allow(dead_code)] // used by task 5b
+    persona: Option<Arc<crate::companion::persona::Persona>>,
+    #[allow(dead_code)] // used by task 5b
+    companion_cfg: octoplus_common::config::CompanionConfig,
 }
 
 fn invalid(msg: &'static str) -> HandlerError {
@@ -244,8 +252,25 @@ impl KnowledgeHandler {
             state: Mutex::new(State {
                 session,
                 pending: Pending::None,
+                companion: None,
             }),
+            persona: crate::companion::persona::Persona::default_packaged()
+                .ok()
+                .map(Arc::new),
+            companion_cfg: octoplus_common::config::CompanionConfig::default(),
         }
+    }
+
+    /// Sets the companion persona and configuration (Phase 12).
+    #[must_use]
+    pub fn with_companion(
+        mut self,
+        persona: Arc<crate::companion::persona::Persona>,
+        cfg: octoplus_common::config::CompanionConfig,
+    ) -> Self {
+        self.persona = Some(persona);
+        self.companion_cfg = cfg;
+        self
     }
 
     fn budgets(&self) -> Budgets {
@@ -332,6 +357,7 @@ impl KnowledgeHandler {
             text: cmd.text,
             origin: Origin::Voice as i32,
             at_ns: cmd.t_speech_start_ns,
+            companion: false,
         };
         let (local, mut rx) = StreamSink::channel(16);
         let run = async move {
