@@ -9,6 +9,7 @@ use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tokio::sync::watch;
 
 use crate::chat::ChatEvent;
+use crate::companion::{CompanionCommand, CompanionView};
 use crate::gateway::{AuditRow, ChainStatus, EgressRow, Gateway};
 use crate::gpu::{self, GpuState};
 use crate::health::Snapshot;
@@ -23,6 +24,8 @@ pub enum Update {
     Voice(VoiceView),
     /// The GPU.
     Gpu(GpuState),
+    /// The companion: rhythm, talks, memories.
+    Companion(CompanionView),
     /// A chat event for the running question.
     Chat(ChatEvent),
     /// The privacy ledgers, refreshed.
@@ -49,6 +52,8 @@ pub enum Command {
     Mic(MicAction),
     /// Refresh the ledgers now.
     RefreshLedgers,
+    /// Press a companion button.
+    Companion(CompanionCommand),
 }
 
 /// How often each source is read.
@@ -62,6 +67,8 @@ pub struct Rates {
     pub gpu: Duration,
     /// Ledgers.
     pub ledgers: Duration,
+    /// The companion's status and memory list.
+    pub companion: Duration,
 }
 
 impl Default for Rates {
@@ -71,6 +78,7 @@ impl Default for Rates {
             voice: Duration::from_millis(200),
             gpu: Duration::from_millis(2000),
             ledgers: Duration::from_secs(10),
+            companion: Duration::from_secs(3),
         }
     }
 }
@@ -113,6 +121,13 @@ pub fn start(
         move || {
             let gw = gw.clone();
             async move { Some(Update::Voice(gw.voice().await)) }
+        }
+    });
+    spawn_poll(rt, up_tx.clone(), rates.companion, {
+        let gw = gw.clone();
+        move || {
+            let gw = gw.clone();
+            async move { Some(Update::Companion(gw.companion().await)) }
         }
     });
     spawn_poll(rt, up_tx.clone(), rates.gpu, || async {
@@ -199,6 +214,13 @@ async fn command_loop(
             }
             Command::RefreshLedgers => {
                 let _ = updates.send(ledgers(&gw).await);
+            }
+            Command::Companion(c) => {
+                if let Err(why) = gw.companion_control(c).await {
+                    let _ = updates.send(Update::Notice(why));
+                }
+                // Show the effect at once instead of waiting for the next poll.
+                let _ = updates.send(Update::Companion(gw.companion().await));
             }
         }
     }

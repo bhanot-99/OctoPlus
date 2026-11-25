@@ -2,6 +2,7 @@
 //! [`Update`] here and then redraws only what changed.
 
 use crate::chat::Conversation;
+use crate::companion::CompanionView;
 use crate::controller::Update;
 use crate::gateway::{AuditRow, ChainStatus, EgressRow};
 use crate::gpu::GpuState;
@@ -20,6 +21,8 @@ pub struct Changed {
     pub health: bool,
     /// Voice state.
     pub voice: bool,
+    /// The companion.
+    pub companion: bool,
     /// GPU.
     pub gpu: bool,
     /// Chat.
@@ -70,6 +73,8 @@ pub struct AppState {
     pub have_snapshot: bool,
     /// The voice dock.
     pub voice: VoiceView,
+    /// The companion's rhythm, talks and memories.
+    pub companion: CompanionView,
     /// The GPU, `None` until the first read.
     pub gpu: Option<GpuState>,
     /// This window's conversation.
@@ -102,6 +107,7 @@ impl AppState {
             snapshot: Snapshot::offline(),
             have_snapshot: false,
             voice: VoiceView::unavailable(),
+            companion: CompanionView::unavailable(),
             gpu: None,
             conversation: Conversation::new(),
             ledgers: Ledgers::default(),
@@ -128,6 +134,12 @@ impl AppState {
                 if v != self.voice {
                     self.voice = v;
                     changed.voice = true;
+                }
+            }
+            Update::Companion(c) => {
+                if c != self.companion {
+                    self.companion = c;
+                    changed.companion = true;
                 }
             }
             Update::Gpu(g) => {

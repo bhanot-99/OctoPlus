@@ -533,6 +533,7 @@ impl OverviewPage {
         // Initial paint from state
         let st = ctx.state.borrow();
         page.voice_card.refresh(&st.voice);
+        page.voice_card.refresh_companion(&st.companion);
         page.redraw_health(&st);
         page.redraw_ledgers(&st);
 
@@ -765,6 +766,9 @@ impl Page for OverviewPage {
     }
 
     fn refresh(&self, state: &AppState, changed: Changed) {
+        if changed.companion {
+            self.voice_card.refresh_companion(&state.companion);
+        }
         if changed.voice {
             self.voice_card.refresh(&state.voice);
         }

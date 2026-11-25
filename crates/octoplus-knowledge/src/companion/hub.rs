@@ -13,7 +13,7 @@ use crate::companion::humour::{Feedback, HumourLevel, HumourState, effective_lev
 use crate::companion::memory::{Category, Decision, Keep, MemoryCounters, MemoryRule, plain_form};
 use crate::companion::persona::Persona;
 use crate::companion::pulse::{
-    Pulse, PulseCommand, PulseConfig, PulseCounters, PulseDecision, PulseInput, Response,
+    Pulse, PulseCommand, PulseConfig, PulseCounters, PulseDecision, PulseInput, Response, Topic,
     apply_command, parse_pulse_command,
 };
 
@@ -42,6 +42,43 @@ struct Pending {
     started_ns: u64,
 }
 
+/// One talk she started, for "today's talks" in OctoPit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TalkRecord {
+    /// When the line was spoken.
+    pub at_ns: u64,
+    /// What kind of talk it was.
+    pub topic: Topic,
+    /// What the owner did with it (`None` while waiting).
+    pub response: Option<Response>,
+}
+
+/// Most talks kept for the list.
+const TALK_LOG: usize = 100;
+
+/// Everything OctoPit shows about her rhythm, taken at one moment.
+#[derive(Debug, Clone, PartialEq)]
+pub struct HubStatus {
+    /// The global pause switch.
+    pub paused: bool,
+    /// Minutes the owner's quiet request still holds.
+    pub quiet_minutes_left: u32,
+    /// Talks started today.
+    pub talks_today: u32,
+    /// Talks started in the last hour.
+    pub talks_last_hour: u32,
+    /// The schedule.
+    pub config: PulseConfig,
+    /// The owner's taste in jokes.
+    pub humour: HumourLevel,
+    /// "Chat more / less" as a percentage of the normal rhythm.
+    pub chattiness_percent: u32,
+    /// Recent talks, newest first.
+    pub talks: Vec<TalkRecord>,
+    /// What was kept by chance.
+    pub memory: MemoryCounters,
+}
+
 #[derive(Debug)]
 struct Inner {
     pulse: Pulse,
@@ -51,6 +88,8 @@ struct Inner {
     humour: HumourState,
     memory: MemoryRule,
     followup: Option<(u64, String)>,
+    log: std::collections::VecDeque<TalkRecord>,
+    last_topic: Option<Topic>,
 }
 
 /// Shared scheduler state.
@@ -74,6 +113,8 @@ impl CompanionHub {
                 humour: HumourState::default(),
                 memory: MemoryRule::new(persona, seed),
                 followup: None,
+                log: std::collections::VecDeque::new(),
+                last_topic: None,
             }),
         })
     }
@@ -91,8 +132,13 @@ impl CompanionHub {
             g.pending = None;
             g.pulse
                 .record_response(input.now_ns, input.minute_of_day, Response::Ignored);
+            mark_last(&mut g.log, Response::Ignored);
         }
-        g.pulse.tick(input)
+        let d = g.pulse.tick(input);
+        if let PulseDecision::Talk(topic) = d {
+            g.last_topic = Some(topic);
+        }
+        d
     }
 
     /// The opening line of a talk was spoken: remember it so the conversation that follows
@@ -101,6 +147,13 @@ impl CompanionHub {
         let mut g = self.lock();
         g.pending = Some(Pending { started_ns: now_ns });
         g.opener = Some((now_ns, line.to_string()));
+        let topic = g.last_topic.unwrap_or(Topic::CheckIn);
+        g.log.push_front(TalkRecord {
+            at_ns: now_ns,
+            topic,
+            response: None,
+        });
+        g.log.truncate(TALK_LOG);
     }
 
     /// The opening line she just spoke, once (the chat history starts with it). A line the owner
@@ -124,6 +177,9 @@ impl CompanionHub {
                 PulseCommand::NotNow => {
                     g.pulse
                         .record_response(now_ns, minute_of_day, Response::NotNow);
+                    if live {
+                        mark_last(&mut g.log, Response::NotNow);
+                    }
                 }
                 other => apply_command(&mut g.pulse, &other, now_ns, minute_of_day),
             }
@@ -133,6 +189,7 @@ impl CompanionHub {
             g.pending = None;
             g.pulse
                 .record_response(now_ns, minute_of_day, Response::Accepted);
+            mark_last(&mut g.log, Response::Accepted);
             return OwnerTurn::Plain {
                 answered_talk: true,
             };
@@ -224,6 +281,34 @@ impl CompanionHub {
         (now_ns.saturating_sub(at) <= 48 * 3600 * NS_PER_S).then_some(fact)
     }
 
+    /// Everything OctoPit shows about her rhythm right now.
+    pub fn status(&self, now_ns: u64) -> HubStatus {
+        let g = self.lock();
+        let today_start = now_ns.saturating_sub(24 * 3600 * NS_PER_S);
+        HubStatus {
+            paused: g.pulse.paused(),
+            quiet_minutes_left: g.pulse.snooze_minutes_left(now_ns),
+            talks_today: g.pulse.talks_today(),
+            talks_last_hour: u32::try_from(g.pulse.talks_in_last_hour()).unwrap_or(u32::MAX),
+            config: g.pulse.config(),
+            humour: g.humour.level(),
+            chattiness_percent: (g.pulse.rate_scale() * 100.0).round() as u32,
+            talks: g
+                .log
+                .iter()
+                .filter(|t| t.at_ns >= today_start)
+                .copied()
+                .collect(),
+            memory: g.memory.counters(),
+        }
+    }
+
+    /// An owner control from OctoPit (the same effects as the spoken ones).
+    pub fn control(&self, now_ns: u64, minute_of_day: u16, c: &PulseCommand) {
+        let mut g = self.lock();
+        apply_command(&mut g.pulse, c, now_ns, minute_of_day);
+    }
+
     /// Whether the companion is paused.
     pub fn paused(&self) -> bool {
         self.lock().pulse.paused()
@@ -232,5 +317,12 @@ impl CompanionHub {
     /// Counts for the health report.
     pub fn counters(&self) -> PulseCounters {
         self.lock().pulse.counters().clone()
+    }
+}
+
+/// Fills in what the owner did with the newest talk that is still waiting.
+fn mark_last(log: &mut std::collections::VecDeque<TalkRecord>, r: Response) {
+    if let Some(t) = log.iter_mut().find(|t| t.response.is_none()) {
+        t.response = Some(r);
     }
 }

@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use octopit_core::chat::ChatEvent;
+use octopit_core::companion::CompanionCommand;
 use octopit_core::gateway::Gateway;
 use octopit_core::health::PartState;
 use octopit_core::voice::{MicAction, VoiceState};
@@ -15,8 +16,8 @@ use octoplus_ipc::server::{Server, ServerConfig, ensure_private_dir};
 use octoplus_ipc::{Handler, HandlerError, Request, StreamSink};
 use octoplus_proto::v1::envelope::Body;
 use octoplus_proto::v1::{
-    Ack, AnswerChunk, AnswerDone, ErrorCode, HealthResponse, HealthStatus, PartStatus,
-    StatusReport, Taint, TurnPhase, VoiceControlAction, VoiceStatus,
+    Ack, AnswerChunk, AnswerDone, CompanionStatus, CompanionTalk, ErrorCode, HealthResponse,
+    HealthStatus, PartStatus, StatusReport, Taint, TurnPhase, VoiceControlAction, VoiceStatus,
 };
 use tokio::sync::{mpsc, watch};
 
@@ -61,6 +62,35 @@ impl Handler for Mock {
                         "the microphone is not capturing",
                         true,
                     ))
+                }
+            }
+            Body::CompanionStatusRequest(_) => Ok(Body::CompanionStatus(CompanionStatus {
+                enabled: true,
+                talks_today: 2,
+                chattiness_percent: 100,
+                quiet_start: "23:00".into(),
+                quiet_end: "08:00".into(),
+                humour: "normal".into(),
+                talks: vec![CompanionTalk {
+                    at_ns: 7,
+                    topic: "joke".into(),
+                    reaction: "answered".into(),
+                }],
+                ..CompanionStatus::default()
+            })),
+            Body::CompanionControl(c) => {
+                self.seen
+                    .lock()
+                    .unwrap()
+                    .push(format!("companion:{}:{}:{}", c.action, c.minutes, c.id));
+                if c.id == 99 {
+                    Err(HandlerError::new(
+                        ErrorCode::InvalidRequest,
+                        "that memory could not be forgotten",
+                        false,
+                    ))
+                } else {
+                    Ok(Body::Ack(Ack {}))
                 }
             }
             Body::AskRequest(a) => {
@@ -241,4 +271,47 @@ async fn stopping_an_answer_ends_it_with_cancelled_and_nothing_after() {
     task.await.unwrap();
     assert_eq!(rx.recv().await, None);
     let _ = r.stop.send(true);
+}
+
+#[tokio::test]
+async fn the_companion_status_and_buttons_reach_the_knowledge_part() {
+    let r = rig(&[(Part::Knowledge, "knowledge")], false).await;
+    let gw = Gateway::new(&r.root);
+    let v = gw.companion().await;
+    assert!(v.reachable && v.enabled);
+    assert_eq!(v.headline(), "Companion: here, 2 talks today");
+    assert_eq!(v.talks[0].topic, "A joke");
+    assert_eq!(v.talks[0].reaction, "you answered");
+
+    gw.companion_control(CompanionCommand::QuietFor(30))
+        .await
+        .unwrap();
+    gw.companion_control(CompanionCommand::Forget(7))
+        .await
+        .unwrap();
+    let err = gw
+        .companion_control(CompanionCommand::Forget(99))
+        .await
+        .unwrap_err();
+    assert_eq!(err, "that memory could not be forgotten");
+    let seen = r.mock.seen.lock().unwrap().clone();
+    assert!(seen.contains(&"companion:5:30:0".to_owned()), "{seen:?}");
+    assert!(seen.contains(&"companion:8:0:7".to_owned()), "{seen:?}");
+    let _ = r.stop.send(true);
+}
+
+#[tokio::test]
+async fn a_missing_knowledge_part_is_a_plain_value_for_the_companion() {
+    let dir = tempfile::tempdir().unwrap();
+    let gw = Gateway::new(dir.path());
+    let v = tokio::time::timeout(Duration::from_secs(5), gw.companion())
+        .await
+        .unwrap();
+    assert!(!v.reachable);
+    assert_eq!(v.headline(), "Companion: not reachable");
+    let e = gw
+        .companion_control(CompanionCommand::Pause)
+        .await
+        .unwrap_err();
+    assert_eq!(e, "The companion is not reachable.");
 }

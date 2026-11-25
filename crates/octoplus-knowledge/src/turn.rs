@@ -46,6 +46,7 @@ use crate::speech::{SentenceStream, strip_pictographs};
 use crate::status::{self, NO_LOOKUP_YET, Need};
 
 mod chance_memory;
+mod companion_admin;
 mod companion_turn;
 
 /// Longest question accepted, in bytes (the prompt cuts it further to its token cap).
@@ -1593,6 +1594,8 @@ impl Handler for KnowledgeHandler {
             b @ (Body::NudgeListRequest(_) | Body::NudgeSetEnabled(_) | Body::NudgeTest(_)) => {
                 self.nudge_admin(b).await
             }
+            Body::CompanionStatusRequest(_) => self.companion_status().await,
+            Body::CompanionControl(c) => self.companion_control(c).await,
             _ => Err(invalid("expected AskRequest on knowledge socket")),
         }
     }

@@ -1237,3 +1237,150 @@ async fn a_kept_plan_becomes_something_she_can_ask_about_later() {
     }
     panic!("a plan was never kept in 40 tries");
 }
+
+// ---- status and switches for OctoPit (story C-S06) -------------------------------------------------
+
+impl Stack {
+    async fn status(&self) -> octoplus_proto::v1::CompanionStatus {
+        let client = Client::connect(&self.c5, 1 << 20).await.unwrap();
+        match client
+            .call(
+                Body::CompanionStatusRequest(octoplus_proto::v1::CompanionStatusRequest {}),
+                Duration::from_secs(2),
+            )
+            .await
+            .unwrap()
+        {
+            Body::CompanionStatus(s) => s,
+            other => panic!("unexpected {other:?}"),
+        }
+    }
+
+    async fn control(
+        &self,
+        action: octoplus_proto::v1::CompanionAction,
+        minutes: u32,
+        id: u64,
+    ) -> Result<Body, IpcError> {
+        let client = Client::connect(&self.c5, 1 << 20).await.unwrap();
+        client
+            .call(
+                Body::CompanionControl(octoplus_proto::v1::CompanionControl {
+                    action: action as i32,
+                    minutes,
+                    id,
+                }),
+                Duration::from_secs(2),
+            )
+            .await
+    }
+}
+
+#[tokio::test]
+async fn octopit_sees_her_rhythm_todays_talks_and_what_she_remembers() {
+    use octoplus_knowledge::companion::pulse::{PulseDecision, PulseInput, Topic};
+    use octoplus_knowledge::nudge::types::UserContext;
+    let now = octoplus_common::time::now_ns().unwrap();
+    let s = Stack::start(Opts {
+        facts: vec![
+            ProfileFact {
+                id: 3,
+                text: "(noticed) my dog is Rex".to_string(),
+                taint: Some(Taint { flags: USER_ONLY }),
+                saved_at_ns: now - 5_000_000_000,
+            },
+            ProfileFact {
+                id: 2,
+                text: "I take my tea without sugar".to_string(),
+                taint: Some(Taint { flags: USER_ONLY }),
+                saved_at_ns: now - 9_000_000_000,
+            },
+        ],
+        ..Opts::default()
+    })
+    .await;
+    // She started one talk, and the owner answered it.
+    let input = PulseInput {
+        now_ns: now,
+        minute_of_day: 10 * 60,
+        day_index: 5,
+        ctx: UserContext {
+            voice_available: true,
+            ..UserContext::default()
+        },
+        ..PulseInput::default()
+    };
+    assert!(matches!(
+        s.hub.tick(&input),
+        PulseDecision::Talk(Topic::Morning)
+    ));
+    s.hub
+        .talk_started(now, "Good morning. What does the day look like?");
+    let (_f, _d) = s
+        .voice_ask(
+            "busy day, meetings all afternoon",
+            true,
+            now + 10_000_000_000,
+        )
+        .await
+        .unwrap();
+
+    let st = s.status().await;
+    assert!(st.enabled && !st.paused);
+    assert_eq!(st.talks_today, 1);
+    assert_eq!(st.per_hour_max, 4);
+    assert_eq!(
+        (st.quiet_start.as_str(), st.quiet_end.as_str()),
+        ("23:00", "08:00")
+    );
+    assert_eq!(st.humour, "normal");
+    assert_eq!(st.chattiness_percent, 100);
+    assert_eq!(st.talks.len(), 1);
+    assert_eq!(st.talks[0].topic, "morning");
+    assert_eq!(st.talks[0].reaction, "answered");
+    assert!(st.memory_available);
+    assert_eq!(st.memories.len(), 2);
+    assert_eq!(st.memories[0].id, 3, "newest first");
+    assert!(st.memories[0].noticed);
+    assert_eq!(st.memories[0].text, "my dog is Rex", "marker stripped");
+    assert!(!st.memories[1].noticed);
+}
+
+#[tokio::test]
+async fn the_switches_in_octopit_change_her_rhythm_and_humour() {
+    use octoplus_proto::v1::CompanionAction as A;
+    let s = Stack::start(Opts::default()).await;
+    s.control(A::Pause, 0, 0).await.unwrap();
+    assert!(s.status().await.paused);
+    s.control(A::Resume, 0, 0).await.unwrap();
+    assert!(!s.status().await.paused);
+    s.control(A::ChatLess, 0, 0).await.unwrap();
+    assert_eq!(s.status().await.chattiness_percent, 75);
+    s.control(A::ChatMore, 0, 0).await.unwrap();
+    s.control(A::ChatMore, 0, 0).await.unwrap();
+    assert_eq!(s.status().await.chattiness_percent, 117);
+    s.control(A::QuietFor, 30, 0).await.unwrap();
+    let left = s.status().await.quiet_minutes_left;
+    assert!((29..=30).contains(&left), "{left}");
+    for _ in 0..4 {
+        s.control(A::NotFunny, 0, 0).await.unwrap();
+    }
+    assert_eq!(s.status().await.humour, "off");
+    s.control(A::Funny, 0, 0).await.unwrap();
+    assert!(s.control(A::Unspecified, 0, 0).await.is_err());
+}
+
+#[tokio::test]
+async fn forgetting_a_memory_from_octopit_is_one_audited_kernel_call() {
+    use octoplus_proto::v1::CompanionAction as A;
+    let s = Stack::start(Opts::default()).await;
+    s.control(A::Forget, 0, 7).await.unwrap();
+    let d = s.rec.lock().unwrap().dispatches.clone();
+    assert_eq!(d.len(), 1);
+    assert_eq!(d[0].0, "profile.forget");
+    assert_eq!(d[0].1, r#"{"fact_id":7}"#);
+    assert_eq!(d[0].2, USER_ONLY);
+    // No id, no call.
+    assert!(s.control(A::Forget, 0, 0).await.is_err());
+    assert_eq!(s.rec.lock().unwrap().dispatches.len(), 1);
+}

@@ -89,6 +89,9 @@ message Envelope {
     NudgeList nudge_list = 124;
     NudgeSetEnabled nudge_set_enabled = 125;
     NudgeTest nudge_test = 126;
+    CompanionStatusRequest companion_status_request = 127;
+    CompanionStatus companion_status = 128;
+    CompanionControl companion_control = 129;
 
     // C6 kernel 160–199
     EvaluateRequest evaluate_request = 160;

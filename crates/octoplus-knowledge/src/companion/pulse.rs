@@ -369,6 +369,19 @@ impl Pulse {
         self.paused = paused;
     }
 
+    /// The schedule this scheduler runs on.
+    #[must_use]
+    pub const fn config(&self) -> PulseConfig {
+        self.cfg
+    }
+
+    /// Whole minutes the owner's "not now" or "quiet for ..." still holds her back (0 if none).
+    #[must_use]
+    pub fn snooze_minutes_left(&self, now_ns: u64) -> u32 {
+        let left = self.snooze_until_ns.saturating_sub(now_ns);
+        u32::try_from(left.div_ceil(NS_PER_MIN)).unwrap_or(u32::MAX)
+    }
+
     /// Whether the companion is paused.
     #[must_use]
     pub const fn paused(&self) -> bool {
@@ -802,4 +815,37 @@ pub fn apply_command(p: &mut Pulse, c: &PulseCommand, now_ns: u64, minute_of_day
         PulseCommand::Pause => p.set_paused(true),
         PulseCommand::Resume => p.set_paused(false),
     }
+}
+
+/// The name of a topic as OctoPit shows it.
+#[must_use]
+pub const fn topic_label(t: Topic) -> &'static str {
+    match t {
+        Topic::CheckIn => "check_in",
+        Topic::Joke => "joke",
+        Topic::FollowUp => "follow_up",
+        Topic::Observation => "observation",
+        Topic::FunFact => "fun_fact",
+        Topic::BreakReminder => "break_reminder",
+        Topic::Morning => "morning",
+        Topic::Lunch => "lunch",
+        Topic::Evening => "evening",
+    }
+}
+
+/// What the owner did with a talk, as OctoPit shows it ("" while waiting).
+#[must_use]
+pub const fn response_label(r: Option<Response>) -> &'static str {
+    match r {
+        None => "",
+        Some(Response::Accepted) => "answered",
+        Some(Response::Ignored) => "ignored",
+        Some(Response::NotNow) => "not_now",
+    }
+}
+
+/// Minutes after midnight as "HH:MM".
+#[must_use]
+pub fn clock_label(minute: u32) -> String {
+    format!("{:02}:{:02}", (minute / 60) % 24, minute % 60)
 }

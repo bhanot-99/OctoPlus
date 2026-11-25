@@ -11,13 +11,14 @@ use octoplus_common::paths::{self, Part};
 use octoplus_ipc::{Client, IpcError, ReconnectingClient};
 use octoplus_proto::v1::envelope::Body;
 use octoplus_proto::v1::{
-    AskRequest, AuditTailRequest, AuditVerifyRequest, EgressListRequest, Origin, StatusRequest,
-    VoiceControl, VoiceControlAction, VoiceStatusRequest,
+    AskRequest, AuditTailRequest, AuditVerifyRequest, CompanionControl, CompanionStatusRequest,
+    EgressListRequest, Origin, StatusRequest, VoiceControl, VoiceControlAction, VoiceStatusRequest,
 };
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::watch;
 
 use crate::chat::{AnswerInfo, ChatEvent, sanitize_model_text};
+use crate::companion::{CompanionCommand, CompanionView};
 use crate::health::Snapshot;
 use crate::voice::{MicAction, VoiceView};
 
@@ -83,6 +84,7 @@ pub struct Gateway {
     healthd: std::sync::Arc<ReconnectingClient>,
     voice: std::sync::Arc<ReconnectingClient>,
     kernel: std::sync::Arc<ReconnectingClient>,
+    knowledge: std::sync::Arc<ReconnectingClient>,
 }
 
 impl Gateway {
@@ -100,6 +102,7 @@ impl Gateway {
             healthd: mk(Part::Healthd, "healthd"),
             voice: mk(Part::Voice, "control"),
             kernel: mk(Part::Kernel, "kernel"),
+            knowledge: mk(Part::Knowledge, "knowledge"),
         }
     }
 
@@ -127,6 +130,45 @@ impl Gateway {
         {
             Ok(Body::VoiceStatus(s)) => VoiceView::from_status(&s),
             _ => VoiceView::unavailable(),
+        }
+    }
+
+    /// The companion's rhythm, today's talks and what she remembers, or an unavailable view.
+    pub async fn companion(&self) -> CompanionView {
+        match self
+            .knowledge
+            .call(
+                Body::CompanionStatusRequest(CompanionStatusRequest {}),
+                POLL_DEADLINE,
+            )
+            .await
+        {
+            Ok(Body::CompanionStatus(s)) => CompanionView::from_status(&s),
+            _ => CompanionView::unavailable(),
+        }
+    }
+
+    /// Presses one companion button.
+    ///
+    /// # Errors
+    /// A plain sentence when C5 refuses or cannot be reached.
+    pub async fn companion_control(&self, command: CompanionCommand) -> Result<(), String> {
+        let (action, minutes, id) = command.parts();
+        match self
+            .knowledge
+            .call(
+                Body::CompanionControl(CompanionControl {
+                    action: action as i32,
+                    minutes,
+                    id,
+                }),
+                POLL_DEADLINE,
+            )
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(IpcError::Remote { message, .. }) => Err(plain(&message, 120)),
+            Err(_) => Err("The companion is not reachable.".to_owned()),
         }
     }
 

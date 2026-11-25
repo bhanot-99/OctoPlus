@@ -14,9 +14,10 @@ use crate::pages::PageId;
 use crate::theme::Theme;
 
 /// Pages shown in the review, in order.
-const PAGES: [PageId; 6] = [
+const PAGES: [PageId; 7] = [
     PageId::Overview,
     PageId::Chat,
+    PageId::Companion,
     PageId::Backends,
     PageId::Activity,
     PageId::Privacy,

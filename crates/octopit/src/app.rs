@@ -19,6 +19,7 @@ use crate::mic::MicFab;
 use crate::pages::activity::ActivityPage;
 use crate::pages::backends::BackendsPage;
 use crate::pages::chat::ChatPage;
+use crate::pages::companion::CompanionPage;
 use crate::pages::overview::OverviewPage;
 use crate::pages::privacy::PrivacyPage;
 use crate::pages::settings::SettingsPage;
@@ -184,6 +185,7 @@ impl Window {
         let pages: Vec<(PageId, Box<dyn Page>)> = vec![
             (PageId::Overview, Box::new(OverviewPage::new(&ctx))),
             (PageId::Chat, Box::new(ChatPage::new(&ctx))),
+            (PageId::Companion, Box::new(CompanionPage::new(&ctx))),
             (PageId::Backends, Box::new(BackendsPage::new(&ctx))),
             (PageId::Activity, Box::new(ActivityPage::new(&ctx))),
             (PageId::Privacy, Box::new(PrivacyPage::new(&ctx))),
@@ -734,6 +736,7 @@ impl Window {
         self.redraw(Changed {
             health: true,
             voice: true,
+            companion: true,
             gpu: true,
             chat: true,
             ledgers: true,
