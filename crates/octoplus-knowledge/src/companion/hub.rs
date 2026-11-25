@@ -10,6 +10,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use crate::companion::filter::{ReplyFilter, Verdict};
 use crate::companion::humour::{Feedback, HumourLevel, HumourState, effective_level};
+use crate::companion::memory::{Category, Decision, Keep, MemoryCounters, MemoryRule, plain_form};
 use crate::companion::persona::Persona;
 use crate::companion::pulse::{
     Pulse, PulseCommand, PulseConfig, PulseCounters, PulseDecision, PulseInput, Response,
@@ -48,6 +49,8 @@ struct Inner {
     opener: Option<(u64, String)>,
     filter: ReplyFilter,
     humour: HumourState,
+    memory: MemoryRule,
+    followup: Option<(u64, String)>,
 }
 
 /// Shared scheduler state.
@@ -69,6 +72,8 @@ impl CompanionHub {
                 opener: None,
                 filter: ReplyFilter::new(128).with_avoid_topics(&persona.avoid_topics),
                 humour: HumourState::default(),
+                memory: MemoryRule::new(persona, seed),
+                followup: None,
             }),
         })
     }
@@ -137,6 +142,15 @@ impl CompanionHub {
         }
     }
 
+    /// Like [`Self::check_line`], for a line built from a fact she was just given (a follow-up),
+    /// where "you told me" is true.
+    pub fn check_grounded_line(&self, line: &str) -> Option<String> {
+        match self.lock().filter.check(line, false, true) {
+            Verdict::Keep(s) => Some(s),
+            Verdict::Drop(_) => None,
+        }
+    }
+
     /// Runs one opening line through the same checks as every reply (forbidden phrases, repeats,
     /// invented memories). `None` means the line must not be spoken.
     pub fn check_line(&self, line: &str) -> Option<String> {
@@ -179,6 +193,37 @@ impl CompanionHub {
         self.lock().filter = filter;
     }
 
+    /// What to do with something the owner said: keep it (by chance) or not. When a plan is
+    /// kept ("I have an interview on Thursday") it also becomes something she can ask about
+    /// later. `directed` is false when it may not have been the owner speaking to her.
+    pub fn consider_memory(&self, text: &str, directed: bool, now_ns: u64) -> Decision {
+        let mut g = self.lock();
+        let d = g.memory.decide(text, directed);
+        if let Decision::Save(Keep {
+            fact,
+            category: Category::Plan,
+            ..
+        }) = &d
+        {
+            g.followup = Some((now_ns, plain_form(fact).to_string()));
+            g.pulse.set_followup_available(true);
+        }
+        d
+    }
+
+    /// Counts of what was kept and skipped.
+    pub fn memory_counters(&self) -> MemoryCounters {
+        self.lock().memory.counters()
+    }
+
+    /// Something she may ask about, once, within two days of it being said.
+    pub fn take_followup(&self, now_ns: u64) -> Option<String> {
+        let mut g = self.lock();
+        g.pulse.set_followup_available(false);
+        let (at, fact) = g.followup.take()?;
+        (now_ns.saturating_sub(at) <= 48 * 3600 * NS_PER_S).then_some(fact)
+    }
+
     /// Whether the companion is paused.
     pub fn paused(&self) -> bool {
         self.lock().pulse.paused()
@@ -187,10 +232,5 @@ impl CompanionHub {
     /// Counts for the health report.
     pub fn counters(&self) -> PulseCounters {
         self.lock().pulse.counters().clone()
-    }
-
-    /// A topic to follow up on exists (story C-S05 sets this).
-    pub fn set_followup_available(&self, available: bool) {
-        self.lock().pulse.set_followup_available(available);
     }
 }

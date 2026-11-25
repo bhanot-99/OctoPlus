@@ -486,7 +486,7 @@ async fn rig(o: Opts) -> Rig {
         RunnerSettings {
             listen_seconds: 30,
             budgets: Budgets {
-                facts: 0,
+                facts: 48,
                 focus: 0,
                 history: 0,
                 evidence: 0,
@@ -683,4 +683,48 @@ async fn nothing_is_spoken_when_the_moment_or_the_line_is_wrong() {
             "{name}: no talk may be remembered"
         );
     }
+}
+
+#[tokio::test]
+async fn a_follow_up_talk_is_built_from_the_plan_the_owner_mentioned() {
+    let t0 = octoplus_common::time::now_ns().unwrap();
+    let r = rig(Opts {
+        reply: vec!["How did the interview go?"],
+        ..Opts::default()
+    })
+    .await;
+    // The owner mentioned a plan and it was kept (try until the dice allow it).
+    let mut kept = false;
+    for i in 0..60u64 {
+        if let octoplus_knowledge::companion::memory::Decision::Save(_) = r.hub.consider_memory(
+            "I have an interview on Thursday at ten",
+            true,
+            t0 + i * NS_PER_S,
+        ) {
+            kept = true;
+            break;
+        }
+    }
+    assert!(kept);
+    let line = r
+        .runner
+        .write_line(Topic::FollowUp, t0 + 100 * NS_PER_S)
+        .await;
+    assert_eq!(line.as_deref(), Some("How did the interview go?"));
+    {
+        let seen = r.seen.lock().unwrap();
+        assert!(seen.prompts[0].contains("I have an interview on Thursday at ten"));
+        assert!(!seen.prompts[0].contains("(noticed)"));
+    }
+    // It is asked about once only.
+    assert_eq!(r.hub.take_followup(t0 + 101 * NS_PER_S), None);
+    // And a follow-up with nothing to follow up on becomes an ordinary check-in.
+    let line = r
+        .runner
+        .write_line(Topic::FollowUp, t0 + 200 * NS_PER_S)
+        .await;
+    // (The fake model says the same sentence again, which the repeat guard rightly drops.)
+    assert_eq!(line, None);
+    let seen = r.seen.lock().unwrap();
+    assert!(seen.prompts[1].contains("how the owner's day is going"));
 }

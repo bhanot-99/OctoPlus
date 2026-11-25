@@ -311,6 +311,19 @@ impl CompanionRunner {
         } else {
             Mode::Heart
         };
+        // A follow-up is built from the plan the owner mentioned (and she may say "you told
+        // me"); without one it is an ordinary check-in.
+        let followup = if topic == Topic::FollowUp {
+            self.hub.take_followup(now_ns)
+        } else {
+            None
+        };
+        let topic = if topic == Topic::FollowUp && followup.is_none() {
+            Topic::CheckIn
+        } else {
+            topic
+        };
+        let facts: Vec<String> = followup.iter().cloned().collect();
         let request = opening_request(topic);
         let built = prompt::assemble(
             &CompanionPromptInput {
@@ -320,8 +333,12 @@ impl CompanionRunner {
                 kabir_allowed: false,
                 gentle_line: None,
                 humour: self.hub.humour_level(false),
-                facts: &[],
-                facts_taint: TaintFlags::empty(),
+                facts: &facts,
+                facts_taint: if facts.is_empty() {
+                    TaintFlags::empty()
+                } else {
+                    TaintFlags::USER_PROVIDED
+                },
                 history: "",
                 history_taint: TaintFlags::empty(),
                 question: &request,
@@ -373,7 +390,12 @@ impl CompanionRunner {
         sentences.extend(pieces.flush());
         let mut kept: Vec<String> = Vec::new();
         for s in sentences {
-            if let Some(ok) = self.hub.check_line(&s) {
+            let checked = if followup.is_some() {
+                self.hub.check_grounded_line(&s)
+            } else {
+                self.hub.check_line(&s)
+            };
+            if let Some(ok) = checked {
                 kept.push(ok);
             }
             if kept.len() >= MAX_LINE_SENTENCES {

@@ -124,6 +124,21 @@ impl KnowledgeHandler {
             return Ok(Self::done(Route::Companion, self.base_taint()));
         }
 
+        // "What do you remember?": the owner can always see what she keeps.
+        if crate::companion::memory::asks_what_i_remember(text) {
+            let line = match self.query_facts("").await {
+                Some(facts) => {
+                    let texts: Vec<String> = facts.into_iter().map(|f| f.text).collect();
+                    crate::companion::memory::memory_list_line(&texts)
+                }
+                None => "I can't reach my memory right now. Ask me again in a moment.".to_string(),
+            };
+            Self::say(sink, &line).await?;
+            self.metrics.route_companion.fetch_add(1, Ordering::Relaxed);
+            self.metrics.completed.fetch_add(1, Ordering::Relaxed);
+            return Ok(Self::done(Route::Companion, self.base_taint()));
+        }
+
         let plan = self.with_state(|state| {
             let engine = state
                 .companion
@@ -176,7 +191,7 @@ impl KnowledgeHandler {
                 );
                 let picked_facts: Vec<String> = picked_indices
                     .into_iter()
-                    .map(|i| all_facts[i].text.clone())
+                    .map(|i| crate::companion::memory::plain_form(&all_facts[i].text).to_string())
                     .collect();
 
                 let facts_present = !picked_facts.is_empty();
@@ -236,6 +251,15 @@ impl KnowledgeHandler {
                         engine.finish_turn(text, &said, turn_taint, now, &plan_generate);
                     }
                 });
+
+                // What the owner said about themselves may be kept by chance (R0-8, ADR-0019).
+                if !cut_short
+                    && let Some(h) = &hub
+                    && let crate::companion::memory::Decision::Save(keep) =
+                        h.consider_memory(text, true, now)
+                {
+                    self.queue_chance_memory(keep);
+                }
 
                 if !cut_short {
                     self.remember_turn(TurnRecord {

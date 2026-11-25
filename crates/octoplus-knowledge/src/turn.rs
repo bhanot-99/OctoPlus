@@ -45,6 +45,7 @@ use crate::session::{Session, SessionConfig};
 use crate::speech::{SentenceStream, strip_pictographs};
 use crate::status::{self, NO_LOOKUP_YET, Need};
 
+mod chance_memory;
 mod companion_turn;
 
 /// Longest question accepted, in bytes (the prompt cuts it further to its token cap).
@@ -220,6 +221,8 @@ pub struct KnowledgeHandler {
     companion_cfg: octoplus_common::config::CompanionConfig,
     /// The scheduler state shared with the runner that starts talks (Phase 12, C-S03).
     hub: Option<Arc<crate::companion::hub::CompanionHub>>,
+    /// A fact she decided to keep by chance this turn, waiting for its audited save.
+    chance_fact: Mutex<Option<crate::companion::memory::Keep>>,
 }
 
 fn invalid(msg: &'static str) -> HandlerError {
@@ -265,6 +268,7 @@ impl KnowledgeHandler {
                 .map(Arc::new),
             companion_cfg: octoplus_common::config::CompanionConfig::default(),
             hub: None,
+            chance_fact: Mutex::new(None),
         }
     }
 
@@ -503,7 +507,9 @@ impl KnowledgeHandler {
             && !(first.route == RouteKind::Desktop
                 && crate::companion::guards::is_interrogative(&text))
         {
-            return self.companion_turn(&text, origin, now, sink).await;
+            let done = self.companion_turn(&text, origin, now, sink).await?;
+            self.flush_chance_memory(&text, origin, now, sink).await;
+            return Ok(done);
         }
         self.question_turn(&text, origin, now, sink).await
     }
@@ -1143,7 +1149,10 @@ impl KnowledgeHandler {
             self.cfg.facts_tokens,
             self.cfg.bytes_per_token,
         );
-        let fact_texts: Vec<String> = picked.iter().map(|i| facts[*i].text.clone()).collect();
+        let fact_texts: Vec<String> = picked
+            .iter()
+            .map(|i| crate::companion::memory::plain_form(&facts[*i].text).to_string())
+            .collect();
         let (history, history_taint) =
             self.with_state(|s| s.session.render(self.cfg.history_tokens));
 

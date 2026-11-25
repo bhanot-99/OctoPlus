@@ -1040,3 +1040,200 @@ async fn funny_and_not_funny_are_answered_with_a_fixed_line_and_change_her_humou
         prompts[0]
     );
 }
+
+// ---- memory of the owner (story C-S05) -----------------------------------------------------------
+
+const USER_ONLY: u32 = 1 << 1;
+
+fn remembered(s: &Stack) -> Vec<(String, u32)> {
+    s.rec
+        .lock()
+        .unwrap()
+        .dispatches
+        .iter()
+        .filter(|(skill, _, _)| skill == "profile.remember")
+        .map(|(_, args, taint)| (args.clone(), *taint))
+        .collect()
+}
+
+#[tokio::test]
+async fn about_half_of_what_the_owner_says_about_themselves_is_kept_through_the_kernel() {
+    let s = Stack::start(Opts {
+        default_answer: vec!["That sounds nice.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+    let n = 120u64;
+    for i in 0..n {
+        let text = if i % 2 == 0 {
+            "I love strong black tea in the evening"
+        } else {
+            "My dog Rex hates the vacuum cleaner"
+        };
+        // Each turn a fresh conversation (an hour apart) so the repeat guard does not interfere.
+        let (_said, done) = s
+            .ask_companion(text, T0 + i * 3_600_000_000_000)
+            .await
+            .unwrap();
+        assert_eq!(done.route, Route::Companion as i32);
+    }
+    let kept = remembered(&s);
+    let share = kept.len() as f64 / n as f64;
+    println!("kept {} of {n} = {share:.2}", kept.len());
+    assert!((0.30..=0.65).contains(&share), "share {share}");
+    for (args, taint) in &kept {
+        assert!(args.contains("(noticed) "), "marked as noticed: {args}");
+        assert_eq!(*taint, USER_ONLY, "only the owner's own words: {args}");
+    }
+    assert_eq!(s.hub.memory_counters().saved as usize, kept.len());
+}
+
+#[tokio::test]
+async fn nothing_excluded_is_ever_kept_even_in_a_long_run() {
+    let s = Stack::start(Opts {
+        default_answer: vec!["I hear you.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+    let lines = [
+        "My password is hunter two and I use it everywhere",
+        "I take medication every morning",
+        "My credit card number is on the table",
+        "My friend told me in confidence that she quit",
+    ];
+    for i in 0..60u64 {
+        let _ = s
+            .ask_companion(lines[(i % 4) as usize], T0 + i * 3_600_000_000_000)
+            .await
+            .unwrap();
+    }
+    assert!(remembered(&s).is_empty());
+    assert!(s.hub.memory_counters().excluded >= 60);
+}
+
+#[tokio::test]
+async fn questions_and_ambient_speech_are_never_kept() {
+    let s = Stack::start(Opts {
+        default_answer: vec!["Hm.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+    for i in 0..40u64 {
+        let _ = s
+            .ask_companion("What is my name again?", T0 + i * 3_600_000_000_000)
+            .await
+            .unwrap();
+    }
+    // Spoken lines the "is it meant for her" check throws away never reach memory.
+    for i in 0..40u64 {
+        let _ = s
+            .voice_ask(
+                "the senator said that taxes will rise next year according to the report",
+                true,
+                T0 + 50 * 3_600_000_000_000 + i * 3_600_000_000_000,
+            )
+            .await
+            .unwrap();
+    }
+    assert!(remembered(&s).is_empty());
+}
+
+#[tokio::test]
+async fn an_explicit_remember_is_still_saved_exactly_and_unmarked() {
+    let s = Stack::start(Opts {
+        action_reply: r#"{"skill":"profile.remember","fact":"my dog is Rex"}"#.into(),
+        ..Opts::default()
+    })
+    .await;
+    let (_said, done) = s
+        .ask_companion("remember that my dog is Rex", T0)
+        .await
+        .unwrap();
+    assert_eq!(done.route, Route::Action as i32);
+    let kept = remembered(&s);
+    assert_eq!(kept.len(), 1, "explicit requests are always saved");
+    assert_eq!(
+        kept[0].0, r#"{"fact":"my dog is Rex"}"#,
+        "exact words, no marker"
+    );
+}
+
+#[tokio::test]
+async fn what_do_you_remember_lists_both_kinds_plainly() {
+    let s = Stack::start(Opts {
+        facts: vec![
+            ProfileFact {
+                id: 1,
+                text: "I take my tea without sugar".to_string(),
+                taint: Some(Taint { flags: USER_ONLY }),
+                saved_at_ns: 0,
+            },
+            ProfileFact {
+                id: 2,
+                text: "(noticed) my dog is Rex".to_string(),
+                taint: Some(Taint { flags: USER_ONLY }),
+                saved_at_ns: 0,
+            },
+        ],
+        ..Opts::default()
+    })
+    .await;
+    let (said, done) = s
+        .ask_companion("what do you remember about me", T0)
+        .await
+        .unwrap();
+    assert_eq!(done.route, Route::Companion as i32);
+    assert!(said.contains("I take my tea without sugar"), "{said}");
+    assert!(said.contains("I noticed: my dog is Rex"), "{said}");
+    assert!(!said.contains("(noticed)"), "{said}");
+    assert!(said.contains("forget that"), "{said}");
+    assert!(s.rec.lock().unwrap().prompts.is_empty(), "no model call");
+}
+
+#[tokio::test]
+async fn the_marker_never_reaches_the_model() {
+    let s = Stack::start(Opts {
+        facts: vec![ProfileFact {
+            id: 2,
+            text: "(noticed) my dog is Rex".to_string(),
+            taint: Some(Taint { flags: USER_ONLY }),
+            saved_at_ns: 0,
+        }],
+        default_answer: vec!["Rex sounds lovely.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+    let _ = s
+        .ask_companion("tell me something about my dog Rex", T0)
+        .await
+        .unwrap();
+    let prompts = s.rec.lock().unwrap().prompts.clone();
+    assert_eq!(prompts.len(), 1);
+    assert!(prompts[0].contains("my dog is Rex"), "{}", prompts[0]);
+    assert!(!prompts[0].contains("(noticed)"), "{}", prompts[0]);
+}
+
+#[tokio::test]
+async fn a_kept_plan_becomes_something_she_can_ask_about_later() {
+    let s = Stack::start(Opts {
+        default_answer: vec!["Good luck with it.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+    for i in 0..40u64 {
+        let _ = s
+            .ask_companion(
+                "I have an interview on Thursday at ten",
+                T0 + i * 3_600_000_000_000,
+            )
+            .await
+            .unwrap();
+        if s.hub
+            .take_followup(T0 + i * 3_600_000_000_000 + 1)
+            .is_some()
+        {
+            return;
+        }
+    }
+    panic!("a plan was never kept in 40 tries");
+}

@@ -149,7 +149,7 @@ pub fn init(
             companion::runner::RunnerSettings {
                 listen_seconds: ctx.config.companion.listen_seconds,
                 budgets: prompt::Budgets {
-                    facts: 0,
+                    facts: ctx.config.companion.facts_tokens,
                     focus: 0,
                     history: 0,
                     evidence: 0,
