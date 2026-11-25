@@ -22,6 +22,11 @@ pub const PAST_MEMORY_CUES: &[&str] = &[
     "that time we",
     "we used to",
     "i still remember",
+    "ive been thinking about that",
+    "i was thinking about that",
+    "the other day we",
+    "when we met",
+    "weve talked about",
 ];
 
 /// Cues that refer to earlier discussion in this conversation.
@@ -30,6 +35,9 @@ pub const CHAT_MEMORY_CUES: &[&str] = &[
     "you told me",
     "we talked about",
     "like you said before",
+    "you mentioned",
+    "you were telling me",
+    "you talked about",
 ];
 
 /// Normalizes text for memory cue matching by stripping apostrophes,

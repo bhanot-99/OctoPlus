@@ -47,6 +47,7 @@ std::vector<TurnAction> TurnMachine::HandleSessionEnd(const TurnEvent& e) {
     return {};
   }
   std::vector<TurnAction> acts;
+  acts.reserve(3);  // also keeps GCC 13's -O3 stringop-overflow false alarm quiet
   if (speaking()) {
     acts.push_back(TurnAction{.kind = TurnActionKind::kFlushOutput});
     acts.push_back(TurnAction{.kind = TurnActionKind::kCancelReply});
@@ -102,6 +103,7 @@ std::vector<TurnAction> TurnMachine::HandleFollowUpTick(const TurnEvent& e) {
 
 std::vector<TurnAction> TurnMachine::EndSessionOnDeviceLost(std::vector<TurnAction> acts) {
   if (session_active_) {
+    acts.reserve(acts.size() + 1);
     acts.push_back(TurnAction{.kind = TurnActionKind::kSessionEnded});
     ResetSession();
   }

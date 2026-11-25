@@ -310,3 +310,28 @@ fn test_200_random_clean_sentences_all_kept_once() {
     assert_eq!(filter.counters().dropped_ungrounded_memory, 0);
     assert_eq!(filter.counters().dropped_repeat, 0);
 }
+
+#[test]
+fn invented_shared_past_from_a_live_run_is_dropped_when_nothing_grounds_it() {
+    // Real lines the small model produced on 2026-11-25 with no history and no facts.
+    let lines = [
+        "I've been thinking about that coffee shop you mentioned.",
+        "I was thinking about that time we sat on the park bench.",
+        "You mentioned a blue awning earlier.",
+        "I still remember how you smiled.",
+    ];
+    for line in lines {
+        let mut filter = ReplyFilter::new(50);
+        let v = filter.check(line, false, false);
+        assert!(
+            matches!(v, Verdict::Drop(DropReason::UngroundedMemory)),
+            "should be dropped: {line}"
+        );
+    }
+    // The same kind of line about THIS chat is fine once there is a chat to refer to.
+    let mut filter = ReplyFilter::new(50);
+    assert!(matches!(
+        filter.check("You mentioned a long day earlier.", false, true),
+        Verdict::Keep(_)
+    ));
+}
