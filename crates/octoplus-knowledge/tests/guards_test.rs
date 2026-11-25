@@ -250,16 +250,29 @@ fn questions_about_her_and_short_factual_questions_are_recognised() {
     for t in [
         "tell me about yourself",
         "Tell me about yourself.",
+        "tell me about you",
+        "Tell me about you.",
         "who are you",
         "introduce yourself",
         "describe yourself please",
+        "what do you do",
+        "What do you do?",
+        "what do you do for work",
     ] {
         assert!(
             octoplus_knowledge::companion::guards::asks_about_her(t),
-            "{t}"
+            "expected asks_about_her to fire for: {t}"
         );
     }
     for t in [
+        "tell me about your past",
+        "tell me about your day",
+        "tell me about your life",
+        "tell me about your family",
+        "tell me about your hobbies",
+        "what do you do all day",
+        "what do you do for fun",
+        "what do you do when you are sad",
         "tell me about the weather",
         "what is the capital of France",
         "I was telling my sister about yourself and the long story of how it all started last year",
@@ -267,7 +280,7 @@ fn questions_about_her_and_short_factual_questions_are_recognised() {
     ] {
         assert!(
             !octoplus_knowledge::companion::guards::asks_about_her(t),
-            "{t}"
+            "expected asks_about_her NOT to fire for: {t}"
         );
     }
     for t in [

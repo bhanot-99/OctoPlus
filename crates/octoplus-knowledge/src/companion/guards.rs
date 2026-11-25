@@ -218,34 +218,44 @@ pub fn is_interrogative(text: &str) -> bool {
     false
 }
 
-/// Whether the owner asks who she is ("tell me about yourself", "who are you", "what's your name").
+/// Whether the owner asks who she is ("tell me about yourself", "who are you", "what do you do").
+///
+/// Uses whole-phrase boundaries so "tell me about you" matches while "tell me about your past"
+/// / "your day" / "your life" / "your family" / "your hobbies" do not. Similarly, "what do you
+/// do" matches identity/role questions ("what do you do", "what do you do for work"), while
+/// daily-routine questions ("what do you do all day", "what do you do for fun") do not.
 #[must_use]
 pub fn asks_about_her(text: &str) -> bool {
-    let t: String = text
-        .to_lowercase()
-        .chars()
-        .filter(|c| *c != '\'' && *c != '’')
-        .map(|c| if c.is_alphanumeric() { c } else { ' ' })
-        .collect::<String>()
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ");
-    if t.split(' ').count() > 9 {
+    let t = norm_words(text);
+    if t.is_empty() || t.split(' ').count() > 9 {
         return false;
     }
-    const CUES: [&str; 10] = [
+    let padded = format!(" {t} ");
+    const CUES: [&str; 11] = [
         "about yourself",
+        "about your self",
         "who are you",
         "what are you",
         "introduce yourself",
         "tell me about you",
         "describe yourself",
         "what is your story",
+        "whats your story",
         "who is laila",
-        "what do you do",
-        "about your self",
+        "whos laila",
     ];
-    CUES.iter().any(|c| t.contains(c))
+    if CUES.iter().any(|c| padded.contains(&format!(" {c} "))) {
+        return true;
+    }
+    const ROLE_DO_PHRASES: [&str; 6] = [
+        "what do you do",
+        "so what do you do",
+        "and what do you do",
+        "what do you do please",
+        "what do you do for work",
+        "what do you do for a living",
+    ];
+    ROLE_DO_PHRASES.contains(&t.as_str())
 }
 
 /// Whether the owner asked a short factual question ("what is the capital of France", "how many
