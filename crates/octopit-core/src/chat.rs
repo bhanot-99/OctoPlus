@@ -6,6 +6,34 @@
 
 use octoplus_proto::v1::AnswerDone;
 
+/// Who the Chat page talks to.
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum ChatMode {
+    /// Companion character Laila (she only talks).
+    #[default]
+    Laila,
+    /// The ordinary assistant (search, desktop questions, tasks).
+    Assistant,
+}
+
+impl ChatMode {
+    /// Whether this mode uses the companion engine (`AskRequest.companion = true`).
+    #[must_use]
+    pub const fn is_companion(self) -> bool {
+        matches!(self, Self::Laila)
+    }
+
+    /// Short label shown in the switch and status.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Laila => "Laila",
+            Self::Assistant => "Assistant",
+        }
+    }
+}
+
 /// The longest answer shown, in characters. Longer text is cut with a marker.
 pub const MAX_ANSWER_CHARS: usize = 8000;
 
@@ -112,8 +140,10 @@ pub fn clean_question(raw: &str) -> Option<String> {
 /// What C5 says about a finished answer.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AnswerInfo {
-    /// Plain name of the route (`octoplusctl ask --explain` wording).
+    /// Plain name of the route (`"Laila"` for companion, or `octoplusctl ask --explain` wording).
     pub route: &'static str,
+    /// Which chat mode asked this question.
+    pub mode: ChatMode,
     /// The answer used text from outside this machine (taint bit 1).
     pub external: bool,
     /// A web lookup was part of the answer.
@@ -128,6 +158,17 @@ impl AnswerInfo {
     /// Reads C5's done message.
     #[must_use]
     pub fn from_done(done: &AnswerDone) -> Self {
+        let mode = if done.route == 5 {
+            ChatMode::Laila
+        } else {
+            ChatMode::Assistant
+        };
+        Self::from_done_with_mode(done, mode)
+    }
+
+    /// Reads C5's done message while recording which mode sent the request.
+    #[must_use]
+    pub fn from_done_with_mode(done: &AnswerDone, mode: ChatMode) -> Self {
         let flags = done.taint.as_ref().map_or(0, |t| t.flags);
         Self {
             route: match done.route {
@@ -135,8 +176,10 @@ impl AnswerInfo {
                 2 => "desktop answer",
                 3 => "general chat",
                 4 => "nudge reply",
+                5 => "Laila",
                 _ => "answer",
             },
+            mode,
             external: flags & 1 != 0,
             used_web: done.used_web,
             status_only: done.status_only,
@@ -163,6 +206,8 @@ pub enum TurnState {
 pub struct Turn {
     /// The question as sent.
     pub question: String,
+    /// Which chat mode asked this question.
+    pub mode: ChatMode,
     raw_answer: String,
     /// Where the turn stands.
     pub state: TurnState,
@@ -223,15 +268,22 @@ impl Conversation {
         self.turns.last().is_some_and(Turn::is_streaming)
     }
 
-    /// Starts a turn. Returns the cleaned question to send, or `None` when there is nothing to
-    /// send or an answer is still streaming (one question at a time).
+    /// Starts a turn in [`ChatMode::Laila`]. Returns the cleaned question to send, or `None` when
+    /// there is nothing to send or an answer is still streaming (one question at a time).
     pub fn begin(&mut self, typed: &str) -> Option<String> {
+        self.begin_in_mode(typed, ChatMode::Laila)
+    }
+
+    /// Starts a turn in the given [`ChatMode`]. Returns the cleaned question to send, or `None`
+    /// when there is nothing to send or an answer is still streaming.
+    pub fn begin_in_mode(&mut self, typed: &str, mode: ChatMode) -> Option<String> {
         if self.busy() {
             return None;
         }
         let question = clean_question(typed)?;
         self.turns.push(Turn {
             question: question.clone(),
+            mode,
             raw_answer: String::new(),
             state: TurnState::Streaming,
         });
@@ -364,10 +416,38 @@ mod tests {
     fn answer_info_reads_route_and_external_text() {
         let i = AnswerInfo::from_done(&done(2, 0b1));
         assert_eq!(i.route, "desktop answer");
+        assert_eq!(i.mode, ChatMode::Assistant);
         assert!(i.external);
         let j = AnswerInfo::from_done(&done(9, 0));
         assert_eq!(j.route, "answer");
         assert!(!j.external);
+        let k = AnswerInfo::from_done(&done(5, 0));
+        assert_eq!(k.route, "Laila");
+        assert_eq!(k.mode, ChatMode::Laila);
+    }
+
+    #[test]
+    fn chat_mode_defaults_to_laila_and_tracks_turns() {
+        assert_eq!(ChatMode::default(), ChatMode::Laila);
+        assert!(ChatMode::Laila.is_companion());
+        assert!(!ChatMode::Assistant.is_companion());
+
+        let mut c = Conversation::new();
+        assert_eq!(
+            c.begin_in_mode("whats your name", ChatMode::Laila),
+            Some("whats your name".to_owned())
+        );
+        assert_eq!(c.turns()[0].mode, ChatMode::Laila);
+        c.apply(ChatEvent::Chunk("My name is ".into()));
+        c.apply(ChatEvent::Chunk("Laila.".into()));
+        c.apply(ChatEvent::Done(AnswerInfo::from_done(&done(5, 0))));
+        assert_eq!(c.turns()[0].answer(), "My name is Laila.");
+
+        assert_eq!(
+            c.begin_in_mode("battery?", ChatMode::Assistant),
+            Some("battery?".to_owned())
+        );
+        assert_eq!(c.turns()[1].mode, ChatMode::Assistant);
     }
 
     #[test]

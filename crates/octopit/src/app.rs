@@ -170,6 +170,7 @@ impl Window {
             .as_deref()
             .map(Settings::load)
             .unwrap_or_default();
+        state.borrow_mut().chat_mode = loaded.chat_mode;
         let settings_page = SettingsPage::new(&ctx);
         settings_page.set(&loaded);
         {
@@ -182,9 +183,23 @@ impl Window {
             }));
         }
 
+        let chat_page = ChatPage::new(&ctx);
+        {
+            let cell = Rc::clone(&nav_cell);
+            chat_page.on_mode_change(Box::new(move |mode| {
+                if let Some(w) = cell.borrow().clone() {
+                    let mut s = w.settings.borrow().clone();
+                    if s.chat_mode != mode {
+                        s.chat_mode = mode;
+                        w.save_settings(&s);
+                    }
+                }
+            }));
+        }
+
         let pages: Vec<(PageId, Box<dyn Page>)> = vec![
             (PageId::Overview, Box::new(OverviewPage::new(&ctx))),
-            (PageId::Chat, Box::new(ChatPage::new(&ctx))),
+            (PageId::Chat, Box::new(chat_page)),
             (PageId::Companion, Box::new(CompanionPage::new(&ctx))),
             (PageId::Backends, Box::new(BackendsPage::new(&ctx))),
             (PageId::Activity, Box::new(ActivityPage::new(&ctx))),
@@ -524,13 +539,18 @@ impl Window {
 
     /// Asks a question as if it had been typed (the screenshot review uses it).
     pub fn ask(&self, text: &str) {
-        let q = self.state.borrow_mut().conversation.begin(text);
+        let (mode, q) = {
+            let mut st = self.state.borrow_mut();
+            let mode = st.chat_mode;
+            let q = st.conversation.begin_in_mode(text, mode);
+            (mode, q)
+        };
         if let Some(q) = q {
             self.redraw(Changed {
                 chat: true,
                 ..Changed::default()
             });
-            let _ = self.controller.send(Command::Ask(q));
+            let _ = self.controller.send(Command::Ask { text: q, mode });
         }
     }
 
@@ -644,7 +664,10 @@ impl Window {
     /// The settings page changed something: apply it and keep it for the next start.
     fn change_settings(&self, s: &Settings) {
         let mut new = s.clone();
-        new.welcome_done = self.settings.borrow().welcome_done;
+        let prev = self.settings.borrow();
+        new.welcome_done = prev.welcome_done;
+        new.chat_mode = prev.chat_mode;
+        drop(prev);
         self.apply_settings(&new);
         self.save_settings(&new);
     }

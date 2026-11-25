@@ -8,7 +8,7 @@ use tokio::runtime::Handle;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tokio::sync::watch;
 
-use crate::chat::ChatEvent;
+use crate::chat::{ChatEvent, ChatMode};
 use crate::companion::{CompanionCommand, CompanionView};
 use crate::gateway::{AuditRow, ChainStatus, EgressRow, Gateway};
 use crate::gpu::{self, GpuState};
@@ -44,8 +44,13 @@ pub enum Update {
 /// What the window asks the background half to do.
 #[derive(Debug, Clone)]
 pub enum Command {
-    /// Ask a question (already cleaned by `Conversation::begin`).
-    Ask(String),
+    /// Ask a question (already cleaned by `Conversation::begin_in_mode`).
+    Ask {
+        /// Cleaned question text.
+        text: String,
+        /// Target chat mode (Laila or Assistant).
+        mode: ChatMode,
+    },
     /// Stop the running answer.
     StopAsk,
     /// Press the mic button.
@@ -182,7 +187,7 @@ async fn command_loop(
     let mut stop: Option<watch::Sender<bool>> = None;
     while let Some(command) = commands.recv().await {
         match command {
-            Command::Ask(question) => {
+            Command::Ask { text, mode } => {
                 if let Some(old) = stop.take() {
                     let _ = old.send(true);
                 }
@@ -190,7 +195,7 @@ async fn command_loop(
                 stop = Some(stop_tx);
                 let (ev_tx, mut ev_rx) = mpsc::unbounded_channel();
                 let gw = gw.clone();
-                tokio::spawn(async move { gw.ask(question, ev_tx, stop_rx).await });
+                tokio::spawn(async move { gw.ask(text, mode, ev_tx, stop_rx).await });
                 let updates = updates.clone();
                 tokio::spawn(async move {
                     while let Some(e) = ev_rx.recv().await {

@@ -1,7 +1,7 @@
 //! Everything the window shows, in one GTK-free value (ADR-0017). The window applies each
 //! [`Update`] here and then redraws only what changed.
 
-use crate::chat::Conversation;
+use crate::chat::{ChatMode, Conversation};
 use crate::companion::CompanionView;
 use crate::controller::Update;
 use crate::gateway::{AuditRow, ChainStatus, EgressRow};
@@ -79,6 +79,8 @@ pub struct AppState {
     pub gpu: Option<GpuState>,
     /// This window's conversation.
     pub conversation: Conversation,
+    /// Selected Chat page target (Laila or Assistant).
+    pub chat_mode: ChatMode,
     /// Privacy ledgers.
     pub ledgers: Ledgers,
     /// The newest notice, shown once.
@@ -110,6 +112,7 @@ impl AppState {
             companion: CompanionView::unavailable(),
             gpu: None,
             conversation: Conversation::new(),
+            chat_mode: ChatMode::Laila,
             ledgers: Ledgers::default(),
             notice: None,
             gpu_util: Series::new(SERIES_LEN),
@@ -179,6 +182,16 @@ impl AppState {
             }
         }
         changed
+    }
+
+    /// Updates the selected chat mode and returns whether it changed.
+    pub fn set_chat_mode(&mut self, mode: ChatMode) -> bool {
+        if self.chat_mode == mode {
+            false
+        } else {
+            self.chat_mode = mode;
+            true
+        }
     }
 
     /// The sentence at the top of the header: one thing, the most important.
@@ -280,6 +293,15 @@ mod tests {
         let c = s.apply(Update::Chat(ChatEvent::Chunk("Hi".into())));
         assert!(c.chat);
         assert_eq!(s.conversation.turns()[0].answer(), "Hi");
+    }
+
+    #[test]
+    fn chat_mode_defaults_to_laila_and_tracks_changes() {
+        let mut s = AppState::new();
+        assert_eq!(s.chat_mode, ChatMode::Laila);
+        assert!(!s.set_chat_mode(ChatMode::Laila));
+        assert!(s.set_chat_mode(ChatMode::Assistant));
+        assert_eq!(s.chat_mode, ChatMode::Assistant);
     }
 
     #[test]
