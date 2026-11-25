@@ -11,8 +11,10 @@
 //! - [`prompt`]: companion ChatML prompt assembly and cacheable system block.
 //! - [`session`]: conversational memory with rolling summary and turn retention.
 //! - [`filter`]: streamed sentence validation and safety scrubbing before speech synthesis.
+//! - [`engine`]: unified dialogue orchestrator managing per-conversation state.
 
 pub mod dependence;
+pub mod engine;
 pub mod filter;
 pub mod guards;
 pub mod kabir;
