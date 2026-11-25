@@ -1,0 +1,317 @@
+{
+  "summary": {
+    "label": "C-S07 baseline before speed work (Linux, CPU, qwen small, text path)",
+    "when": "2026-11-25T07:07:26+00:00",
+    "runs": 20,
+    "failed": 0,
+    "cold_first_piece_s": 1.0549240440013818,
+    "warm_first_piece_p50_s": 1.8077143210030044,
+    "warm_first_piece_p95_s": 5.303911735899596,
+    "warm_first_piece_mean_s": 2.398057956210227,
+    "warm_total_p50_s": 7.317076161998557,
+    "warm_total_p95_s": 10.966750501098426,
+    "note": "first piece = first chunk of text at the CLI, before any speech synthesis"
+  },
+  "runs": [
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 1.0549240440013818,
+      "total_s": 4.282659863005392,
+      "chunks": 3,
+      "words": 10,
+      "done": {
+        "route": "companion",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 0,
+      "cold": true
+    },
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 4.5744855489974725,
+      "total_s": 10.719765082998492,
+      "chunks": 6,
+      "words": 60,
+      "done": {
+        "route": "companion",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 1,
+      "cold": false
+    },
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 3.086833483997907,
+      "total_s": 8.657654778995493,
+      "chunks": 8,
+      "words": 45,
+      "done": {
+        "route": "companion",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 2,
+      "cold": false
+    },
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 1.0929359479996492,
+      "total_s": 6.782318186000339,
+      "chunks": 5,
+      "words": 35,
+      "done": {
+        "route": "companion",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 3,
+      "cold": false
+    },
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 1.8077143210030044,
+      "total_s": 8.787358681001933,
+      "chunks": 7,
+      "words": 38,
+      "done": {
+        "route": "companion",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 4,
+      "cold": false
+    },
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 0.9875191839964828,
+      "total_s": 4.807980974997918,
+      "chunks": 4,
+      "words": 26,
+      "done": {
+        "route": "companion",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 5,
+      "cold": false
+    },
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 0.536976487004722,
+      "total_s": 7.689508595998632,
+      "chunks": 7,
+      "words": 48,
+      "done": {
+        "route": "companion",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 6,
+      "cold": false
+    },
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 2.506552541999554,
+      "total_s": 7.07331271199655,
+      "chunks": 9,
+      "words": 39,
+      "done": {
+        "route": "companion",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 7,
+      "cold": false
+    },
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 0.9682746649996261,
+      "total_s": 6.375419907999458,
+      "chunks": 7,
+      "words": 41,
+      "done": {
+        "route": "companion",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 8,
+      "cold": false
+    },
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 0.9020934979998856,
+      "total_s": 5.1672632780027925,
+      "chunks": 7,
+      "words": 32,
+      "done": {
+        "route": "companion",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 9,
+      "cold": false
+    },
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 3.0669132099937997,
+      "total_s": 8.396704710998165,
+      "chunks": 5,
+      "words": 39,
+      "done": {
+        "route": "companion",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 10,
+      "cold": false
+    },
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 1.289243045997864,
+      "total_s": 7.317076161998557,
+      "chunks": 6,
+      "words": 39,
+      "done": {
+        "route": "companion",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 11,
+      "cold": false
+    },
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 3.2020841039993684,
+      "total_s": 6.917011136996734,
+      "chunks": 4,
+      "words": 43,
+      "done": {
+        "route": "companion",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 12,
+      "cold": false
+    },
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 5.064129878999665,
+      "total_s": 7.625925397995161,
+      "chunks": 28,
+      "words": 28,
+      "done": {
+        "route": "desktop answer",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 13,
+      "cold": false
+    },
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 7.461948447999021,
+      "total_s": 13.189619263997884,
+      "chunks": 6,
+      "words": 52,
+      "done": {
+        "route": "companion",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 14,
+      "cold": false
+    },
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 2.6262638600019272,
+      "total_s": 8.899281761005113,
+      "chunks": 7,
+      "words": 52,
+      "done": {
+        "route": "companion",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 15,
+      "cold": false
+    },
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 1.686158026997873,
+      "total_s": 8.989979439000308,
+      "chunks": 5,
+      "words": 52,
+      "done": {
+        "route": "companion",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 16,
+      "cold": false
+    },
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 1.1469552230046247,
+      "total_s": 5.859203523999895,
+      "chunks": 4,
+      "words": 41,
+      "done": {
+        "route": "companion",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 17,
+      "cold": false
+    },
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 2.7635039430024335,
+      "total_s": 6.03400321600202,
+      "chunks": 3,
+      "words": 30,
+      "done": {
+        "route": "companion",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 18,
+      "cold": false
+    },
+    {
+      "ok": true,
+      "exit": 0,
+      "first_chunk_s": 0.7925157499994384,
+      "total_s": 4.666031380998902,
+      "chunks": 6,
+      "words": 33,
+      "done": {
+        "route": "companion",
+        "degraded": false
+      },
+      "error": "",
+      "prompt_index": 19,
+      "cold": false
+    }
+  ]
+}

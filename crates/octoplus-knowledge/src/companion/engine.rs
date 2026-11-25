@@ -8,7 +8,9 @@ use std::sync::Arc;
 use octoplus_taint::TaintFlags;
 
 use crate::companion::dependence::{DependenceGuard, GENTLE_LINES, no_one_else};
-use crate::companion::filter::{ReplyFilter, filter_reply};
+use crate::companion::filter::{
+    ReplyFilter, ReplyFilterCounters, Verdict, has_chat_memory_cue, has_past_memory_cue,
+};
 use crate::companion::guards::{self, SAFE_GOODBYE};
 use crate::companion::kabir::{KabirContext, KabirGate, love_topic};
 use crate::companion::mode::{Mode, ModeMachine, signals_from_text, switch_instruction};
@@ -103,6 +105,7 @@ pub struct CompanionEngine {
     rng: Rng,
     careful_turns: u32,
     session_start_ns: u64,
+    facts_grounded: bool,
     counters: EngineCounters,
 }
 
@@ -127,6 +130,7 @@ impl CompanionEngine {
             rng,
             careful_turns: 0,
             session_start_ns: now_ns,
+            facts_grounded: false,
             counters: EngineCounters::default(),
         }
     }
@@ -252,10 +256,52 @@ impl CompanionEngine {
             .push(question, answer, TaintFlags::USER_PROVIDED, now_ns);
     }
 
+    /// Sets whether remembered facts were included in the prompt for this turn.
+    pub fn set_grounded(&mut self, grounded: bool) {
+        self.facts_grounded = grounded;
+    }
+
     /// Filters streamed reply sentences before speech synthesis, providing safe goodbye fallback.
     pub fn filter_pieces(&mut self, pieces: &[String], goodbye: bool) -> Vec<String> {
         let pick = self.rng.pick(SAFE_GOODBYE.len());
-        filter_reply(&mut self.filter, pieces, goodbye, pick)
+        let has_facts = self.facts_grounded;
+        let has_history = self.session.turn_count() > 0;
+        let mut kept = Vec::new();
+        for p in pieces {
+            let grounded = if has_facts {
+                true
+            } else if has_past_memory_cue(p) {
+                false
+            } else if has_chat_memory_cue(p) {
+                has_history
+            } else {
+                true
+            };
+            if let Verdict::Keep(clean) = self.filter.check(p, goodbye, grounded) {
+                kept.push(clean);
+            }
+        }
+
+        if kept.is_empty() {
+            if goodbye {
+                let idx = if SAFE_GOODBYE.is_empty() {
+                    0
+                } else {
+                    pick % SAFE_GOODBYE.len()
+                };
+                vec![SAFE_GOODBYE[idx].to_string()]
+            } else {
+                Vec::new()
+            }
+        } else {
+            kept
+        }
+    }
+
+    /// Returns cumulative reply filter counters.
+    #[must_use]
+    pub fn filter_counters(&self) -> ReplyFilterCounters {
+        self.filter.counters()
     }
 
     /// Records completed turn into session memory and checks for Kabir mentions.

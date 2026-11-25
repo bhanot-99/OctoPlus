@@ -101,6 +101,13 @@ impl KnowledgeHandler {
                     .map(|i| all_facts[i].text.clone())
                     .collect();
 
+                let facts_present = !picked_facts.is_empty();
+                self.with_state(|state| {
+                    if let Some(engine) = state.companion.as_mut() {
+                        engine.set_grounded(facts_present);
+                    }
+                });
+
                 let (history_text, history_taint) = self.with_state(|state| {
                     state.companion.as_ref().map_or_else(
                         || (String::new(), TaintFlags::empty()),

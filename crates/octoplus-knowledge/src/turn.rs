@@ -474,7 +474,10 @@ impl KnowledgeHandler {
                 )
                 .await;
         }
-        if ask.companion && first.route != RouteKind::Desktop {
+        if ask.companion
+            && !(first.route == RouteKind::Desktop
+                && crate::companion::guards::is_interrogative(&text))
+        {
             return self.companion_turn(&text, origin, now, sink).await;
         }
         self.question_turn(&text, origin, now, sink).await

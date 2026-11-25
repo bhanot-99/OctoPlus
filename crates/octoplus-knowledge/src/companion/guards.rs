@@ -170,3 +170,141 @@ pub fn is_goodbye(text: &str) -> bool {
         .iter()
         .any(|cue| norm.contains(&format!(" {cue} ")))
 }
+
+/// Returns true if the text is interrogative (contains '?' or starts with a question word,
+/// after stripping conversational openers like "hey", "okay", "so").
+pub fn is_interrogative(text: &str) -> bool {
+    if text.contains('?') {
+        return true;
+    }
+    let lower = text.trim().to_lowercase();
+    let mut cur: &str = lower.as_str();
+
+    // Repeatedly strip leading conversational openers: "hey", "okay", "so"
+    loop {
+        cur = cur.trim_start_matches(|c: char| c.is_whitespace() || c.is_ascii_punctuation());
+        let mut stripped = false;
+        for opener in &["hey", "okay", "so"] {
+            if let Some(rest) = cur.strip_prefix(opener)
+                && (rest.is_empty()
+                    || rest.starts_with(|c: char| c.is_whitespace() || c.is_ascii_punctuation()))
+            {
+                cur = rest;
+                stripped = true;
+                break;
+            }
+        }
+        if !stripped {
+            break;
+        }
+    }
+    cur = cur.trim_start_matches(|c: char| c.is_whitespace() || c.is_ascii_punctuation());
+
+    const QUESTION_WORDS: &[&str] = &[
+        "what", "when", "where", "which", "who", "whom", "whose", "why", "how", "did", "do",
+        "does", "was", "were", "is", "are", "can", "could", "will", "would", "should", "have",
+        "has",
+    ];
+
+    for &q in QUESTION_WORDS {
+        if let Some(rest) = cur.strip_prefix(q)
+            && (rest.is_empty()
+                || rest.starts_with(|c: char| c.is_whitespace() || c.is_ascii_punctuation()))
+        {
+            return true;
+        }
+    }
+
+    false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_interrogative_table_30_statements_30_questions() {
+        let statements = [
+            "I finished my work early today",
+            "I had a long day at work",
+            "The weather outside is very cold",
+            "We went to the grocery store earlier",
+            "My cat was sleeping on the couch all morning",
+            "I wrote three chapters of my new book",
+            "Today was a productive day overall",
+            "I really enjoyed that movie we watched",
+            "Dinner tasted delicious tonight",
+            "I plan to start exercising tomorrow",
+            "Software engineering can be challenging sometimes",
+            "I took a long walk in the park",
+            "My computer finished compiling the project",
+            "She decided to learn how to play guitar",
+            "They arrived right on time for the meeting",
+            "The sun set behind the distant mountains",
+            "I cleaned my entire desk and organized the files",
+            "Coffee made me feel much more awake",
+            "It felt great to finally take a break",
+            "The train ride was smooth and peaceful",
+            "I planted some flowers in the backyard garden",
+            "My favorite book is currently on the shelf",
+            "We had a wonderful conversation about history",
+            "Listening to music helps me concentrate",
+            "The cake smelled like vanilla and cinnamon",
+            "I finished reading the latest research paper",
+            "The dog was excited to see the mail carrier",
+            "I decided to go to bed a little earlier",
+            "Writing Rust code is quite satisfying",
+            "Everything is organized and ready for tomorrow",
+        ];
+
+        let questions = [
+            "what was I doing today?",
+            "what time is the meeting tomorrow",
+            "when did you arrive in town",
+            "where did I leave my keys",
+            "which book would you recommend",
+            "who called while I was away",
+            "whom should we notify about the update",
+            "whose coat is hanging in the hallway",
+            "why is the build taking so long",
+            "how do I configure this service",
+            "did you see the email from earlier",
+            "do we have enough coffee beans left",
+            "does this script need root permissions",
+            "was the package delivered this morning",
+            "were they able to fix the issue",
+            "is the server running normally",
+            "are you ready to start the presentation",
+            "can you explain how this algorithm works",
+            "could we reschedule for next Tuesday",
+            "will it rain later this afternoon",
+            "would you like another cup of tea",
+            "should I submit the report right now",
+            "have you seen my glasses anywhere",
+            "has the backup completed yet",
+            "hey, what was I doing today?",
+            "okay so where are we heading next",
+            "so, did you find what you needed?",
+            "hey can we review the plan together",
+            "what's the best route to take",
+            "did I save my progress?",
+        ];
+
+        assert_eq!(statements.len(), 30);
+        assert_eq!(questions.len(), 30);
+
+        for s in statements {
+            assert!(
+                !is_interrogative(s),
+                "Expected statement to return false: '{s}'"
+            );
+        }
+
+        for q in questions {
+            assert!(
+                is_interrogative(q),
+                "Expected question to return true: '{q}'"
+            );
+        }
+    }
+}

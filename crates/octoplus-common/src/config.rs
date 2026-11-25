@@ -763,9 +763,9 @@ impl Default for CompanionConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            history_tokens: 320,
+            history_tokens: 200,
             facts_tokens: 48,
-            max_reply_tokens: 160,
+            max_reply_tokens: 110,
             session_max_minutes: 15,
         }
     }
@@ -1050,9 +1050,9 @@ mod tests {
     fn companion_defaults_and_validation() {
         let c = Config::default().companion;
         assert!(c.enabled);
-        assert_eq!(c.history_tokens, 320);
+        assert_eq!(c.history_tokens, 200);
         assert_eq!(c.facts_tokens, 48);
-        assert_eq!(c.max_reply_tokens, 160);
+        assert_eq!(c.max_reply_tokens, 110);
         assert_eq!(c.session_max_minutes, 15);
 
         for bad in [

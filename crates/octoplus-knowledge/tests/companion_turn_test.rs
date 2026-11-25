@@ -384,12 +384,11 @@ async fn test_companion_ask_returns_route_and_prompt_content() {
     let prompt = &rec.prompts[0];
     assert!(prompt.contains("Laila"), "prompt must name Laila");
     assert!(
-        prompt.contains("never claim to be human"),
+        prompt.contains("Never claim to be human"),
         "prompt must carry boundary: {prompt}"
     );
     assert!(
-        prompt.contains("Right now you are in logic mode")
-            || prompt.contains("Right now you are in heart mode"),
+        prompt.contains("Mode now: logic.") || prompt.contains("Mode now: heart."),
         "prompt must carry mode block: {prompt}"
     );
 }
@@ -531,7 +530,7 @@ async fn test_conversation_history_and_30_turn_budget() {
 
     let rec_all = s.rec.lock().unwrap();
     assert_eq!(rec_all.prompts.len(), 30);
-    let max_budget_tokens = 2048 - 160;
+    let max_budget_tokens = 2048 - 110;
     for (i, p) in rec_all.prompts.iter().enumerate() {
         let est = estimate(p, 4);
         assert!(
@@ -676,4 +675,35 @@ async fn test_latency_record() {
 
     // Print (not assert) elapsed time against the instant fake model
     println!("companion turn elapsed against instant fake model: {elapsed:?}");
+}
+
+#[tokio::test]
+async fn test_companion_routing_casual_statement_vs_interrogative() {
+    let s = Stack::start(Opts {
+        default_answer: vec!["Activity answer.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+
+    // Casual statement with time/personal words routes to Route::Companion
+    let (_said1, done1) = s
+        .ask_companion("I finished my work early today", 1_000_000_000)
+        .await
+        .unwrap();
+    assert_eq!(
+        done1.route,
+        Route::Companion as i32,
+        "Casual statement should route to Route::Companion"
+    );
+
+    // Question about owner activity routes to Route::DesktopAnswer
+    let (_said2, done2) = s
+        .ask_companion("what was I doing today?", 2_000_000_000)
+        .await
+        .unwrap();
+    assert_eq!(
+        done2.route,
+        Route::DesktopAnswer as i32,
+        "Interrogative activity query should route to Route::DesktopAnswer"
+    );
 }
