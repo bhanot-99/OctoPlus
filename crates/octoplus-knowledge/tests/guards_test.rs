@@ -446,4 +446,10 @@ fn followup_and_stage_direction_checks() {
         assert!(is_stage_direction(sd), "expected stage direction: {sd}");
     }
     assert!(!is_stage_direction("I had filter coffee this morning."));
+    assert!(octoplus_knowledge::companion::guards::asks_about_her_work(
+        "what are you working on these days"
+    ));
+    assert!(!octoplus_knowledge::companion::guards::asks_about_her_work(
+        "what was I working on today"
+    ));
 }

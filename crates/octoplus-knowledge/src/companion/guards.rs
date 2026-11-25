@@ -442,6 +442,17 @@ pub fn asks_her_studies(text: &str) -> bool {
         .any(|c| padded.contains(&format!(" {c} ")))
 }
 
+/// Whether the owner asks what she is doing or working on ("what are you working on these days").
+///
+/// Keeps `turn.rs` from misrouting `"these"` + `"working"` to the owner's desktop monitor.
+#[must_use]
+pub fn asks_about_her_work(text: &str) -> bool {
+    let n = norm_words(text);
+    let padded = format!(" {n} ");
+    n.split(' ').count() <= 10
+        && (padded.contains(" are you working ") || padded.contains(" you working on "))
+}
+
 /// Whether the owner asks an identity question (who she is, her name, her age, her studies).
 ///
 /// These are answered by the model using grounded persona facts, with fail-closed fallback to her

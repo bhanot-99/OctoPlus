@@ -527,7 +527,9 @@ impl KnowledgeHandler {
                 && crate::companion::guards::is_interrogative(&text))
                 // "Do you remember what we talked about yesterday" has a time word, but it is
                 // about her chats, not the owner's activity.
-                || crate::companion::guards::asks_about_past_chats(&text))
+                || crate::companion::guards::asks_about_past_chats(&text)
+                // "What are you working on these days" has "these" + "working", but asks about her.
+                || crate::companion::guards::asks_about_her_work(&text))
         {
             let done = self.companion_turn(&text, origin, now, sink).await?;
             self.flush_chance_memory(&text, origin, now, sink).await;
