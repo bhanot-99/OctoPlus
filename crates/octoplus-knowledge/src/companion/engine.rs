@@ -105,6 +105,17 @@ pub struct GeneratePlan {
     pub is_followup: bool,
 }
 
+/// Deterministic identity-framing angles so repeated "tell me about yourself" turns across
+/// fresh sessions vary naturally while always stating Laila, 25, CS + cognitive science, and
+/// head vs heart.
+const IDENTITY_ANGLES: [&str; 5] = [
+    "Introduce yourself as Laila, 25, who studied computer science and cognitive science, and mention how your head and heart keep arguing.",
+    "Start with 'I'm Laila, 25'—mention studying computer science and cognitive science, your head-vs-heart tug-of-war, and what you are working on lately.",
+    "Say your name is Laila (25), mention your CS and cognitive science studies, that your logic and heart rarely agree, and one book or reading interest.",
+    "Answer warmly as Laila, 25: mention computer science, cognitive science, the constant debate between your head and heart, and one small everyday habit.",
+    "Introduce yourself naturally as Laila, 25—talk about mixing computer science with cognitive science and never knowing whether your analytical or softer side will answer first.",
+];
+
 /// Deterministic style angles rotated via `Rng` so identical questions in different chats
 /// receive varied phrasing while facts remain identical.
 const STYLE_ANGLES: [&str; 6] = [
@@ -471,11 +482,13 @@ impl CompanionEngine {
                     "Answer naturally that you are {} (an AI character) in one or two short spoken sentences. {style_angle}",
                     self.persona.age
                 ))
-            } else if identity_question {
+            } else if guards::asks_her_studies(text) {
                 Some(format!(
-                    "Answer who you are in your own fresh words: {}, {}, CS and cognitive science, and your head and heart arguing. Mention one life detail if it fits. {style_angle}",
-                    self.persona.name, self.persona.age
+                    "Answer naturally that you studied computer science and cognitive science, in one or two short spoken sentences. {style_angle}"
                 ))
+            } else if identity_question {
+                let id_angle = IDENTITY_ANGLES[self.rng.pick(IDENTITY_ANGLES.len())];
+                Some(id_angle.to_string())
             } else if short_factual {
                 None
             } else {

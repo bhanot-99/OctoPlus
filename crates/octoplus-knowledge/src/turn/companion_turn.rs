@@ -624,7 +624,9 @@ impl KnowledgeHandler {
                 && (!crate::companion::guards::asks_her_age(question)
                     || low.contains(&persona.age.to_string())
                     || low.contains("twenty-five")
-                    || low.contains("twenty five"));
+                    || low.contains("twenty five"))
+                && (!crate::companion::guards::asks_her_studies(question)
+                    || (low.contains("computer") && low.contains("cognitive")));
             let out = if valid {
                 candidate
             } else {

@@ -270,7 +270,7 @@ pub fn life_snippets(
             "story",
         ],
     ) {
-        picks.push(("Her past", &persona.life.past));
+        picks.push(("Your past", &persona.life.past));
     }
     if contains_any_cue(
         &hay,
@@ -288,7 +288,7 @@ pub fn life_snippets(
             "relatives",
         ],
     ) {
-        picks.push(("Her family", &persona.life.family));
+        picks.push(("Your family", &persona.life.family));
     }
     if contains_any_cue(
         &hay,
@@ -308,8 +308,8 @@ pub fn life_snippets(
             "habits",
         ],
     ) {
-        picks.push(("Her normal day", &persona.life.day));
-        picks.push(("Small habits", &persona.life.habits));
+        picks.push(("Your normal day", &persona.life.day));
+        picks.push(("Your habits", &persona.life.habits));
     }
     if contains_any_cue(
         &hay,
@@ -326,8 +326,8 @@ pub fn life_snippets(
             "essays",
         ],
     ) {
-        picks.push(("What she works on", &persona.life.work));
-        picks.push(("Her background", &persona.background));
+        picks.push(("What you work on", &persona.life.work));
+        picks.push(("Your studies", &persona.background));
     }
     if contains_any_cue(
         &hay,
@@ -346,7 +346,7 @@ pub fn life_snippets(
             "favorite book",
         ],
     ) {
-        picks.push(("What she reads", &persona.life.reads));
+        picks.push(("What you read", &persona.life.reads));
     }
     if contains_any_cue(
         &hay,
@@ -369,12 +369,12 @@ pub fn life_snippets(
             "favorites",
         ],
     ) {
-        picks.push(("Her favourites", &persona.life.favourites));
-        picks.push(("Small habits", &persona.life.habits));
+        picks.push(("Your favourites", &persona.life.favourites));
+        picks.push(("Your habits", &persona.life.habits));
     }
     if contains_any_cue(&hay, &["happy", "joy", "cheer"]) {
-        picks.push(("What makes her happy", &persona.life.happy));
-        picks.push(("What she finds hard", &persona.life.hard));
+        picks.push(("What makes you happy", &persona.life.happy));
+        picks.push(("What you find hard", &persona.life.hard));
     }
     if contains_any_cue(
         &hay,
@@ -391,8 +391,8 @@ pub fn life_snippets(
             "hurt",
         ],
     ) {
-        picks.push(("What she finds hard", &persona.life.hard));
-        picks.push(("What makes her happy", &persona.life.happy));
+        picks.push(("What you find hard", &persona.life.hard));
+        picks.push(("What makes you happy", &persona.life.happy));
     }
     if contains_any_cue(
         &hay,
@@ -411,9 +411,9 @@ pub fn life_snippets(
             "about you",
         ],
     ) {
-        picks.push(("Her work", &persona.life.work));
-        picks.push(("What she reads", &persona.life.reads));
-        picks.push(("Small habits", &persona.life.habits));
+        picks.push(("What you work on", &persona.life.work));
+        picks.push(("What you read", &persona.life.reads));
+        picks.push(("Your habits", &persona.life.habits));
     }
 
     if picks.is_empty() {
