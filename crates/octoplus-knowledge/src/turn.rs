@@ -126,6 +126,8 @@ pub struct Metrics {
     pub route_general: Arc<AtomicU64>,
     /// Companion chat answers (Phase 12).
     pub route_companion: Arc<AtomicU64>,
+    /// Spoken companion turns ignored because they were not directed to her (Phase 12).
+    pub companion_ignored: Arc<AtomicU64>,
     /// Evidence items dropped for a missing taint (R0-4).
     pub evidence_no_taint: Arc<AtomicU64>,
     /// Times the user spoke over a spoken answer (FR-VOI-07).
@@ -345,21 +347,28 @@ impl KnowledgeHandler {
                 retrieval_best_score: None,
                 cutoff,
             });
-            let kind = match first.route {
-                RouteKind::Action => PreambleKind::Acknowledge,
-                RouteKind::Desktop => PreambleKind::Looking,
-                _ => PreambleKind::Thinking,
-            };
-            // Best effort: a preamble that cannot be sent never fails the answer.
-            let _ = sink
-                .send(Body::PreambleRequest(PreambleRequest { kind: kind as i32 }))
-                .await;
+            let will_be_companion = cmd.in_session
+                && !(first.route == RouteKind::Action && first.action_hint.is_some())
+                && !(first.route == RouteKind::Desktop
+                    && crate::companion::guards::is_interrogative(&cmd.text));
+
+            if !will_be_companion {
+                let kind = match first.route {
+                    RouteKind::Action => PreambleKind::Acknowledge,
+                    RouteKind::Desktop => PreambleKind::Looking,
+                    _ => PreambleKind::Thinking,
+                };
+                // Best effort: a preamble that cannot be sent never fails the answer.
+                let _ = sink
+                    .send(Body::PreambleRequest(PreambleRequest { kind: kind as i32 }))
+                    .await;
+            }
         }
         let ask = AskRequest {
             text: cmd.text,
             origin: Origin::Voice as i32,
             at_ns: cmd.t_speech_start_ns,
-            companion: false,
+            companion: cmd.in_session,
         };
         let (local, mut rx) = StreamSink::channel(16);
         let run = async move {
@@ -380,12 +389,18 @@ impl KnowledgeHandler {
                     .collect::<Vec<_>>()
             };
             while let Some(env) = rx.recv().await {
-                if let Some(Body::AnswerChunk(c)) = env.body {
-                    for frame in speak(stream.feed(&c.text)) {
-                        if sink.send(frame).await.is_err() {
-                            return;
+                match env.body {
+                    Some(Body::AnswerChunk(c)) => {
+                        for frame in speak(stream.feed(&c.text)) {
+                            if sink.send(frame).await.is_err() {
+                                return;
+                            }
                         }
                     }
+                    Some(Body::PreambleRequest(p)) => {
+                        let _ = sink.send(Body::PreambleRequest(p)).await;
+                    }
+                    _ => {}
                 }
             }
             for frame in speak(stream.flush()) {

@@ -16,6 +16,7 @@
 
 pub mod boot;
 pub mod dependence;
+pub mod directed;
 pub mod engine;
 pub mod filter;
 pub mod guards;

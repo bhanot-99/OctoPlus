@@ -125,6 +125,7 @@ pub fn init(
         route_desktop: h.counter("route_desktop"),
         route_general: h.counter("route_general"),
         route_companion: h.counter("route_companion"),
+        companion_ignored: h.counter("companion_ignored"),
         evidence_no_taint: h.counter("evidence_dropped_no_taint"),
         barge_ins: h.counter("voice_barge_ins"),
     };

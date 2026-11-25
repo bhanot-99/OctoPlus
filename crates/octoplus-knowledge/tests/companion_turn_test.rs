@@ -15,7 +15,8 @@ use octoplus_ipc::{
 use octoplus_proto::v1::envelope::Body;
 use octoplus_proto::v1::{
     Ack, AnswerDone, AskRequest, DispatchResult, DispatchStatus, EvaluateResult, GenerateDone,
-    Origin, ProfileFact, ProfileFacts, Route, StopReason, Taint, Tier, TokenChunk,
+    Origin, PreambleKind, ProfileFact, ProfileFacts, Route, StopReason, Taint, Tier, TokenChunk,
+    VoiceCommand,
 };
 
 use octoplus_knowledge::companion::guards::{SAFE_GOODBYE, honest_reply};
@@ -171,9 +172,10 @@ struct Stack {
     c5: PathBuf,
     rec: Shared,
     _stop: tokio::sync::watch::Sender<bool>,
-    _route_action: Arc<AtomicU64>,
+    route_action: Arc<AtomicU64>,
     route_general: Arc<AtomicU64>,
     route_companion: Arc<AtomicU64>,
+    companion_ignored: Arc<AtomicU64>,
     _completed: Arc<AtomicU64>,
 }
 
@@ -252,6 +254,7 @@ impl Stack {
             route_desktop: counter(),
             route_general: counter(),
             route_companion: counter(),
+            companion_ignored: counter(),
             evidence_no_taint: counter(),
             barge_ins: counter(),
         };
@@ -259,6 +262,7 @@ impl Stack {
         let route_action = metrics.route_action.clone();
         let route_general = metrics.route_general.clone();
         let route_companion = metrics.route_companion.clone();
+        let companion_ignored = metrics.companion_ignored.clone();
         let completed = metrics.completed.clone();
 
         let cfg = KnowledgeConfig {
@@ -303,11 +307,42 @@ impl Stack {
             c5,
             rec,
             _stop: stop,
-            _route_action: route_action,
+            route_action,
             route_general,
             route_companion,
+            companion_ignored,
             _completed: completed,
         }
+    }
+
+    async fn voice_ask(
+        &self,
+        text: &str,
+        in_session: bool,
+        at_ns: u64,
+    ) -> Result<(Vec<Body>, AnswerDone), IpcError> {
+        let client = Client::connect(&self.c5, 1 << 20).await.unwrap();
+        let mut stream = client
+            .stream(
+                Body::VoiceCommand(VoiceCommand {
+                    text: text.to_string(),
+                    t_speech_start_ns: at_ns,
+                    t_speech_end_ns: at_ns + 100_000_000,
+                    in_session,
+                    ..Default::default()
+                }),
+                Duration::from_secs(5),
+            )
+            .await?;
+        let mut frames = Vec::new();
+        let mut done = None;
+        while let Some(item) = stream.next().await {
+            match item? {
+                Body::AnswerDone(d) => done = Some(d),
+                other => frames.push(other),
+            }
+        }
+        Ok((frames, done.expect("AnswerDone frame missing")))
     }
 
     async fn ask_companion(
@@ -706,4 +741,157 @@ async fn test_companion_routing_casual_statement_vs_interrogative() {
         Route::DesktopAnswer as i32,
         "Interrogative activity query should route to Route::DesktopAnswer"
     );
+}
+
+#[tokio::test]
+async fn test_voice_ask_session_companion_and_backchannel() {
+    let s = Stack::start(Opts {
+        default_answer: vec!["Hello there. Good morning.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+
+    // In-session voice ask addressed to companion
+    let (frames, done) = s
+        .voice_ask("how was your morning?", true, 1_000_000_000)
+        .await
+        .unwrap();
+
+    assert_eq!(done.route, Route::Companion as i32);
+    assert_eq!(s.route_companion.load(Ordering::SeqCst), 1);
+    assert_eq!(s.companion_ignored.load(Ordering::SeqCst), 0);
+
+    // Backchannel preamble is first frame
+    assert!(!frames.is_empty(), "expected frames from voice ask");
+    match &frames[0] {
+        Body::PreambleRequest(p) => {
+            assert_eq!(p.kind, PreambleKind::Backchannel as i32);
+        }
+        other => panic!("expected PreambleRequest as first frame, got {other:?}"),
+    }
+
+    // Subsequent frames contain SpeakChunk
+    let speak_chunks: Vec<_> = frames
+        .iter()
+        .filter_map(|f| match f {
+            Body::SpeakChunk(sc) => Some(sc.text.clone()),
+            _ => None,
+        })
+        .collect();
+    assert!(!speak_chunks.is_empty(), "expected SpeakChunk frames");
+}
+
+#[tokio::test]
+async fn test_voice_ask_no_session_unchanged() {
+    let s = Stack::start(Opts {
+        default_answer: vec!["Rust is a systems language.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+
+    // Out-of-session voice ask routes normally (not companion)
+    let (frames, done) = s
+        .voice_ask("what is rust?", false, 1_000_000_000)
+        .await
+        .unwrap();
+
+    assert_ne!(done.route, Route::Companion as i32);
+    assert_eq!(s.route_companion.load(Ordering::SeqCst), 0);
+
+    // Out-of-session preamble is Thinking (or Looking), NOT Backchannel
+    assert!(!frames.is_empty());
+    match &frames[0] {
+        Body::PreambleRequest(p) => {
+            assert_eq!(p.kind, PreambleKind::Thinking as i32);
+        }
+        other => panic!("expected PreambleRequest as first frame, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn test_voice_ask_ignored_voice_turn() {
+    let s = Stack::start(Opts {
+        default_answer: vec!["Should not be spoken.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+
+    // Ambient TV / filler line in an open session
+    let (frames, done) = s.voice_ask("uh", true, 1_000_000_000).await.unwrap();
+
+    assert_eq!(done.route, Route::Companion as i32);
+    assert!(!done.status_only);
+    assert_eq!(s.companion_ignored.load(Ordering::SeqCst), 1);
+    assert_eq!(s.route_companion.load(Ordering::SeqCst), 1);
+
+    // Ignored voice turn produces no frames (no preamble, no chunk)
+    assert!(
+        frames.is_empty(),
+        "ignored turn must produce no chunks, got {frames:?}"
+    );
+
+    // No C3 store, no C4 call
+    assert!(
+        s.rec.lock().unwrap().stored.is_empty(),
+        "no interaction should be stored in C3"
+    );
+    assert!(
+        s.rec.lock().unwrap().prompts.is_empty(),
+        "no C4 inference prompt should be generated"
+    );
+}
+
+#[tokio::test]
+async fn test_typed_ask_with_companion_true_never_ignored() {
+    let s = Stack::start(Opts {
+        default_answer: vec!["I hear you.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+
+    // A line that would be ignored in voice (e.g. ambient text or filler) is never ignored in typed chat
+    let (said, done) = s
+        .ask_companion(
+            "the weather in Chicago is currently sixty degrees with clear skies",
+            1_000_000_000,
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(done.route, Route::Companion as i32);
+    assert_eq!(s.companion_ignored.load(Ordering::SeqCst), 0);
+    assert_eq!(
+        s.rec.lock().unwrap().prompts.len(),
+        1,
+        "C4 inference must be called for typed chat"
+    );
+    assert!(!said.is_empty());
+}
+
+#[tokio::test]
+async fn test_action_phrase_in_session_routes_to_action() {
+    let s = Stack::start(Opts {
+        action_reply: r#"{"status":"done"}"#.to_string(),
+        ..Opts::default()
+    })
+    .await;
+
+    // "forget that" inside an open session routes to Action, not Companion
+    let (frames, done) = s
+        .voice_ask("forget that", true, 1_000_000_000)
+        .await
+        .unwrap();
+
+    assert_eq!(done.route, Route::Action as i32);
+    assert_eq!(s.route_action.load(Ordering::SeqCst), 1);
+    assert_eq!(s.route_companion.load(Ordering::SeqCst), 0);
+
+    // Action preamble is Acknowledge, not Backchannel
+    assert!(!frames.is_empty());
+    match &frames[0] {
+        Body::PreambleRequest(p) => {
+            assert_eq!(p.kind, PreambleKind::Acknowledge as i32);
+        }
+        other => panic!("expected PreambleRequest as first frame, got {other:?}"),
+    }
 }

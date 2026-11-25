@@ -14,11 +14,14 @@ use std::time::Instant;
 
 use octoplus_ipc::{HandlerError, StreamSink};
 use octoplus_proto::v1::envelope::Body;
-use octoplus_proto::v1::{ErrorCode, GenerateRequest, Origin, Route, StopReason};
+use octoplus_proto::v1::{
+    ErrorCode, GenerateRequest, Origin, PreambleKind, PreambleRequest, Route, StopReason,
+};
 use octoplus_taint::TaintFlags;
 use tracing::warn;
 
 use super::{KnowledgeHandler, TurnRecord};
+use crate::companion::directed::Directed;
 use crate::companion::engine::{CompanionEngine, FixedKind, GeneratePlan, Plan};
 use crate::companion::prompt::{self, CompanionPromptInput};
 use crate::facts;
@@ -49,6 +52,34 @@ impl KnowledgeHandler {
                 return Ok(Self::done(Route::Companion, self.base_taint()));
             }
         };
+
+        if origin == Origin::Voice {
+            let directed = self.with_state(|state| {
+                let engine = state
+                    .companion
+                    .get_or_insert_with(|| CompanionEngine::new(Arc::clone(&persona), now, now));
+                engine.directed(text)
+            });
+            if let Directed::Ignore(_) = directed {
+                self.metrics
+                    .companion_ignored
+                    .fetch_add(1, Ordering::Relaxed);
+                self.metrics.route_companion.fetch_add(1, Ordering::Relaxed);
+                self.metrics.completed.fetch_add(1, Ordering::Relaxed);
+                return Ok(Self::done_with(
+                    Route::Companion,
+                    self.base_taint(),
+                    false,
+                    false,
+                ));
+            }
+
+            let _ = sink
+                .send(Body::PreambleRequest(PreambleRequest {
+                    kind: PreambleKind::Backchannel as i32,
+                }))
+                .await;
+        }
 
         let plan = self.with_state(|state| {
             let engine = state

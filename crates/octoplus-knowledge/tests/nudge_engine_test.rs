@@ -313,6 +313,7 @@ impl Stack {
             route_desktop: counter(),
             route_general: counter(),
             route_companion: counter(),
+            companion_ignored: counter(),
             evidence_no_taint: counter(),
             barge_ins: counter(),
         };

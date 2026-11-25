@@ -8,6 +8,7 @@ use std::sync::Arc;
 use octoplus_taint::TaintFlags;
 
 use crate::companion::dependence::{DependenceGuard, GENTLE_LINES, no_one_else};
+use crate::companion::directed::{self, Directed};
 use crate::companion::filter::{
     ReplyFilter, ReplyFilterCounters, Verdict, has_chat_memory_cue, has_past_memory_cue,
 };
@@ -106,6 +107,7 @@ pub struct CompanionEngine {
     careful_turns: u32,
     session_start_ns: u64,
     facts_grounded: bool,
+    last_reply_was_question: bool,
     counters: EngineCounters,
 }
 
@@ -131,6 +133,7 @@ impl CompanionEngine {
             careful_turns: 0,
             session_start_ns: now_ns,
             facts_grounded: false,
+            last_reply_was_question: false,
             counters: EngineCounters::default(),
         }
     }
@@ -150,6 +153,7 @@ impl CompanionEngine {
             self.mode_machine = ModeMachine::new(&self.persona.switching, next_seed);
             self.session = CompanionSession::new(self.persona.session.max_minutes, 6, 4);
             self.careful_turns = 0;
+            self.last_reply_was_question = false;
         }
 
         if self.session_start_ns == 0 {
@@ -254,6 +258,20 @@ impl CompanionEngine {
         }
         self.session
             .push(question, answer, TaintFlags::USER_PROVIDED, now_ns);
+        self.last_reply_was_question = answer.trim_end().ends_with('?');
+    }
+
+    /// Returns true if the last finished assistant reply ended with '?'.
+    #[must_use]
+    pub fn last_reply_was_question(&self) -> bool {
+        self.last_reply_was_question
+    }
+
+    /// Evaluates whether incoming spoken text is directed to the companion.
+    #[must_use]
+    pub fn directed(&self, text: &str) -> Directed {
+        let session_turns = self.session.turn_count() as u32;
+        directed::assess(text, self.last_reply_was_question, session_turns)
     }
 
     /// Sets whether remembered facts were included in the prompt for this turn.
@@ -315,6 +333,7 @@ impl CompanionEngine {
         _plan: &GeneratePlan,
     ) {
         self.session.push(question, reply, taint, now_ns);
+        self.last_reply_was_question = reply.trim_end().ends_with('?');
         let reply_lower = reply.to_lowercase();
         let name_lower = self.persona.past_love.name.to_lowercase();
         if reply_lower.contains(&name_lower) {
@@ -335,6 +354,7 @@ impl CompanionEngine {
                 .record_session(self.session_start_ns, now_ns);
         }
         self.session_start_ns = 0;
+        self.last_reply_was_question = false;
         self.session.clear();
         self.counters.sessions += 1;
     }
