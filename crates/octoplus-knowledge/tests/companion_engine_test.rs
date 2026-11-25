@@ -347,6 +347,7 @@ fn test_expired_session_starts_fresh() {
         kabir_allowed: false,
         gentle_line: None,
         goodbye: false,
+        humour: octoplus_knowledge::companion::humour::HumourLevel::Normal,
     };
     engine.finish_turn(
         "Hello there!",

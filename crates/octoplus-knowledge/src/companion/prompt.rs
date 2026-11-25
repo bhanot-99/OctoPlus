@@ -87,6 +87,8 @@ pub struct CompanionPromptInput<'a> {
     pub kabir_allowed: bool,
     /// Gentle dependence reminder line if triggered.
     pub gentle_line: Option<&'a str>,
+    /// How much humour this reply may have (Phase 12, C-S04).
+    pub humour: crate::companion::humour::HumourLevel,
     /// Remembered facts relevant to the conversation.
     pub facts: &'a [String],
     /// Taint flags of the facts.
@@ -202,6 +204,7 @@ pub fn assemble(input: &CompanionPromptInput<'_>, budgets: &Budgets) -> Prompt {
     let switch = switch_block(input);
     let kabir = kabir_block(input);
     let gentle = gentle_block(input);
+    let humour = format!("{}\n", input.humour.prompt_line());
     let history = history_block(input, budgets, q_tokens);
 
     let taint = TaintFlags::USER_PROVIDED
@@ -209,7 +212,7 @@ pub fn assemble(input: &CompanionPromptInput<'_>, budgets: &Budgets) -> Prompt {
         .merge(input.history_taint);
 
     let text = format!(
-        "{system}<|im_start|>user\n{facts}{mode}{switch}{kabir}{gentle}{history}{question}<|im_end|>\n<|im_start|>assistant\n"
+        "{system}<|im_start|>user\n{facts}{mode}{humour}{switch}{kabir}{gentle}{history}{question}<|im_end|>\n<|im_start|>assistant\n"
     );
 
     Prompt {

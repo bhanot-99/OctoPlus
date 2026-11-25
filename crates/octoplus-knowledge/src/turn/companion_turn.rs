@@ -57,15 +57,22 @@ impl KnowledgeHandler {
         // her, whatever the directedness check would say about so short a sentence.
         let is_control = crate::companion::pulse::parse_pulse_command(text).is_some();
         let hub = self.hub.clone();
+        let minute = crate::nudge::signals::local_minute(now, &crate::nudge::boot::time_zone());
         // If she started this chat herself, her opening line is the first thing in the history.
+        // The owner's taste in jokes and the time of day go to the engine before it plans.
         self.with_state(|state| {
-            let engine = state
-                .companion
-                .get_or_insert_with(|| CompanionEngine::new(Arc::clone(&persona), now, now));
-            if let Some(h) = &hub
-                && let Some(opener) = h.take_opener(now)
-            {
-                engine.push_opener(&opener, now);
+            let engine = state.companion.get_or_insert_with(|| {
+                let mut e = CompanionEngine::new(Arc::clone(&persona), now, now);
+                if let Some(h) = &hub {
+                    e.adopt_filter(h.lend_filter());
+                }
+                e
+            });
+            if let Some(h) = &hub {
+                if let Some(opener) = h.take_opener(now) {
+                    engine.push_opener(&opener, now);
+                }
+                engine.set_moment(minute, h.humour_level(false));
             }
         });
 
@@ -97,17 +104,24 @@ impl KnowledgeHandler {
                 .await;
         }
 
+        // "That was funny" / "not funny": remember the taste, say a fixed line, no model call.
+        if let (Some(h), Some(f)) = (&hub, crate::companion::humour::parse_feedback(text)) {
+            h.record_feedback(f);
+            Self::say(sink, crate::companion::humour::ack_line(f)).await?;
+            self.metrics.route_companion.fetch_add(1, Ordering::Relaxed);
+            self.metrics.completed.fetch_add(1, Ordering::Relaxed);
+            return Ok(Self::done(Route::Companion, self.base_taint()));
+        }
+
         // Scheduler controls, and the owner's answer to a talk she started.
-        if let Some(h) = &hub {
-            let minute = crate::nudge::signals::local_minute(now, &crate::nudge::boot::time_zone());
-            if let crate::companion::hub::OwnerTurn::Command(cmd) =
+        if let Some(h) = &hub
+            && let crate::companion::hub::OwnerTurn::Command(cmd) =
                 h.on_owner_turn(now, u16::try_from(minute).unwrap_or(0), text)
-            {
-                Self::say(sink, crate::companion::pulse::ack_line(&cmd)).await?;
-                self.metrics.route_companion.fetch_add(1, Ordering::Relaxed);
-                self.metrics.completed.fetch_add(1, Ordering::Relaxed);
-                return Ok(Self::done(Route::Companion, self.base_taint()));
-            }
+        {
+            Self::say(sink, crate::companion::pulse::ack_line(&cmd)).await?;
+            self.metrics.route_companion.fetch_add(1, Ordering::Relaxed);
+            self.metrics.completed.fetch_add(1, Ordering::Relaxed);
+            return Ok(Self::done(Route::Companion, self.base_taint()));
         }
 
         let plan = self.with_state(|state| {
@@ -133,11 +147,15 @@ impl KnowledgeHandler {
                     .await;
                 }
                 if fixed.end_session {
-                    self.with_state(|state| {
-                        if let Some(mut engine) = state.companion.take() {
+                    let kept = self.with_state(|state| {
+                        state.companion.take().map(|mut engine| {
                             engine.end_session(now);
-                        }
+                            engine.take_filter()
+                        })
                     });
+                    if let (Some(h), Some(f)) = (&hub, kept) {
+                        h.return_filter(f);
+                    }
                 }
                 self.metrics.route_companion.fetch_add(1, Ordering::Relaxed);
                 self.metrics.completed.fetch_add(1, Ordering::Relaxed);
@@ -184,6 +202,7 @@ impl KnowledgeHandler {
                     switch_instruction: plan_generate.instruction.as_deref(),
                     kabir_allowed: plan_generate.kabir_allowed,
                     gentle_line: plan_generate.gentle_line,
+                    humour: plan_generate.humour,
                     facts: &picked_facts,
                     facts_taint,
                     history: &history_text,

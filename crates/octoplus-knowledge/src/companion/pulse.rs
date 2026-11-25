@@ -269,6 +269,8 @@ pub struct Pulse {
     cooldown_until_ns: u64,
     recent: VecDeque<Topic>,
     followup_available: bool,
+    /// Multiplier of the joke topic's weight (0 turns jokes off).
+    joke_weight: f64,
     /// Talks in a row that were ignored or answered with "not now".
     consecutive_unwelcome: u32,
     morning_day: Option<u64>,
@@ -295,6 +297,7 @@ impl Pulse {
             cooldown_until_ns: 0,
             recent: VecDeque::new(),
             followup_available: false,
+            joke_weight: 1.0,
             consecutive_unwelcome: 0,
             morning_day: None,
             lunch_day: None,
@@ -394,6 +397,11 @@ impl Pulse {
     /// "Chat less".
     pub fn chat_less(&mut self) {
         self.rate_scale = (self.rate_scale * 0.75).max(0.5);
+    }
+
+    /// How much the joke topic is wanted (0 means never), from the owner's feedback (C-S04).
+    pub fn set_joke_weight(&mut self, weight: f64) {
+        self.joke_weight = weight.clamp(0.0, 2.0);
     }
 
     /// A follow-up topic exists (set by the memory part, story C-S05).
@@ -557,7 +565,9 @@ impl Pulse {
             options.push((Topic::BreakReminder, 2.0));
         }
         options.push((Topic::CheckIn, 3.0));
-        options.push((Topic::Joke, 2.0));
+        if self.joke_weight > 0.0 {
+            options.push((Topic::Joke, 2.0 * self.joke_weight));
+        }
         options.push((Topic::Observation, 1.0));
         options.push((Topic::FunFact, 1.0));
 

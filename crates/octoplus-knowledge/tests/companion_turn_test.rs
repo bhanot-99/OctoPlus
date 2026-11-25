@@ -1006,3 +1006,37 @@ async fn an_unanswered_opening_line_never_appears_in_a_later_chat() {
     assert_eq!(prompts.len(), 1);
     assert!(!prompts[0].contains("how is your day going"));
 }
+
+#[tokio::test]
+async fn funny_and_not_funny_are_answered_with_a_fixed_line_and_change_her_humour() {
+    let s = Stack::start(Opts {
+        default_answer: vec!["Sure.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+    let (said, done) = s.ask_companion("not funny", T0).await.unwrap();
+    assert_eq!(done.route, Route::Companion as i32);
+    assert!(said.contains("tone it down"), "{said}");
+    assert!(s.rec.lock().unwrap().prompts.is_empty(), "no model call");
+    for i in 1..4u64 {
+        s.ask_companion("bad joke", T0 + i * 1_000_000_000)
+            .await
+            .unwrap();
+    }
+    assert_eq!(
+        s.hub.humour_level(false),
+        octoplus_knowledge::companion::humour::HumourLevel::Off
+    );
+    // The next real reply is told not to joke.
+    let (_said, _done) = s
+        .ask_companion("tell me something fun", T0 + 10_000_000_000)
+        .await
+        .unwrap();
+    let prompts = s.rec.lock().unwrap().prompts.clone();
+    assert_eq!(prompts.len(), 1);
+    assert!(
+        prompts[0].contains("Do not joke or tease"),
+        "{}",
+        prompts[0]
+    );
+}

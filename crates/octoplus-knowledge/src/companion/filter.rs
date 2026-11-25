@@ -88,6 +88,8 @@ pub enum DropReason {
     Forbidden(&'static str),
     /// Contained an ungrounded claim of memory or shared past.
     UngroundedMemory,
+    /// Named a topic the owner asked her to leave alone.
+    AvoidedTopic,
     /// Duplicate sentence detected by the repeat guard.
     Repeat,
     /// Sentence was empty or contained only pictographs/whitespace.
@@ -112,6 +114,8 @@ pub struct ReplyFilterCounters {
     pub dropped_forbidden: u64,
     /// Number of sentences dropped due to ungrounded memory claims.
     pub dropped_ungrounded_memory: u64,
+    /// Number of sentences dropped because they named an avoided topic.
+    pub dropped_avoided_topic: u64,
     /// Number of sentences dropped due to repeat detection.
     pub dropped_repeat: u64,
 }
@@ -121,6 +125,7 @@ pub struct ReplyFilterCounters {
 pub struct ReplyFilter {
     repeat_guard: RepeatGuard,
     counters: ReplyFilterCounters,
+    avoid_topics: Vec<String>,
 }
 
 impl ReplyFilter {
@@ -130,7 +135,19 @@ impl ReplyFilter {
         Self {
             repeat_guard: RepeatGuard::new(repeat_capacity),
             counters: ReplyFilterCounters::default(),
+            avoid_topics: Vec::new(),
         }
+    }
+
+    /// Topics the owner wants left alone: any sentence that names one is dropped.
+    #[must_use]
+    pub fn with_avoid_topics(mut self, topics: &[String]) -> Self {
+        self.avoid_topics = topics
+            .iter()
+            .map(|t| normalize_for_memory(t).trim().to_string())
+            .filter(|t| !t.is_empty())
+            .collect();
+        self
     }
 
     /// Checks a single candidate sentence.
@@ -147,6 +164,18 @@ impl ReplyFilter {
         if let Some(id) = guards::forbidden_phrase(trimmed) {
             self.counters.dropped_forbidden += 1;
             return Verdict::Drop(DropReason::Forbidden(id));
+        }
+
+        if !self.avoid_topics.is_empty() {
+            let norm = normalize_for_memory(trimmed);
+            if self
+                .avoid_topics
+                .iter()
+                .any(|t| norm.contains(&format!(" {t} ")))
+            {
+                self.counters.dropped_avoided_topic += 1;
+                return Verdict::Drop(DropReason::AvoidedTopic);
+            }
         }
 
         if !grounded && has_memory_cue(trimmed) {

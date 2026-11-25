@@ -13,6 +13,7 @@ use crate::companion::filter::{
     ReplyFilter, ReplyFilterCounters, Verdict, has_chat_memory_cue, has_past_memory_cue,
 };
 use crate::companion::guards::{self, SAFE_GOODBYE};
+use crate::companion::humour::{HumourLevel, late_hour};
 use crate::companion::kabir::{KabirContext, KabirGate, love_topic};
 use crate::companion::mode::{Mode, ModeMachine, signals_from_text, switch_instruction};
 use crate::companion::persona::Persona;
@@ -67,6 +68,8 @@ pub struct GeneratePlan {
     pub gentle_line: Option<&'static str>,
     /// Whether this turn intends to conclude the session.
     pub goodbye: bool,
+    /// How much humour this reply may have.
+    pub humour: HumourLevel,
 }
 
 /// Cumulative counters for companion engine decisions and transitions.
@@ -108,6 +111,12 @@ pub struct CompanionEngine {
     session_start_ns: u64,
     facts_grounded: bool,
     last_reply_was_question: bool,
+    /// What the owner's "funny / not funny" feedback asks for (set by the handler).
+    humour_taste: HumourLevel,
+    /// Minutes after local midnight (set by the handler); decides "too late for jokes".
+    minute_of_day: u32,
+    quiet_start_min: u32,
+    quiet_end_min: u32,
     counters: EngineCounters,
 }
 
@@ -119,7 +128,8 @@ impl CompanionEngine {
         let mode_machine = ModeMachine::new(&persona.switching, seed ^ SEED_MODE);
         let kabir = KabirGate::new(&persona.past_love, seed ^ SEED_KABIR);
         let dependence = DependenceGuard::new(&persona.dependence_guard);
-        let filter = ReplyFilter::new(128);
+        let filter = ReplyFilter::new(128).with_avoid_topics(&persona.avoid_topics);
+        let quiet = crate::companion::pulse::PulseConfig::from_persona(&persona);
         let session = CompanionSession::new(persona.session.max_minutes, 6, 4);
 
         Self {
@@ -134,8 +144,32 @@ impl CompanionEngine {
             session_start_ns: now_ns,
             facts_grounded: false,
             last_reply_was_question: false,
+            humour_taste: HumourLevel::Normal,
+            minute_of_day: 12 * 60,
+            quiet_start_min: quiet.quiet_start_min,
+            quiet_end_min: quiet.quiet_end_min,
             counters: EngineCounters::default(),
         }
+    }
+
+    /// Tells the engine the time of day and the owner's taste in jokes before a turn.
+    pub fn set_moment(&mut self, minute_of_day: u32, taste: HumourLevel) {
+        self.minute_of_day = minute_of_day;
+        self.humour_taste = taste;
+    }
+
+    /// Takes the reply filter (with its memory of what was already said) so the next
+    /// conversation can continue it; this engine gets a fresh one.
+    pub fn take_filter(&mut self) -> ReplyFilter {
+        std::mem::replace(
+            &mut self.filter,
+            ReplyFilter::new(128).with_avoid_topics(&self.persona.avoid_topics),
+        )
+    }
+
+    /// Continues an earlier conversation's reply filter, so a joke is not told twice.
+    pub fn adopt_filter(&mut self, filter: ReplyFilter) {
+        self.filter = filter;
     }
 
     /// Returns true if the conversation session has been idle longer than `session.max_minutes`.
@@ -215,9 +249,19 @@ impl CompanionEngine {
                 kabir_allowed: false,
                 gentle_line: None,
                 goodbye: false,
+                humour: HumourLevel::Off,
             })
         } else {
-            let decision = self.mode_machine.step(signals_from_text(text));
+            let signals = signals_from_text(text);
+            // No jokes late at night or when the owner sounds sad or tired.
+            let sensitive = late_hour(self.minute_of_day, self.quiet_start_min, self.quiet_end_min)
+                || signals.sad_or_tired;
+            let humour = if sensitive {
+                HumourLevel::Off
+            } else {
+                self.humour_taste
+            };
+            let decision = self.mode_machine.step(signals);
             let instruction = switch_instruction(&decision).map(ToString::to_string);
 
             let topic_love = love_topic(text);
@@ -248,6 +292,7 @@ impl CompanionEngine {
                 kabir_allowed,
                 gentle_line,
                 goodbye: false,
+                humour,
             })
         }
     }

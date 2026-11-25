@@ -319,6 +319,7 @@ impl CompanionRunner {
                 switch_instruction: None,
                 kabir_allowed: false,
                 gentle_line: None,
+                humour: self.hub.humour_level(false),
                 facts: &[],
                 facts_taint: TaintFlags::empty(),
                 history: "",

@@ -9,6 +9,7 @@
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use crate::companion::filter::{ReplyFilter, Verdict};
+use crate::companion::humour::{Feedback, HumourLevel, HumourState, effective_level};
 use crate::companion::persona::Persona;
 use crate::companion::pulse::{
     Pulse, PulseCommand, PulseConfig, PulseCounters, PulseDecision, PulseInput, Response,
@@ -46,12 +47,14 @@ struct Inner {
     pending: Option<Pending>,
     opener: Option<(u64, String)>,
     filter: ReplyFilter,
+    humour: HumourState,
 }
 
 /// Shared scheduler state.
 #[derive(Debug)]
 pub struct CompanionHub {
     inner: Mutex<Inner>,
+    avoid: Vec<String>,
 }
 
 impl CompanionHub {
@@ -59,11 +62,13 @@ impl CompanionHub {
     #[must_use]
     pub fn new(persona: &Persona, seed: u64) -> Arc<Self> {
         Arc::new(Self {
+            avoid: persona.avoid_topics.clone(),
             inner: Mutex::new(Inner {
                 pulse: Pulse::new(PulseConfig::from_persona(persona), seed),
                 pending: None,
                 opener: None,
-                filter: ReplyFilter::new(64),
+                filter: ReplyFilter::new(128).with_avoid_topics(&persona.avoid_topics),
+                humour: HumourState::default(),
             }),
         })
     }
@@ -139,6 +144,39 @@ impl CompanionHub {
             Verdict::Keep(s) => Some(s),
             Verdict::Drop(_) => None,
         }
+    }
+
+    /// The owner said "that was funny" or "not funny": remember it, and let the scheduler tell
+    /// fewer or more jokes.
+    pub fn record_feedback(&self, f: Feedback) {
+        let mut g = self.lock();
+        g.humour.record(f);
+        let w = g.humour.joke_weight();
+        g.pulse.set_joke_weight(w);
+    }
+
+    /// The humour level the owner's taste asks for; `sensitive` lowers it to none.
+    pub fn humour_level(&self, sensitive: bool) -> HumourLevel {
+        effective_level(&self.lock().humour, sensitive)
+    }
+
+    /// The owner's taste in jokes, as small numbers.
+    pub fn humour_state(&self) -> HumourState {
+        self.lock().humour
+    }
+
+    /// Lends the reply filter (and its memory of what was already said) to a conversation, so a
+    /// joke told this morning is not told again this evening. Give it back with
+    /// [`Self::return_filter`].
+    pub fn lend_filter(&self) -> ReplyFilter {
+        let mut g = self.lock();
+        let fresh = ReplyFilter::new(128).with_avoid_topics(&self.avoid);
+        std::mem::replace(&mut g.filter, fresh)
+    }
+
+    /// Takes the filter back when a conversation ends.
+    pub fn return_filter(&self, filter: ReplyFilter) {
+        self.lock().filter = filter;
     }
 
     /// Whether the companion is paused.
