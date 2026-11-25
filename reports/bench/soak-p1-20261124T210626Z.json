@@ -1,0 +1,75 @@
+{
+  "source_csv": "/home/bhanot/.local/share/octoplus/soak/soak-20261124T210627Z.csv",
+  "duration_s": 7200,
+  "asks": 360,
+  "failed_asks": 0,
+  "ttft_ms_median": 617,
+  "ttft_ms_p95": 1473,
+  "parts": {
+    "fetcher": {
+      "baseline_mib": 3.2,
+      "final_mib": 3.2,
+      "growth_pct": 0.0,
+      "last30_rise_pct": 0.0,
+      "restarts": 0,
+      "verdict": "pass"
+    },
+    "healthd": {
+      "baseline_mib": 4.9,
+      "final_mib": 5.1,
+      "growth_pct": 3.44,
+      "last30_rise_pct": 0.54,
+      "restarts": 0,
+      "verdict": "FAIL"
+    },
+    "inference": {
+      "baseline_mib": 2713.5,
+      "final_mib": 2713.5,
+      "growth_pct": 0.0,
+      "last30_rise_pct": 0.0,
+      "restarts": 0,
+      "verdict": "pass"
+    },
+    "kernel": {
+      "baseline_mib": 6.7,
+      "final_mib": 6.7,
+      "growth_pct": 0.06,
+      "last30_rise_pct": 0.0,
+      "restarts": 0,
+      "verdict": "pass"
+    },
+    "knowledge": {
+      "baseline_mib": 5.6,
+      "final_mib": 5.8,
+      "growth_pct": 2.79,
+      "last30_rise_pct": 0.08,
+      "restarts": 0,
+      "verdict": "FAIL"
+    },
+    "monitor": {
+      "baseline_mib": 7.3,
+      "final_mib": 7.4,
+      "growth_pct": 1.39,
+      "last30_rise_pct": 0.04,
+      "restarts": 0,
+      "verdict": "pass"
+    },
+    "storage": {
+      "baseline_mib": 252.2,
+      "final_mib": 258.7,
+      "growth_pct": 2.6,
+      "last30_rise_pct": 0.2,
+      "restarts": 0,
+      "verdict": "FAIL"
+    },
+    "voice": {
+      "baseline_mib": 527.9,
+      "final_mib": 527.9,
+      "growth_pct": 0.0,
+      "last30_rise_pct": 0.0,
+      "restarts": 0,
+      "verdict": "pass"
+    }
+  },
+  "pass": false
+}
