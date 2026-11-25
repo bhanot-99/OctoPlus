@@ -69,6 +69,14 @@ enum VoiceControlAction {
   VOICE_CONTROL_ACTION_STOP_LISTENING = 2;
   // Drop the turn: discard the capture, stop speaking, cancel the request.
   VOICE_CONTROL_ACTION_CANCEL = 3;
+  // End active open-mic session.
+  VOICE_CONTROL_ACTION_END_SESSION = 4;
+  // Start an open-mic session now.
+  VOICE_CONTROL_ACTION_START_SESSION = 5;
+  // Enable guest mode (silence for guest_minutes).
+  VOICE_CONTROL_ACTION_GUEST_MODE = 6;
+  // Disable guest mode.
+  VOICE_CONTROL_ACTION_GUEST_OFF = 7;
 }
 
 message VoiceControl {

@@ -73,6 +73,7 @@ struct CommandMsg {
   std::uint64_t t_speech_start_ns = 0;  // wall clock
   std::uint64_t t_speech_end_ns = 0;    // wall clock
   bool in_follow_up = false;
+  bool in_session = false;
 };
 
 // Receives what C5 streams back for one command. Called from the link's thread.
@@ -125,6 +126,12 @@ struct PipelineConfig {
   std::uint64_t wake_lookback_ns = 600'000'000;  // audio kept from before a wake word was reported
   std::uint64_t tail_ns = 200'000'000;  // silence kept after the last speech; the rest is trimmed
   std::size_t min_utterance_samples = 4800;  // under 300 ms of audio is not sent to speech to text
+
+  // Open-mic and companion sessions (Phase 12, story C-S02)
+  bool session_on_wake = true;
+  std::uint64_t session_end_silence_ns = 400'000'000ULL;
+  std::uint32_t guest_minutes = 30;
+  bool earcons = true;
 };
 
 // What the pipeline reports about itself (FR-VOI-10, health).
@@ -139,6 +146,12 @@ struct PipelineStatus {
   std::uint64_t wake_words = 0;
   // Microphone level, 0..1000 (the last frame's loudness). A number only.
   std::uint32_t input_level_permille = 0;
+
+  // Open-mic session fields (Phase 12, story C-S02)
+  bool session_active = false;
+  std::uint32_t session_seconds_left = 0;
+  std::uint32_t guest_seconds_left = 0;
+  std::uint64_t sessions_started = 0;
 };
 
 struct PipelineStats {
@@ -207,6 +220,12 @@ class VoicePipeline final : public ReplyReceiver {
   Status StopListening();   // ends the capture and answers what was said (or cancels the turn)
   Status CancelTurn();      // drops the turn whatever it is doing
 
+  // Open-mic session controls (Phase 12, story C-S02)
+  Status StartSession();
+  Status EndSession();
+  Status StartGuestMode();
+  Status EndGuestMode();
+
   [[nodiscard]] PipelineStatus status() const;
   [[nodiscard]] PipelineStats stats() const;
   [[nodiscard]] std::size_t cached_clips() const;
@@ -228,6 +247,7 @@ class VoicePipeline final : public ReplyReceiver {
   void Run(const std::vector<TurnAction>& actions);  // no lock held
   void BeginUtterance(bool with_backlog);
   void Transcribe();
+  bool HandleSpecialTranscript(const std::string& text);
   void QueueSpeech(const std::string& text, bool nudge, std::uint64_t epoch);
   void QueueClip(const std::string& phrase, bool nudge, std::uint64_t epoch, bool preamble = false);
   void FinishQueue(std::uint64_t epoch);
@@ -274,6 +294,11 @@ class VoicePipeline final : public ReplyReceiver {
   std::atomic<int> pending_control_{0};
   std::unordered_map<std::string, Clip> clips_;
   PipelineStats stats_;
+
+  // Open-mic and companion session state (Phase 12, story C-S02)
+  std::uint64_t guest_until_mono_ns_ = 0;
+  std::uint64_t sessions_started_ = 0;
+  std::size_t mute_ring_samples_ = 0;
 };
 
 }  // namespace octoplus::voice

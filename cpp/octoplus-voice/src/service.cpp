@@ -145,6 +145,18 @@ Status VoiceService::HandleControl(v1::VoiceControlAction action, v1::Envelope* 
     case v1::VOICE_CONTROL_ACTION_CANCEL:
       s = pipeline->CancelTurn();
       break;
+    case v1::VOICE_CONTROL_ACTION_END_SESSION:
+      s = pipeline->EndSession();
+      break;
+    case v1::VOICE_CONTROL_ACTION_START_SESSION:
+      s = pipeline->StartSession();
+      break;
+    case v1::VOICE_CONTROL_ACTION_GUEST_MODE:
+      s = pipeline->StartGuestMode();
+      break;
+    case v1::VOICE_CONTROL_ACTION_GUEST_OFF:
+      s = pipeline->EndGuestMode();
+      break;
     default:
       return Error{.message = "unknown voice control action",
                    .retryable = false,
@@ -174,6 +186,10 @@ Status VoiceService::HandleStatus(const ipc::Request& /*req*/, v1::Envelope* rep
   status->set_phase(static_cast<v1::TurnPhase>(st.phase));
   status->set_wake_words(st.wake_words);
   status->set_input_level_permille(st.input_level_permille);
+  status->set_session_active(st.session_active);
+  status->set_session_seconds_left(st.session_seconds_left);
+  status->set_guest_seconds_left(st.guest_seconds_left);
+  status->set_sessions_started(st.sessions_started);
   return ok_status();
 }
 
