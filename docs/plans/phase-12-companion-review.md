@@ -66,7 +66,7 @@ A few weeks of focused work. Each story ends with tests, a full gate run, a repo
 | 7 | **C-S05** | Memory of you: "remember", the chance rule, "what do you remember", "forget" |
 | 8 | **C-S06** | OctoPit: session indicator, companion card, settings, today's talks, feedback buttons |
 | 9 | **C-S08** | Safety checks: words-only guard, no audio written, injection tests |
-| 10 | **C-S09** | 24 h soak in companion mode, then your one-week "aliveness" trial with daily ratings |
+| 10 | ~~C-S09~~ | Not part of Phase 12 (owner, 2026-11-25): the 24 h soak and the one-week trial are run only if and when the owner decides; they are not a step or an exit criterion of this phase. |
 | later | **C-S10** | Hinglish test and language pack |
 
 **Start rule:** nothing starts until the current 24 h soak has been judged (it ends about 21:05 IST on 24 Nov), so the companion work is measured against a known good base.
