@@ -20,6 +20,9 @@ enum class TurnEventKind {
   kDeviceLost,     // the microphone or speaker went away
   kUserCancel,     // the user dropped the turn (OctoPit's mic button); handled like kDeviceLost
   kTick,           // time passed; used for timeouts
+  kSessionBegin,   // mic button, companion talk answered, or wake word: start session
+  kSessionEnd,     // stop phrase, guest phrase, mic button: end session
+  kSessionEndAfterReply,  // owner said bye: finish speaking current reply, then end session
 };
 
 struct TurnEvent {
@@ -39,6 +42,10 @@ enum class TurnActionKind {
   kFlushOutput,     // stop playback and drop everything queued
   kSendBargeIn,     // tell C5 the user spoke over the reply (it cancels generation)
   kCancelReply,     // cancel the request to C5 (stop receiving text)
+  kSessionStarted,  // pipeline plays the start sound
+  kSayStillThere,   // ask the owner: "still there?"
+  kSayKeepGoing,    // ask the owner: "we've been talking for 15 minutes, should we keep going?"
+  kSessionEnded,    // pipeline plays the end sound and tells the link
 };
 
 struct TurnAction {
@@ -56,6 +63,11 @@ struct TurnConfig {
   std::uint64_t follow_up_ns =
       8'000'000'000;  // FR-VOI-08: listen without wake word after spoken output
   std::uint32_t max_consecutive_follow_ups = 1;  // cap follow-ups without the wake word (BUG-088)
+  bool sessions_enabled = false;
+  std::uint64_t session_silence_ns = 90'000'000'000;  // silence before "still there?"
+  std::uint64_t session_grace_ns =
+      20'000'000'000;  // wait after "still there?" or continue question before closing
+  std::uint64_t session_max_ns = 900'000'000'000;  // 15 min max session
 };
 
 class TurnMachine {
@@ -68,8 +80,19 @@ class TurnMachine {
   [[nodiscard]] bool follow_up_open() const;    // kFollowUp
   [[nodiscard]] bool speaking() const;          // kSpeaking
   [[nodiscard]] std::uint32_t consecutive_follow_ups() const;
+  [[nodiscard]] bool session_active() const;
+  [[nodiscard]] std::uint64_t session_started_ns() const;
+  [[nodiscard]] std::uint64_t session_ns_left(std::uint64_t now_ns) const;
 
  private:
+  void ResetSession();
+  void OnSpeechOrWakeHeard(const TurnEvent& e);
+  std::vector<TurnAction> HandleSessionBegin(const TurnEvent& e);
+  std::vector<TurnAction> HandleSessionEnd(const TurnEvent& e);
+  std::vector<TurnAction> HandleSessionEndAfterReply(const TurnEvent& e);
+  std::vector<TurnAction> HandleFollowUpTick(const TurnEvent& e);
+  std::vector<TurnAction> EndSessionOnDeviceLost(std::vector<TurnAction> acts);
+
   TurnConfig cfg_;
   TurnState state_ = TurnState::kIdle;
   std::uint64_t state_entered_ns_ = 0;
@@ -79,6 +102,11 @@ class TurnMachine {
   bool utterance_is_follow_up_ = false;
   bool reply_is_nudge_ = false;
   bool reply_finished_ = false;
+  bool session_active_ = false;
+  std::uint64_t session_started_ns_ = 0;
+  bool still_there_asked_ = false;
+  bool keep_going_asked_ = false;
+  bool end_after_reply_ = false;
 };
 
 }  // namespace octoplus::voice

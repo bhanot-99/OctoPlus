@@ -309,6 +309,13 @@ void VoicePipeline::Run(const std::vector<TurnAction>& actions) {
       case TurnActionKind::kBeginUtterance:
       case TurnActionKind::kDiscardCapture:
         break;
+      // Session actions: wired in story C-S02 task b2 (the machine never emits them until the
+      // pipeline enables sessions).
+      case TurnActionKind::kSessionStarted:
+      case TurnActionKind::kSayStillThere:
+      case TurnActionKind::kSayKeepGoing:
+      case TurnActionKind::kSessionEnded:
+        break;
     }
   }
 }
