@@ -183,6 +183,279 @@ fn history_block(input: &CompanionPromptInput<'_>, b: &Budgets, question_tokens:
     }
 }
 
+/// Maximum token budget allowed for per-turn companion life snippets in the user block.
+pub const MAX_LIFE_TOKENS: u32 = 110;
+
+/// Token ceiling allocated to life snippets given `budgets`.
+#[must_use]
+pub fn life_budget_tokens(b: &Budgets) -> u32 {
+    MAX_LIFE_TOKENS.min(b.facts.saturating_add(b.history).max(64) / 2)
+}
+
+fn contains_any_cue(hay: &str, cues: &[&str]) -> bool {
+    cues.iter()
+        .any(|c| hay.contains(&format!(" {c} ")) || hay.starts_with(&format!("{c} ")) || hay == *c)
+}
+
+fn normalize_topic_text(s: &str) -> String {
+    let cleaned: String = s
+        .to_lowercase()
+        .chars()
+        .filter(|c| *c != '\'' && *c != '’')
+        .map(|c| if c.is_alphanumeric() { c } else { ' ' })
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    format!(" {cleaned} ")
+}
+
+/// Selects relevant `[life]` persona details for the current turn within `max_tokens`.
+///
+/// Matches the current question first, and if the question is a short follow-up ("more",
+/// "why that one"), also inspects recent session turns so topic continuity keeps the same
+/// grounded details in context. Returns empty string for unrelated trivia/factual turns.
+#[must_use]
+pub fn life_snippets(
+    persona: &Persona,
+    question: &str,
+    turns: &[(String, String)],
+    max_tokens: u32,
+    bytes_per_token: u32,
+) -> String {
+    if max_tokens == 0 {
+        return String::new();
+    }
+    let mut hay = normalize_topic_text(question);
+    let q_words = hay.split_whitespace().count();
+    let looks_followup = q_words <= 6
+        && contains_any_cue(
+            &hay,
+            &[
+                "more",
+                "go on",
+                "why",
+                "really",
+                "continue",
+                "that one",
+                "tell me more",
+                "what else",
+                "anything else",
+                "and",
+            ],
+        );
+    if looks_followup && let Some((prev_q, prev_a)) = turns.last() {
+        hay.push_str(&normalize_topic_text(prev_q));
+        hay.push_str(&normalize_topic_text(prev_a));
+    }
+
+    let mut picks: Vec<(&str, &str)> = Vec::new();
+    let push_unique = |picks: &mut Vec<(&str, &str)>, label: &'static str, val: &'static str| {
+        if !picks.iter().any(|(l, _)| *l == label) {
+            picks.push((label, val));
+        }
+    };
+    let _ = &push_unique;
+
+    if contains_any_cue(
+        &hay,
+        &[
+            "past",
+            "grow up",
+            "grew up",
+            "childhood",
+            "younger",
+            "kid",
+            "used to",
+            "story",
+        ],
+    ) {
+        picks.push(("Her past", &persona.life.past));
+    }
+    if contains_any_cue(
+        &hay,
+        &[
+            "family",
+            "mother",
+            "mom",
+            "father",
+            "dad",
+            "brother",
+            "sister",
+            "parents",
+            "grandfather",
+            "grandmother",
+            "relatives",
+        ],
+    ) {
+        picks.push(("Her family", &persona.life.family));
+    }
+    if contains_any_cue(
+        &hay,
+        &[
+            "all day",
+            "normal day",
+            "typical day",
+            "your day",
+            "daily",
+            "routine",
+            "morning",
+            "evening",
+            "weekend",
+            "free time",
+            "spare time",
+            "habit",
+            "habits",
+        ],
+    ) {
+        picks.push(("Her normal day", &persona.life.day));
+        picks.push(("Small habits", &persona.life.habits));
+    }
+    if contains_any_cue(
+        &hay,
+        &[
+            "working on",
+            "work on",
+            "these days",
+            "project",
+            "projects",
+            "study",
+            "studied",
+            "cognitive",
+            "computer science",
+            "essays",
+        ],
+    ) {
+        picks.push(("What she works on", &persona.life.work));
+        picks.push(("Her background", &persona.background));
+    }
+    if contains_any_cue(
+        &hay,
+        &[
+            "read",
+            "reading",
+            "book",
+            "books",
+            "author",
+            "novel",
+            "dispossessed",
+            "le guin",
+            "borges",
+            "sacks",
+            "favourite book",
+            "favorite book",
+        ],
+    ) {
+        picks.push(("What she reads", &persona.life.reads));
+    }
+    if contains_any_cue(
+        &hay,
+        &[
+            "food",
+            "eat",
+            "dinner",
+            "lunch",
+            "coffee",
+            "tea",
+            "music",
+            "song",
+            "places",
+            "library",
+            "bookshop",
+            "hobby",
+            "hobbies",
+            "like to do",
+            "favourites",
+            "favorites",
+        ],
+    ) {
+        picks.push(("Her favourites", &persona.life.favourites));
+        picks.push(("Small habits", &persona.life.habits));
+    }
+    if contains_any_cue(&hay, &["happy", "joy", "cheer"]) {
+        picks.push(("What makes her happy", &persona.life.happy));
+        picks.push(("What she finds hard", &persona.life.hard));
+    }
+    if contains_any_cue(
+        &hay,
+        &[
+            "sad",
+            "lonely",
+            "loneliness",
+            "rough day",
+            "hard",
+            "feelings",
+            "feel",
+            "upset",
+            "stressed",
+            "hurt",
+        ],
+    ) {
+        picks.push(("What she finds hard", &persona.life.hard));
+        picks.push(("What makes her happy", &persona.life.happy));
+    }
+    if contains_any_cue(
+        &hay,
+        &[
+            "yourself",
+            "your self",
+            "who are you",
+            "what are you",
+            "your name",
+            "called",
+            "how old",
+            "your age",
+            "introduce",
+            "describe yourself",
+            "what do you do",
+            "about you",
+        ],
+    ) {
+        picks.push(("Her work", &persona.life.work));
+        picks.push(("What she reads", &persona.life.reads));
+        picks.push(("Small habits", &persona.life.habits));
+    }
+
+    if picks.is_empty() {
+        return String::new();
+    }
+
+    let header =
+        "Your own life details (these belong to YOU, never invent owner facts from them):\n";
+    let header_cost = estimate(header, bytes_per_token) + 1;
+    let mut body = String::new();
+    let mut seen = Vec::new();
+    for (label, raw) in picks {
+        if seen.contains(&label) {
+            continue;
+        }
+        seen.push(label);
+        let clean = neutralise(raw.trim());
+        if clean.is_empty() {
+            continue;
+        }
+        let candidate = format!("- {label}: {clean}\n");
+        let used = header_cost + estimate(&body, bytes_per_token);
+        let cost = estimate(&candidate, bytes_per_token);
+        if used + cost <= max_tokens {
+            body.push_str(&candidate);
+        } else if body.is_empty() && max_tokens > header_cost + 4 {
+            let fitted = fit(&candidate, max_tokens - header_cost, bytes_per_token);
+            if !fitted.trim().is_empty() {
+                body.push_str(fitted.trim_end());
+                body.push('\n');
+            }
+            break;
+        }
+    }
+
+    if body.is_empty() {
+        String::new()
+    } else {
+        format!("{header}{body}\n")
+    }
+}
+
 /// Assembles a complete ChatML prompt for companion dialogue.
 ///
 /// User block includes facts, active mode notes, switch instructions, Kabir backstory (if permitted),
@@ -200,6 +473,13 @@ pub fn assemble(input: &CompanionPromptInput<'_>, budgets: &Budgets) -> Prompt {
     let q_tokens = estimate(&question, budgets.bytes_per_token);
 
     let facts = facts_block(input, budgets);
+    let life = life_snippets(
+        input.persona,
+        input.question,
+        input.turns,
+        life_budget_tokens(budgets),
+        budgets.bytes_per_token,
+    );
     let mode = mode_block(input);
     let switch = switch_block(input);
     let kabir = kabir_block(input);
@@ -226,7 +506,7 @@ pub fn assemble(input: &CompanionPromptInput<'_>, budgets: &Budgets) -> Prompt {
         .merge(input.history_taint);
 
     let text = format!(
-        "{system}{earlier}<|im_start|>user\n{facts}{mode}{humour}{switch}{kabir}{gentle}{history}{question}<|im_end|>\n<|im_start|>assistant\n"
+        "{system}{earlier}<|im_start|>user\n{facts}{life}{mode}{humour}{switch}{kabir}{gentle}{history}{question}<|im_end|>\n<|im_start|>assistant\n"
     );
 
     Prompt {

@@ -336,3 +336,105 @@ fn test_heart_vs_logic_differs_only_in_user_block() {
     assert!(p_heart.text[prefix_len..].contains("Silent note, never say it aloud: sound"));
     assert_ne!(p_logic.text, p_heart.text);
 }
+
+#[test]
+fn test_per_turn_life_snippets_by_topic_and_budget() {
+    use octoplus_knowledge::companion::prompt::{life_budget_tokens, life_snippets};
+    use octoplus_knowledge::tokens::estimate;
+
+    let persona = Persona::default_packaged().unwrap();
+    let budgets = test_budgets();
+    let cap = life_budget_tokens(&budgets);
+
+    let cases = [
+        ("tell me about your past", "radios"),
+        ("what do you do all day", "filter coffee"),
+        ("what do you like to read", "The Dispossessed"),
+        ("what makes you happy", "rain on glass"),
+        ("do you ever get sad", "messy feelings"),
+        ("what are you working on these days", "cognitive-science"),
+        ("do you have a family", "older brother"),
+    ];
+    for (q, expected) in cases {
+        let out = life_snippets(&persona, q, &[], cap, budgets.bytes_per_token);
+        assert!(
+            out.contains(expected),
+            "question '{q}' missing expected '{expected}' in: {out}"
+        );
+        let tok = estimate(&out, budgets.bytes_per_token);
+        assert!(tok <= cap, "life snippets exceeded budget {cap}: {tok}");
+    }
+
+    // Follow-up retains prior turn's topic snippet
+    let turns = vec![(
+        "what is your favourite book".to_string(),
+        "I keep coming back to The Dispossessed.".to_string(),
+    )];
+    let followup = life_snippets(
+        &persona,
+        "why that one",
+        &turns,
+        cap,
+        budgets.bytes_per_token,
+    );
+    assert!(
+        followup.contains("The Dispossessed"),
+        "follow-up must retain prior reading context: {followup}"
+    );
+
+    // Trivia must not pull personal life bloat
+    let trivia = life_snippets(
+        &persona,
+        "what is the capital of France",
+        &[],
+        cap,
+        budgets.bytes_per_token,
+    );
+    assert!(
+        trivia.is_empty(),
+        "unexpected life snippet for trivia: {trivia}"
+    );
+
+    // System block bytes never change between turns even when life snippets vary
+    let p_past = assemble(
+        &CompanionPromptInput {
+            persona: &persona,
+            mode: Mode::Heart,
+            switch_instruction: None,
+            kabir_allowed: false,
+            gentle_line: None,
+            humour: octoplus_knowledge::companion::humour::HumourLevel::Normal,
+            facts: &[],
+            facts_taint: TaintFlags::empty(),
+            history: "",
+            history_taint: TaintFlags::empty(),
+            turns: &[],
+            question: "tell me about your past",
+        },
+        &budgets,
+    );
+    let p_book = assemble(
+        &CompanionPromptInput {
+            persona: &persona,
+            mode: Mode::Logic,
+            switch_instruction: None,
+            kabir_allowed: false,
+            gentle_line: None,
+            humour: octoplus_knowledge::companion::humour::HumourLevel::Normal,
+            facts: &[],
+            facts_taint: TaintFlags::empty(),
+            history: "",
+            history_taint: TaintFlags::empty(),
+            turns: &[],
+            question: "what do you like to read",
+        },
+        &budgets,
+    );
+    assert_eq!(p_past.stable_prefix_chars, p_book.stable_prefix_chars);
+    assert_eq!(
+        &p_past.text.as_bytes()[..p_past.stable_prefix_chars as usize],
+        &p_book.text.as_bytes()[..p_book.stable_prefix_chars as usize]
+    );
+    assert!(p_past.text[p_past.stable_prefix_chars as usize..].contains("radios"));
+    assert!(p_book.text[p_book.stable_prefix_chars as usize..].contains("The Dispossessed"));
+}

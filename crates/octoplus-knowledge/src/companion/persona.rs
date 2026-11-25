@@ -107,6 +107,50 @@ pub struct Persona {
     pub session: SessionConfig,
     /// Emergency crisis response lines and contacts.
     pub crisis: CrisisConfig,
+    /// Concrete daily-life details drawn from when talking about her life.
+    #[serde(default)]
+    pub life: LifeConfig,
+}
+
+/// Concrete everyday details for the companion character (`[life]`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[serde(default)]
+pub struct LifeConfig {
+    /// Growing up and earlier years.
+    pub past: String,
+    /// Modest details about her family.
+    pub family: String,
+    /// What a normal day looks like.
+    pub day: String,
+    /// What she is working on these days.
+    pub work: String,
+    /// Favourite books, authors, and topics she reads.
+    pub reads: String,
+    /// Favourite food, music, and places.
+    pub favourites: String,
+    /// Small everyday habits.
+    pub habits: String,
+    /// What makes her happy.
+    pub happy: String,
+    /// What she finds hard.
+    pub hard: String,
+}
+
+impl Default for LifeConfig {
+    fn default() -> Self {
+        Self {
+            past: "Grew up in a quiet university neighbourhood with a noisy kitchen table and stacks of borrowed paperbacks. Was always the kid taking old radios apart and keeping neat notebooks about everything except how she felt.".to_string(),
+            family: "An older brother who teaches maths and calls on Sundays, a mother who sends recipes by text, and a retired grandfather who taught her patience over chess.".to_string(),
+            day: "Mornings start with filter coffee and twenty minutes of quiet reading before opening code or notes. Late afternoon is a walk without headphones to clear her head, then tea and a book at night.".to_string(),
+            work: "Organising cognitive-science reading notes, tinkering with plain tools for clearer thinking, and drafting short essays she rarely shows anyone.".to_string(),
+            reads: "Her favourite book is Ursula K. Le Guin's The Dispossessed for how patiently it looks at people and ideas; she also loves Borges short stories, Oliver Sacks case studies, and essays on memory and attention.".to_string(),
+            favourites: "Strong filter coffee, warm dal with toasted sourdough, quiet cello suites or rainy piano when thinking, and corner window seats in small libraries and late-open bookshops.".to_string(),
+            habits: "Keeps paper index cards on her desk, underlines book margins lightly in pencil, taps a pen twice before speaking when thinking hard, and leaves half-finished cups of tea beside her keyboard.".to_string(),
+            happy: "An idea finally clicking after an hour of confusion, rain on glass while reading, a dry clever joke, and people saying honestly what they mean.".to_string(),
+            hard: "Sitting with messy feelings instead of turning them into a diagram, small talk in loud rooms, and noticing someone hurting without rushing to fix it.".to_string(),
+        }
+    }
 }
 
 /// Configurations for the two speaking modes.
@@ -434,8 +478,34 @@ impl Persona {
             }
         }
 
+        // Life details validation
+        validate_life(&self.life)?;
+
         Ok(())
     }
+}
+
+fn validate_life(life: &LifeConfig) -> Result<(), PersonaError> {
+    let fields = [
+        ("life.past", &life.past),
+        ("life.family", &life.family),
+        ("life.day", &life.day),
+        ("life.work", &life.work),
+        ("life.reads", &life.reads),
+        ("life.favourites", &life.favourites),
+        ("life.habits", &life.habits),
+        ("life.happy", &life.happy),
+        ("life.hard", &life.hard),
+    ];
+    for (key, val) in fields {
+        if val.trim().is_empty() || val.len() > 600 {
+            return Err(PersonaError::Validation {
+                key,
+                reason: "life field length must be between 1 and 600 characters",
+            });
+        }
+    }
+    Ok(())
 }
 
 fn validate_mode_details(mode: &ModeDetails, prefix: &'static str) -> Result<(), PersonaError> {

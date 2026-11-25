@@ -177,5 +177,29 @@ fn test_every_key_documented_exists_on_default_file() {
         doc_keys, file_keys,
         "keys in persona-format.md must match deploy/persona/laila.toml 1:1"
     );
-    assert_eq!(doc_keys.len(), 48);
+    assert_eq!(doc_keys.len(), 57);
+}
+
+#[test]
+fn test_life_section_loaded_and_validated() {
+    let persona = Persona::default_packaged().unwrap();
+    assert!(persona.life.reads.contains("The Dispossessed"));
+    assert!(!persona.life.past.is_empty());
+    assert!(!persona.life.family.is_empty());
+    assert!(!persona.life.day.is_empty());
+    assert!(!persona.life.work.is_empty());
+    assert!(!persona.life.favourites.is_empty());
+    assert!(!persona.life.habits.is_empty());
+    assert!(!persona.life.happy.is_empty());
+    assert!(!persona.life.hard.is_empty());
+
+    let mut bad = persona.clone();
+    bad.life.past = "   ".to_string();
+    assert!(matches!(
+        bad.validate(),
+        Err(PersonaError::Validation {
+            key: "life.past",
+            ..
+        })
+    ));
 }

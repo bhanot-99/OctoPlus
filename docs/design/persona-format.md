@@ -76,6 +76,15 @@ Every key in `persona.toml` is defined below.
 | `session.max_minutes` | integer | `15` | 1 to 120 min | Default maximum duration for an open-mic session. |
 | `crisis.text_lines` | list of strings | Fixed calm emergency lines | 1 to 64 items, each <= 600 chars | Mandatory emergency guidance lines without phone numbers. |
 | `crisis.contacts` | list of strings | `[]` | 0 to 64 items, each <= 600 chars | Emergency contact numbers supplied by owner. |
+| `life.past` | string | University-town childhood and notebooks | 1 to 600 chars | Concrete background on how she grew up. |
+| `life.family` | string | Older maths-teacher brother, mother, grandfather | 1 to 600 chars | Modest, consistent details about her family. |
+| `life.day` | string | Coffee, reading, notes, afternoon walk, night tea | 1 to 600 chars | What a normal day looks like for her. |
+| `life.work` | string | Reading notes, thinking tools, short essays | 1 to 600 chars | What she is working on these days. |
+| `life.reads` | string | Le Guin's The Dispossessed, Borges, Sacks, essays | 1 to 600 chars | Favourite book, authors, and reading topics. |
+| `life.favourites` | string | Filter coffee, dal, cello/piano, window seats | 1 to 600 chars | Favourite food, drink, music, and places. |
+| `life.habits` | string | Index cards, pencil underlines, forgotten teacups | 1 to 600 chars | Small everyday quirks and habits. |
+| `life.happy` | string | Clear ideas, rain on glass, dry jokes, honesty | 1 to 600 chars | What makes her happy. |
+| `life.hard` | string | Messy feelings, loud small talk, not rushing to fix | 1 to 600 chars | What she finds difficult or struggles with. |
 
 ---
 
@@ -101,6 +110,7 @@ Every key in `persona.toml` is defined below.
 
 - **Owner-Editable Keys:**
   - `name`, `age`, `background`, `personality_line`, `voice`.
+  - `life.*` (daily routine, past, family, reading, favourites, habits, what makes her happy or feels hard).
   - `avoid_topics`.
   - `schedule.*` (quiet hours and talk rates).
   - `switching.*` (probabilities and cooldowns).
