@@ -1,8 +1,8 @@
 # ADR-0019 — Companion mode: model-written talk, open-microphone sessions, proactive chat
 
-**Status:** Proposed 2026-11-23 (owner decisions recorded in `docs/plans/phase-12-companion-plan.md` §1; work has NOT started and waits for the owner to name a story)
+**Status:** Accepted 2026-11-25 (owner took Claude's defaults, memory.md D-77; C-S00 owner sign-off pending)
 **Date:** 2026-11-23
-**Changes (when work starts):** `rules.md` (R0-6 retired as ordered; the "speech has no path to actions" property kept as a design requirement unless the owner overrules), `phases.md`, ADR-0015, Phase 6 and 7 plans (references to R0-6), `PRD.md` (companion mode in scope), `design.md` (voice section), `security.md` (open microphone, ambient speech).
+**Changes (applied in C-S00 part A):** `rules.md` (R0-6 retired, R0-8 reworded), `design.md` (§9.6 companion mode, §12 DR-1), `security.md` (§4.3 untrusted companion text and DR-1, §4.6 open mic and ambient speech, line 202 R0-7 fix), `phases.md` (§2 Phase 12 roadmap entry, §15 model-written nudges under ADR-0019 and DR-1), `PRD.md` (§5.14 FR-COM-01–08), ADR-0015 and Phase 5/6/7 plans annotated with dated update.
 **Evidence:** the voice reports (first sound about 4.0 s median today), the nudge engine (templates, caps, quiet rules), the voice turn machine (wake word, an 8 s follow-up window, barge-in).
 
 ## Context
@@ -32,3 +32,12 @@ Good: a more alive assistant, fewer wake-word repeats, a measurable way to tune 
 | Keep the wake word every time | Not conversational |
 | Drop the "no path to actions" property too | An open microphone plus model text makes accidental commands possible: advised against, owner may overrule |
 | Voice-print identification of the speaker | Biometric data; not needed |
+
+## Defaults chosen 2026-11-25
+
+- Quiet hours 23:00-08:00
+- No avoided topics yet
+- Crisis text without phone numbers (owner supplies later)
+- One model only until the Mac
+- Persona defaults per `docs/design/companion-persona-laila.md` section 5a
+- DR-1 kept

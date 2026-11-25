@@ -1,6 +1,6 @@
 # rules.md — Engineering, Quality and AI Rules
 
-**Document version:** 2.0 · **Date:** 2026-11-14 · **Status:** Binding
+**Document version:** 2.1 · **Date:** 2026-11-25 · **Status:** Binding
 **Applies to:** every human and every AI assistant that writes, reviews or changes anything in this repository.
 
 "MUST / MUST NOT / SHOULD / MAY" follow RFC 2119. When a rule blocks you, stop and ask; do not work around it. A rule changes only through an ADR and an update to this file.
@@ -16,9 +16,9 @@
 | R0-3 | **Never weaken a sandbox to make something work.** Fix the design; if an exception is truly needed, it gets an ADR naming the replacement control. |
 | R0-4 | **Taint is never cleared and tiers are never lowered.** A missing taint value is an error, not "clean". |
 | R0-5 | **Every skill execution is audited:** `ATTEMPT` before, `RESULT` after, including on error. No `ATTEMPT`, no action. |
-| R0-6 | **A nudge never acts.** The nudge engine has no code path to `Dispatch`, and nudge and notification text comes only from our own templates and numbers. |
+| R0-6 | **Retired 2026-11-25 (ADR-0019).** Nudge and companion text may be written by the model. The no-action property lives on as design requirement DR-1 (see design.md section 12 and security.md). |
 | R0-7 | **Approval is given only in the dialog.** There is no voice path and no other path. |
-| R0-8 | **Personal facts are saved only on the user's word.** |
+| R0-8 | **Personal facts are saved only on the user's word, or by the companion's chance rule within fixed exclusions.** Secrets and keys, card or account numbers, health details, other people's private matters, ambient speech (TV, calls, other people), and topics the owner marks sensitive. Those are saved only on an explicit 'remember' (ADR-0019 point 6). |
 | R0-9 | **No runtime downloads.** Only the operator script fetches models, and it verifies hashes. |
 | R0-10 | **No personal content in logs** at `info` or above. |
 | R0-11 | **Contracts first.** Parts talk only through `proto/octoplus/v1`. |

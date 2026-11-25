@@ -57,6 +57,7 @@ At the end of each phase Claude verifies every exit criterion with evidence (tes
 | 8 | Fetcher and search | C7, egress ledger | M6 |
 | 9 | Integration, security verification, 24 h soak | all | M7 |
 | 10 | Packaging and release | all | M7 |
+| 12 | Companion | C2, C5 (a friend that talks, jokes and chats, voice first) | — |
 
 ```mermaid
 flowchart LR
@@ -622,7 +623,7 @@ flowchart LR
 | Item | Note |
 | :--- | :--- |
 | Knowledge graph learning and graph view | Revisit when real use shows enough entities to learn from |
-| Model-written nudges | Only with a design that keeps R0-6's guarantees |
+| Model-written nudges | Allowed from Phase 12 under ADR-0019 and DR-1 |
 | Load-on-demand speech engine | Largest known memory saving in C2 |
 | Custom wake-word model | Needed before any distribution |
 | HUD overlay, wlroots, X11, GPU for voice or embedding | By demand |

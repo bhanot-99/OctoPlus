@@ -16,6 +16,7 @@
 | 4 | Model-written casual lines | **Yes** |
 | 5 | Name and personality | **Given: Laila**, a 25-year-old woman whose logic and heart keep arguing; her past love is a man. Full text and the implementation notes: `docs/design/companion-persona-laila.md` |
 | 6 | Where it talks | **Voice only** (OctoPit only shows status and controls, no chat for this) |
+| 7 | Defaults taken 2026-11-25 (D-77) | Quiet hours 23:00-08:00, no avoided topics yet, crisis text without numbers (owner supplies), one model only, persona defaults per section 5a, DR-1 kept |
 
 Answered later the same day:
 - **Language:** the owner prefers **Hinglish**, and doubts that good fluent options exist. See §9a: the plan is English first, Hinglish as a language pack after a short test (a spike) on the owner's own voice.
