@@ -41,3 +41,12 @@ Good: a more alive assistant, fewer wake-word repeats, a measurable way to tune 
 - One model only until the Mac
 - Persona defaults per `docs/design/companion-persona-laila.md` section 5a
 - DR-1 kept
+
+## How it was built (2026-11-25, branch `phase-12`)
+
+- **DR-1 in code.** Everything under `crates/octoplus-knowledge/src/companion/` and `src/turn/companion_turn.rs` is scanned by `tests/companion_isolation_test.rs`: none of it may name a dispatch, the action module, a fact store or the remember skill. The model's words go only to speech.
+- **Two places act, both outside that tree, both on the owner's own words and both audited:** `src/turn/chance_memory.rs` keeps a fact by the chance rule (the owner's sentence only, taint `USER_PROVIDED`, one `profile.remember` call to the safety kernel, never when the session holds web text) and `src/turn/companion_admin.rs` forgets a fact when the owner clicks Forget in OctoPit (one `profile.forget` call). Hostile model output across 160 turns never reached either (`whatever_the_model_writes_the_companion_acts_on_nothing`).
+- **Memory marker.** A fact kept by chance is stored with the text prefix `(noticed) `, so OctoPit and "what do you remember" can tell it from a fact the owner asked for, with no database change. The marker is stripped before the model sees the fact.
+- **Companion lines on C2.** One new message, `SpeakCompanion` (C5 to C2 on `voice.sock`, the same door and trust as `SpeakNudge`), speaks one line of at most 400 bytes and opens a quiet session that listens for `listen_seconds` (default 30) and closes without a sound if nobody answers. C2 refuses it during a turn, a session, guest mode, another app's microphone use, when open mic is off, and within 60 s of the previous one.
+- **Pulse defaults** (all in `deploy/persona/laila.toml`): 2 to 4 talks an hour, at most 40 a day, 10 minutes between talks, a talk forced after 90 minutes of free time (stretching to 180 and 270 after unwelcome talks), 20 minutes of quiet after an ignored talk, 60 after "not now". Measured over 200 simulated days: 2.03 talks per free hour, no gap longer than 155 minutes, no rule broken.
+- **Changes from the plan.** `per_day_cap` is 40, not 24 (24 contradicted "2 to 4 an hour"). Directedness is a word-list check only: the plan's extra "ask the model" step was not built (one model, and the cost). The OctoPit persona editor is not built: the page shows the rhythm and says where the file is.

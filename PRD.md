@@ -337,6 +337,9 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | FR-COM-06 | Honest about being an AI, no manipulation, crisis behaviour fixed. |
 | FR-COM-07 | First sound for casual replies p50 about 1.5 s. |
 | FR-COM-08 | Audio never stored. |
+| FR-COM-09 | Humour follows "funny / not funny" and is off at sensitive moments; jokes are not repeated; avoided topics are never spoken. |
+| FR-COM-10 | Spoken controls ("not now", "quiet for an hour", "chat more", "pause the companion") and OctoPit switches steer the rhythm. |
+| FR-COM-11 | OctoPit shows her rhythm, today's talks and what she remembers, and can forget a memory. |
 
 ---
 

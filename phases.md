@@ -57,7 +57,7 @@ At the end of each phase Claude verifies every exit criterion with evidence (tes
 | 8 | Fetcher and search | C7, egress ledger | M6 |
 | 9 | Integration, security verification, 24 h soak | all | M7 |
 | 10 | Packaging and release | all | M7 |
-| 12 | Companion | C2, C5 (a friend that talks, jokes and chats, voice first) | — |
+| 12 | Companion | C2, C5, OctoPit (a friend that talks, jokes and chats, voice first) | built on branch `phase-12`; report `reports/phase-12-companion.md` |
 
 ```mermaid
 flowchart LR
