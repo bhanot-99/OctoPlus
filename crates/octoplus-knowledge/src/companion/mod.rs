@@ -13,6 +13,8 @@
 //! - [`filter`]: streamed sentence validation and safety scrubbing before speech synthesis.
 //! - [`engine`]: unified dialogue orchestrator managing per-conversation state.
 //! - [`pulse`]: when she starts a chat herself (gates, caps, learned rhythm, spoken controls).
+//! - [`hub`]: the scheduler state shared by the runner and the chat handler.
+//! - [`runner`]: the loop that starts a talk by herself and asks C2 to speak it.
 //! - [`boot`]: preloading and fallback resolution for the persona configuration.
 
 pub mod boot;
@@ -21,6 +23,7 @@ pub mod directed;
 pub mod engine;
 pub mod filter;
 pub mod guards;
+pub mod hub;
 pub mod kabir;
 pub mod mode;
 pub mod persona;
@@ -28,4 +31,5 @@ pub mod prompt;
 pub mod pulse;
 pub mod repeat;
 pub mod rng;
+pub mod runner;
 pub mod session;

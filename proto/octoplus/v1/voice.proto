@@ -40,6 +40,14 @@ message SpeakNudge {
   repeated TemplateArg args = 3;
 }
 
+// C5 -> C2: an unprompted line from the companion (Phase 12). C2 speaks it, then listens for
+// the owner's answer without the wake word for `listen_seconds`, and closes quietly if nobody
+// answers. Words only: it carries no action.
+message SpeakCompanion {
+  string text = 1;
+  uint32 listen_seconds = 2;
+}
+
 enum StatusLine {
   STATUS_LINE_UNSPECIFIED = 0;
   STATUS_LINE_PART_UNAVAILABLE = 1;

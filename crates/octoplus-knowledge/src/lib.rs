@@ -131,10 +131,40 @@ pub fn init(
     };
     let persona = companion::boot::persona()
         .map_err(|e| octoplus_health::ServiceError::Custom(format!("persona: {e}")))?;
-    let nudge = start_nudges(ctx, &peers, voice)?;
+    // Laila's own talks (Phase 12, C-S03): the scheduler state is shared by the chat handler
+    // (which hears the owner's answers) and the runner (which starts the talks).
+    let seed = octoplus_common::time::now_ns().unwrap_or(0);
+    let hub = companion::hub::CompanionHub::new(&persona, seed);
+    let nudge = start_nudges(ctx, &peers, Arc::clone(&voice))?;
+    if ctx.config.companion.enabled && ctx.config.companion.pulse_enabled {
+        let runner = companion::runner::CompanionRunner::new(
+            nudge::engine::NudgePeers {
+                storage: Arc::clone(&peers.storage),
+                kernel: Arc::clone(&peers.kernel),
+                inference: Arc::clone(&peers.inference),
+                voice,
+            },
+            Arc::clone(&hub),
+            Arc::clone(&persona),
+            companion::runner::RunnerSettings {
+                listen_seconds: ctx.config.companion.listen_seconds,
+                budgets: prompt::Budgets {
+                    facts: 0,
+                    focus: 0,
+                    history: 0,
+                    evidence: 0,
+                    bytes_per_token: ctx.config.knowledge.bytes_per_token,
+                },
+                stale_after_s: ctx.config.nudges.stale_after_s,
+            },
+        );
+        let stop = ctx.stop_rx.clone();
+        ctx.spawn_task(async move { runner.run(nudge::boot::time_zone(), stop).await });
+    }
     let handler = Arc::new(
         KnowledgeHandler::new(peers, ctx.config.knowledge.clone(), timing, metrics, nudge)
-            .with_companion(persona, ctx.config.companion.clone()),
+            .with_companion(persona, ctx.config.companion.clone())
+            .with_hub(hub),
     );
     ctx.spawn_server("knowledge", handler)?;
     ctx.health.set_ready();

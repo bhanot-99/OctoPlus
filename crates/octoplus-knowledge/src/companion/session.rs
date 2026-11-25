@@ -191,10 +191,15 @@ impl CompanionSession {
         }
 
         for turn in &self.raw_turns {
-            blocks.push(format!(
-                "Owner: {}\nYou: {}\n\n",
-                turn.question, turn.answer
-            ));
+            if turn.question.is_empty() {
+                // A line she opened the chat with: nothing from the owner came before it.
+                blocks.push(format!("You: {}\n\n", turn.answer));
+            } else {
+                blocks.push(format!(
+                    "Owner: {}\nYou: {}\n\n",
+                    turn.question, turn.answer
+                ));
+            }
         }
 
         if blocks.is_empty() {

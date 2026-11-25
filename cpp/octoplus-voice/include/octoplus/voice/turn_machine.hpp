@@ -22,6 +22,7 @@ enum class TurnEventKind {
   kTick,           // time passed; used for timeouts
   kSessionBegin,   // mic button, companion talk answered, or wake word: start session
   kSessionEnd,     // stop phrase, guest phrase, mic button: end session
+  kCompanionLine,  // C5 asked C2 to speak a companion line: a quiet session opens (`listen_ns`)
   kSessionEndAfterReply,  // owner said bye: finish speaking current reply, then end session
 };
 
@@ -29,7 +30,8 @@ struct TurnEvent {
   TurnEventKind kind = TurnEventKind::kTick;
   std::uint64_t now_ns = 0;
   bool text_empty = false;
-  bool nudge = false;  // set on kReplyStarted when the reply is an unprompted nudge
+  bool nudge = false;           // set on kReplyStarted when the reply is an unprompted nudge
+  std::uint64_t listen_ns = 0;  // kCompanionLine: how long to wait for an answer
 };
 
 enum class TurnActionKind {
@@ -45,7 +47,8 @@ enum class TurnActionKind {
   kSessionStarted,  // pipeline plays the start sound
   kSayStillThere,   // ask the owner: "still there?"
   kSayKeepGoing,    // ask the owner: "we've been talking for 15 minutes, should we keep going?"
-  kSessionEnded,    // pipeline plays the end sound and tells the link
+  kSessionEndedQuiet,  // the companion's own talk got no answer: close without any sound
+  kSessionEnded,       // pipeline plays the end sound and tells the link
 };
 
 struct TurnAction {
@@ -86,6 +89,8 @@ class TurnMachine {
 
  private:
   void ResetSession();
+  [[nodiscard]] std::uint64_t SessionDeadline(std::uint64_t now_ns) const;
+  std::vector<TurnAction> HandleCompanionLine(const TurnEvent& e);
   void OnSpeechOrWakeHeard(const TurnEvent& e);
   std::vector<TurnAction> HandleSessionBegin(const TurnEvent& e);
   std::vector<TurnAction> HandleSessionEnd(const TurnEvent& e);
@@ -107,6 +112,8 @@ class TurnMachine {
   bool still_there_asked_ = false;
   bool keep_going_asked_ = false;
   bool end_after_reply_ = false;
+  bool quiet_first_ = false;           // the session was opened by the companion's own line
+  std::uint64_t quiet_listen_ns_ = 0;  // how long that first listen lasts
 };
 
 }  // namespace octoplus::voice

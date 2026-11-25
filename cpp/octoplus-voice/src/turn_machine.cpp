@@ -13,10 +13,17 @@ void TurnMachine::ResetSession() {
   still_there_asked_ = false;
   keep_going_asked_ = false;
   end_after_reply_ = false;
+  quiet_first_ = false;
+  quiet_listen_ns_ = 0;
+}
+
+std::uint64_t TurnMachine::SessionDeadline(std::uint64_t now_ns) const {
+  return now_ns + (quiet_first_ ? quiet_listen_ns_ : cfg_.session_silence_ns);
 }
 
 void TurnMachine::OnSpeechOrWakeHeard(const TurnEvent& e) {
   if (session_active_) {
+    quiet_first_ = false;
     if (keep_going_asked_) {
       session_started_ns_ = e.now_ns;
     }
@@ -37,9 +44,24 @@ std::vector<TurnAction> TurnMachine::HandleSessionBegin(const TurnEvent& e) {
   if (state_ == TurnState::kIdle) {
     state_ = TurnState::kFollowUp;
     state_entered_ns_ = e.now_ns;
-    follow_up_deadline_ns_ = e.now_ns + cfg_.session_silence_ns;
+    follow_up_deadline_ns_ = SessionDeadline(e.now_ns);
   }
   return {TurnAction{.kind = TurnActionKind::kSessionStarted}};
+}
+
+std::vector<TurnAction> TurnMachine::HandleCompanionLine(const TurnEvent& e) {
+  if (!cfg_.sessions_enabled || session_active_ || turn_in_progress() ||
+      state_ != TurnState::kIdle) {
+    return {};
+  }
+  session_active_ = true;
+  session_started_ns_ = e.now_ns;
+  still_there_asked_ = false;
+  keep_going_asked_ = false;
+  end_after_reply_ = false;
+  quiet_first_ = true;
+  quiet_listen_ns_ = e.listen_ns;
+  return {};  // no start sound: the line itself is the cue
 }
 
 std::vector<TurnAction> TurnMachine::HandleSessionEnd(const TurnEvent& e) {
@@ -80,6 +102,13 @@ std::vector<TurnAction> TurnMachine::HandleFollowUpTick(const TurnEvent& e) {
       return {TurnAction{.kind = TurnActionKind::kSayKeepGoing}};
     }
     if (e.now_ns >= follow_up_deadline_ns_) {
+      if (quiet_first_) {
+        state_ = TurnState::kIdle;
+        state_entered_ns_ = e.now_ns;
+        consecutive_follow_ups_ = 0;
+        ResetSession();
+        return {TurnAction{.kind = TurnActionKind::kSessionEndedQuiet}};
+      }
       if (!still_there_asked_ && !keep_going_asked_) {
         still_there_asked_ = true;
         follow_up_deadline_ns_ = e.now_ns + cfg_.session_grace_ns;
@@ -121,6 +150,9 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& event) {
 
   if (e.kind == TurnEventKind::kSessionBegin) {
     return HandleSessionBegin(e);
+  }
+  if (e.kind == TurnEventKind::kCompanionLine) {
+    return HandleCompanionLine(e);
   }
   if (e.kind == TurnEventKind::kSessionEnd) {
     return HandleSessionEnd(e);
@@ -170,7 +202,7 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& event) {
           if (session_active_) {
             state_ = TurnState::kFollowUp;
             state_entered_ns_ = e.now_ns;
-            follow_up_deadline_ns_ = e.now_ns + cfg_.session_silence_ns;
+            follow_up_deadline_ns_ = SessionDeadline(e.now_ns);
             return {TurnAction{.kind = TurnActionKind::kDiscardCapture}};
           }
           state_ = TurnState::kIdle;
@@ -237,7 +269,7 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& event) {
         if (session_active_) {
           state_ = TurnState::kFollowUp;
           state_entered_ns_ = e.now_ns;
-          follow_up_deadline_ns_ = e.now_ns + cfg_.session_silence_ns;
+          follow_up_deadline_ns_ = SessionDeadline(e.now_ns);
           return {};
         }
         state_ = TurnState::kIdle;
@@ -273,7 +305,7 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& event) {
           }
           state_ = TurnState::kFollowUp;
           state_entered_ns_ = e.now_ns;
-          follow_up_deadline_ns_ = e.now_ns + cfg_.session_silence_ns;
+          follow_up_deadline_ns_ = SessionDeadline(e.now_ns);
           return {};
         }
         if (consecutive_follow_ups_ < cfg_.max_consecutive_follow_ups) {
@@ -293,7 +325,7 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& event) {
           if (session_active_) {
             state_ = TurnState::kFollowUp;
             state_entered_ns_ = e.now_ns;
-            follow_up_deadline_ns_ = e.now_ns + cfg_.session_silence_ns;
+            follow_up_deadline_ns_ = SessionDeadline(e.now_ns);
             return {TurnAction{.kind = TurnActionKind::kCancelReply}};
           }
           state_ = TurnState::kIdle;
@@ -373,7 +405,7 @@ std::vector<TurnAction> TurnMachine::OnEvent(const TurnEvent& event) {
             }
             state_ = TurnState::kFollowUp;
             state_entered_ns_ = e.now_ns;
-            follow_up_deadline_ns_ = e.now_ns + cfg_.session_silence_ns;
+            follow_up_deadline_ns_ = SessionDeadline(e.now_ns);
             return {};
           }
           if (consecutive_follow_ups_ < cfg_.max_consecutive_follow_ups) {

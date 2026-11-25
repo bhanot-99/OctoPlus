@@ -7,6 +7,12 @@ namespace {
 
 TEST(SessionPhrasesTest, StopPhrasesPositives) {
   EXPECT_TRUE(IsStopPhrase("bye"));
+  // Companion rhythm controls close the chat after their fixed reply.
+  EXPECT_TRUE(IsStopPhrase("not now"));
+  EXPECT_TRUE(IsStopPhrase("Not right now"));
+  EXPECT_TRUE(IsStopPhrase("be quiet for an hour"));
+  EXPECT_TRUE(IsStopPhrase("stop talking"));
+  EXPECT_FALSE(IsStopPhrase("I think now is not the time to be quiet for sure"));
   EXPECT_TRUE(IsStopPhrase("Bye!"));
   EXPECT_TRUE(IsStopPhrase("goodbye"));
   EXPECT_TRUE(IsStopPhrase("good bye"));

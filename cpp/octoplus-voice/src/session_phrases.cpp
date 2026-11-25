@@ -87,10 +87,22 @@ bool IsStopPhrase(std::string_view transcript) {
     return false;
   }
   static const std::vector<std::vector<std::string_view>> kPhrases = {
-      {"bye"},           {"goodbye"},           {"good", "bye"},
-      {"good", "night"}, {"stop", "listening"}, {"that's", "all"},
-      {"thats", "all"},  {"see", "you"},        {"talk", "later"},
+      {"bye"},
+      {"goodbye"},
+      {"good", "bye"},
+      {"good", "night"},
+      {"stop", "listening"},
+      {"that's", "all"},
+      {"thats", "all"},
+      {"see", "you"},
+      {"talk", "later"},
       {"gotta", "go"},
+      // Spoken controls for the companion's rhythm (Phase 12, C-S03): C5 answers them with a
+      // fixed line and the chat should close after it instead of staying open.
+      {"not", "now"},
+      {"not", "right", "now"},
+      {"quiet", "for"},
+      {"stop", "talking"},
   };
   return MatchesAnyPhrase(words, kPhrases);
 }

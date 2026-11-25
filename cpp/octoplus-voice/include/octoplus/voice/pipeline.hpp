@@ -211,6 +211,10 @@ class VoicePipeline final : public ReplyReceiver {
 
   // C5 asks C2 to speak (voice.sock).
   Status SpeakNudge(std::string_view template_id, std::span<const NudgeArg> args);
+  // An unprompted companion line (Phase 12): spoken like a nudge, then a quiet session listens
+  // for `listen_seconds` (10 to 120) without the wake word. Refused during a turn, a session,
+  // guest mode, another app's microphone use, or less than 60 s after the previous one.
+  Status SpeakCompanionLine(std::string_view text, std::uint32_t listen_seconds);
   void PlayPreamble(int kind);
   void PlayStatus(int line);
 
@@ -298,6 +302,7 @@ class VoicePipeline final : public ReplyReceiver {
   // Open-mic and companion session state (Phase 12, story C-S02)
   std::uint64_t guest_until_mono_ns_ = 0;
   std::uint64_t sessions_started_ = 0;
+  std::uint64_t last_companion_line_mono_ns_ = 0;
   std::size_t mute_ring_samples_ = 0;
 };
 

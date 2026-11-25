@@ -50,6 +50,7 @@ message Envelope {
     VoiceStatusRequest voice_status_request = 46;
     VoiceStatus voice_status = 47;
     VoiceControl voice_control = 48;
+    SpeakCompanion speak_companion = 49;
 
     // C3 storage 60–99
     QueryFocusHistory query_focus_history = 60;

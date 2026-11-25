@@ -30,6 +30,8 @@ class VoiceService {
   Status HandleControl(v1::VoiceControlAction action, v1::Envelope* reply);
   // Handle VoiceStatusRequest (reports the pipeline when there is one, idle otherwise)
   Status HandleStatus(const ipc::Request& req, v1::Envelope* reply);
+  // The requests that make C2 speak (nudge, companion line, preamble, status clip).
+  static Status HandleSpeak(VoicePipeline* pipeline, const ipc::Request& req, v1::Envelope* reply);
 
   // Connects the service to the running pipeline (nullptr: none, e.g. models missing). The
   // pipeline must outlive the servers or be cleared first.

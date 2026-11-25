@@ -1156,3 +1156,133 @@ TEST(VoicePipeline, SessionStatusFieldsAreAccurate) {
 
 }  // namespace
 }  // namespace octoplus::voice
+
+namespace octoplus::voice {
+namespace {
+
+// ---- the companion starts a talk by itself (Phase 12, C-S03) --------------------------------
+
+TEST(VoicePipelineCompanionLine, TheLineIsSpokenThenAQuietSessionHearsTheAnswerWithoutTheWakeWord) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  Rig r(cfg);
+  ASSERT_TRUE(r.p->SpeakCompanionLine("Hey, how is your day going?", 30).ok());
+  r.Settle();
+  ASSERT_EQ(r.tts.spoken.size(), 1U);
+  EXPECT_EQ(r.tts.spoken[0], "Hey, how is your day going?");
+  EXPECT_TRUE(r.p->status().session_active);
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  EXPECT_TRUE(r.p->status().follow_up_open);
+  r.stt.text = "pretty good actually";
+  r.Frames(1000, 30);
+  r.Frames(0, 25);
+  r.Settle();
+  ASSERT_EQ(r.link.commands.size(), 1U);
+  EXPECT_TRUE(r.link.commands[0].in_session);
+  EXPECT_TRUE(r.link.commands[0].in_follow_up);
+}
+
+TEST(VoicePipelineCompanionLine, NoAnswerClosesTheSessionWithoutAnyExtraSound) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  ASSERT_TRUE(r.p->SpeakCompanionLine("Hey, how is your day going?", 10).ok());
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  ASSERT_TRUE(r.p->status().session_active);
+  const auto writes_before = r.sink.writes.size();
+  const auto spoken_before = r.tts.spoken.size();
+  r.Frames(0, 330);  // a little over 10 s of silence
+  r.Settle();
+  EXPECT_FALSE(r.p->status().session_active);
+  EXPECT_EQ(r.sink.writes.size(), writes_before) << "no end sound and no still-there question";
+  EXPECT_EQ(r.tts.spoken.size(), spoken_before);
+  EXPECT_TRUE(r.link.commands.empty());
+}
+
+TEST(VoicePipelineCompanionLine, RefusedWhenItShouldNotSpeak) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  {
+    Rig off(PipelineConfig{});
+    EXPECT_FALSE(off.p->SpeakCompanionLine("Hello there", 30).ok()) << "open mic is off";
+  }
+  {
+    Rig r(cfg);
+    r.Frames(2000, 6);  // a turn has begun
+    ASSERT_TRUE(r.p->status().turn_in_progress);
+    const auto s = r.p->SpeakCompanionLine("Hello there", 30);
+    EXPECT_FALSE(s.ok());
+    EXPECT_TRUE(s.error().retryable);
+  }
+  {
+    Rig r(cfg);
+    r.probe.busy = true;
+    EXPECT_FALSE(r.p->SpeakCompanionLine("Hello there", 30).ok());
+    r.Settle();
+    EXPECT_TRUE(r.tts.spoken.empty());
+    r.probe.busy = false;
+    EXPECT_TRUE(r.p->SpeakCompanionLine("Hello there", 30).ok());
+  }
+  {
+    Rig r(cfg);  // a session is already running
+    r.p->PreloadClips();
+    r.AskByVoice();
+    ASSERT_TRUE(r.p->status().session_active);
+    r.link.Receiver()->OnFinished(true);
+    r.Settle();
+    r.sink.playing = false;
+    r.Frames(0, 2);
+    EXPECT_FALSE(r.p->SpeakCompanionLine("Hello there", 30).ok());
+  }
+}
+
+TEST(VoicePipelineCompanionLine, GuestModeBlocksIt) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.stt.text = "someone's here";
+  r.AskByVoice();
+  r.Settle();
+  EXPECT_FALSE(r.p->SpeakCompanionLine("Hello there", 30).ok());
+}
+
+TEST(VoicePipelineCompanionLine, BadTextIsRejectedAndNeverSpoken) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  Rig r(cfg);
+  EXPECT_FALSE(r.p->SpeakCompanionLine("", 30).ok());
+  EXPECT_FALSE(r.p->SpeakCompanionLine(std::string(401, 'a'), 30).ok());
+  EXPECT_FALSE(r.p->SpeakCompanionLine("bad \xC3\x28 bytes", 30).ok());
+  EXPECT_FALSE(r.p->SpeakCompanionLine("lone \xC3", 30).ok());
+  EXPECT_FALSE(r.p->SpeakCompanionLine("overlong \xC0\xAF", 30).ok());
+  EXPECT_FALSE(r.p->SpeakCompanionLine("surrogate \xED\xA0\x80", 30).ok());
+  r.Settle();
+  EXPECT_TRUE(r.tts.spoken.empty());
+  EXPECT_TRUE(r.p->SpeakCompanionLine("caf\xC3\xA9 is open", 30).ok()) << "valid UTF-8 passes";
+}
+
+TEST(VoicePipelineCompanionLine, ASecondLineWithinAMinuteIsRefused) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  Rig r(cfg);
+  ASSERT_TRUE(r.p->SpeakCompanionLine("First line", 10).ok());
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 400);  // the quiet session closes (about 13 s)
+  r.Settle();
+  ASSERT_FALSE(r.p->status().session_active);
+  const auto s = r.p->SpeakCompanionLine("Second line", 10);
+  EXPECT_FALSE(s.ok());
+  EXPECT_TRUE(s.error().retryable);
+  r.Frames(0, 1900);  // another minute
+  r.Settle();
+  EXPECT_TRUE(r.p->SpeakCompanionLine("Second line", 10).ok());
+}
+
+}  // namespace
+}  // namespace octoplus::voice

@@ -341,6 +341,14 @@ impl CompanionEngine {
         }
     }
 
+    /// The companion started this chat herself: her opening line is the first thing in the
+    /// history, so the owner's answer ("pretty good") is understood as an answer to it.
+    pub fn push_opener(&mut self, line: &str, now_ns: u64) {
+        self.session
+            .push("", line, TaintFlags::MODEL_GENERATED, now_ns);
+        self.last_reply_was_question = line.trim_end().ends_with('?');
+    }
+
     /// Renders multi-turn conversation history within token budget.
     #[must_use]
     pub fn history(&self, budget_tokens: u32) -> (String, TaintFlags) {

@@ -757,6 +757,10 @@ pub struct CompanionConfig {
     pub max_reply_tokens: u32,
     /// Session duration timeout in minutes (fallback when persona file does not specify).
     pub session_max_minutes: u32,
+    /// Whether she may start a chat by herself (the Pulse scheduler, Phase 12 story C-S03).
+    pub pulse_enabled: bool,
+    /// Seconds C2 listens for the owner's answer after one of her own opening lines.
+    pub listen_seconds: u32,
 }
 
 impl Default for CompanionConfig {
@@ -767,6 +771,8 @@ impl Default for CompanionConfig {
             facts_tokens: 48,
             max_reply_tokens: 110,
             session_max_minutes: 15,
+            pulse_enabled: true,
+            listen_seconds: 30,
         }
     }
 }
@@ -784,6 +790,7 @@ impl CompanionConfig {
                 "companion.session_max_minutes",
                 u64::from(self.session_max_minutes),
             ),
+            ("companion.listen_seconds", u64::from(self.listen_seconds)),
         ];
         for (key, v) in nonzero {
             if v == 0 {

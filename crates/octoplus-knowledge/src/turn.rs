@@ -218,6 +218,8 @@ pub struct KnowledgeHandler {
     persona: Option<Arc<crate::companion::persona::Persona>>,
     #[allow(dead_code)] // used by task 5b
     companion_cfg: octoplus_common::config::CompanionConfig,
+    /// The scheduler state shared with the runner that starts talks (Phase 12, C-S03).
+    hub: Option<Arc<crate::companion::hub::CompanionHub>>,
 }
 
 fn invalid(msg: &'static str) -> HandlerError {
@@ -262,7 +264,15 @@ impl KnowledgeHandler {
                 .ok()
                 .map(Arc::new),
             companion_cfg: octoplus_common::config::CompanionConfig::default(),
+            hub: None,
         }
+    }
+
+    /// Shares the Pulse scheduler's state with this handler (Phase 12, C-S03).
+    #[must_use]
+    pub fn with_hub(mut self, hub: Arc<crate::companion::hub::CompanionHub>) -> Self {
+        self.hub = Some(hub);
+        self
     }
 
     /// Sets the companion persona and configuration (Phase 12).

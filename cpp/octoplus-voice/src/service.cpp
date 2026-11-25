@@ -51,6 +51,63 @@ void VoiceService::SetDetail(std::string detail) {
   detail_ = std::move(detail);
 }
 
+Status VoiceService::HandleSpeak(VoicePipeline* pipeline, const ipc::Request& req,
+                                 v1::Envelope* reply) {
+  const auto unavailable = [](const char* why) {
+    return Error{
+        .message = why, .retryable = true, .code = static_cast<int>(v1::ERROR_CODE_UNAVAILABLE)};
+  };
+  if (req.envelope.has_speak_nudge()) {
+    if (pipeline == nullptr) {
+      return unavailable("voice is not running");
+    }
+    const auto& n = req.envelope.speak_nudge();
+    std::vector<NudgeArg> args;
+    for (const auto& a : n.args()) {
+      args.push_back(NudgeArg{a.name(), a.value()});
+    }
+    auto s = pipeline->SpeakNudge(n.template_id(), args);
+    if (!s.ok()) {
+      return s.error();
+    }
+    reply->mutable_ack();
+    return ok_status();
+  }
+  if (req.envelope.has_speak_companion()) {
+    if (pipeline == nullptr) {
+      return unavailable("voice is not running");
+    }
+    const auto& c = req.envelope.speak_companion();
+    auto s = pipeline->SpeakCompanionLine(c.text(), c.listen_seconds());
+    if (!s.ok()) {
+      return s.error();
+    }
+    reply->mutable_ack();
+    return ok_status();
+  }
+  if (req.envelope.has_preamble_request()) {
+    if (pipeline == nullptr) {
+      return unavailable("voice is not running");
+    }
+    pipeline->PlayPreamble(static_cast<int>(req.envelope.preamble_request().kind()));
+    reply->mutable_ack();
+    return ok_status();
+  }
+  if (req.envelope.has_speak_status()) {
+    if (pipeline == nullptr) {
+      return unavailable("voice is not running");
+    }
+    pipeline->PlayStatus(static_cast<int>(req.envelope.speak_status().line()));
+    reply->mutable_ack();
+    return ok_status();
+  }
+  return Error{
+      .message = "unsupported request in voice service (voice.sock)",
+      .retryable = false,
+      .code = static_cast<int>(v1::ERROR_CODE_INVALID_REQUEST),
+  };
+}
+
 ipc::Handler VoiceService::GetVoiceHandler() {
   return [this](const ipc::Request& req, ipc::StreamSink& /*sink*/,
                 const ipc::CancelToken& /*cancel_token*/, v1::Envelope* reply) -> Status {
@@ -62,47 +119,7 @@ ipc::Handler VoiceService::GetVoiceHandler() {
       const std::lock_guard<std::mutex> lock(mu_);
       pipeline = pipeline_;
     }
-    const auto unavailable = [](const char* why) {
-      return Error{
-          .message = why, .retryable = true, .code = static_cast<int>(v1::ERROR_CODE_UNAVAILABLE)};
-    };
-    if (req.envelope.has_speak_nudge()) {
-      if (pipeline == nullptr) {
-        return unavailable("voice is not running");
-      }
-      const auto& n = req.envelope.speak_nudge();
-      std::vector<NudgeArg> args;
-      for (const auto& a : n.args()) {
-        args.push_back(NudgeArg{a.name(), a.value()});
-      }
-      auto s = pipeline->SpeakNudge(n.template_id(), args);
-      if (!s.ok()) {
-        return s.error();
-      }
-      reply->mutable_ack();
-      return ok_status();
-    }
-    if (req.envelope.has_preamble_request()) {
-      if (pipeline == nullptr) {
-        return unavailable("voice is not running");
-      }
-      pipeline->PlayPreamble(static_cast<int>(req.envelope.preamble_request().kind()));
-      reply->mutable_ack();
-      return ok_status();
-    }
-    if (req.envelope.has_speak_status()) {
-      if (pipeline == nullptr) {
-        return unavailable("voice is not running");
-      }
-      pipeline->PlayStatus(static_cast<int>(req.envelope.speak_status().line()));
-      reply->mutable_ack();
-      return ok_status();
-    }
-    return Error{
-        .message = "unsupported request in voice service (voice.sock)",
-        .retryable = false,
-        .code = static_cast<int>(v1::ERROR_CODE_INVALID_REQUEST),
-    };
+    return HandleSpeak(pipeline, req, reply);
   };
 }
 

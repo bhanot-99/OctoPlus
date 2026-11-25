@@ -53,7 +53,23 @@ impl KnowledgeHandler {
             }
         };
 
-        if origin == Origin::Voice {
+        // A spoken control for the scheduler ("not now", "quiet for an hour") is always meant for
+        // her, whatever the directedness check would say about so short a sentence.
+        let is_control = crate::companion::pulse::parse_pulse_command(text).is_some();
+        let hub = self.hub.clone();
+        // If she started this chat herself, her opening line is the first thing in the history.
+        self.with_state(|state| {
+            let engine = state
+                .companion
+                .get_or_insert_with(|| CompanionEngine::new(Arc::clone(&persona), now, now));
+            if let Some(h) = &hub
+                && let Some(opener) = h.take_opener(now)
+            {
+                engine.push_opener(&opener, now);
+            }
+        });
+
+        if origin == Origin::Voice && !is_control {
             let directed = self.with_state(|state| {
                 let engine = state
                     .companion
@@ -79,6 +95,19 @@ impl KnowledgeHandler {
                     kind: PreambleKind::Backchannel as i32,
                 }))
                 .await;
+        }
+
+        // Scheduler controls, and the owner's answer to a talk she started.
+        if let Some(h) = &hub {
+            let minute = crate::nudge::signals::local_minute(now, &crate::nudge::boot::time_zone());
+            if let crate::companion::hub::OwnerTurn::Command(cmd) =
+                h.on_owner_turn(now, u16::try_from(minute).unwrap_or(0), text)
+            {
+                Self::say(sink, crate::companion::pulse::ack_line(&cmd)).await?;
+                self.metrics.route_companion.fetch_add(1, Ordering::Relaxed);
+                self.metrics.completed.fetch_add(1, Ordering::Relaxed);
+                return Ok(Self::done(Route::Companion, self.base_taint()));
+            }
         }
 
         let plan = self.with_state(|state| {

@@ -1044,3 +1044,87 @@ TEST(TurnMachineTest, SessionThreeHourSimulatedLoopNeverStalls) {
 
 }  // namespace
 }  // namespace octoplus::voice
+
+namespace octoplus::voice {
+namespace {
+
+// The companion starts a talk by itself (Phase 12, C-S03): a quiet session listens for a short
+// while without the wake word and closes silently when nobody answers.
+TurnConfig SessionCfg() {
+  TurnConfig cfg;
+  cfg.sessions_enabled = true;
+  return cfg;
+}
+
+constexpr std::uint64_t kSec = 1'000'000'000ULL;
+
+// Line spoken: kCompanionLine, the first audio (as a nudge), playback ends.
+void SpeakCompanionLineThrough(TurnMachine& tm, std::uint64_t t0, std::uint64_t listen_s) {
+  TurnEvent open{.kind = TurnEventKind::kCompanionLine, .now_ns = t0};
+  open.listen_ns = listen_s * kSec;
+  EXPECT_TRUE(tm.OnEvent(open).empty()) << "no start sound: the line is the cue";
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = t0 + kSec, .nudge = true});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyFinished, .now_ns = t0 + 2 * kSec});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kPlaybackIdle, .now_ns = t0 + 4 * kSec});
+}
+
+TEST(TurnMachineCompanionLine, QuietSessionOpensAfterTheLineAndClosesSilentlyOnNoAnswer) {
+  TurnMachine tm(SessionCfg());
+  SpeakCompanionLineThrough(tm, 100 * kSec, 20);
+  EXPECT_TRUE(tm.session_active());
+  EXPECT_EQ(tm.state(), TurnState::kFollowUp);
+  // Still listening 19 s after playback ended.
+  EXPECT_TRUE(tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = 123 * kSec}).empty());
+  EXPECT_TRUE(tm.session_active());
+  // At 20 s it closes with the quiet action only: no "still there?", no end sound.
+  const auto acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = 125 * kSec});
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kSessionEndedQuiet);
+  EXPECT_FALSE(tm.session_active());
+  EXPECT_EQ(tm.state(), TurnState::kIdle);
+}
+
+TEST(TurnMachineCompanionLine, AnAnswerKeepsTheSessionUnderTheNormalRules) {
+  TurnMachine tm(SessionCfg());
+  SpeakCompanionLineThrough(tm, 100 * kSec, 20);
+  auto acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechStarted, .now_ns = 110 * kSec});
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kBeginUtterance);
+  EXPECT_TRUE(acts[0].in_follow_up);
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = 112 * kSec});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTranscribed, .now_ns = 113 * kSec});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = 114 * kSec});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyFinished, .now_ns = 115 * kSec});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kPlaybackIdle, .now_ns = 118 * kSec});
+  ASSERT_EQ(tm.state(), TurnState::kFollowUp);
+  // Normal 90 s silence rule now, not the 20 s one.
+  EXPECT_TRUE(tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = 150 * kSec}).empty());
+  EXPECT_TRUE(tm.session_active());
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = 209 * kSec});
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kSayStillThere);
+}
+
+TEST(TurnMachineCompanionLine, IgnoredWhenSessionsAreOffOrABusyMomentOrASessionIsRunning) {
+  TurnMachine off{TurnConfig{}};
+  TurnEvent open{.kind = TurnEventKind::kCompanionLine, .now_ns = kSec};
+  open.listen_ns = 20 * kSec;
+  EXPECT_TRUE(off.OnEvent(open).empty());
+  EXPECT_FALSE(off.session_active());
+
+  TurnMachine busy(SessionCfg());
+  busy.OnEvent(TurnEvent{.kind = TurnEventKind::kWakeWord, .now_ns = kSec});
+  ASSERT_TRUE(busy.turn_in_progress());
+  EXPECT_TRUE(busy.OnEvent(open).empty());
+  EXPECT_FALSE(busy.session_active());
+
+  TurnMachine live(SessionCfg());
+  live.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionBegin, .now_ns = kSec});
+  const auto started = live.session_started_ns();
+  open.now_ns = 50 * kSec;
+  EXPECT_TRUE(live.OnEvent(open).empty());
+  EXPECT_EQ(live.session_started_ns(), started) << "an open session is left alone";
+}
+
+}  // namespace
+}  // namespace octoplus::voice

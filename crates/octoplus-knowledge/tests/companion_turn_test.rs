@@ -177,6 +177,7 @@ struct Stack {
     route_companion: Arc<AtomicU64>,
     companion_ignored: Arc<AtomicU64>,
     _completed: Arc<AtomicU64>,
+    hub: Arc<octoplus_knowledge::companion::hub::CompanionHub>,
 }
 
 async fn serve<H: Handler>(sock: &Path, handler: H, stop: &tokio::sync::watch::Sender<bool>) {
@@ -299,6 +300,11 @@ impl Stack {
             metrics,
             nudge,
         );
+        let hub = octoplus_knowledge::companion::hub::CompanionHub::new(
+            &octoplus_knowledge::companion::persona::Persona::default_packaged().unwrap(),
+            1,
+        );
+        let handler = handler.with_hub(hub.clone());
 
         serve(&c5, handler, &stop).await;
 
@@ -312,6 +318,7 @@ impl Stack {
             route_companion,
             companion_ignored,
             _completed: completed,
+            hub,
         }
     }
 
@@ -894,4 +901,108 @@ async fn test_action_phrase_in_session_routes_to_action() {
         }
         other => panic!("expected PreambleRequest as first frame, got {other:?}"),
     }
+}
+
+// ---- Laila's own talks and the spoken controls (story C-S03) ----------------------------------
+
+const T0: u64 = 1_000_000_000_000_000;
+
+#[tokio::test]
+async fn an_answer_to_her_opening_line_is_understood_as_an_answer() {
+    let s = Stack::start(Opts {
+        default_answer: vec!["Glad to hear it.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+    s.hub.talk_started(T0, "Hey, how is your day going?");
+    let (_frames, done) = s
+        .voice_ask("pretty good actually", true, T0 + 12_000_000_000)
+        .await
+        .unwrap();
+    assert_eq!(done.route, Route::Companion as i32);
+    let prompts = s.rec.lock().unwrap().prompts.clone();
+    assert_eq!(prompts.len(), 1);
+    assert!(
+        prompts[0].contains("You: Hey, how is your day going?"),
+        "her opening line is the first thing in the history: {}",
+        prompts[0]
+    );
+    assert!(prompts[0].contains("pretty good actually"));
+    assert_eq!(s.hub.counters().accepted, 1);
+}
+
+#[tokio::test]
+async fn a_spoken_not_now_is_answered_with_a_fixed_line_and_never_reaches_the_model() {
+    let s = Stack::start(Opts::default()).await;
+    s.hub.talk_started(T0, "Hey, how is your day going?");
+    let (frames, done) = s
+        .voice_ask("not now", true, T0 + 6_000_000_000)
+        .await
+        .unwrap();
+    assert_eq!(done.route, Route::Companion as i32);
+    let said: String = frames
+        .iter()
+        .filter_map(|f| match f {
+            Body::SpeakChunk(c) => Some(c.text.clone()),
+            _ => None,
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert!(said.contains("leave you be"), "{said}");
+    assert!(s.rec.lock().unwrap().prompts.is_empty(), "no model call");
+    let c = s.hub.counters();
+    assert_eq!((c.not_now, c.accepted), (1, 0));
+}
+
+#[tokio::test]
+async fn quiet_for_an_hour_works_by_voice_and_typed_and_is_not_dropped_as_ambient() {
+    let s = Stack::start(Opts::default()).await;
+    // A four word control must not be thrown away by the "is it meant for her?" check.
+    let (frames, done) = s.voice_ask("quiet for an hour", true, T0).await.unwrap();
+    assert_eq!(done.route, Route::Companion as i32);
+    assert_eq!(s.companion_ignored.load(Ordering::SeqCst), 0);
+    assert!(
+        frames
+            .iter()
+            .any(|f| matches!(f, Body::SpeakChunk(c) if c.text.contains("quiet")))
+    );
+    let (said, done) = s
+        .ask_companion("chat less", T0 + 1_000_000_000)
+        .await
+        .unwrap();
+    assert_eq!(done.route, Route::Companion as i32);
+    assert!(said.contains("talk a bit less"), "{said}");
+    assert!(s.rec.lock().unwrap().prompts.is_empty());
+}
+
+#[tokio::test]
+async fn controls_are_only_read_in_companion_chat() {
+    let s = Stack::start(Opts {
+        default_answer: vec!["Sure.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+    let (_said, done) = s.ask_normal("chat less", T0).await.unwrap();
+    assert_ne!(done.route, Route::Companion as i32);
+    assert_eq!(s.hub.counters().talks, 0);
+    // The scheduler was not touched: a pause by the normal path does nothing to her.
+    assert!(!s.hub.paused());
+}
+
+#[tokio::test]
+async fn an_unanswered_opening_line_never_appears_in_a_later_chat() {
+    let s = Stack::start(Opts {
+        default_answer: vec!["Hello.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+    s.hub.talk_started(T0, "Hey, how is your day going?");
+    // Ten minutes later the owner starts a chat on their own.
+    let (_f, _d) = s
+        .voice_ask("tell me something fun", true, T0 + 600_000_000_000)
+        .await
+        .unwrap();
+    let prompts = s.rec.lock().unwrap().prompts.clone();
+    assert_eq!(prompts.len(), 1);
+    assert!(!prompts[0].contains("how is your day going"));
 }

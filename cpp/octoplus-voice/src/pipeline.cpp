@@ -283,6 +283,9 @@ void VoicePipeline::Run(const std::vector<TurnAction>& actions) {
         case TurnActionKind::kSayStillThere:
           d_.on_trace("still_there");
           break;
+        case TurnActionKind::kSessionEndedQuiet:
+          d_.on_trace("session_ended_quiet");
+          break;
         default:
           break;
       }
@@ -362,6 +365,9 @@ void VoicePipeline::Run(const std::vector<TurnAction>& actions) {
         QueueClip(SessionPhrase(1), false, epoch);
         break;
       }
+      case TurnActionKind::kSessionEndedQuiet:
+        gate_.SetEndSilenceNs(cfg_.vad.end_silence_ns);
+        break;
       case TurnActionKind::kSessionEnded: {
         gate_.SetEndSilenceNs(cfg_.vad.end_silence_ns);
         const bool busy = d_.mic_probe != nullptr && d_.mic_probe->OtherAppCapturing();
@@ -1114,6 +1120,102 @@ Status VoicePipeline::SpeakNudge(std::string_view template_id, std::span<const N
   if (!spoken->offer.empty()) {
     QueueSpeech(spoken->offer, true, epoch);
   }
+  FinishQueue(epoch);
+  return ok_status();
+}
+
+namespace {
+// True when `s` is well-formed UTF-8 (no overlong forms, no surrogates, nothing above U+10FFFF).
+bool ValidUtf8(std::string_view s) {
+  std::size_t i = 0;
+  while (i < s.size()) {
+    const auto c = static_cast<unsigned char>(s[i]);
+    std::size_t n = 0;
+    std::uint32_t cp = 0;
+    if (c < 0x80) {
+      ++i;
+      continue;
+    }
+    if ((c & 0xE0U) == 0xC0U) {
+      n = 1;
+      cp = c & 0x1FU;
+    } else if ((c & 0xF0U) == 0xE0U) {
+      n = 2;
+      cp = c & 0x0FU;
+    } else if ((c & 0xF8U) == 0xF0U) {
+      n = 3;
+      cp = c & 0x07U;
+    } else {
+      return false;
+    }
+    if (i + n >= s.size()) {
+      return false;
+    }
+    for (std::size_t k = 1; k <= n; ++k) {
+      const auto cc = static_cast<unsigned char>(s[i + k]);
+      if ((cc & 0xC0U) != 0x80U) {
+        return false;
+      }
+      cp = (cp << 6U) | (cc & 0x3FU);
+    }
+    std::uint32_t min = 0x80U;  // the smallest code point a sequence of this length may hold
+    if (n == 2) {
+      min = 0x800U;
+    } else if (n == 3) {
+      min = 0x10000U;
+    }
+    if (cp < min || cp > 0x10FFFFU || (cp >= 0xD800U && cp <= 0xDFFFU)) {
+      return false;
+    }
+    i += n + 1;
+  }
+  return true;
+}
+}  // namespace
+
+Status VoicePipeline::SpeakCompanionLine(std::string_view text, std::uint32_t listen_seconds) {
+  if (text.empty() || text.size() > 400 || !ValidUtf8(text)) {
+    return Error{.message = "companion line must be 1 to 400 bytes of valid UTF-8",
+                 .retryable = false,
+                 .code = 1};
+  }
+  const std::uint32_t listen = std::clamp<std::uint32_t>(listen_seconds, 10, 120);
+  std::uint64_t epoch = 0;
+  {
+    const std::lock_guard<std::mutex> lock(mu_);
+    const std::uint64_t now = d_.mono_ns();
+    if (!cfg_.turn.sessions_enabled) {
+      return Error{.message = "open microphone sessions are off", .retryable = false, .code = 1};
+    }
+    if (machine_.turn_in_progress() || machine_.session_active()) {
+      return Error{.message = "a turn or session is in progress", .retryable = true, .code = 11};
+    }
+    if (now < guest_until_mono_ns_) {
+      return Error{.message = "guest mode is on", .retryable = true, .code = 11};
+    }
+    if (last_companion_line_mono_ns_ != 0 &&
+        now - last_companion_line_mono_ns_ < 60ULL * 1'000'000'000ULL) {
+      return Error{.message = "a companion line was spoken less than a minute ago",
+                   .retryable = true,
+                   .code = 11};
+    }
+    if (d_.mic_probe != nullptr && d_.mic_probe->OtherAppCapturing()) {
+      return Error{.message = "the microphone is in use by another application",
+                   .retryable = true,
+                   .code = 11};
+    }
+    last_companion_line_mono_ns_ = now;
+    epoch = ++epoch_;
+    reply_audio_started_ = false;
+  }
+  Trace("companion_line");
+  TurnEvent open;
+  open.kind = TurnEventKind::kCompanionLine;
+  open.now_ns = d_.mono_ns();
+  open.listen_ns = static_cast<std::uint64_t>(listen) * 1'000'000'000ULL;
+  Run(Post(open));
+  gate_.SetEndSilenceNs(cfg_.session_end_silence_ns);
+  QueueSpeech(std::string(text), true, epoch);
   FinishQueue(epoch);
   return ok_status();
 }
