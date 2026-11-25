@@ -58,8 +58,8 @@ Code: `crates/octoplus-knowledge/src/companion/`, `src/turn/companion_*.rs`, `sr
 ## 7. Owner items
 
 1. Read this report, sign off, and merge `phase-12` into `main`.
-2. Give the helpline numbers or trusted people for the fixed crisis text (`crisis.contacts` in `persona.toml`; none were invented).
-3. Say whether the voice memory budget (836 of 800 MiB) is accepted; open-mic sessions were not measured against it.
+2. ~~Helpline numbers for the crisis text~~ Skipped for now by the owner (2026-11-25, D-80); `crisis.contacts` stays empty.
+3. ~~Voice memory budget~~ Accepted for now by the owner (D-80); optimisation comes after everything works properly.
 4. Try the microphone side in a real room (open-mic chat, a self-started talk, guest mode, TV in the background) and listen to the "Mm.", "Oh.", "Hm.", "Ah." sounds.
 5. Remove the 2 leftover test facts (ids 398 and 399) from OctoPit's Companion page or `octoplusctl profile remove`.
 6. Hinglish test, 24 h soak and trial week: only if and when you decide.
