@@ -45,6 +45,8 @@ use crate::session::{Session, SessionConfig};
 use crate::speech::{SentenceStream, strip_pictographs};
 use crate::status::{self, NO_LOOKUP_YET, Need};
 
+mod companion_turn;
+
 /// Longest question accepted, in bytes (the prompt cuts it further to its token cap).
 pub const MAX_QUESTION_BYTES: usize = 4096;
 /// Most answer text kept for the session and the stored summary.
@@ -471,6 +473,9 @@ impl KnowledgeHandler {
                     sink,
                 )
                 .await;
+        }
+        if ask.companion && first.route != RouteKind::Desktop {
+            return self.companion_turn(&text, origin, now, sink).await;
         }
         self.question_turn(&text, origin, now, sink).await
     }
