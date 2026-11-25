@@ -63,7 +63,7 @@ quiet_start = "23:00"
 quiet_end = "08:00"
 talks_per_hour_min = 2
 talks_per_hour_max = 4
-per_day_cap = "set in C-S03"
+per_day_cap = 40
 
 [memory]
 chance_target_low = 0.40

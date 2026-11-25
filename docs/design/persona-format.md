@@ -63,7 +63,7 @@ Every key in `persona.toml` is defined below.
 | `schedule.quiet_end` | string | `"08:00"` | `"HH:MM"` (00:00 to 23:59) | End of quiet hours. |
 | `schedule.talks_per_hour_min` | integer | `2` | >= 0 | Minimum target spontaneous talks per active hour. |
 | `schedule.talks_per_hour_max` | integer | `4` | >= talks_per_hour_min | Maximum spontaneous talks per active hour. |
-| `schedule.per_day_cap` | string or integer | `"set in C-S03"` | >= 0 or open string | Hard daily limit on spontaneous talks. |
+| `schedule.per_day_cap` | integer | `40` | 1 to 100 (an open string is read as the default 40) | Hard daily limit on spontaneous talks (Pulse scheduler, C-S03). |
 | `memory.chance_target_low` | float | `0.40` | 0.0 to 1.0 | Lower bound of spontaneous memory chance rule. |
 | `memory.chance_target_high` | float | `0.50` | 0.0 to 1.0 | Upper bound of spontaneous memory chance rule. |
 | `memory.retention_days` | integer | `90` | >= 1 | Retention period in days for session summaries. |

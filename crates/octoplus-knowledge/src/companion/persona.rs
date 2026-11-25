@@ -345,6 +345,12 @@ impl Persona {
             });
         }
 
+        if matches!(&self.schedule.per_day_cap, NumOrOpen::Num(n) if !(1..=100).contains(n)) {
+            return Err(PersonaError::Validation {
+                key: "schedule.per_day_cap",
+                reason: "per_day_cap must be between 1 and 100",
+            });
+        }
         if matches!(&self.schedule.per_day_cap, NumOrOpen::Open(s) if s.len() > 600) {
             return Err(PersonaError::Validation {
                 key: "schedule.per_day_cap",
