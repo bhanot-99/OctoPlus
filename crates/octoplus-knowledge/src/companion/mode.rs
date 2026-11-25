@@ -223,24 +223,24 @@ impl ModeMachine {
 /// Returns `None` when no mode transition occurred for this turn.
 #[must_use]
 pub fn switch_instruction(decision: &ModeDecision) -> Option<&'static str> {
-    // These are written for a small model: concrete example lines, and never the words that
-    // name the two sides (it reads those aloud).
+    // Written as non-spoken direction without quoted catchphrases so a small model does not recite
+    // stage directions aloud.
     if let Some(target) = decision.mid_reply_switch {
         match target {
             Mode::Heart => Some(
-                "Start your answer brisk and precise, then soften partway through with a short natural aside such as 'Sorry, my brain just went analytical on you.' Never use the words mode, heart or logic.",
+                "(Internal direction only, do not read aloud: start brisk and precise, then soften partway through into a warmer, gentler tone. Never say mode, heart, or logic.)",
             ),
             Mode::Logic => Some(
-                "Start your answer soft and open, then turn precise partway through with a short natural aside such as 'Okay, let me think about this properly.' Never use the words mode, heart or logic.",
+                "(Internal direction only, do not read aloud: start warm and open, then turn crisp and step-by-step partway through. Never say mode, heart, or logic.)",
             ),
         }
     } else if decision.switched {
         match decision.mode {
             Mode::Heart => Some(
-                "Your tone just softened. If it fits, begin with a short natural line such as 'Hey... wait. How are you actually doing?' and then answer. Never use the words mode, heart or logic.",
+                "(Internal direction only, do not read aloud: your tone just softened, so sound warm, personal, and empathetic. Never say mode, heart, or logic.)",
             ),
             Mode::Logic => Some(
-                "Your tone just sharpened. If it fits, begin with a short natural line such as 'Sorry, my brain just went analytical on you.' and then answer. Never use the words mode, heart or logic.",
+                "(Internal direction only, do not read aloud: your tone just sharpened, so sound clear, direct, and grounded. Never say mode, heart, or logic.)",
             ),
         }
     } else {

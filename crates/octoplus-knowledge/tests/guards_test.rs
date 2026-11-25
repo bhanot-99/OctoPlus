@@ -415,3 +415,35 @@ fn identity_leak_catches_ai_cliches_and_wrong_names_but_keeps_laila() {
         );
     }
 }
+
+#[test]
+fn followup_and_stage_direction_checks() {
+    use octoplus_knowledge::companion::guards::{is_followup, is_stage_direction};
+    for fu in [
+        "more",
+        "tell me more",
+        "go on",
+        "and?",
+        "why?",
+        "really?",
+        "why that one",
+    ] {
+        assert!(is_followup(fu), "expected followup: {fu}");
+    }
+    for not_fu in [
+        "why is the sky blue",
+        "why do you think people get lonely",
+        "tell me about your past",
+    ] {
+        assert!(!is_followup(not_fu), "expected non-followup: {not_fu}");
+    }
+    for sd in [
+        "Sorry, my brain just went analytical on you.",
+        "(softly)",
+        "*sighs*",
+        "[quietly]",
+    ] {
+        assert!(is_stage_direction(sd), "expected stage direction: {sd}");
+    }
+    assert!(!is_stage_direction("I had filter coffee this morning."));
+}

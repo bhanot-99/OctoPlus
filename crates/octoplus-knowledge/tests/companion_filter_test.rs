@@ -395,3 +395,27 @@ fn text_in_brackets_is_never_spoken() {
     );
     assert_eq!(speakable("Yes [sighs] okay."), "Yes okay.");
 }
+
+#[test]
+fn stage_direction_leaks_are_dropped_before_speaking() {
+    let mut f = ReplyFilter::new(32);
+    for leaked in [
+        "Sorry, my brain just went analytical on you.",
+        "(softly)",
+        "*smiles warmly*",
+        "[pauses]",
+        "Aside: keep this short.",
+    ] {
+        assert!(
+            matches!(
+                f.check(leaked, false, true),
+                Verdict::Drop(DropReason::StageDirection)
+            ),
+            "expected stage direction to drop: {leaked}"
+        );
+    }
+    assert!(matches!(
+        f.check("*nods* I read The Dispossessed on rainy evenings.", false, true),
+        Verdict::Keep(ref s) if s == "I read The Dispossessed on rainy evenings."
+    ));
+}

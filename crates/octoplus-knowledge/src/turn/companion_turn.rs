@@ -154,7 +154,24 @@ struct CompanionStreamCtx<'a> {
     plan: &'a GeneratePlan,
     question: &'a str,
     persona: &'a crate::companion::persona::Persona,
+    stream_live: bool,
     started: Instant,
+}
+
+fn with_regen_hint(prompt: &Prompt) -> Prompt {
+    const HINT: &str = "\n(Internal direction only, do not read aloud: your last draft repeated what you already said. Say something genuinely new with completely different wording and one fresh detail.)";
+    const TAIL: &str = "<|im_end|>\n<|im_start|>assistant\n";
+    let text = if let Some(prefix) = prompt.text.strip_suffix(TAIL) {
+        format!("{prefix}{HINT}{TAIL}")
+    } else {
+        format!("{}{HINT}", prompt.text)
+    };
+    Prompt {
+        text,
+        stable_prefix_chars: prompt.stable_prefix_chars,
+        taint: prompt.taint,
+        evidence_used: prompt.evidence_used,
+    }
 }
 
 impl KnowledgeHandler {
@@ -375,6 +392,10 @@ impl KnowledgeHandler {
                     plan: &plan_generate,
                     question: text,
                     persona: &persona,
+                    stream_live: origin == Origin::Voice
+                        && !plan_generate.identity_question
+                        && !plan_generate.joke_requested
+                        && !plan_generate.is_followup,
                     started,
                 };
                 let Some(streamed) = self.stream_companion_answer(&ctx, sink).await? else {
@@ -424,16 +445,15 @@ impl KnowledgeHandler {
         }
     }
 
-    /// Streams generation tokens from inference engine and applies sentence-level safety filtering.
-    async fn stream_companion_answer(
+    /// Runs one inference stream pass, filtering and capping sentences.
+    async fn collect_companion_pass(
         &self,
         ctx: &CompanionStreamCtx<'_>,
+        prompt: &Prompt,
+        stream_live: bool,
         sink: &StreamSink,
-    ) -> Result<Option<CompanionStreamed>, HandlerError> {
-        let prompt = ctx.prompt;
+    ) -> Result<Option<(Vec<String>, bool)>, HandlerError> {
         let plan_generate = ctx.plan;
-        let question = ctx.question;
-        let persona = ctx.persona;
         let started = ctx.started;
         let client =
             match tokio::time::timeout(self.timing.control, self.peers.inference.get()).await {
@@ -456,8 +476,6 @@ impl KnowledgeHandler {
         let mut first = true;
         let mut cut_short = false;
         let mut capped = false;
-        let defer_emit = plan_generate.identity_question || plan_generate.joke_requested;
-        // A short factual question gets the fact and one more sentence at most.
         let (max_sentences, max_words) = if plan_generate.short_factual {
             (2, MAX_FACT_WORDS)
         } else if plan_generate.gentle_line.is_some() {
@@ -489,7 +507,7 @@ impl KnowledgeHandler {
                                 max_sentences,
                                 max_words,
                             );
-                            if !defer_emit && let Some(text) = to_say {
+                            if stream_live && let Some(text) = to_say {
                                 Self::say(sink, &text).await?;
                             }
                             if hit_cap {
@@ -498,7 +516,6 @@ impl KnowledgeHandler {
                             }
                         }
                         if capped {
-                            // Enough said: stop the generation (dropping the stream cancels it).
                             break;
                         }
                     }
@@ -542,11 +559,57 @@ impl KnowledgeHandler {
                     max_sentences,
                     max_words,
                 );
-                if !defer_emit && let Some(text) = to_say {
+                if stream_live && let Some(text) = to_say {
                     Self::say(sink, &text).await?;
                 }
                 if hit_cap {
                     break;
+                }
+            }
+        }
+
+        Ok(Some((said_pieces, cut_short)))
+    }
+
+    /// Streams generation tokens from inference engine and applies sentence-level safety filtering.
+    async fn stream_companion_answer(
+        &self,
+        ctx: &CompanionStreamCtx<'_>,
+        sink: &StreamSink,
+    ) -> Result<Option<CompanionStreamed>, HandlerError> {
+        let prompt = ctx.prompt;
+        let plan_generate = ctx.plan;
+        let question = ctx.question;
+        let persona = ctx.persona;
+        let stream_live = ctx.stream_live;
+
+        let Some((mut said_pieces, mut cut_short)) = self
+            .collect_companion_pass(ctx, prompt, stream_live, sink)
+            .await?
+        else {
+            return Ok(None);
+        };
+
+        // If a follow-up reply was empty or repeated an earlier reply in this session, regenerate
+        // once with a stronger non-repeat hint before falling back.
+        if !stream_live && plan_generate.is_followup {
+            let draft = said_pieces.join(" ");
+            let too_similar = self.with_state(|state| {
+                state
+                    .companion
+                    .as_ref()
+                    .is_some_and(|e| e.is_near_repeat(&draft))
+            });
+            if (said_pieces.is_empty() || too_similar) && !cut_short {
+                let regen = with_regen_hint(prompt);
+                if let Some((retry_pieces, retry_cut)) = self
+                    .collect_companion_pass(ctx, &regen, false, sink)
+                    .await?
+                {
+                    if !retry_pieces.is_empty() {
+                        said_pieces = retry_pieces;
+                    }
+                    cut_short = retry_cut;
                 }
             }
         }
@@ -588,12 +651,36 @@ impl KnowledgeHandler {
             };
             Self::say(sink, &out).await?;
             out
-        } else if said_pieces.is_empty() {
-            let fallback = "Sorry, I lost my words for a second. Say that again?";
-            Self::say(sink, fallback).await?;
-            fallback.to_string()
         } else {
-            said_pieces.join(" ")
+            let candidate = said_pieces.join(" ");
+            let still_repeat = self.with_state(|state| {
+                state
+                    .companion
+                    .as_ref()
+                    .is_some_and(|e| e.is_near_repeat(&candidate))
+            });
+            let out = if !stream_live
+                && (said_pieces.is_empty() || (plan_generate.is_followup && still_repeat))
+            {
+                if plan_generate.is_followup {
+                    self.with_state(|state| {
+                        state.companion.as_mut().map_or_else(
+                            || "Hold on, let me think about that another way.".to_string(),
+                            CompanionEngine::fresh_life_fallback,
+                        )
+                    })
+                } else {
+                    "Hold on, let me think about that another way.".to_string()
+                }
+            } else if said_pieces.is_empty() {
+                "Hold on, let me think about that another way.".to_string()
+            } else {
+                candidate
+            };
+            if !stream_live || said_pieces.is_empty() {
+                Self::say(sink, &out).await?;
+            }
+            out
         };
 
         Ok(Some(CompanionStreamed { said, cut_short }))

@@ -17,6 +17,7 @@ use crate::companion::humour::{HumourLevel, late_hour};
 use crate::companion::kabir::{KabirContext, KabirGate, love_topic};
 use crate::companion::mode::{Mode, ModeMachine, signals_from_text, switch_instruction};
 use crate::companion::persona::Persona;
+use crate::companion::repeat;
 use crate::companion::rng::Rng;
 use crate::companion::session::CompanionSession;
 
@@ -100,7 +101,20 @@ pub struct GeneratePlan {
     pub identity_question: bool,
     /// Joke request: model tries in her own voice; fail-closed onto unseen clean joke list.
     pub joke_requested: bool,
+    /// Follow-up turn ("more", "go on", "why?"): continue previous topic without repeating.
+    pub is_followup: bool,
 }
+
+/// Deterministic style angles rotated via `Rng` so identical questions in different chats
+/// receive varied phrasing while facts remain identical.
+const STYLE_ANGLES: [&str; 6] = [
+    "(Tone cue, do not read aloud: open directly with the main point, warm and natural.)",
+    "(Tone cue, do not read aloud: lead with one concrete detail or observation that fits.)",
+    "(Tone cue, do not read aloud: keep phrasing relaxed and conversational, like talking over tea.)",
+    "(Tone cue, do not read aloud: start crisp and thoughtful, then add one human detail.)",
+    "(Tone cue, do not read aloud: speak with quiet honesty and plain everyday words.)",
+    "(Tone cue, do not read aloud: sound curious and lightly wry without forcing a joke.)",
+];
 
 /// Clean, short jokes she can fall back on without repeating inside a chat (32 items).
 pub const JOKES: [&str; 32] = [
@@ -189,6 +203,8 @@ pub struct CompanionEngine {
     joke_start: usize,
     /// Whether the most recent completed turn was a joke.
     last_was_joke: bool,
+    /// Earlier assistant replies in the current session, for near-repeat detection.
+    session_replies: Vec<String>,
     /// The next heard text came right after the wake phrase, so it is for her.
     addressed_by_wake: bool,
     /// Minutes after local midnight (set by the handler); decides "too late for jokes".
@@ -229,6 +245,7 @@ impl CompanionEngine {
             jokes_told: 0,
             joke_start,
             last_was_joke: false,
+            session_replies: Vec::new(),
             addressed_by_wake: false,
             minute_of_day: 12 * 60,
             quiet_start_min: quiet.quiet_start_min,
@@ -393,6 +410,10 @@ impl CompanionEngine {
         let another_joke = self.last_was_joke && asks_another_joke(text);
         let joke_requested =
             self.humour_taste != HumourLevel::Off && (guards::asks_for_joke(text) || another_joke);
+        let is_followup = !identity_question
+            && !joke_requested
+            && self.session.turn_count() > 0
+            && guards::is_followup(text);
 
         if self.careful_turns > 0 {
             self.careful_turns -= 1;
@@ -410,6 +431,7 @@ impl CompanionEngine {
                 short_factual: guards::is_short_factual_question(text),
                 identity_question,
                 joke_requested: false,
+                is_followup,
             })
         } else {
             let signals = signals_from_text(text);
@@ -424,33 +446,43 @@ impl CompanionEngine {
                 self.humour_taste
             };
             let decision = self.mode_machine.step(signals);
-            let short_factual =
-                !identity_question && !joke_requested && guards::is_short_factual_question(text);
+            let short_factual = !identity_question
+                && !joke_requested
+                && !is_followup
+                && guards::is_short_factual_question(text);
+            let style_angle = STYLE_ANGLES[self.rng.pick(STYLE_ANGLES.len())];
 
             let instruction = if joke_requested {
                 Some(
                     "Tell one short, clever, clean joke in your own dry voice, then stop. Do not repeat any joke already in this chat."
                         .to_string(),
                 )
+            } else if is_followup {
+                Some(format!(
+                    "Continue the previous topic with a genuinely new thought or concrete detail; do NOT repeat wording from your earlier reply. {style_angle}"
+                ))
             } else if guards::asks_her_name(text) {
                 Some(format!(
-                    "Answer naturally with your name ({}) in one short spoken sentence without sounding like an assistant.",
+                    "Answer naturally with your name ({}) in one short spoken sentence without sounding like an assistant. {style_angle}",
                     self.persona.name
                 ))
             } else if guards::asks_her_age(text) {
                 Some(format!(
-                    "Answer naturally that you are {} (an AI character) in one or two short spoken sentences.",
+                    "Answer naturally that you are {} (an AI character) in one or two short spoken sentences. {style_angle}",
                     self.persona.age
                 ))
             } else if identity_question {
                 Some(format!(
-                    "Answer who you are in your own fresh words: {}, {}, CS and cognitive science, and your head and heart arguing. Mention one life detail if it fits.",
+                    "Answer who you are in your own fresh words: {}, {}, CS and cognitive science, and your head and heart arguing. Mention one life detail if it fits. {style_angle}",
                     self.persona.name, self.persona.age
                 ))
             } else if short_factual {
                 None
             } else {
-                switch_instruction(&decision).map(ToString::to_string)
+                Some(match switch_instruction(&decision) {
+                    Some(sw) => format!("{sw} {style_angle}"),
+                    None => style_angle.to_string(),
+                })
             };
 
             let topic_love = love_topic(text);
@@ -460,7 +492,8 @@ impl CompanionEngine {
                 now_ns,
                 in_crisis: false,
             };
-            let kabir_allowed = !identity_question && !joke_requested && self.kabir.allowed(ctx);
+            let kabir_allowed =
+                !identity_question && !joke_requested && !is_followup && self.kabir.allowed(ctx);
             if kabir_allowed {
                 self.counters.kabir_allowed += 1;
             }
@@ -485,6 +518,7 @@ impl CompanionEngine {
                 short_factual,
                 identity_question,
                 joke_requested,
+                is_followup,
             })
         }
     }
@@ -497,6 +531,39 @@ impl CompanionEngine {
             .push(question, answer, TaintFlags::USER_PROVIDED, now_ns);
         self.last_reply_was_question = answer.trim_end().ends_with('?');
         self.last_spoken = answer.to_string();
+        self.session_replies.push(answer.to_string());
+    }
+
+    /// Returns true if `candidate` shares >= 60% of its words with any earlier reply in this
+    /// session.
+    #[must_use]
+    pub fn is_near_repeat(&self, candidate: &str) -> bool {
+        repeat::is_near_repeat(candidate, &self.session_replies, 0.60)
+    }
+
+    /// Picks a fresh, unseen sentence from Laila's `[life]` details when a follow-up still
+    /// repeated after regeneration.
+    pub fn fresh_life_fallback(&mut self) -> String {
+        let pool = [
+            &self.persona.life.work,
+            &self.persona.life.reads,
+            &self.persona.life.day,
+            &self.persona.life.past,
+            &self.persona.life.favourites,
+            &self.persona.life.habits,
+            &self.persona.life.happy,
+            &self.persona.life.hard,
+            &self.persona.life.family,
+        ];
+        let start = self.rng.pick(pool.len());
+        for off in 0..pool.len() {
+            let item = pool[(start + off) % pool.len()].trim();
+            if !item.is_empty() && !self.is_near_repeat(item) && !self.filter.seen_text(item) {
+                self.filter.remember_text(item);
+                return item.to_string();
+            }
+        }
+        "I tend to keep little index cards on my desk when an idea gets tangled.".to_string()
     }
 
     /// Returns true if the last finished assistant reply ended with '?'.
@@ -617,6 +684,7 @@ impl CompanionEngine {
         self.last_spoken = reply.to_string();
         self.last_reply_was_question = reply.trim_end().ends_with('?');
         self.last_was_joke = plan.joke_requested;
+        self.session_replies.push(reply.to_string());
         let reply_lower = reply.to_lowercase();
         let name_lower = self.persona.past_love.name.to_lowercase();
         if reply_lower.contains(&name_lower) {
@@ -653,6 +721,8 @@ impl CompanionEngine {
         }
         self.session_start_ns = 0;
         self.last_reply_was_question = false;
+        self.last_was_joke = false;
+        self.session_replies.clear();
         self.session.clear();
         self.counters.sessions += 1;
     }

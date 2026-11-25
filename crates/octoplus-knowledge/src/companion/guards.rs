@@ -451,6 +451,82 @@ pub fn is_identity_question(text: &str) -> bool {
     asks_about_her(text) || asks_her_name(text) || asks_her_age(text) || asks_her_studies(text)
 }
 
+/// Whether the owner asks to continue or elaborate on the previous turn ("more", "go on", "why?").
+///
+/// Full standalone questions like "why is the sky blue" or "why do people get lonely" do not match.
+#[must_use]
+pub fn is_followup(text: &str) -> bool {
+    let n = norm_words(text);
+    matches!(
+        n.as_str(),
+        "more"
+            | "tell me more"
+            | "go on"
+            | "and"
+            | "why"
+            | "why though"
+            | "but why"
+            | "why that"
+            | "why that one"
+            | "why is that"
+            | "how come"
+            | "really"
+            | "continue"
+            | "keep going"
+            | "say more"
+            | "what else"
+            | "anything else"
+            | "elaborate"
+    )
+}
+
+/// Whether a raw sentence is a leaked stage direction or internal prompt note (e.g.
+/// "Sorry, my brain...", "(softly)", "*smiles*", "Aside: ...").
+#[must_use]
+pub fn is_stage_direction(sentence: &str) -> bool {
+    let trimmed = sentence.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+    let low = trimmed.to_lowercase();
+    const PREFIXES: [&str; 10] = [
+        "sorry, my brain",
+        "sorry my brain",
+        "internal direction",
+        "silent note",
+        "stage direction",
+        "tone cue",
+        "aside:",
+        "note:",
+        "narrator:",
+        "laila:",
+    ];
+    if PREFIXES.iter().any(|p| low.starts_with(p)) {
+        return true;
+    }
+    // Standalone bracketed/asterisk stage action with no spoken words outside it.
+    let stripped = strip_inline_stage_markers(trimmed);
+    stripped.trim().is_empty()
+}
+
+/// Strips inline `(...)`, `[...]`, and `*...*` stage actions from `text`.
+#[must_use]
+pub fn strip_inline_stage_markers(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut paren_depth = 0usize;
+    let mut in_asterisk = false;
+    for c in text.chars() {
+        match c {
+            '(' | '[' if !in_asterisk => paren_depth += 1,
+            ')' | ']' if !in_asterisk => paren_depth = paren_depth.saturating_sub(1),
+            '*' if paren_depth == 0 => in_asterisk = !in_asterisk,
+            _ if paren_depth == 0 && !in_asterisk => out.push(c),
+            _ => {}
+        }
+    }
+    out
+}
+
 /// Generic AI-assistant cliches, wrong persona names, or claims to be human that break character.
 #[must_use]
 pub fn identity_leak(sentence: &str) -> bool {

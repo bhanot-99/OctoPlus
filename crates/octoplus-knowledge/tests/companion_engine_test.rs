@@ -351,6 +351,7 @@ fn test_expired_session_starts_fresh() {
         short_factual: false,
         identity_question: false,
         joke_requested: false,
+        is_followup: false,
     };
     engine.finish_turn(
         "Hello there!",
@@ -413,4 +414,30 @@ fn test_safety_answers_stay_fixed_without_model() {
             "safety/control '{q}' must stay Plan::Fixed"
         );
     }
+}
+
+#[test]
+fn test_different_seeds_vary_style_while_same_seed_is_deterministic() {
+    let persona = Arc::new(Persona::default_packaged().unwrap());
+    let mut e1a = CompanionEngine::new(persona.clone(), 101, 1_000_000_000);
+    let mut e1b = CompanionEngine::new(persona.clone(), 101, 1_000_000_000);
+    assert_eq!(
+        e1a.plan("tell me about yourself", 1_000_000_000),
+        e1b.plan("tell me about yourself", 1_000_000_000)
+    );
+
+    let mut seen_instructions = HashSet::new();
+    for seed in 1..=20u64 {
+        let mut e = CompanionEngine::new(persona.clone(), seed * 7919, 1_000_000_000);
+        if let Plan::Generate(gp) = e.plan("tell me about yourself", 1_000_000_000)
+            && let Some(instr) = gp.instruction
+        {
+            seen_instructions.insert(instr);
+        }
+    }
+    assert!(
+        seen_instructions.len() >= 3,
+        "expected varied style angles across seeds, got {}",
+        seen_instructions.len()
+    );
 }

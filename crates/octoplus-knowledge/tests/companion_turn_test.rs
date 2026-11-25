@@ -2022,3 +2022,53 @@ async fn a_single_long_sentence_for_a_fact_question_is_capped_at_thirty_words_en
         "expected sentence ending in flush: {said2}"
     );
 }
+
+#[tokio::test]
+async fn followup_continues_with_new_content_and_repeat_regenerates_once() {
+    let s = Stack::start(Opts {
+        scripted_answers: vec![
+            vec!["I keep coming back to The Dispossessed for how patiently it treats people.".to_string()],
+            // First draft on "more" repeats the previous answer verbatim/near-verbatim;
+            // regeneration produces a genuinely new reply.
+            vec!["I keep coming back to The Dispossessed for how patiently it treats people and ideas.".to_string()],
+            vec!["The main character Shevek tries to build bridges without losing his own quiet honesty.".to_string()],
+        ],
+        ..Opts::default()
+    })
+    .await;
+
+    let (a1, _) = s
+        .ask_companion("what is your favourite book", T0)
+        .await
+        .unwrap();
+    assert!(a1.contains("The Dispossessed"), "{a1}");
+
+    let (a2, _) = s.ask_companion("more", T0 + 5_000_000_000).await.unwrap();
+    assert!(
+        a2.contains("Shevek"),
+        "expected regenerated fresh reply, got: {a2}"
+    );
+
+    let prompts = s.rec.lock().unwrap().prompts.clone();
+    assert_eq!(prompts.len(), 3, "expected 1st turn + draft + 1 regen");
+    assert!(prompts[1].contains("Continue the previous topic"));
+    assert!(prompts[2].contains("repeated what you already said"));
+}
+
+#[tokio::test]
+async fn stage_direction_leak_from_model_is_dropped_before_speaking() {
+    let s = Stack::start(Opts {
+        default_answer: vec![
+            "Sorry, my brain just went analytical on you. ".to_string(),
+            "(softly) I read Borges when it rains.".to_string(),
+        ],
+        ..Opts::default()
+    })
+    .await;
+
+    let (said, _) = s
+        .ask_companion("what do you like to read", T0)
+        .await
+        .unwrap();
+    assert_eq!(said, "I read Borges when it rains.");
+}

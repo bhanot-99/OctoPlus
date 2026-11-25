@@ -92,6 +92,8 @@ pub enum DropReason {
     AvoidedTopic,
     /// Talked about her own machinery or about typing (never spoken).
     MetaLeak,
+    /// Leaked a stage direction or internal prompt note.
+    StageDirection,
     /// Broke character with AI clichés, wrong name, or human claim.
     IdentityLeak,
     /// Duplicate sentence detected by the repeat guard.
@@ -109,6 +111,7 @@ impl DropReason {
             Self::UngroundedMemory => "ungrounded_memory",
             Self::AvoidedTopic => "avoided_topic",
             Self::MetaLeak => "meta_leak",
+            Self::StageDirection => "stage_direction",
             Self::IdentityLeak => "identity_leak",
             Self::Repeat => "repeat",
             Self::Empty => "empty",
@@ -138,27 +141,19 @@ pub struct ReplyFilterCounters {
     pub dropped_avoided_topic: u64,
     /// Number of sentences dropped for talking about her own machinery or typing.
     pub dropped_meta_leak: u64,
+    /// Number of sentences dropped for stage directions or leaked prompt notes.
+    pub dropped_stage_direction: u64,
     /// Number of sentences dropped for identity/AI-assistant/wrong-name leaks.
     pub dropped_identity_leak: u64,
     /// Number of sentences dropped due to repeat detection.
     pub dropped_repeat: u64,
 }
 
-/// Removes text in brackets: stage directions like "(softly)" and asides like "(Though my head
-/// says ...)" are written for the page and sound wrong aloud. An unclosed bracket removes the
-/// rest of the sentence.
+/// Removes text in brackets or `*...*`: stage directions like "(softly)" or "*smiles*" are
+/// written for the page and sound wrong aloud. An unclosed bracket removes the rest of the
+/// sentence.
 fn without_asides(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    let mut depth = 0usize;
-    for c in text.chars() {
-        match c {
-            '(' | '[' => depth += 1,
-            ')' | ']' => depth = depth.saturating_sub(1),
-            _ if depth == 0 => out.push(c),
-            _ => {}
-        }
-    }
-    out
+    guards::strip_inline_stage_markers(text)
 }
 
 /// Fillers the speech engine reads letter by letter ("H M M") or that sound wrong aloud.
@@ -235,6 +230,11 @@ impl ReplyFilter {
     /// Cleans pictographs, validates against forbidden phrases, checks ungrounded memory
     /// cues, checks the repeat guard, and updates evaluation counters.
     pub fn check(&mut self, sentence: &str, _goodbye: bool, grounded: bool) -> Verdict {
+        if guards::is_stage_direction(sentence) {
+            self.counters.dropped_stage_direction += 1;
+            return Verdict::Drop(DropReason::StageDirection);
+        }
+
         let cleaned = speakable(&strip_pictographs(sentence));
         let trimmed = cleaned.trim();
         if trimmed.is_empty() {

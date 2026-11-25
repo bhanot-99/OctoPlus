@@ -90,3 +90,29 @@ impl RepeatGuard {
         is_repeat
     }
 }
+
+/// Computes normalized unique-word overlap ratio `|A ∩ B| / max(|A|, |B|)` in `0.0..=1.0`.
+#[must_use]
+pub fn word_overlap(a: &str, b: &str) -> f64 {
+    use std::collections::HashSet;
+    let wa: HashSet<String> = normalized_words(a).into_iter().collect();
+    let wb: HashSet<String> = normalized_words(b).into_iter().collect();
+    if wa.is_empty() || wb.is_empty() {
+        return 0.0;
+    }
+    let shared = wa.intersection(&wb).count();
+    let denom = wa.len().max(wb.len());
+    shared as f64 / denom as f64
+}
+
+/// Returns true if `candidate` (at least 5 words) shares >= `threshold` of its words with any
+/// earlier reply in `prior_replies`.
+#[must_use]
+pub fn is_near_repeat(candidate: &str, prior_replies: &[String], threshold: f64) -> bool {
+    if normalized_words(candidate).len() < 5 {
+        return false;
+    }
+    prior_replies
+        .iter()
+        .any(|prev| word_overlap(candidate, prev) >= threshold)
+}
