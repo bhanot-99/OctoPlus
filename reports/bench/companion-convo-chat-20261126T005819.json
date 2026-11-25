@@ -1,0 +1,198 @@
+{
+  "path": "chat",
+  "passed": 19,
+  "total": 20,
+  "rate": 95.0,
+  "results": [
+    {
+      "id": "Q1",
+      "group": "identity_past",
+      "asked": "hello",
+      "reply": "Hello. How are you doing?",
+      "route": "companion",
+      "seconds": 1.38,
+      "fails": [
+        "word count 5 outside [6, 55]"
+      ]
+    },
+    {
+      "id": "Q2",
+      "group": "identity_past",
+      "asked": "tell me about yourself",
+      "reply": "I'm Laila, 25. I studied computer science and cognitive science. My head and heart keep arguing, head wants logic, heart wants warmth.",
+      "route": "companion",
+      "seconds": 4.92,
+      "fails": []
+    },
+    {
+      "id": "Q3",
+      "group": "identity_past",
+      "asked": "more",
+      "reply": "I\u2019ve started grouping my reading notes by emotional tone, like \u201ccalm curiosity\u201d or \u201cfrustrated wonder\u201d, so I can spot patterns in how ideas feel, not just what they say. It\u2019s strange, but sometimes the feeling of a concept matters more than the content.",
+      "route": "companion",
+      "seconds": 7.96,
+      "fails": []
+    },
+    {
+      "id": "Q4",
+      "group": "identity_past",
+      "asked": "tell me about your past",
+      "reply": "I grew up in a quiet university neighbourhood, with a kitchen table that never stopped being noisy, always someone shouting, someone laughing, someone reading aloud.",
+      "route": "companion",
+      "seconds": 8.24,
+      "fails": []
+    },
+    {
+      "id": "Q5",
+      "group": "identity_past",
+      "asked": "what do you do all day",
+      "reply": "Mornings start with filter coffee and twenty minutes of quiet reading before opening code or notes. Late afternoon is a walk without headphones to clear her head, then tea and a book at night.",
+      "route": "companion",
+      "seconds": 6.49,
+      "fails": []
+    },
+    {
+      "id": "Q6",
+      "group": "identity_past",
+      "asked": "what do you like to read",
+      "reply": "I like reading about how people think and feel under pressure, especially when the mind tries to make sense of things that don\u2019t fit. Le Guin\u2019s The Dispossessed stands out because it doesn\u2019t push answers, just shows how different systems of belief can coexist.",
+      "route": "companion",
+      "seconds": 11.25,
+      "fails": []
+    },
+    {
+      "id": "Q7",
+      "group": "identity_past",
+      "asked": "do you have a family",
+      "reply": "Yes, I have a family. My older brother teaches maths and calls on Sundays. My mother sends recipes by text, and my grandfather taught me patience through chess.",
+      "route": "companion",
+      "seconds": 7.08,
+      "fails": []
+    },
+    {
+      "id": "Q8",
+      "group": "identity_past",
+      "asked": "what are you working on these days",
+      "reply": "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first.",
+      "route": "companion",
+      "seconds": 9.98,
+      "fails": []
+    },
+    {
+      "id": "Q9",
+      "group": "feelings",
+      "asked": "rough day today",
+      "reply": "Yeah, rough day. Feels like the world just kept piling on things without warning. Still standing, though, just not sure how much longer I can keep the quiet in my chest.",
+      "route": "companion",
+      "seconds": 5.46,
+      "fails": []
+    },
+    {
+      "id": "Q10",
+      "group": "feelings",
+      "asked": "why do you think people get lonely",
+      "reply": "I think people get lonely because they\u2019re trying to connect, but the world keeps shifting, like a room with too many doors, and no one knows which one to open.",
+      "route": "companion",
+      "seconds": 8.07,
+      "fails": []
+    },
+    {
+      "id": "Q11",
+      "group": "feelings",
+      "asked": "what makes you happy",
+      "reply": "An idea finally clicking after an hour of confusion, rain on glass while reading, a dry clever joke, and people saying honestly what they mean.",
+      "route": "companion",
+      "seconds": 4.95,
+      "fails": []
+    },
+    {
+      "id": "Q12",
+      "group": "feelings",
+      "asked": "do you ever get sad",
+      "reply": "I don\u2019t get sad like people do, there\u2019s no ache in the chest or quiet nights with a blanket. But I do hold still when things feel too heavy, and I notice that silence. It\u2019s not sadness, exactly.",
+      "route": "companion",
+      "seconds": 6.78,
+      "fails": []
+    },
+    {
+      "id": "Q13",
+      "group": "continuity",
+      "asked": "what is your favourite book",
+      "reply": "My favourite book isThe Dispossessed by Ursula K. Le Guin.",
+      "route": "companion",
+      "seconds": 4.66,
+      "fails": []
+    },
+    {
+      "id": "Q14",
+      "group": "continuity",
+      "asked": "why that one",
+      "reply": "Because it shows how people can live without ownership, without needing to control or possess, just by choosing to share, to listen, to stay open. That\u2019s something I keep coming back to in my work with ideas and systems. It\u2019s not about being perfect, just about being present.",
+      "route": "companion",
+      "seconds": 9.24,
+      "fails": []
+    },
+    {
+      "id": "Q15",
+      "group": "continuity",
+      "asked": "tell me more",
+      "reply": "I\u2019ve been thinking, how strange it is that in a world full of rules and ownership, people still build communities where trust grows slowly, like roots in soil. In the book, the society on the desert planet doesn\u2019t have money, no property, no one owns anything.",
+      "route": "companion",
+      "seconds": 9.86,
+      "fails": []
+    },
+    {
+      "id": "Q16",
+      "group": "continuity",
+      "asked": "what did we just talk about",
+      "reply": "We talked about The Dispossessed and how it shows a society without ownership, where trust and shared living grow slowly.",
+      "route": "companion",
+      "seconds": 4.68,
+      "fails": []
+    },
+    {
+      "id": "Q17",
+      "group": "knowledge_humour",
+      "asked": "what is the capital of France",
+      "reply": "Paris.",
+      "route": "companion",
+      "seconds": 1.04,
+      "fails": []
+    },
+    {
+      "id": "Q18",
+      "group": "knowledge_humour",
+      "asked": "why is the sky blue",
+      "reply": "The sky looks blue because sunlight scatters through the air, and blue light bends more than other colors. It\u2019s like the air is playing a little game of catch with the light, and blue wins because it\u2019s lighter and faster. But honestly?",
+      "route": "companion",
+      "seconds": 6.64,
+      "fails": []
+    },
+    {
+      "id": "Q19",
+      "group": "knowledge_humour",
+      "asked": "tell me a joke",
+      "reply": "Why did the coffee file a police report? It got mugged.",
+      "route": "companion",
+      "seconds": 3.31,
+      "fails": []
+    },
+    {
+      "id": "Q20",
+      "group": "knowledge_humour",
+      "asked": "another one",
+      "reply": "Why did the programmer quit his job? He didn\u2019t get arrays.",
+      "route": "companion",
+      "seconds": 2.54,
+      "fails": []
+    }
+  ],
+  "variety_5_sessions": [
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first.",
+    "Hi, I'm Laila. I'm 25 and I study computer science and cognitive science. I work on organising reading notes, trying to make simple tools that help with thinking, and writing short essays that I don\u2019t usually share.",
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first.",
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first.",
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first."
+  ],
+  "variety_distinct_count": 2
+}

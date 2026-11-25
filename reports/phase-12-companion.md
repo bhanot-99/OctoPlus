@@ -1,7 +1,7 @@
 # Phase 12: the Companion (Laila): Report
 
 **Date:** 2026-11-25 · **Branch:** `phase-12` (not merged) · **Builders:** agy (C-S00 documents, C-S01 core, C-S02 turn machine and pipeline, C-S07a tuning) and Claude (C-S03 to C-S08, all checks, every commit) · **Checker:** Claude read every diff and re-ran every check; agy's reports were never taken as proof · **Owner decisions:** `memory.md` D-77 (defaults), D-78 (progress), and on 2026-11-25 "take full control after agy's last report" and "the 24 h soak and the one-week trial are not part of this phase"
-**Status:** Built and green (including the OctoPit Chat Laila fix in `reports/phase-12-octopit-chat-laila.md`). Waiting for the owner's sign-off and merge, and for the owner-only items in section 7.
+**Status:** Built and green (including the OctoPit Chat Laila fix in `reports/phase-12-octopit-chat-laila.md` and the Laila personality & 20-question cross-verification in `reports/phase-12-laila-personality.md`). Waiting for the owner's sign-off and merge, and for the owner-only items in section 7.
 
 ## 1. Summary
 
