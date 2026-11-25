@@ -128,7 +128,8 @@ impl KnowledgeHandler {
         if crate::companion::memory::asks_what_i_remember(text) {
             let line = match self.query_facts("").await {
                 Some(facts) => {
-                    let texts: Vec<String> = facts.into_iter().map(|f| f.text).collect();
+                    // Newest first: what she learned lately matters most to the owner.
+                    let texts: Vec<String> = facts.into_iter().rev().map(|f| f.text).collect();
                     crate::companion::memory::memory_list_line(&texts)
                 }
                 None => "I can't reach my memory right now. Ask me again in a moment.".to_string(),

@@ -1185,6 +1185,10 @@ async fn what_do_you_remember_lists_both_kinds_plainly() {
     assert_eq!(done.route, Route::Companion as i32);
     assert!(said.contains("I take my tea without sugar"), "{said}");
     assert!(said.contains("I noticed: my dog is Rex"), "{said}");
+    assert!(
+        said.find("I noticed: my dog is Rex") < said.find("I take my tea without sugar"),
+        "newest first: {said}"
+    );
     assert!(!said.contains("(noticed)"), "{said}");
     assert!(said.contains("forget that"), "{said}");
     assert!(s.rec.lock().unwrap().prompts.is_empty(), "no model call");

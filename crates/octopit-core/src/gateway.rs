@@ -154,6 +154,13 @@ impl Gateway {
     /// A plain sentence when C5 refuses or cannot be reached.
     pub async fn companion_control(&self, command: CompanionCommand) -> Result<(), String> {
         let (action, minutes, id) = command.parts();
+        // Forgetting a fact opens the approval dialog, which waits for the owner: give it as long
+        // as a question gets. The other buttons are quick.
+        let deadline = if matches!(command, CompanionCommand::Forget(_)) {
+            ASK_DEADLINE
+        } else {
+            POLL_DEADLINE
+        };
         match self
             .knowledge
             .call(
@@ -162,7 +169,7 @@ impl Gateway {
                     minutes,
                     id,
                 }),
-                POLL_DEADLINE,
+                deadline,
             )
             .await
         {
