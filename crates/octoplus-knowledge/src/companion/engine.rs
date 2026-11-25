@@ -53,6 +53,16 @@ pub enum FixedKind {
     Honest,
     /// Warm goodbye farewell concluding the session.
     Goodbye,
+    /// An apology to a complaint about how her voice sounded.
+    VoiceSorry,
+    /// An honest answer about earlier chats she does not have.
+    PastChats,
+    /// What she says about herself, her name or her age (fixed, from her persona).
+    About,
+    /// She never approves a dialog; only the owner can.
+    CannotApprove,
+    /// She only talks: a request to do something on the computer.
+    CannotAct,
 }
 
 /// Parameters guiding model generation for a companion turn.
@@ -70,6 +80,8 @@ pub struct GeneratePlan {
     pub goodbye: bool,
     /// How much humour this reply may have.
     pub humour: HumourLevel,
+    /// The owner asked a short factual question: the fact, then stop.
+    pub short_factual: bool,
 }
 
 /// Cumulative counters for companion engine decisions and transitions.
@@ -110,7 +122,11 @@ pub struct CompanionEngine {
     careful_turns: u32,
     session_start_ns: u64,
     facts_grounded: bool,
+    /// The facts that went into the prompt, for judging whether a memory claim is backed.
+    facts_in_prompt: Vec<String>,
     last_reply_was_question: bool,
+    /// Her last spoken words, to recognise her own voice coming back through the microphone.
+    last_spoken: String,
     /// What the owner's "funny / not funny" feedback asks for (set by the handler).
     humour_taste: HumourLevel,
     /// Minutes after local midnight (set by the handler); decides "too late for jokes".
@@ -143,7 +159,9 @@ impl CompanionEngine {
             careful_turns: 0,
             session_start_ns: now_ns,
             facts_grounded: false,
+            facts_in_prompt: Vec::new(),
             last_reply_was_question: false,
+            last_spoken: String::new(),
             humour_taste: HumourLevel::Normal,
             minute_of_day: 12 * 60,
             quiet_start_min: quiet.quiet_start_min,
@@ -219,6 +237,66 @@ impl CompanionEngine {
             });
         }
 
+        // 2a. Things she must answer the same true way every time, without the model.
+        let fixed_line = if guards::asks_to_approve(text) {
+            Some((
+                FixedKind::CannotApprove,
+                guards::cannot_approve().to_string(),
+            ))
+        } else if guards::asks_to_do_something(text) {
+            Some((FixedKind::CannotAct, guards::cannot_do_that().to_string()))
+        } else if guards::asks_about_her(text) {
+            Some((FixedKind::About, self.persona.introduction_text()))
+        } else if guards::asks_her_name(text) {
+            Some((
+                FixedKind::About,
+                format!("My name is {}.", self.persona.name),
+            ))
+        } else if guards::asks_her_age(text) {
+            Some((
+                FixedKind::About,
+                format!(
+                    "I'm {}, as a character. I'm still an AI, of course.",
+                    self.persona.age
+                ),
+            ))
+        } else {
+            None
+        };
+        if let Some((kind, line)) = fixed_line {
+            self.record_fixed(text, &line, now_ns);
+            self.counters.turns += 1;
+            return Plan::Fixed(FixedReply {
+                kind,
+                lines: vec![line],
+                end_session: false,
+            });
+        }
+
+        // 2b. "Your voice sounded wrong": an apology for the speech engine, no discussion of spelling.
+        if guards::voice_complaint(text) {
+            let line = guards::voice_sorry().to_string();
+            self.record_fixed(text, &line, now_ns);
+            self.counters.turns += 1;
+            return Plan::Fixed(FixedReply {
+                kind: FixedKind::VoiceSorry,
+                lines: vec![line],
+                end_session: false,
+            });
+        }
+
+        // 2c. "Do you remember what we talked about yesterday": she only has this chat.
+        if guards::asks_about_past_chats(text) && self.session.turn_count() == 0 {
+            let line = guards::past_chats_reply().to_string();
+            self.record_fixed(text, &line, now_ns);
+            self.counters.turns += 1;
+            return Plan::Fixed(FixedReply {
+                kind: FixedKind::PastChats,
+                lines: vec![line],
+                end_session: false,
+            });
+        }
+
         // 3. Goodbye check
         if guards::is_goodbye(text) {
             let idx = self.rng.pick(SAFE_GOODBYE.len());
@@ -250,6 +328,7 @@ impl CompanionEngine {
                 gentle_line: None,
                 goodbye: false,
                 humour: HumourLevel::Off,
+                short_factual: guards::is_short_factual_question(text),
             })
         } else {
             let signals = signals_from_text(text);
@@ -262,8 +341,22 @@ impl CompanionEngine {
                 self.humour_taste
             };
             let decision = self.mode_machine.step(signals);
-            let instruction = switch_instruction(&decision).map(ToString::to_string);
-
+            // A tone-switch aside ('Hey... wait.') never replaces an answer: no aside for a fact
+            // question or a joke request.
+            let answer_only =
+                guards::is_short_factual_question(text) || guards::asks_for_joke(text);
+            let mut instruction = if answer_only {
+                None
+            } else {
+                switch_instruction(&decision).map(ToString::to_string)
+            };
+            if guards::asks_for_joke(text) && humour != HumourLevel::Off {
+                let joke = "The owner asked for a joke. Tell one short, clean, simple joke in two sentences at most, then stop.".to_string();
+                instruction = Some(match instruction {
+                    Some(i) => format!("{i} {joke}"),
+                    None => joke,
+                });
+            }
             let topic_love = love_topic(text);
             let ctx = KabirContext {
                 topic_is_love_loneliness_regret: topic_love,
@@ -293,6 +386,7 @@ impl CompanionEngine {
                 gentle_line,
                 goodbye: false,
                 humour,
+                short_factual: guards::is_short_factual_question(text),
             })
         }
     }
@@ -304,6 +398,7 @@ impl CompanionEngine {
         self.session
             .push(question, answer, TaintFlags::USER_PROVIDED, now_ns);
         self.last_reply_was_question = answer.trim_end().ends_with('?');
+        self.last_spoken = answer.to_string();
     }
 
     /// Returns true if the last finished assistant reply ended with '?'.
@@ -315,6 +410,9 @@ impl CompanionEngine {
     /// Evaluates whether incoming spoken text is directed to the companion.
     #[must_use]
     pub fn directed(&self, text: &str) -> Directed {
+        if directed::is_echo_of(text, &self.last_spoken) {
+            return Directed::Ignore(directed::IgnoreReason::EchoOfHer);
+        }
         let session_turns = self.session.turn_count() as u32;
         directed::assess(text, self.last_reply_was_question, session_turns)
     }
@@ -324,6 +422,28 @@ impl CompanionEngine {
         self.facts_grounded = grounded;
     }
 
+    /// Tells the engine which facts about the owner went into the prompt, so a sentence that
+    /// says "you told me ..." is only allowed when it matches one of them.
+    pub fn set_facts(&mut self, facts: &[String]) {
+        self.facts_in_prompt = facts.to_vec();
+        self.facts_grounded = !facts.is_empty();
+    }
+
+    /// Whether a sentence shares at least two real words with a fact that is in the prompt.
+    fn backed_by_a_fact(&self, sentence: &str) -> bool {
+        let words = |t: &str| -> std::collections::HashSet<String> {
+            t.to_lowercase()
+                .split(|c: char| !c.is_alphanumeric())
+                .filter(|w| w.len() >= 4)
+                .map(str::to_string)
+                .collect()
+        };
+        let sw = words(sentence);
+        self.facts_in_prompt
+            .iter()
+            .any(|f| words(f).intersection(&sw).count() >= 2)
+    }
+
     /// Filters streamed reply sentences before speech synthesis, providing safe goodbye fallback.
     pub fn filter_pieces(&mut self, pieces: &[String], goodbye: bool) -> Vec<String> {
         let pick = self.rng.pick(SAFE_GOODBYE.len());
@@ -331,17 +451,22 @@ impl CompanionEngine {
         let has_history = self.session.turn_count() > 0;
         let mut kept = Vec::new();
         for p in pieces {
-            let grounded = if has_facts {
+            // A claim about the past is backed only by a fact that says the same thing, or (for
+            // "you said ...") by this chat. Having SOME fact in the prompt backs nothing.
+            let no_claim = !has_past_memory_cue(p) && !has_chat_memory_cue(p);
+            let grounded = if no_claim || (has_facts && self.backed_by_a_fact(p)) {
                 true
-            } else if has_past_memory_cue(p) {
-                false
-            } else if has_chat_memory_cue(p) {
+            } else if has_chat_memory_cue(p) && !has_past_memory_cue(p) {
                 has_history
             } else {
-                true
+                false
             };
-            if let Verdict::Keep(clean) = self.filter.check(p, goodbye, grounded) {
-                kept.push(clean);
+            match self.filter.check(p, goodbye, grounded) {
+                Verdict::Keep(clean) => kept.push(clean),
+                Verdict::Drop(reason) => {
+                    // The reason only, never the words (R0-10).
+                    tracing::debug!("companion reply piece dropped: {}", reason.label());
+                }
             }
         }
 
@@ -378,6 +503,7 @@ impl CompanionEngine {
         _plan: &GeneratePlan,
     ) {
         self.session.push(question, reply, taint, now_ns);
+        self.last_spoken = reply.to_string();
         self.last_reply_was_question = reply.trim_end().ends_with('?');
         let reply_lower = reply.to_lowercase();
         let name_lower = self.persona.past_love.name.to_lowercase();
@@ -392,6 +518,13 @@ impl CompanionEngine {
         self.session
             .push("", line, TaintFlags::MODEL_GENERATED, now_ns);
         self.last_reply_was_question = line.trim_end().ends_with('?');
+        self.last_spoken = line.to_string();
+    }
+
+    /// The conversation so far as separate turns (see [`CompanionSession::parts`]).
+    #[must_use]
+    pub fn history_parts(&self, budget_tokens: u32) -> (String, Vec<(String, String)>, TaintFlags) {
+        self.session.parts(budget_tokens)
     }
 
     /// Renders multi-turn conversation history within token budget.

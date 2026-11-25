@@ -579,7 +579,7 @@ impl Pulse {
         }
         options.push((Topic::CheckIn, 3.0));
         if self.joke_weight > 0.0 {
-            options.push((Topic::Joke, 2.0 * self.joke_weight));
+            options.push((Topic::Joke, 0.8 * self.joke_weight));
         }
         options.push((Topic::Observation, 1.0));
         options.push((Topic::FunFact, 1.0));

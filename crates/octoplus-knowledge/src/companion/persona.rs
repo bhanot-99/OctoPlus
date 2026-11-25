@@ -79,6 +79,10 @@ pub struct Persona {
     pub story: String,
     /// One-line personality summary.
     pub personality_line: String,
+    /// What she says about herself when asked, in her own first-person words (empty: composed
+    /// from her name, age and personality line).
+    #[serde(default)]
+    pub introduction: String,
     /// Voice identifier for speech synthesis.
     pub voice: String,
     /// Topics to avoid.
@@ -228,6 +232,18 @@ pub struct CrisisConfig {
 }
 
 impl Persona {
+    /// What she says when asked about herself: her own introduction, or one composed from her
+    /// name, age and personality line.
+    #[must_use]
+    pub fn introduction_text(&self) -> String {
+        let own = self.introduction.trim();
+        if own.is_empty() {
+            format!("I'm {}, {}. {}", self.name, self.age, self.personality_line)
+        } else {
+            own.to_string()
+        }
+    }
+
     /// Parses a persona from a TOML string and validates it.
     ///
     /// # Errors
@@ -284,6 +300,12 @@ impl Persona {
             return Err(PersonaError::Validation {
                 key: "story",
                 reason: "story length must be between 1 and 2000 characters",
+            });
+        }
+        if self.introduction.len() > 600 {
+            return Err(PersonaError::Validation {
+                key: "introduction",
+                reason: "introduction must be at most 600 characters",
             });
         }
         if self.personality_line.is_empty() || self.personality_line.len() > 600 {

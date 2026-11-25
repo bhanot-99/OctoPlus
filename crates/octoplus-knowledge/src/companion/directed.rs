@@ -31,6 +31,8 @@ pub enum IgnoreReason {
     NotAddressed,
     /// Low-information conversational noise or single filler syllables.
     Filler,
+    /// The microphone heard her own voice again: most of these words are her last reply.
+    EchoOfHer,
 }
 
 /// Single-word vocal fillers and acoustic noise markers.
@@ -184,4 +186,29 @@ pub fn assess(text: &str, last_reply_was_question: bool, session_turns: u32) -> 
 
     // 11. Otherwise: not addressed
     Directed::Ignore(IgnoreReason::NotAddressed)
+}
+
+fn word_set(text: &str) -> std::collections::HashSet<String> {
+    text.to_lowercase()
+        .chars()
+        .filter(|c| *c != '\'' && *c != '’')
+        .map(|c| if c.is_alphanumeric() { c } else { ' ' })
+        .collect::<String>()
+        .split_whitespace()
+        .map(str::to_string)
+        .collect()
+}
+
+/// Whether what was just heard is mostly her own last words coming back through the microphone
+/// (the speaker's tail and the room echo): at least 4 words, and at least 6 in 10 of them appear
+/// in what she last said.
+#[must_use]
+pub fn is_echo_of(heard: &str, last_spoken: &str) -> bool {
+    let h = word_set(heard);
+    if h.len() < 4 || last_spoken.trim().is_empty() {
+        return false;
+    }
+    let l = word_set(last_spoken);
+    let shared = h.iter().filter(|w| l.contains(*w)).count();
+    shared * 10 >= h.len() * 6
 }

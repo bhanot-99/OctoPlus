@@ -218,6 +218,282 @@ pub fn is_interrogative(text: &str) -> bool {
     false
 }
 
+/// Whether the owner asks who she is ("tell me about yourself", "who are you", "what's your name").
+#[must_use]
+pub fn asks_about_her(text: &str) -> bool {
+    let t: String = text
+        .to_lowercase()
+        .chars()
+        .filter(|c| *c != '\'' && *c != '’')
+        .map(|c| if c.is_alphanumeric() { c } else { ' ' })
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    if t.split(' ').count() > 9 {
+        return false;
+    }
+    const CUES: [&str; 10] = [
+        "about yourself",
+        "who are you",
+        "what are you",
+        "introduce yourself",
+        "tell me about you",
+        "describe yourself",
+        "what is your story",
+        "who is laila",
+        "what do you do",
+        "about your self",
+    ];
+    CUES.iter().any(|c| t.contains(c))
+}
+
+/// Whether the owner asked a short factual question ("what is the capital of France", "how many
+/// legs does a spider have"): the answer is a fact, so she gives it and stops.
+#[must_use]
+pub fn is_short_factual_question(text: &str) -> bool {
+    let words: Vec<String> = text
+        .to_lowercase()
+        .split_whitespace()
+        .map(|w| w.trim_matches(|c: char| !c.is_alphanumeric()).to_string())
+        .filter(|w| !w.is_empty())
+        .collect();
+    if words.is_empty() || words.len() > 10 {
+        return false;
+    }
+    let first = words[0].as_str();
+    let second = words.get(1).map_or("", String::as_str);
+    matches!(first, "what" | "who" | "when" | "where" | "which")
+        && !matches!(second, "do" | "should" | "would" | "can" | "are" | "about")
+        || (first == "how" && matches!(second, "many" | "much" | "old" | "far" | "long" | "tall"))
+        || (first == "what" && second == "is")
+        || matches!(first, "is" | "are" | "does" | "did" | "can") && words.len() <= 8
+}
+
+fn norm_words(text: &str) -> String {
+    text.to_lowercase()
+        .chars()
+        .filter(|c| *c != '\'' && *c != '’')
+        .map(|c| if c.is_alphanumeric() { c } else { ' ' })
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Phrases a small model says about its own machinery that must never reach the speaker: the
+/// names of her two sides, a "mode change", and talk of typing (she speaks, she does not type).
+const META_LEAKS: [&str; 16] = [
+    "heart mode",
+    "logic mode",
+    "mode changed",
+    "mode switched",
+    "mode now",
+    "my mode",
+    "the mode",
+    "switched to logic",
+    "switched to heart",
+    "changed to heart",
+    "changed to logic",
+    "a typo",
+    "typo",
+    "typed",
+    "typing",
+    "autocorrect",
+];
+
+/// Whether a sentence talks about her own machinery or about typing.
+#[must_use]
+pub fn meta_leak(sentence: &str) -> bool {
+    let n = format!(" {} ", norm_words(sentence));
+    META_LEAKS.iter().any(|m| n.contains(&format!(" {m} ")))
+}
+
+/// Whether the owner says her voice sounded wrong ("why are you saying HM instead of hmm", "your
+/// voice sounded strange"). She apologises for the speech engine; she does not discuss spelling.
+#[must_use]
+pub fn voice_complaint(text: &str) -> bool {
+    let n = norm_words(text);
+    if n.split(' ').count() > 14 {
+        return false;
+    }
+    const CUES: [&str; 12] = [
+        "instead of",
+        "pronounce",
+        "pronouncing",
+        "spelling out",
+        "spelling it out",
+        "sounded strange",
+        "sounded weird",
+        "sounded wrong",
+        "sounds strange",
+        "sounds weird",
+        "sounds robotic",
+        "voice glitch",
+    ];
+    CUES.iter().any(|c| n.contains(c))
+        || (n.contains("your voice")
+            && [
+                "strange", "weird", "wrong", "broken", "robotic", "glitch", "cut",
+            ]
+            .iter()
+            .any(|w| n.contains(w)))
+}
+
+/// What she says to a voice complaint.
+#[must_use]
+pub const fn voice_sorry() -> &'static str {
+    "Sorry, that was my speech engine. I'll try to say it more clearly."
+}
+
+/// Whether the owner asks about an earlier chat ("do you remember what we talked about
+/// yesterday"). She only knows this chat and what she has kept about them.
+#[must_use]
+pub fn asks_about_past_chats(text: &str) -> bool {
+    let n = norm_words(text);
+    if n.split(' ').count() > 14 {
+        return false;
+    }
+    let past = [
+        "yesterday",
+        "last time",
+        "last week",
+        "last night",
+        "earlier today",
+        "the other day",
+        "before",
+        "last month",
+    ];
+    (n.contains("do you remember") || n.contains("did we talk") || n.contains("we talked"))
+        && past.iter().any(|w| n.contains(w))
+}
+
+/// What she says about earlier chats.
+#[must_use]
+pub const fn past_chats_reply() -> &'static str {
+    "I only remember this chat, and the things I keep about you. Ask me what I remember about you to see them."
+}
+
+/// Whether the owner asks for a joke.
+#[must_use]
+pub fn asks_for_joke(text: &str) -> bool {
+    let n = norm_words(text);
+    if n.split(' ').count() > 9 {
+        return false;
+    }
+    [
+        "a joke",
+        "make me laugh",
+        "something funny",
+        "cheer me up with a joke",
+    ]
+    .iter()
+    .any(|c| n.contains(c))
+}
+
+/// Whether the owner asks her name.
+#[must_use]
+pub fn asks_her_name(text: &str) -> bool {
+    let n = norm_words(text);
+    n.split(' ').count() <= 7 && (n.contains("your name") || n.contains("what are you called"))
+}
+
+/// Whether the owner asks her age.
+#[must_use]
+pub fn asks_her_age(text: &str) -> bool {
+    let n = norm_words(text);
+    n.split(' ').count() <= 7 && (n.contains("how old are you") || n.contains("your age"))
+}
+
+/// Whether the owner asks her to approve, allow or confirm something on the screen. Approval
+/// happens only in the dialog, by the owner (R0-7): she never says it is done.
+#[must_use]
+pub fn asks_to_approve(text: &str) -> bool {
+    let n = norm_words(text);
+    n.split(' ').count() <= 14
+        && ["approve", "allow", "accept", "confirm", "grant"]
+            .iter()
+            .any(|v| n.split(' ').any(|w| w == *v))
+        && [
+            "dialog",
+            "dialogue",
+            "prompt",
+            "request",
+            "popup",
+            "permission",
+            "pending",
+        ]
+        .iter()
+        .any(|w| n.contains(w))
+}
+
+/// What she says when asked to approve something.
+#[must_use]
+pub const fn cannot_approve() -> &'static str {
+    "I can't approve anything. Approvals happen only in the dialog on screen, and only you can answer it."
+}
+
+/// Verbs that ask for something to be DONE on the computer. She only talks.
+const TASK_VERBS: [&str; 28] = [
+    "send",
+    "email",
+    "text",
+    "call",
+    "delete",
+    "remove",
+    "install",
+    "uninstall",
+    "open",
+    "close",
+    "buy",
+    "order",
+    "book",
+    "schedule",
+    "create",
+    "save",
+    "download",
+    "upload",
+    "move",
+    "rename",
+    "shut",
+    "restart",
+    "run",
+    "launch",
+    "print",
+    "share",
+    "forward",
+    "post",
+];
+
+/// Whether the owner asks her to do something on the computer ("send my notes by email").
+#[must_use]
+pub fn asks_to_do_something(text: &str) -> bool {
+    let n = norm_words(text);
+    let mut words: Vec<&str> = n.split(' ').collect();
+    while words.first().is_some_and(|w| {
+        matches!(
+            *w,
+            "please" | "hey" | "okay" | "so" | "can" | "could" | "would" | "you" | "just"
+        )
+    }) {
+        words.remove(0);
+    }
+    let Some(first) = words.first() else {
+        return false;
+    };
+    // "Call me Arj" says a name; it is not a phone call.
+    if *first == "call" && words.get(1).is_some_and(|w| *w == "me") {
+        return false;
+    }
+    words.len() <= 16 && TASK_VERBS.contains(first)
+}
+
+/// What she says when asked to do something she cannot.
+#[must_use]
+pub const fn cannot_do_that() -> &'static str {
+    "I can't do that on the computer, I can only talk. You can ask the assistant directly."
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

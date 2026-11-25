@@ -565,6 +565,18 @@ void VoicePipeline::ProcessFrame(std::span<const std::int16_t> frame) {
       Run(Post(e));
     }
   }
+  // Her own voice has just stopped: its tail and the room echo are not the owner. Treat the
+  // microphone as silent for the guard time, but keep the clock running for the timeouts.
+  if (now < echo_guard_until_ns_) {
+    gate_.Reset();
+    barge_gate_.Reset();
+    d_.vad->Reset();
+    TurnEvent guard_tick;
+    guard_tick.kind = TurnEventKind::kTick;
+    guard_tick.now_ns = now;
+    Run(Post(guard_tick));
+    return;
+  }
   const float prob = d_.vad->Process(frame);
   const VadEvent main = gate_.Update(prob, now);
   const VadEvent barge = barge_gate_.Update(prob, now);
@@ -668,6 +680,7 @@ void VoicePipeline::ProcessFrame(std::span<const std::int16_t> frame) {
     TurnEvent e;
     e.kind = TurnEventKind::kPlaybackIdle;
     e.now_ns = now;
+    echo_guard_until_ns_ = now + cfg_.echo_guard_ns;
     Run(Post(e));
     // glibc keeps freed model buffers in the heap otherwise: give them back after each turn
     // (lessons-from-v1 §3, memory crept up between idle and steady).

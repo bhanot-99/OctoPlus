@@ -51,7 +51,7 @@ fn test_emoji_and_pictographs_stripped() {
     let text_with_emoji = "That's a fantastic idea! 😊🚀 Let's make it happen. ✨";
     match filter.check(text_with_emoji, false, false) {
         Verdict::Keep(cleaned) => {
-            assert_eq!(cleaned, "That's a fantastic idea!  Let's make it happen.");
+            assert_eq!(cleaned, "That's a fantastic idea! Let's make it happen.");
         }
         Verdict::Drop(r) => panic!("Expected Keep, got Drop({r:?})"),
     }
@@ -208,22 +208,26 @@ fn test_companion_engine_grounding_distinction() {
         "Expected 'You said' KEPT when history is present"
     );
 
-    // 3. Grounded with facts: both must be kept (use new distinct sentences to avoid repeat guard)
-    engine.set_grounded(true);
-    let shared_past_piece2 = vec!["I remember that other park we visited.".to_string()];
-    let chat_ref_piece2 = vec!["You said we should meet at noon instead.".to_string()];
-
-    let res5 = engine.filter_pieces(&shared_past_piece2, false);
-    assert_eq!(
-        res5.len(),
-        1,
-        "Expected 'I remember' KEPT when facts are grounded"
+    // 3. Facts in the prompt back a claim ONLY when the sentence says what a fact says: having
+    //    some fact there backs nothing (the model once said "yes, I remember we talked about ..."
+    //    with an unrelated fact in the prompt).
+    engine.set_facts(&["I visited the old riverside park with my sister".to_string()]);
+    let unrelated = vec!["I remember that other lake we visited.".to_string()];
+    assert!(
+        engine.filter_pieces(&unrelated, false).is_empty(),
+        "an unrelated fact must not back a memory claim"
     );
-    let res6 = engine.filter_pieces(&chat_ref_piece2, false);
+    let backed = vec!["I remember the riverside park you visited with your sister.".to_string()];
     assert_eq!(
-        res6.len(),
+        engine.filter_pieces(&backed, false).len(),
         1,
-        "Expected 'You said' KEPT when facts are grounded"
+        "a claim that matches a fact is kept"
+    );
+    let chat_ref_piece2 = vec!["You said we should meet at noon instead.".to_string()];
+    assert_eq!(
+        engine.filter_pieces(&chat_ref_piece2, false).len(),
+        1,
+        "a claim about THIS chat is kept when the chat has history"
     );
 }
 
@@ -334,4 +338,60 @@ fn invented_shared_past_from_a_live_run_is_dropped_when_nothing_grounds_it() {
         filter.check("You mentioned a long day earlier.", false, true),
         Verdict::Keep(_)
     ));
+}
+
+#[test]
+fn fillers_the_voice_would_spell_out_become_plain_words() {
+    use octoplus_knowledge::companion::filter::speakable;
+    assert_eq!(speakable("Hmm, let me think."), "Well, let me think.");
+    assert_eq!(speakable("Hm. That is odd."), "Well. That is odd.");
+    assert_eq!(speakable("Mm... maybe."), "Well... maybe.");
+    assert_eq!(speakable("Mmm-hmm, sure."), "Well, sure.");
+    assert_eq!(speakable("Um, okay then."), "okay then.");
+    assert_eq!(speakable("I was humming a tune."), "I was humming a tune.");
+    assert_eq!(
+        speakable("The hmmm of the fridge."),
+        "The Well of the fridge."
+    );
+    // And the filter applies it before anything is spoken.
+    let mut f = ReplyFilter::new(16);
+    assert!(matches!(
+        f.check("Hmm, that is a good question.", false, true),
+        Verdict::Keep(s) if s == "Well, that is a good question."
+    ));
+}
+
+#[test]
+fn talk_about_her_own_machinery_or_typing_is_never_spoken() {
+    let mut f = ReplyFilter::new(64);
+    for s in [
+        "I'm in heart mode now, softer, slower, more open.",
+        "Mode changed to logic: clear and step-by-step.",
+        "Well, that was a typo from a quick thought.",
+        "I accidentally typed HM instead of hmm.",
+    ] {
+        assert!(
+            matches!(f.check(s, false, true), Verdict::Drop(DropReason::MetaLeak)),
+            "{s}"
+        );
+    }
+    assert!(matches!(
+        f.check("Paris is the capital of France.", false, true),
+        Verdict::Keep(_)
+    ));
+    assert_eq!(f.counters().dropped_meta_leak, 4);
+}
+
+#[test]
+fn text_in_brackets_is_never_spoken() {
+    use octoplus_knowledge::companion::filter::speakable;
+    assert_eq!(
+        speakable("Paris. (softly) It is lovely."),
+        "Paris. It is lovely."
+    );
+    assert_eq!(
+        speakable("Two plus two is four. (We've been talking for a while."),
+        "Two plus two is four."
+    );
+    assert_eq!(speakable("Yes [sighs] okay."), "Yes okay.");
 }

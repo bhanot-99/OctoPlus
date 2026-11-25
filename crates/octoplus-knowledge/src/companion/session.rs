@@ -169,6 +169,42 @@ impl CompanionSession {
         self.taint = TaintFlags::empty();
     }
 
+    /// The conversation as separate turns, for a prompt that carries them as real chat turns
+    /// (so the model answers the new question instead of continuing the old text).
+    ///
+    /// Returns the short summary of older turns, then the newest raw turns oldest first, all
+    /// within `budget_tokens`. A turn whose owner part is empty is a line she opened the chat with.
+    #[must_use]
+    pub fn parts(&self, budget_tokens: u32) -> (String, Vec<(String, String)>, TaintFlags) {
+        let mut left = budget_tokens;
+        let mut turns: Vec<(String, String)> = Vec::new();
+        for t in self.raw_turns.iter().rev() {
+            let cost = estimate(&t.question, self.bytes_per_token)
+                + estimate(&t.answer, self.bytes_per_token)
+                + 6;
+            if cost > left {
+                break;
+            }
+            left -= cost;
+            turns.push((t.question.clone(), t.answer.clone()));
+        }
+        turns.reverse();
+        let mut summary = String::new();
+        if !self.summary_lines.is_empty() {
+            let body = self
+                .summary_lines
+                .iter()
+                .cloned()
+                .collect::<Vec<_>>()
+                .join("; ");
+            let cost = estimate(&body, self.bytes_per_token);
+            if cost <= left {
+                summary = body;
+            }
+        }
+        (summary, turns, self.taint)
+    }
+
     /// Renders the conversation history formatted within `budget_tokens`.
     ///
     /// Formats the summary first ("Earlier in this chat: ...") followed by the raw turns.

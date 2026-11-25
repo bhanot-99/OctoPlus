@@ -490,7 +490,14 @@ impl KnowledgeHandler {
             retrieval_best_score: None,
             cutoff,
         });
-        if let (RouteKind::Action, Some(hint)) = (first.route, first.action_hint) {
+        // In companion chat a rhythm control ("be quiet for an hour", "not now") is for the
+        // companion, even when the same words would pause the monitor in plain chat.
+        let companion_control = ask.companion
+            && (crate::companion::pulse::parse_pulse_command(&text).is_some()
+                || crate::companion::humour::parse_feedback(&text).is_some());
+        if !companion_control
+            && let (RouteKind::Action, Some(hint)) = (first.route, first.action_hint)
+        {
             self.metrics.route_action.fetch_add(1, Ordering::Relaxed);
             return self
                 .action_turn(
@@ -505,8 +512,11 @@ impl KnowledgeHandler {
                 .await;
         }
         if ask.companion
-            && !(first.route == RouteKind::Desktop
+            && (!(first.route == RouteKind::Desktop
                 && crate::companion::guards::is_interrogative(&text))
+                // "Do you remember what we talked about yesterday" has a time word, but it is
+                // about her chats, not the owner's activity.
+                || crate::companion::guards::asks_about_past_chats(&text))
         {
             let done = self.companion_turn(&text, origin, now, sink).await?;
             self.flush_chance_memory(&text, origin, now, sink).await;

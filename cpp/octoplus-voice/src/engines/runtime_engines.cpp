@@ -236,6 +236,7 @@ Result<std::unique_ptr<VoiceRuntime>> BuildVoiceRuntime(const RuntimeOptions& o)
   pc.session_on_wake = o.config.session_on_wake;
   pc.session_end_silence_ns =
       static_cast<std::uint64_t>(o.config.session_end_silence_ms) * 1'000'000ULL;
+  pc.echo_guard_ns = static_cast<std::uint64_t>(o.config.echo_guard_ms) * 1'000'000ULL;
   pc.guest_minutes = o.config.guest_minutes;
   pc.earcons = o.config.earcons;
   rt->pipeline_ = std::make_unique<VoicePipeline>(d, pc);

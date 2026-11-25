@@ -539,3 +539,45 @@ fn test_monologue_ignored_reason() {
         Directed::Ignore(IgnoreReason::Monologue)
     );
 }
+
+#[test]
+fn her_own_voice_coming_back_through_the_microphone_is_not_the_owner() {
+    use octoplus_knowledge::companion::engine::CompanionEngine;
+    use octoplus_knowledge::companion::persona::Persona;
+    use std::sync::Arc;
+    let said = "Why did the coffee file a police report? Because it got mugged.";
+    // The whole thing, a clipped start, and a garbled middle all count as her echo.
+    for heard in [
+        "why did the coffee file a police report because it got mugged",
+        "why did the coffee file a police report",
+        "did the coffee file a police report because got mugged",
+    ] {
+        assert!(directed::is_echo_of(heard, said), "{heard}");
+    }
+    // The owner talking about the same subject, or a short reply, is not an echo.
+    for heard in [
+        "that joke was terrible",
+        "tell me another joke about tea",
+        "why is the sky blue",
+        "yes",
+        "haha good one",
+    ] {
+        assert!(!directed::is_echo_of(heard, said), "{heard}");
+    }
+    assert!(!directed::is_echo_of(
+        "why did the coffee file a police report",
+        ""
+    ));
+
+    // And the engine drops it before it can become a turn.
+    let mut e = CompanionEngine::new(Arc::new(Persona::default_packaged().unwrap()), 1, 1);
+    e.push_opener(said, 2);
+    assert_eq!(
+        e.directed("why did the coffee file a police report because it got mugged"),
+        Directed::Ignore(IgnoreReason::EchoOfHer)
+    );
+    assert_eq!(
+        e.directed("what is the capital of france"),
+        Directed::Respond
+    );
+}

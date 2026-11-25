@@ -130,6 +130,8 @@ struct PipelineConfig {
   // Open-mic and companion sessions (Phase 12, story C-S02)
   bool session_on_wake = true;
   std::uint64_t session_end_silence_ns = 400'000'000ULL;
+  // The microphone is ignored this long after playback ends (0 switches the guard off).
+  std::uint64_t echo_guard_ns = 0;
   std::uint32_t guest_minutes = 30;
   bool earcons = true;
 };
@@ -303,6 +305,7 @@ class VoicePipeline final : public ReplyReceiver {
   std::uint64_t guest_until_mono_ns_ = 0;
   std::uint64_t sessions_started_ = 0;
   std::uint64_t last_companion_line_mono_ns_ = 0;
+  std::uint64_t echo_guard_until_ns_ = 0;  // audio thread only
   std::size_t mute_ring_samples_ = 0;
 };
 

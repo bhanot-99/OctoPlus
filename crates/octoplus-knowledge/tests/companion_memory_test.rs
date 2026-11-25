@@ -365,3 +365,26 @@ fn same_seed_same_decisions() {
     assert_eq!(run(5), run(5));
     assert_ne!(run(5), run(6));
 }
+
+#[test]
+fn commands_and_requests_are_never_kept_as_facts_about_the_owner() {
+    // Found in a live run: "send my notes to my friend by email" was kept as a fact.
+    let mut rule = MemoryRule::new(&persona(), 5);
+    for text in [
+        "send my notes to my friend by email",
+        "delete my old files from my laptop",
+        "call my sister tomorrow morning",
+        "remind me about my interview on Thursday",
+        "write my report for tomorrow",
+        "please add my dog to the list",
+        "turn off my laptop tonight",
+        "forward my emails to my boss",
+    ] {
+        for _ in 0..500 {
+            assert!(
+                !matches!(rule.decide(text, true), Decision::Save(_)),
+                "kept a command as a fact: {text}"
+            );
+        }
+    }
+}

@@ -90,10 +90,27 @@ pub enum DropReason {
     UngroundedMemory,
     /// Named a topic the owner asked her to leave alone.
     AvoidedTopic,
+    /// Talked about her own machinery or about typing (never spoken).
+    MetaLeak,
     /// Duplicate sentence detected by the repeat guard.
     Repeat,
     /// Sentence was empty or contained only pictographs/whitespace.
     Empty,
+}
+
+impl DropReason {
+    /// A fixed name for logs and counters (never any of the dropped words).
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Forbidden(_) => "forbidden_phrase",
+            Self::UngroundedMemory => "ungrounded_memory",
+            Self::AvoidedTopic => "avoided_topic",
+            Self::MetaLeak => "meta_leak",
+            Self::Repeat => "repeat",
+            Self::Empty => "empty",
+        }
+    }
 }
 
 /// Result of evaluating a reply sentence against the safety filter.
@@ -116,8 +133,66 @@ pub struct ReplyFilterCounters {
     pub dropped_ungrounded_memory: u64,
     /// Number of sentences dropped because they named an avoided topic.
     pub dropped_avoided_topic: u64,
+    /// Number of sentences dropped for talking about her own machinery or typing.
+    pub dropped_meta_leak: u64,
     /// Number of sentences dropped due to repeat detection.
     pub dropped_repeat: u64,
+}
+
+/// Removes text in brackets: stage directions like "(softly)" and asides like "(Though my head
+/// says ...)" are written for the page and sound wrong aloud. An unclosed bracket removes the
+/// rest of the sentence.
+fn without_asides(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut depth = 0usize;
+    for c in text.chars() {
+        match c {
+            '(' | '[' => depth += 1,
+            ')' | ']' => depth = depth.saturating_sub(1),
+            _ if depth == 0 => out.push(c),
+            _ => {}
+        }
+    }
+    out
+}
+
+/// Fillers the speech engine reads letter by letter ("H M M") or that sound wrong aloud.
+const SPELLED_OUT: [&str; 9] = [
+    "hmm", "hm", "hmmm", "mm", "mmm", "mhm", "mmhmm", "mmmhmm", "mmhm",
+];
+/// Fillers that are simply dropped.
+const DROPPED: [&str; 5] = ["um", "umm", "uh", "uhm", "erm"];
+
+/// Replaces fillers the voice cannot say with plain words ("Hmm," becomes "Well,"), and drops
+/// "um" and "uh". Everything else is left exactly as written.
+#[must_use]
+pub fn speakable(text: &str) -> String {
+    let text = without_asides(text);
+    let mut out: Vec<String> = Vec::new();
+    for token in text.split_whitespace() {
+        let core: String = token
+            .chars()
+            .filter(|c| c.is_alphabetic())
+            .collect::<String>()
+            .to_lowercase();
+        let tail: String = token
+            .chars()
+            .rev()
+            .take_while(|c| !c.is_alphabetic())
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .collect();
+        let head_is_clean = token.chars().take_while(|c| !c.is_alphabetic()).count() <= 1;
+        if head_is_clean && SPELLED_OUT.contains(&core.as_str()) {
+            out.push(format!("Well{tail}"));
+        } else if head_is_clean && DROPPED.contains(&core.as_str()) {
+            // dropped; its comma goes with it
+        } else {
+            out.push(token.to_string());
+        }
+    }
+    out.join(" ")
 }
 
 /// Streamed reply filter checking sentences before speech synthesis.
@@ -155,7 +230,7 @@ impl ReplyFilter {
     /// Cleans pictographs, validates against forbidden phrases, checks ungrounded memory
     /// cues, checks the repeat guard, and updates evaluation counters.
     pub fn check(&mut self, sentence: &str, _goodbye: bool, grounded: bool) -> Verdict {
-        let cleaned = strip_pictographs(sentence);
+        let cleaned = speakable(&strip_pictographs(sentence));
         let trimmed = cleaned.trim();
         if trimmed.is_empty() {
             return Verdict::Drop(DropReason::Empty);
@@ -164,6 +239,11 @@ impl ReplyFilter {
         if let Some(id) = guards::forbidden_phrase(trimmed) {
             self.counters.dropped_forbidden += 1;
             return Verdict::Drop(DropReason::Forbidden(id));
+        }
+
+        if guards::meta_leak(trimmed) {
+            self.counters.dropped_meta_leak += 1;
+            return Verdict::Drop(DropReason::MetaLeak);
         }
 
         if !self.avoid_topics.is_empty() {

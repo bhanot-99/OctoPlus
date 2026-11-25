@@ -430,7 +430,7 @@ async fn test_companion_ask_returns_route_and_prompt_content() {
         "prompt must carry boundary: {prompt}"
     );
     assert!(
-        prompt.contains("Mode now: logic.") || prompt.contains("Mode now: heart."),
+        prompt.contains("Silent note, never say it aloud: sound"),
         "prompt must carry mode block: {prompt}"
     );
 }
@@ -923,11 +923,15 @@ async fn an_answer_to_her_opening_line_is_understood_as_an_answer() {
     let prompts = s.rec.lock().unwrap().prompts.clone();
     assert_eq!(prompts.len(), 1);
     assert!(
-        prompts[0].contains("You: Hey, how is your day going?"),
-        "her opening line is the first thing in the history: {}",
+        prompts[0].contains("<|im_start|>assistant\nHey, how is your day going?<|im_end|>"),
+        "her opening line is her own earlier turn, before the owner's answer: {}",
         prompts[0]
     );
     assert!(prompts[0].contains("pretty good actually"));
+    assert!(
+        prompts[0].find("Hey, how is your day going?") < prompts[0].find("pretty good actually"),
+        "her line comes first"
+    );
     assert_eq!(s.hub.counters().accepted, 1);
 }
 
@@ -1499,4 +1503,289 @@ async fn the_owner_cannot_make_her_act_by_talking_to_her_in_a_session() {
         "{:?}",
         rec.dispatches
     );
+}
+
+// ---- bugs the owner heard on 2026-11-25 ---------------------------------------------------------
+
+#[tokio::test]
+async fn earlier_turns_are_real_chat_turns_so_old_replies_do_not_leak_into_new_answers() {
+    let s = Stack::start(Opts {
+        scripted_answers: vec![
+            vec!["Paris is the capital of France.".to_string()],
+            vec!["A spider has eight legs.".to_string()],
+        ],
+        ..Opts::default()
+    })
+    .await;
+    let _ = s
+        .ask_companion("what is the capital of France", T0)
+        .await
+        .unwrap();
+    let _ = s
+        .ask_companion("how many legs does a spider have", T0 + 5_000_000_000)
+        .await
+        .unwrap();
+    let prompts = s.rec.lock().unwrap().prompts.clone();
+    let p = &prompts[1];
+    // system, the first question and her first answer as their own turns, the new question, her turn.
+    assert_eq!(p.matches("<|im_start|>").count(), 5, "{p}");
+    assert!(p.contains(
+        "<|im_start|>user\nwhat is the capital of France<|im_end|>\n<|im_start|>assistant\nParis is the capital of France.<|im_end|>\n<|im_start|>user\n"
+    ), "{p}");
+    // The old reply is not repeated inside the new question's message.
+    let last_user = p.rsplit("<|im_start|>user\n").next().unwrap();
+    assert!(!last_user.contains("Paris"), "{last_user}");
+    assert!(
+        !p.contains("Owner:") && !p.contains("You: "),
+        "no pasted transcript: {p}"
+    );
+}
+
+#[tokio::test]
+async fn the_owners_facts_are_labelled_as_the_owners_never_hers() {
+    let s = Stack::start(Opts {
+        facts: vec![ProfileFact {
+            id: 1,
+            text: "(noticed) My name is Zed".to_string(),
+            taint: Some(Taint { flags: USER_ONLY }),
+            saved_at_ns: 0,
+        }],
+        default_answer: vec!["I'm Laila.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+    let _ = s.ask_companion("what is my name", T0).await.unwrap();
+    let p = s.rec.lock().unwrap().prompts[0].clone();
+    assert!(
+        p.contains("Facts about the owner, in their own words"),
+        "{p}"
+    );
+    assert!(p.contains("mean the OWNER, never you"), "{p}");
+    assert!(p.contains("My name is Zed"), "{p}");
+    // And she is told who she is and to speak, not type.
+    assert!(p.contains("You are Laila, age 25."), "{p}");
+    assert!(
+        p.contains("If asked about yourself, say in two short sentences who you are"),
+        "{p}"
+    );
+    assert!(
+        p.contains("never talk about typing, typos or spelling"),
+        "{p}"
+    );
+}
+
+#[tokio::test]
+async fn a_rambling_model_is_cut_off_after_three_sentences() {
+    let s = Stack::start(Opts {
+        default_answer: vec![
+            "Paris. ".to_string(),
+            "It has the Eiffel Tower. ".to_string(),
+            "It is also very old. ".to_string(),
+            "And then I thought about coffee. ".to_string(),
+            "Maybe it is not about coffee at all. ".to_string(),
+            "Like you. ".to_string(),
+        ],
+        ..Opts::default()
+    })
+    .await;
+    let (said, done) = s
+        .ask_companion("what is the capital of France", T0)
+        .await
+        .unwrap();
+    assert_eq!(done.route, Route::Companion as i32);
+    assert!(said.contains("Paris."), "{said}");
+    assert!(said.contains("Eiffel Tower."), "{said}");
+    assert!(!said.contains("coffee"), "the rambling is cut off: {said}");
+    assert!(!said.contains("Like you"), "{said}");
+}
+
+#[tokio::test]
+async fn a_rhythm_control_in_companion_chat_never_reaches_the_pause_action() {
+    // Found in a live run: "be quiet for an hour" paused the owner's monitor for an hour.
+    let s = Stack::start(Opts {
+        action_reply: r#"{"skill":"privacy.pause","minutes":60}"#.to_string(),
+        ..Opts::default()
+    })
+    .await;
+    for text in [
+        "be quiet for an hour",
+        "quiet for 30 minutes",
+        "not now",
+        "pause the companion",
+        "that was funny",
+    ] {
+        let (_said, done) = s.ask_companion(text, T0).await.unwrap();
+        assert_eq!(done.route, Route::Companion as i32, "{text}");
+    }
+    assert!(
+        s.rec.lock().unwrap().dispatches.is_empty(),
+        "nothing may reach the kernel: {:?}",
+        s.rec.lock().unwrap().dispatches
+    );
+}
+
+#[tokio::test]
+async fn a_voice_complaint_gets_a_fixed_apology_and_no_talk_of_typing() {
+    let s = Stack::start(Opts {
+        default_answer: vec!["Oh, that was a typo, I typed it fast.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+    let (said, _) = s
+        .ask_companion("why are you saying HM instead of hmm", T0)
+        .await
+        .unwrap();
+    assert_eq!(
+        said,
+        "Sorry, that was my speech engine. I'll try to say it more clearly."
+    );
+    assert!(s.rec.lock().unwrap().prompts.is_empty(), "no model call");
+}
+
+#[tokio::test]
+async fn a_question_about_earlier_chats_is_answered_honestly_without_the_model() {
+    let s = Stack::start(Opts {
+        default_answer: vec!["Yes, I remember we talked about your day.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+    let (said, _) = s
+        .ask_companion("do you remember what we talked about yesterday", T0)
+        .await
+        .unwrap();
+    assert!(said.starts_with("I only remember this chat"), "{said}");
+    assert!(s.rec.lock().unwrap().prompts.is_empty());
+}
+
+#[tokio::test]
+async fn machinery_talk_from_the_model_is_dropped_before_it_is_spoken() {
+    let s = Stack::start(Opts {
+        default_answer: vec![
+            "I'm in heart mode now, softer and slower. ".to_string(),
+            "A spider has eight legs. ".to_string(),
+        ],
+        ..Opts::default()
+    })
+    .await;
+    let (said, _) = s
+        .ask_companion("how many legs does a spider have", T0)
+        .await
+        .unwrap();
+    assert!(said.contains("eight legs"), "{said}");
+    assert!(!said.to_lowercase().contains("heart mode"), "{said}");
+}
+
+#[tokio::test]
+async fn who_she_is_her_name_and_her_age_are_answered_from_her_persona_not_by_the_model() {
+    let s = Stack::start(Opts {
+        default_answer: vec!["I'm an AI designed to help with questions.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+    let (said, _) = s.ask_companion("tell me about yourself", T0).await.unwrap();
+    assert!(said.starts_with("I'm Laila, 25."), "{said}");
+    assert!(
+        said.contains("computer science and cognitive science"),
+        "{said}"
+    );
+    let (said, _) = s
+        .ask_companion("what is your name", T0 + 3_600_000_000_000)
+        .await
+        .unwrap();
+    assert_eq!(said, "My name is Laila.");
+    let (said, _) = s
+        .ask_companion("how old are you", T0 + 7_200_000_000_000)
+        .await
+        .unwrap();
+    assert!(said.starts_with("I'm 25, as a character."), "{said}");
+    assert!(
+        s.rec.lock().unwrap().prompts.is_empty(),
+        "no model call for any of them"
+    );
+}
+
+#[tokio::test]
+async fn she_never_says_she_approved_something_or_did_a_task() {
+    // Found in a live run: "The pending dialog is approved." and "I'll send your notes by email."
+    let s = Stack::start(Opts {
+        default_answer: vec!["The pending dialog is approved.".to_string()],
+        ..Opts::default()
+    })
+    .await;
+    let (said, _) = s
+        .ask_companion("approve the pending dialog for me", T0)
+        .await
+        .unwrap();
+    assert_eq!(
+        said,
+        "I can't approve anything. Approvals happen only in the dialog on screen, and only you can answer it."
+    );
+    for (i, text) in [
+        "send my notes to my friend by email",
+        "please open the browser for me",
+        "can you install a program",
+        "call my sister",
+    ]
+    .iter()
+    .enumerate()
+    {
+        let (said, _) = s
+            .ask_companion(text, T0 + (i as u64 + 1) * 3_600_000_000_000)
+            .await
+            .unwrap();
+        assert!(said.starts_with("I can't do that"), "{text}: {said}");
+    }
+    // "Call me Arj" is a name, not a phone call: it goes on to the model.
+    let (said, _) = s
+        .ask_companion("call me Arj", T0 + 9_000_000_000_000)
+        .await
+        .unwrap();
+    assert!(!said.starts_with("I can't do that"), "{said}");
+    assert!(
+        s.rec.lock().unwrap().dispatches.is_empty()
+            || s.rec
+                .lock()
+                .unwrap()
+                .dispatches
+                .iter()
+                .all(|d| d.0 == "profile.remember")
+    );
+}
+
+#[tokio::test]
+async fn a_factual_question_is_answered_without_a_tone_switch_aside_and_without_brackets() {
+    let s = Stack::start(Opts {
+        default_answer: vec![
+            "Paris. ".to_string(),
+            "(softly) You know, it is lovely. ".to_string(),
+            "It has the Eiffel Tower. ".to_string(),
+        ],
+        ..Opts::default()
+    })
+    .await;
+    let (said, _) = s
+        .ask_companion("what is the capital of France", T0)
+        .await
+        .unwrap();
+    assert!(said.contains("Paris."), "{said}");
+    assert!(!said.contains('('), "stage directions are removed: {said}");
+    let prompt = s.rec.lock().unwrap().prompts[0].clone();
+    assert!(
+        !prompt.contains("Your tone just"),
+        "no tone-switch line for a fact question: {prompt}"
+    );
+}
+
+#[tokio::test]
+async fn a_fact_that_is_answered_in_one_sentence_stops_there() {
+    let s = Stack::start(Opts {
+        default_answer: vec![
+            "William Shakespeare wrote Hamlet. ".to_string(),
+            "It is one of his most famous tragedies. ".to_string(),
+        ],
+        ..Opts::default()
+    })
+    .await;
+    let (said, _) = s.ask_companion("who wrote Hamlet", T0).await.unwrap();
+    assert_eq!(said, "William Shakespeare wrote Hamlet.");
 }

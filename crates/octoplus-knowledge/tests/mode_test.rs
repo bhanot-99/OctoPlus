@@ -148,10 +148,11 @@ fn test_switch_instruction() {
         if dec.mid_reply_switch.is_some() {
             assert!(instr.is_some());
             assert!(instr.unwrap().contains("partway through"));
+            assert!(!instr.unwrap().to_lowercase().contains("mode mode"));
             found_mid = true;
         } else if dec.switched {
             assert!(instr.is_some());
-            assert!(instr.unwrap().contains("just changed to"));
+            assert!(instr.unwrap().contains("tone just"));
             found_switch = true;
         } else {
             assert!(instr.is_none());

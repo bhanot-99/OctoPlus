@@ -33,6 +33,7 @@ Every key in `persona.toml` is defined below.
 | `background` | string | `"Studied computer science and cognitive science; works on small projects and reads a lot."` | 1 to 600 chars | Educational and professional background. |
 | `story` | string | Backstory of Laila and Kabir | 1 to 2000 chars | Narrative history shaping character reactions. |
 | `personality_line` | string | `"A very smart girl whose head and heart keep arguing, and you never know which one will speak first."` | 1 to 600 chars | One-line core personality summary. |
+| `introduction` | string | Laila's own text | 0 to 600 chars (empty: composed from name, age and personality line) | What she says when asked about herself ("tell me about yourself", "who are you"): spoken as written, no model. |
 | `voice` | string | `"af_heart"` | Installed voice ID | Voice identifier used for speech synthesis. |
 | `avoid_topics` | list of strings | `[]` | 0 to 64 items, each <= 600 chars | Topics the companion will not initiate or joke about. |
 | `boundaries` | list of strings | 7 fixed safety items | 1 to 64 items, each <= 600 chars | Hard safety rules; default items are required. |

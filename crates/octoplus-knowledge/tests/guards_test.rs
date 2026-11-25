@@ -244,3 +244,132 @@ fn test_is_goodbye() {
         );
     }
 }
+
+#[test]
+fn questions_about_her_and_short_factual_questions_are_recognised() {
+    for t in [
+        "tell me about yourself",
+        "Tell me about yourself.",
+        "who are you",
+        "introduce yourself",
+        "describe yourself please",
+    ] {
+        assert!(
+            octoplus_knowledge::companion::guards::asks_about_her(t),
+            "{t}"
+        );
+    }
+    for t in [
+        "tell me about the weather",
+        "what is the capital of France",
+        "I was telling my sister about yourself and the long story of how it all started last year",
+        "how are you",
+    ] {
+        assert!(
+            !octoplus_knowledge::companion::guards::asks_about_her(t),
+            "{t}"
+        );
+    }
+    for t in [
+        "what is the capital of France",
+        "how many legs does a spider have",
+        "who wrote hamlet",
+        "when did the war end",
+        "is the earth round",
+        "what is two plus two",
+    ] {
+        assert!(
+            octoplus_knowledge::companion::guards::is_short_factual_question(t),
+            "{t}"
+        );
+    }
+    for t in [
+        "what do you think about love",
+        "how are you feeling today",
+        "tell me a story",
+        "I had a long day at work and I just want to talk about it for a while",
+        "what should I do about my boss",
+    ] {
+        assert!(
+            !octoplus_knowledge::companion::guards::is_short_factual_question(t),
+            "{t}"
+        );
+    }
+}
+
+#[test]
+fn machinery_and_typing_talk_is_recognised_and_ordinary_talk_is_not() {
+    use octoplus_knowledge::companion::guards::meta_leak;
+    for s in [
+        "I'm in heart mode now, softer and slower.",
+        "Mode changed to logic: clear, step-by-step.",
+        "That was a typo from a quick thought.",
+        "I accidentally typed HM instead of hmm.",
+        "Sorry, I was typing too fast.",
+        "Mode switched to logic.",
+    ] {
+        assert!(meta_leak(s), "{s}");
+    }
+    for s in [
+        "Paris is the capital of France.",
+        "I like the way the heart of the city feels at night.",
+        "My head says be precise, my heart says be present.",
+        "The model of the car is old.",
+        "She is a logical person.",
+        "That sounds like a good plan.",
+    ] {
+        assert!(!meta_leak(s), "{s}");
+    }
+}
+
+#[test]
+fn voice_complaints_past_chat_questions_and_joke_requests_are_recognised() {
+    use octoplus_knowledge::companion::guards::{
+        asks_about_past_chats, asks_for_joke, voice_complaint,
+    };
+    for t in [
+        "why are you saying HM instead of hmm",
+        "your voice sounded strange just now",
+        "you are pronouncing that wrong",
+        "why are you spelling out letters",
+        "your voice is weird today",
+    ] {
+        assert!(voice_complaint(t), "{t}");
+    }
+    for t in [
+        "I like your voice",
+        "what is the capital of France",
+        "tell me a story about a strange voice in the forest that kept calling out to travellers at night",
+        "instead of tea I want coffee but that is a very long sentence about my preferences today",
+    ] {
+        assert!(!voice_complaint(t), "{t}");
+    }
+    for t in [
+        "do you remember what we talked about yesterday",
+        "do you remember what I said last time",
+        "did we talk about this before",
+    ] {
+        assert!(asks_about_past_chats(t), "{t}");
+    }
+    for t in [
+        "do you remember how to spell necessary",
+        "what did we just say",
+        "hello",
+    ] {
+        assert!(!asks_about_past_chats(t), "{t}");
+    }
+    for t in [
+        "tell me a joke",
+        "make me laugh",
+        "say something funny",
+        "got a joke",
+    ] {
+        assert!(asks_for_joke(t), "{t}");
+    }
+    for t in [
+        "what is the capital of France",
+        "this is no joke at all and I mean it seriously",
+    ] {
+        assert!(!asks_for_joke(t), "{t}");
+    }
+}

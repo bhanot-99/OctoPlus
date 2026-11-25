@@ -209,7 +209,7 @@ TEST(SpokenLinesTest, PreamblesAndStatusPhrases) {
   ASSERT_EQ(thinking.size(), 3U);
   EXPECT_EQ(thinking[0], "One moment.");
   EXPECT_EQ(thinking[1], "Let me think.");
-  EXPECT_EQ(thinking[2], "Hmm, let me see.");
+  EXPECT_EQ(thinking[2], "Let me see.");
 
   const auto& looking = PreamblePhrases(2);
   ASSERT_EQ(looking.size(), 3U);
@@ -225,10 +225,10 @@ TEST(SpokenLinesTest, PreamblesAndStatusPhrases) {
 
   const auto& backchannel = PreamblePhrases(4);
   ASSERT_EQ(backchannel.size(), 4U);
-  EXPECT_EQ(backchannel[0], "Mm.");
-  EXPECT_EQ(backchannel[1], "Oh.");
-  EXPECT_EQ(backchannel[2], "Hm.");
-  EXPECT_EQ(backchannel[3], "Ah.");
+  EXPECT_EQ(backchannel[0], "Oh.");
+  EXPECT_EQ(backchannel[1], "I see.");
+  EXPECT_EQ(backchannel[2], "Right.");
+  EXPECT_EQ(backchannel[3], "Yeah.");
 
   // Fallback -> thinking
   EXPECT_EQ(PreamblePhrases(99), thinking);

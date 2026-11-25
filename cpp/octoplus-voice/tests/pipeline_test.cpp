@@ -1286,3 +1286,62 @@ TEST(VoicePipelineCompanionLine, ASecondLineWithinAMinuteIsRefused) {
 
 }  // namespace
 }  // namespace octoplus::voice
+
+namespace octoplus::voice {
+namespace {
+
+// The tail of her own voice and the room echo must never be heard as the owner (Phase 12,
+// listening-noise fix): right after playback ends the microphone counts as silent.
+TEST(VoicePipelineEchoGuard, TheTailOfHerOwnVoiceIsNotHeardAsTheOwner) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  cfg.echo_guard_ns = 700'000'000ULL;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.AskByVoice();
+  ASSERT_EQ(r.link.commands.size(), 1U);
+  r.link.Receiver()->OnSpeak("Answer.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  r.Settle();
+  ASSERT_TRUE(r.p->status().follow_up_open);
+
+  // Loud "speech" inside the guard time (10 frames is 320 ms): her own echo. Not a command.
+  r.stt.text = "that is what she just said";
+  r.Frames(1000, 10);
+  r.Frames(0, 25);
+  r.Settle();
+  EXPECT_EQ(r.link.commands.size(), 1U) << "the echo was taken for the owner";
+
+  // After the guard the owner is heard as usual.
+  r.stt.text = "a real follow up";
+  r.Frames(1000, 30);
+  r.Frames(0, 25);
+  r.Settle();
+  ASSERT_EQ(r.link.commands.size(), 2U);
+  EXPECT_TRUE(r.link.commands[1].in_follow_up);
+}
+
+TEST(VoicePipelineEchoGuard, WithTheGuardOffNothingChanges) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  cfg.echo_guard_ns = 0;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.AskByVoice();
+  r.link.Receiver()->OnSpeak("Answer.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  r.stt.text = "immediate follow up";
+  r.Frames(1000, 30);
+  r.Frames(0, 25);
+  r.Settle();
+  EXPECT_EQ(r.link.commands.size(), 2U);
+}
+
+}  // namespace
+}  // namespace octoplus::voice

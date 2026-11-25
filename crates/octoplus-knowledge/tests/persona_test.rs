@@ -177,5 +177,5 @@ fn test_every_key_documented_exists_on_default_file() {
         doc_keys, file_keys,
         "keys in persona-format.md must match deploy/persona/laila.toml 1:1"
     );
-    assert_eq!(doc_keys.len(), 47);
+    assert_eq!(doc_keys.len(), 48);
 }

@@ -185,6 +185,7 @@ fn the_humour_line_reaches_the_prompt_and_the_system_block_stays_constant() {
                 facts_taint: TaintFlags::empty(),
                 history: "",
                 history_taint: TaintFlags::empty(),
+                turns: &[],
                 question: "hello",
             },
             &budgets,

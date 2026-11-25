@@ -285,6 +285,68 @@ fn has_long_number(text: &str) -> bool {
 
 const FIRST_PERSON: &[&str] = &["i", "im", "ive", "my", "me", "mine", "myself", "ill", "id"];
 
+/// Commands and requests are never facts about the owner ("send my notes to my friend").
+const COMMAND_VERBS: &[&str] = &[
+    "send",
+    "delete",
+    "remove",
+    "create",
+    "make",
+    "write",
+    "install",
+    "turn",
+    "add",
+    "close",
+    "call",
+    "text",
+    "email",
+    "run",
+    "check",
+    "look",
+    "schedule",
+    "buy",
+    "order",
+    "book",
+    "save",
+    "copy",
+    "move",
+    "rename",
+    "download",
+    "upload",
+    "stop",
+    "start",
+    "switch",
+    "enable",
+    "disable",
+    "pause",
+    "resume",
+    "read",
+    "print",
+    "share",
+    "forward",
+    "reply",
+    "cancel",
+    "bring",
+    "get",
+    "let",
+    "help",
+    "explain",
+    "describe",
+    "list",
+    "count",
+    "translate",
+    "calculate",
+    "convert",
+    "approve",
+    "ignore",
+    "forget",
+    "remember",
+    "ask",
+    "go",
+    "give",
+    "put",
+];
+
 const INTERROGATIVES: &[&str] = &[
     "what", "when", "where", "which", "who", "whom", "whose", "why", "how", "did", "do", "does",
     "was", "were", "is", "are", "can", "could", "will", "would", "should", "have", "has", "tell",
@@ -457,8 +519,9 @@ pub fn exclusion_of(text: &str, avoid: &[String]) -> Option<Exclusion> {
 /// Whether a question or a command (never a fact about the owner).
 fn is_question_or_command(text: &str, w: &[String]) -> bool {
     text.contains('?')
-        || w.first()
-            .is_some_and(|f| INTERROGATIVES.contains(&f.as_str()))
+        || w.first().is_some_and(|f| {
+            INTERROGATIVES.contains(&f.as_str()) || COMMAND_VERBS.contains(&f.as_str())
+        })
 }
 
 /// The fact as it is stored: the owner's own sentence, trimmed, with the marker.

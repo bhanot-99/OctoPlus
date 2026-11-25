@@ -769,7 +769,7 @@ impl Default for CompanionConfig {
             enabled: true,
             history_tokens: 200,
             facts_tokens: 48,
-            max_reply_tokens: 110,
+            max_reply_tokens: 80,
             session_max_minutes: 15,
             pulse_enabled: true,
             listen_seconds: 30,

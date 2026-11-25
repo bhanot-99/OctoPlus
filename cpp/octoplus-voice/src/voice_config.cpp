@@ -152,6 +152,10 @@ Result<VoiceConfig> ParseVoiceConfig(std::string_view text) {
       if (!ParseUint(value, 200, 1200, &cfg.session_end_silence_ms)) {
         return Bad(where + ": 200 to 1200");
       }
+    } else if (key == "echo_guard_ms") {
+      if (!ParseUint(value, 0, 3000, &cfg.echo_guard_ms)) {
+        return Bad(where + ": 0 to 3000");
+      }
     } else if (key == "guest_minutes") {
       if (!ParseUint(value, 1, 240, &cfg.guest_minutes)) {
         return Bad(where + ": 1 to 240");

@@ -19,6 +19,7 @@ TEST(VoiceConfig, EmptyTextGivesTheDefaults) {
   EXPECT_EQ(c.value().session_silence_s, 90U);
   EXPECT_EQ(c.value().session_max_minutes, 15U);
   EXPECT_EQ(c.value().session_end_silence_ms, 400U);
+  EXPECT_EQ(c.value().echo_guard_ms, 700U);
   EXPECT_EQ(c.value().guest_minutes, 30U);
   EXPECT_TRUE(c.value().earcons);
 }
@@ -30,6 +31,7 @@ TEST(VoiceConfig, SessionConfigKeysCanBeSet) {
       "session_silence_s = 120\n"
       "session_max_minutes = 20\n"
       "session_end_silence_ms = 350\n"
+      "echo_guard_ms = 900\n"
       "guest_minutes = 45\n"
       "earcons = off\n");
   ASSERT_TRUE(c.ok());
@@ -38,6 +40,7 @@ TEST(VoiceConfig, SessionConfigKeysCanBeSet) {
   EXPECT_EQ(c.value().session_silence_s, 120U);
   EXPECT_EQ(c.value().session_max_minutes, 20U);
   EXPECT_EQ(c.value().session_end_silence_ms, 350U);
+  EXPECT_EQ(c.value().echo_guard_ms, 900U);
   EXPECT_EQ(c.value().guest_minutes, 45U);
   EXPECT_FALSE(c.value().earcons);
 
@@ -52,7 +55,7 @@ TEST(VoiceConfig, SessionConfigBadValuesAreRefused) {
   for (const char* bad :
        {"open_mic = true\n", "open_mic = maybe\n", "session_on_wake = 1\n", "earcons = yes\n",
         "session_silence_s = 5\n", "session_silence_s = 700\n", "session_max_minutes = 0\n",
-        "session_max_minutes = 70\n", "session_end_silence_ms = 100\n",
+        "session_max_minutes = 70\n", "session_end_silence_ms = 100\n", "echo_guard_ms = 3001\n",
         "session_end_silence_ms = 1500\n", "guest_minutes = 0\n", "guest_minutes = 300\n"}) {
     EXPECT_FALSE(ParseVoiceConfig(bad).ok()) << bad;
   }

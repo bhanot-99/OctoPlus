@@ -341,6 +341,7 @@ impl CompanionRunner {
                 },
                 history: "",
                 history_taint: TaintFlags::empty(),
+                turns: &[],
                 question: &request,
             },
             &self.settings.budgets,

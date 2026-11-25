@@ -36,6 +36,9 @@ struct VoiceConfig {
   std::uint32_t session_silence_s = 90;
   std::uint32_t session_max_minutes = 15;
   std::uint32_t session_end_silence_ms = 400;
+  // After she stops speaking the microphone is ignored for this long: the tail of her own voice
+  // and the room echo must never be heard as the owner (Phase 12, listening-noise fix).
+  std::uint32_t echo_guard_ms = 700;
   std::uint32_t guest_minutes = 30;
   bool earcons = true;
 };

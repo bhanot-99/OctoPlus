@@ -28,6 +28,40 @@ use crate::facts;
 use crate::prompt::Prompt;
 use crate::speech::SentenceStream;
 
+/// For the accuracy test only: what she heard and what she answered, at debug level under its
+/// own target, which is off unless `OCTOPLUS_LOG` names it (never at info or above: R0-10).
+fn eval_log(heard: &str, reply: &str) {
+    tracing::debug!(target: "companion_eval", "heard={:?} reply={:?}", heard, reply);
+}
+
+/// Most finished sentences a companion reply may speak. The small local model tends to ramble
+/// ("... Like you. Maybe it's not about coffee at all ..."); the answer comes first and then stops.
+const MAX_REPLY_SENTENCES: usize = 3;
+/// Most words a companion reply may speak.
+const MAX_REPLY_WORDS: usize = 50;
+/// Most words for a short factual answer: the fact, and at most one more short sentence.
+const MAX_FACT_WORDS: usize = 30;
+
+/// Whether what has been said so far is enough: three finished sentences or about 70 words.
+fn reply_is_long_enough(
+    said: &[String],
+    max_sentences: usize,
+    max_words: usize,
+    factual: bool,
+) -> bool {
+    let sentences = said
+        .iter()
+        .filter(|p| p.trim_end().ends_with(['.', '!', '?']))
+        .count();
+    let words: usize = said.iter().map(|p| p.split_whitespace().count()).sum();
+    // A fact question: once one real sentence (three words or more) has answered it, stop.
+    let answered = factual
+        && said
+            .iter()
+            .any(|p| p.trim_end().ends_with(['.', '!', '?']) && p.split_whitespace().count() >= 3);
+    answered || sentences >= max_sentences || words >= max_words
+}
+
 /// Results captured from streamed companion reply generation.
 struct CompanionStreamed {
     said: String,
@@ -108,6 +142,7 @@ impl KnowledgeHandler {
         if let (Some(h), Some(f)) = (&hub, crate::companion::humour::parse_feedback(text)) {
             h.record_feedback(f);
             Self::say(sink, crate::companion::humour::ack_line(f)).await?;
+            eval_log(text, crate::companion::humour::ack_line(f));
             self.metrics.route_companion.fetch_add(1, Ordering::Relaxed);
             self.metrics.completed.fetch_add(1, Ordering::Relaxed);
             return Ok(Self::done(Route::Companion, self.base_taint()));
@@ -119,6 +154,7 @@ impl KnowledgeHandler {
                 h.on_owner_turn(now, u16::try_from(minute).unwrap_or(0), text)
         {
             Self::say(sink, crate::companion::pulse::ack_line(&cmd)).await?;
+            eval_log(text, crate::companion::pulse::ack_line(&cmd));
             self.metrics.route_companion.fetch_add(1, Ordering::Relaxed);
             self.metrics.completed.fetch_add(1, Ordering::Relaxed);
             return Ok(Self::done(Route::Companion, self.base_taint()));
@@ -135,6 +171,7 @@ impl KnowledgeHandler {
                 None => "I can't reach my memory right now. Ask me again in a moment.".to_string(),
             };
             Self::say(sink, &line).await?;
+            eval_log(text, &line);
             self.metrics.route_companion.fetch_add(1, Ordering::Relaxed);
             self.metrics.completed.fetch_add(1, Ordering::Relaxed);
             return Ok(Self::done(Route::Companion, self.base_taint()));
@@ -151,6 +188,7 @@ impl KnowledgeHandler {
             Plan::Fixed(fixed) => {
                 let combined = fixed.lines.join(" ");
                 Self::say(sink, &combined).await?;
+                eval_log(text, &combined);
                 let taint = self.base_taint();
                 if fixed.kind != FixedKind::Crisis {
                     self.remember_turn(TurnRecord {
@@ -195,17 +233,16 @@ impl KnowledgeHandler {
                     .map(|i| crate::companion::memory::plain_form(&all_facts[i].text).to_string())
                     .collect();
 
-                let facts_present = !picked_facts.is_empty();
                 self.with_state(|state| {
                     if let Some(engine) = state.companion.as_mut() {
-                        engine.set_grounded(facts_present);
+                        engine.set_facts(&picked_facts);
                     }
                 });
 
-                let (history_text, history_taint) = self.with_state(|state| {
+                let (history_text, history_turns, history_taint) = self.with_state(|state| {
                     state.companion.as_ref().map_or_else(
-                        || (String::new(), TaintFlags::empty()),
-                        |e| e.history(self.companion_cfg.history_tokens),
+                        || (String::new(), Vec::new(), TaintFlags::empty()),
+                        |e| e.history_parts(self.companion_cfg.history_tokens),
                     )
                 });
 
@@ -223,6 +260,7 @@ impl KnowledgeHandler {
                     facts_taint,
                     history: &history_text,
                     history_taint,
+                    turns: &history_turns,
                     question: text,
                 };
                 let prompt = prompt::assemble(&input, &budgets);
@@ -252,6 +290,7 @@ impl KnowledgeHandler {
                         engine.finish_turn(text, &said, turn_taint, now, &plan_generate);
                     }
                 });
+                eval_log(text, &said);
 
                 // What the owner said about themselves may be kept by chance (R0-8, ADR-0019).
                 if !cut_short
@@ -314,6 +353,15 @@ impl KnowledgeHandler {
         let mut first = true;
         let mut cut_short = false;
         let mut any_spoken = false;
+        let mut capped = false;
+        // A short factual question gets the fact and one more sentence at most.
+        let (max_sentences, max_words) = if plan_generate.short_factual {
+            (2, MAX_FACT_WORDS)
+        } else if plan_generate.gentle_line.is_some() {
+            (MAX_REPLY_SENTENCES + 1, MAX_REPLY_WORDS + 15)
+        } else {
+            (MAX_REPLY_SENTENCES, MAX_REPLY_WORDS)
+        };
 
         while let Some(item) = stream.next().await {
             match item {
@@ -340,6 +388,16 @@ impl KnowledgeHandler {
                             said_pieces.push(s);
                             any_spoken = true;
                         }
+                        if reply_is_long_enough(
+                            &said_pieces,
+                            max_sentences,
+                            max_words,
+                            plan_generate.short_factual,
+                        ) {
+                            // Enough said: stop the generation (dropping the stream cancels it).
+                            capped = true;
+                            break;
+                        }
                     }
                 }
                 Ok(Body::GenerateDone(done)) => {
@@ -361,7 +419,11 @@ impl KnowledgeHandler {
             }
         }
 
-        let remaining = sentence_stream.flush();
+        let remaining = if capped {
+            Vec::new()
+        } else {
+            sentence_stream.flush()
+        };
         if !remaining.is_empty() {
             let filtered = self.with_state(|state| {
                 state.companion.as_mut().map_or_else(
