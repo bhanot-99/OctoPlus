@@ -30,6 +30,18 @@ bool ParseUint(std::string_view v, std::uint32_t lo, std::uint32_t hi, std::uint
   return true;
 }
 
+bool ParseOnOff(std::string_view v, bool* out) {
+  if (v == "on") {
+    *out = true;
+    return true;
+  }
+  if (v == "off") {
+    *out = false;
+    return true;
+  }
+  return false;
+}
+
 bool ParseFloat(std::string_view v, float lo, float hi, float* out) {
   const std::string s(v);
   char* end = nullptr;
@@ -119,6 +131,34 @@ Result<VoiceConfig> ParseVoiceConfig(std::string_view text) {
     } else if (key == "stt_threads") {
       if (!ParseUint(value, 1, 16, &cfg.stt_threads)) {
         return Bad(where + ": 1 to 16");
+      }
+    } else if (key == "open_mic") {
+      if (!ParseOnOff(value, &cfg.open_mic)) {
+        return Bad(where + ": on or off");
+      }
+    } else if (key == "session_on_wake") {
+      if (!ParseOnOff(value, &cfg.session_on_wake)) {
+        return Bad(where + ": on or off");
+      }
+    } else if (key == "session_silence_s") {
+      if (!ParseUint(value, 10, 600, &cfg.session_silence_s)) {
+        return Bad(where + ": 10 to 600");
+      }
+    } else if (key == "session_max_minutes") {
+      if (!ParseUint(value, 1, 60, &cfg.session_max_minutes)) {
+        return Bad(where + ": 1 to 60");
+      }
+    } else if (key == "session_end_silence_ms") {
+      if (!ParseUint(value, 200, 1200, &cfg.session_end_silence_ms)) {
+        return Bad(where + ": 200 to 1200");
+      }
+    } else if (key == "guest_minutes") {
+      if (!ParseUint(value, 1, 240, &cfg.guest_minutes)) {
+        return Bad(where + ": 1 to 240");
+      }
+    } else if (key == "earcons") {
+      if (!ParseOnOff(value, &cfg.earcons)) {
+        return Bad(where + ": on or off");
       }
     } else {
       return Bad("unknown key " + where);

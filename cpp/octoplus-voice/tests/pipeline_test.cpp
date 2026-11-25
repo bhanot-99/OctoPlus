@@ -258,7 +258,7 @@ TEST(VoicePipeline, TheWakeWordModelRunsOnlyWhileSomeoneIsSpeaking) {
 
 TEST(VoicePipeline, ReplyIsSpokenAsItStreamsInOneVoiceThenAFollowUpOpens) {
   Rig r;
-  EXPECT_EQ(r.p->PreloadClips(), 12U);
+  EXPECT_EQ(r.p->PreloadClips(), 20U);
   r.AskByVoice();
   r.link.receiver->OnPreamble(1);
   r.Settle();
@@ -270,8 +270,8 @@ TEST(VoicePipeline, ReplyIsSpokenAsItStreamsInOneVoiceThenAFollowUpOpens) {
   r.Settle();
   EXPECT_EQ(r.sink.writes.size(), 4U);
   EXPECT_EQ(r.p->stats().sentences_spoken, 3U);
-  // Every sentence went through the one engine (12 cached phrases + 3 sentences).
-  EXPECT_EQ(r.tts.spoken.size(), 12U + 3U);
+  // Every sentence went through the one engine (20 cached phrases + 3 sentences).
+  EXPECT_EQ(r.tts.spoken.size(), 20U + 3U);
   EXPECT_TRUE(r.p->status().speaking) << "audio is still playing";
   r.sink.playing = false;
   r.Frames(0, 2);
@@ -607,7 +607,7 @@ TEST(VoicePipeline, AFailingSpeechEngineSaysSoOnceInTheCachedVoice) {
   r.Settle();
   EXPECT_EQ(r.p->stats().synth_failures, 3U);
   ASSERT_EQ(r.sink.writes.size(), 1U) << "one cached 'my voice is restarting' clip, not three";
-  EXPECT_EQ(r.tts.spoken.size(), 12U + 3U) << "the clip came from the cache, not from synthesis";
+  EXPECT_EQ(r.tts.spoken.size(), 20U + 3U) << "the clip came from the cache, not from synthesis";
 }
 
 TEST(VoicePipeline, ARequestThatFailsBeforeAnyWordPlaysTheStatusLine) {

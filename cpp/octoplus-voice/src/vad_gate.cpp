@@ -59,6 +59,8 @@ void VadGate::Reset() {
   silence_start_ns_ = 0;
 }
 
+void VadGate::SetEndSilenceNs(std::uint64_t ns) { cfg_.end_silence_ns = ns; }
+
 bool VadGate::speech() const { return speech_; }
 
 }  // namespace octoplus::voice

@@ -223,6 +223,13 @@ TEST(SpokenLinesTest, PreamblesAndStatusPhrases) {
   EXPECT_EQ(ack[1], "Got it.");
   EXPECT_EQ(ack[2], "Sure.");
 
+  const auto& backchannel = PreamblePhrases(4);
+  ASSERT_EQ(backchannel.size(), 4U);
+  EXPECT_EQ(backchannel[0], "Mm.");
+  EXPECT_EQ(backchannel[1], "Oh.");
+  EXPECT_EQ(backchannel[2], "Hm.");
+  EXPECT_EQ(backchannel[3], "Ah.");
+
   // Fallback -> thinking
   EXPECT_EQ(PreamblePhrases(99), thinking);
   EXPECT_EQ(PreamblePhrases(0), thinking);
@@ -235,11 +242,20 @@ TEST(SpokenLinesTest, PreamblesAndStatusPhrases) {
   EXPECT_EQ(StatusPhrase(99), "My voice is restarting, one moment.");
   EXPECT_EQ(StatusPhrase(0), "My voice is restarting, one moment.");
 
-  // AllCachedPhrases has 12 distinct entries
+  // Session phrases
+  EXPECT_EQ(SessionPhrase(0), "Still there?");
+  EXPECT_EQ(SessionPhrase(1), "We have been chatting a while. Want to keep going?");
+  EXPECT_EQ(SessionPhrase(2), "Okay, I will stay quiet for a while.");
+  EXPECT_EQ(SessionPhrase(3), "Okay, I am listening again.");
+  // Fallback -> 0
+  EXPECT_EQ(SessionPhrase(99), "Still there?");
+  EXPECT_EQ(SessionPhrase(-1), "Still there?");
+
+  // AllCachedPhrases has 20 distinct entries
   const auto cached = AllCachedPhrases();
-  ASSERT_EQ(cached.size(), 12U);
+  ASSERT_EQ(cached.size(), 20U);
   std::set<std::string> const unique(cached.begin(), cached.end());
-  EXPECT_EQ(unique.size(), 12U);
+  EXPECT_EQ(unique.size(), 20U);
 }
 
 TEST(SpokenLinesTest, NoGrammarBugsLikeOneHoursOrOneThings) {

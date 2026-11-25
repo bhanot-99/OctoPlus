@@ -32,6 +32,8 @@ class VadGate {
 
   void Reset();  // back to silence, forgets all counters
 
+  void SetEndSilenceNs(std::uint64_t ns);
+
   [[nodiscard]] bool speech() const;
 
  private:

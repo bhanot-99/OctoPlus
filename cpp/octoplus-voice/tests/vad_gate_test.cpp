@@ -184,5 +184,49 @@ TEST(VadGateTest, PropertyStrictlyAlternatingStartedEnded) {
   }
 }
 
+TEST(VadGateTest, SetEndSilenceNsDynamicallyShortensAndRestoresEndSilence) {
+  VadGate gate;  // default 600 ms = 600'000'000 ns
+  gate.Update(0.6F, 0);
+  gate.Update(0.6F, 32'000'000);
+  ASSERT_TRUE(gate.speech());
+
+  // Silence begins at 100 ms
+  gate.Update(0.1F, 100'000'000);
+
+  // At 450 ms (350 ms elapsed): still in speech
+  auto ev = gate.Update(0.1F, 450'000'000);
+  EXPECT_FALSE(ev.ended);
+  EXPECT_TRUE(ev.speech);
+
+  // Shorten end silence to 400 ms on the fly
+  gate.SetEndSilenceNs(400'000'000);
+
+  // At 500 ms (400 ms elapsed): utterance ends earlier because of 400 ms rule!
+  ev = gate.Update(0.1F, 500'000'000);
+  EXPECT_TRUE(ev.ended);
+  EXPECT_FALSE(ev.speech);
+
+  // Restore back to 600 ms
+  gate.SetEndSilenceNs(600'000'000);
+
+  // New utterance
+  gate.Update(0.6F, 600'000'000);
+  gate.Update(0.6F, 632'000'000);
+  ASSERT_TRUE(gate.speech());
+
+  // Silence begins at 700 ms
+  gate.Update(0.1F, 700'000'000);
+
+  // At 1150 ms (450 ms elapsed): still speech under 600 ms rule
+  ev = gate.Update(0.1F, 1'150'000'000);
+  EXPECT_FALSE(ev.ended);
+  EXPECT_TRUE(ev.speech);
+
+  // At 1300 ms (600 ms elapsed): ends under 600 ms rule
+  ev = gate.Update(0.1F, 1'300'000'000);
+  EXPECT_TRUE(ev.ended);
+  EXPECT_FALSE(ev.speech);
+}
+
 }  // namespace
 }  // namespace octoplus::voice
