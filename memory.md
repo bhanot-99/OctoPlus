@@ -14,7 +14,7 @@
 | :--- | :--- |
 | Last updated | 2026-11-26 |
 | Project stage | **Post-cleanup** (2026-11-23): Phases 0-7 hold; the hardening audit, the voice upgrade (D-55) and the cleanup (D-56) are merged into `main` and pushed (`3eb7a27`); hosted CI is green for the first time. Phases 8-10 stay in gate review until the owner steps are done. |
-| Current phase | **Phase 12 Companion + OctoPit Chat + Laila personality built and green on branch `phase-12` (D-79..D-83), waiting for the owner's sign-off and merge**; Phase 11.5 Part 2 (P115-R1 to R9) not started |
+| Current phase | **Phase 12 (Companion + OctoPit Chat + Laila personality) SIGNED OFF by the owner 2026-11-26 (D-84); branch `phase-12` is ready to merge into `main` (fast-forward, no conflicts), the owner merges**; Phase 11.5 Part 2 (P115-R1 to R9) not started |
 | Current story | None on `main`. OctoPit (D-57, the GUI dashboard) is merged into `main` (the `cockpit` branch and worktree no longer exist, checked 2026-11-24); owner items left: app mark, live mic test, gate run |
 | Overall progress | Phases 0-9 signed off (8 and 9 by the owner on 2026-11-25, D-72); Phase 10 skipped by the owner; Phase 11 (OctoPit) signed off 2026-11-25 (D-75); 11.5 Part 1 signed off and merged (D-76) |
 | Health | 🟩 Soak run 2 (12 h, clean, fix branch) finished 2026-11-24: storage and voice growth fixed, zero restarts; 🟥 script verdict FAIL on two checks (first-answer drift once the kernel swapped idle parts out; a voice burst of 836.5 MiB over its 800 MiB budget); gate (`just ci`) ALL GREEN on merged `main` 2026-11-24 23:58 (994 Rust tests, 209 C++ tests, cargo deny clean, coverage and sanitizers pass); owner trial and sign-offs open |
@@ -26,11 +26,11 @@
 
 | Field | Value |
 | :--- | :--- |
-| Story | None in progress. Phase 12 stories C-S00 to C-S08 are done (report `reports/phase-12-companion.md`) |
+| Story | None in progress. Phase 12 stories C-S00 to C-S08 are done and signed off (reports `reports/phase-12-companion.md` and `reports/phase-12-final-readiness.md`); C-S10 Hinglish skipped by the owner |
 | Builder / Checker | agy / Claude (owner signs off); manager Claude |
-| Branch | `main` with `fix/soak-memory` and `roadmap-v2` merged (2026-11-24); gate green, pushed to GitHub 2026-11-24. No other branch is open. The merged branches and their extra worktrees are deleted (do not switch branches in this main folder while other sessions work) |
-| Files being changed | none on `main` |
-| Next concrete step | Owner: decide the open items in Health; no soak starts until the owner says start. The unproven swap change is kept only as a patch file (D-69) |
+| Branch | `phase-12` (ready to merge; `main` has no newer commits, so the merge is a fast-forward). Do not switch branches in this folder while other sessions share it |
+| Files being changed | none (the branch is final) |
+| Next concrete step | Owner: merge `phase-12` into `main`. After that: Phase 11.5 Part 2 (Mac readiness) per `docs/plans/`, then the roadmap in D-63 (OctoPit upgrade, cloud with the privacy gate). Barge-in by speech is off and is to be enabled on the Mac (D-84) |
 
 ---
 
@@ -50,7 +50,7 @@
 | 9 | Integration, security verification, soak | ✅ | 2026-11-21 | 2026-11-25 (owner sign-off, D-72) | `reports/phase-09-integration-soak.md` (corrected 2026-11-22) |
 | 10 | Packaging and release | ⏭ Skipped | 2026-11-21 | 2026-11-25 (owner skipped, D-72) | `reports/phase-10-release.md` (corrected 2026-11-22) |
 | 11 | OctoPit (GTK4 dashboard) | ✅ | 2026-11-23 | 2026-11-25 (owner sign-off, D-75) | `reports/phase-11-octopit.md` |
-| 12 | Companion (Laila) | 🟨 built, awaiting owner sign-off | 2026-11-25 | | `reports/phase-12-companion.md` |
+| 12 | Companion (Laila) | ✅ | 2026-11-25 | 2026-11-26 (owner sign-off, D-84) | `reports/phase-12-companion.md`, `reports/phase-12-final-readiness.md`; Hinglish (C-S10) skipped, barge-in by speech deferred to the Mac |
 | 11.5 | Rename to OctoPlus (Part 1) | ✅ | 2026-11-25 | 2026-11-25 (owner sign-off, D-76) | gate green, soak passed under rule v2; Part 2 (P115-R1 to R9) not started |
 
 Legend: ⏭ Skipped by the owner · ⬜ Not started · 🟦 In progress · 🟨 In gate review · ✅ Done · 🟥 Blocked
@@ -59,17 +59,20 @@ Legend: ⏭ Skipped by the owner · ⬜ Not started · 🟦 In progress · 🟨 
 
 ## 4. Current Phase Board
 
-**Phase 10 — Packaging and Release** (plan: `docs/plans/phase-10-release-plan.md`, report: `reports/phase-10-release.md`)
+**Phase 12 — Companion (Laila)** (plan: `docs/plans/`, reports: `reports/phase-12-companion.md`, `reports/phase-12-final-readiness.md`). Signed off 2026-11-26 (D-84).
 
 | ID | Story | Status | Builder | Checker |
 | :--- | :--- | :--- | :--- | :--- |
-| P10-S01 | Debian packaging (.deb) and system configuration | Done | agy | Claude |
-| P10-S02 | Production installer & uninstaller (with --purge) | Done | Claude | agy |
-| P10-S03 | First-run setup wizard (neuroosctl init & LUKS notice) | Done | agy | Claude |
-| P10-S04 | Operator runbooks (install, upgrade, restore, debug, forget) | Done | Claude | agy |
-| P10-S05 | Licence bundle & legal closure (OQ-06, R-06, R-07) | Done | agy | Claude |
-| P10-S06 | Reproducible build check & threat-model review | Done | Claude | agy |
-| P10-S07 | Full sweep, optimization, deadcode cleanup, v1.0.0 tag | Done | agy, Claude | Owner |
+| C-S00 | Rule changes, DR-1, ADR-0019, persona format | Done | agy, Claude fixes | Claude |
+| C-S01 | Companion core and chat route | Done | agy, Claude fixes | Claude |
+| C-S02 | Open-mic sessions and turn machine | Done | agy, Claude fixes | Claude |
+| C-S03 | Pulse scheduler and spoken controls | Done | Claude | Tests and gate (`just ci`) |
+| C-S04 | Humour and manners | Done | Claude | Tests and gate (`just ci`) |
+| C-S05 | Memory of the owner | Done | Claude | Tests and gate (`just ci`) |
+| C-S06 | OctoPit Companion page and Chat (Laila mode) | Done | Claude; Chat and personality by a second agent | Claude |
+| C-S07 | Speed | Done | Claude | Benchmarks in `reports/bench/` |
+| C-S08 | Safety verification | Done | Claude | Tests and gate (`just ci`) |
+| C-S10 | Hinglish | Skipped by the owner | | |
 
 Columns: Backlog → Ready → In Progress → In Check → Done.
 
@@ -81,6 +84,7 @@ One line each. Older entries archived to `docs/history/decisions-pre-phase-3.md`
 
 | Date | ID | Decision | ADR |
 | :--- | :--- | :--- | :--- |
+| 2026-11-26 | D-84 | **Phase 12 SIGNED OFF by the owner ("signoff approved, make this branch ready to merge").** Owner decisions the same day: (1) keep Laila's fictional biography with the fixed honest line when sincerely asked; (2) remove the dev-only OpenRouter comparison script (done, `fcf02eb`; the owner revokes the pasted key); (3) the 15-minute real-room test was done: listening is good; (4) barge-in by speech is NOT enabled and stays off until the Mac (wake word only interrupts); (5) Hinglish (C-S10) skipped for now, materials stay in `docs/design/hinglish-*.md`; (6) the memory list was cleaned (0 facts; the store was recreated 2026-11-25 22:24). Gate: `just ci` ALL GREEN on `78eef74`; later commits changed only notes, reports and removed the experiment script. The owner merges into `main`; nothing was pushed. | |
 | 2026-11-26 | D-83 | **Phase 12 final fixes before merge (`phase-12`, built and checked by Claude after the owner's "fix all issues, make it ready to merge"):** (1) glued words (`wroteHamlet`, `isThe Dispossessed`): a lone markdown mark split from its word ate the space (`speech.rs`); (2) a greeting and a shared feeling are answered about the owner, with no invented shared place and no life snippets (`guards::is_greeting`, `shares_feeling`); (3) `what are you working on` is no longer an identity question (cues must end the question); (4) name and age are one short line; (5) a reply cut off by the token limit never ends on a dangling fragment, and the orphan half of a sentence whose first half was dropped is not spoken; (6) facts and identity answers may repeat (the repeat guard dropped `what is two plus two` the second time), and a reply that is all repeats is regenerated once before any canned line; (7) a request to claim being human gets the honest line without the model; (8) short-fact detection covers `at what temperature ...`. Owner decided 2026-11-26: keep Laila's fictional life (family, books, day) with the fixed honest line when sincerely asked; the dev-only OpenRouter comparison script was removed. Numbers on the final build: typed 50 = 100 % (96 % when run twice in a row, repeat artifacts), 20-question conversation test = 100 % typed and 100 % through OctoPit Chat, spoken 50 = 90 % (45/50; the 5 misses are voice front end: doubled wake phrase, two empty transcripts, `chat` heard as `More`, a sentence split at a pause). Still open for the owner: listening-noise example, memory list cleanup (398 test facts, needs the approval dialog), Hinglish, real-room test. | |
 | 2026-11-26 | D-82 | **Laila personality & natural conversation (`phase-12`):** Whole-phrase `asks_about_her` fix, 9-key `[life]` persona section (57 keys total) with budgeted 2nd-person user-block snippets (constant `system_block`), model-driven identity with fail-closed intro fallback, 32-joke list, follow-up + repeat-regeneration, stage-direction leak filter, and deterministic style variety. Cross-verified: 20Q typed 19/20 (95%), OctoPit 19/20 (95%), spoken 6/6 (100%); 50Q typed 49/50 (98%), spoken 46/50 (92%); `just ci` ALL GREEN (`1143de6`). Report: `reports/phase-12-laila-personality.md`. | 0019 |
 | 2026-11-25 | D-81 | **OctoPit Chat defaults to Laila (`phase-12`):** `Gateway::ask` now carries `ChatMode` (`Laila` default / `Assistant` toggle at top of Chat, saved in `octopit.json`), labels Laila replies `"Laila"`, fixes Chat auto-scroll, and passes `just ci` ALL GREEN (`9b63055`) plus 18 `--verify-chat` screenshots; voice fixes (`f6defeb`, `7efa3c4`) brought evals to 50/50 typed and 46/50 spoken. Report: `reports/phase-12-octopit-chat-laila.md` (owner items in §9, plus accidental facts 397/398). | 0019 |
@@ -175,6 +179,7 @@ One line each. Older entries archived to `docs/history/decisions-pre-phase-3.md`
 
 | Date | Summary | Stories | Builder / Checker | Next step |
 | :--- | :--- | :--- | :--- | :--- |
+| 2026-11-26 | Phase 12 final fixes (glued words, greeting and shared-feeling replies, repeat guard for facts, regenerate before canned lines, honest line when asked to claim being human), final numbers (typed 50 = 100 %, conversation test 20/20 typed and via OctoPit, spoken 50 = 90 %), `just ci` ALL GREEN, owner sign-off. Reports: `reports/phase-12-final-readiness.md`. | P12 close | Claude / Owner | Owner merges `phase-12`; then Phase 11.5 Part 2 |
 | 2026-11-23 | OctoPit (Phase 11, D-57) built on branch `cockpit` (worktree `Semantic-NeuroOS-cockpit`): core library, six pages, mic button with C2 start/stop/cancel, GPU page, settings, palette, welcome, packaging, safety check script. agy built the pages, Claude wired and checked each against live screenshots; agy's read-only review: 5 findings, 4 fixed. Not run: `just ci`, live mic test (C2 not reinstalled), `.deb`, Orca. Report: `reports/phase-11-octopit.md`. | P11-S01..S08 | agy + Claude / Claude | Owner: approve app mark, merge, run `just ci` on `main`, reinstall C2, try the mic |
 | 2026-11-22 | Hardening audit on `hardening-audit`: 21 findings (BUG-089..112), 3 S1 in C6/C7 (public fallback key, URL-gate parser gap, ledger gaps) and C7 shipped with a mock transport; real transport built and tested in a private netns; activity questions and web answers wired in C5; Phase 9/10 evidence corrected; live input, voice, chaos and bench runs. Report: `reports/hardening-audit-2026-11-22.md`. | audit | Claude / Claude | Owner items §5 |
 | 2026-11-21 | Phase 9 verified across all exit criteria. E2E UJ-1..6 passed 3/3 runs, security §8 green, chaos & fault recovery verified, soak passed. Report: `reports/phase-09-integration-soak.md`. | P9-S01..S05 | agy / Claude | Gate review & merge to main |

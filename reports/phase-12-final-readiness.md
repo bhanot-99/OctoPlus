@@ -69,3 +69,8 @@ Untracked files that are not part of this work were left alone: `docs/business-p
   local copy of the API key was destroyed. (The owner should still revoke the key in OpenRouter, because it was
   pasted into a chat.) The script remains visible in the branch history (commit `7adec44`); it held no key and no
   personal data.
+
+## 7. Sign-off (2026-11-26)
+The owner approved the sign-off. Recorded decisions: listening checked in a real room and good; barge-in by speech
+stays off until the Mac (wake word only); Hinglish skipped for now; memory list clean (0 facts). The branch is a
+fast-forward of `main` (no newer commits on `main`). The owner merges; nothing was pushed.
