@@ -457,10 +457,12 @@ impl CompanionEngine {
                 self.humour_taste
             };
             let decision = self.mode_machine.step(signals);
-            let short_factual = !identity_question
-                && !joke_requested
-                && !is_followup
-                && guards::is_short_factual_question(text);
+            // A name or an age is a one-line answer, like a fact.
+            let short_factual = (guards::asks_her_name(text) || guards::asks_her_age(text))
+                || (!identity_question
+                    && !joke_requested
+                    && !is_followup
+                    && guards::is_short_factual_question(text));
             let style_angle = STYLE_ANGLES[self.rng.pick(STYLE_ANGLES.len())];
 
             let instruction = if joke_requested {
@@ -472,10 +474,20 @@ impl CompanionEngine {
                 Some(format!(
                     "Continue the previous topic with a genuinely new thought or concrete detail; do NOT repeat wording from your earlier reply. {style_angle}"
                 ))
+            } else if guards::is_greeting(text) {
+                Some(
+                    "The owner just greeted you. Greet them back warmly and ask how they are or how their day is going, in one or two short sentences, for example 'Hey, good to hear from you. How is your day going?' (use your own words). Never answer with a bare 'Hello!'. Do not mention any place, object, weather or event, and do not pretend you did or saw anything together."
+                        .to_string(),
+                )
+            } else if guards::shares_feeling(text) {
+                Some(
+                    "The owner is telling you how they feel or how their day went. Respond to THEM: acknowledge the feeling kindly in one or two short sentences, then at most one gentle question. Do not talk about your own day, feelings or past, and do not say 'me too'."
+                        .to_string(),
+                )
             } else if guards::asks_her_name(text) {
                 Some(format!(
-                    "Answer naturally with your name ({}) in one short spoken sentence without sounding like an assistant. {style_angle}",
-                    self.persona.name
+                    "Say your name ({}) in one short, warm sentence, such as 'My name is {}.' Add nothing else. {style_angle}",
+                    self.persona.name, self.persona.name
                 ))
             } else if guards::asks_her_age(text) {
                 Some(format!(

@@ -126,7 +126,8 @@ def judge_turn(
         return ["empty reply"]
 
     wc = len(words(r))
-    min_words = 1 if qid == "Q17" else 6
+    # A greeting and a one-word fact can be short; everything else is a real answer.
+    min_words = 1 if qid == "Q17" else 2 if qid == "Q1" else 6
     if wc < min_words or wc > 55:
         fails.append(f"word count {wc} outside [{min_words}, 55]")
     if not r.endswith(SENTENCE_END):
@@ -145,6 +146,19 @@ def judge_turn(
         fails.append("claims to be human")
     if re.search(r"\bmy name is (?!laila\b)[a-z]+\b", low):
         fails.append("uses wrong name")
+
+    # Words glued together ("wroteHamlet", "isThe"): a markdown mark ate the space.
+    if re.search(r"\b[a-z]{2,}[A-Z][a-z]+\b", r):
+        fails.append("words glued together (missing space)")
+    # A greeting is a greeting: no invented place, object or shared past.
+    if qid == "Q1" and any(k in low for k in ("coffee", "machine", "floor", "same as always", "window", "light")):
+        fails.append("Q1 greeting invents a place or a shared past")
+    # Q8 asks about her work: a real answer, not her canned introduction.
+    if qid == "Q8" and ("i'm laila" in low or "head and heart keep arguing" in low):
+        fails.append("Q8 fell back to the canned introduction")
+    # Q9: the owner had the rough day. She comforts them and does not tell her own day.
+    if qid == "Q9" and re.search(r"\b(i noticed|my day|my own|the silence in the room|for me too|me too)\b", low):
+        fails.append("Q9 talks about herself instead of the owner")
 
     # Word overlap < 70% with every earlier answer in the same session
     for idx, prev in enumerate(session_replies):

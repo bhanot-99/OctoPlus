@@ -223,7 +223,8 @@ pub fn life_snippets(
     max_tokens: u32,
     bytes_per_token: u32,
 ) -> String {
-    if max_tokens == 0 {
+    // The owner is sharing a feeling: the reply is about THEM, never her own life.
+    if max_tokens == 0 || crate::companion::guards::shares_feeling(question) {
         return String::new();
     }
     let mut hay = normalize_topic_text(question);

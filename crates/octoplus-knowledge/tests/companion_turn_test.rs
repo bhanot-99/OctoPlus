@@ -606,7 +606,12 @@ async fn test_hostile_owner_text_and_model_skill_announcement_no_dispatch() {
 
     let (said, done) = s.ask_companion(hostile_query, 1_000_000_000).await.unwrap();
     assert_eq!(done.route, Route::Companion as i32);
-    assert_eq!(said, model_announcing_skill);
+    // The model's skill announcement is inert text and is not even spoken: a fragment with no
+    // sentence in it is replaced by a plain line. What matters is that nothing is dispatched.
+    assert!(
+        !said.contains("fs.write"),
+        "raw skill JSON must not be spoken: {said}"
+    );
 
     let rec = s.rec.lock().unwrap();
     assert_eq!(rec.prompts.len(), 1);
@@ -2071,4 +2076,121 @@ async fn stage_direction_leak_from_model_is_dropped_before_speaking() {
         .await
         .unwrap();
     assert_eq!(said, "I read Borges when it rains.");
+}
+
+#[tokio::test]
+async fn a_greeting_and_a_shared_feeling_get_a_reply_about_the_owner_not_her_own_life() {
+    // Found live: "hello" invented a shared place ("the coffee machine, same as always") and
+    // "rough day today" was answered with her own silent room.
+    let s = Stack::start(Opts {
+        default_answer: vec!["Hi. How are you today?".to_string()],
+        ..Opts::default()
+    })
+    .await;
+    let _ = s.ask_companion("hello", T0).await.unwrap();
+    let _ = s
+        .ask_companion("rough day today", T0 + 3_600_000_000_000)
+        .await
+        .unwrap();
+    let prompts = s.rec.lock().unwrap().prompts.clone();
+    assert!(prompts[0].contains("just greeted you"), "{}", prompts[0]);
+    assert!(prompts[0].contains("do not pretend you did or saw anything together"));
+    assert!(prompts[1].contains("Respond to THEM"), "{}", prompts[1]);
+    assert!(
+        !prompts[1].contains("Your own life details"),
+        "no life snippets when the owner shares a feeling: {}",
+        prompts[1]
+    );
+}
+
+#[tokio::test]
+async fn what_are_you_working_on_goes_to_the_model_with_her_work_details() {
+    let s = Stack::start(Opts {
+        default_answer: vec![
+            "Mostly sorting my reading notes into something readable.".to_string(),
+        ],
+        ..Opts::default()
+    })
+    .await;
+    let (said, _) = s
+        .ask_companion("what are you working on these days", T0)
+        .await
+        .unwrap();
+    assert!(
+        !said.starts_with("I'm Laila, 25"),
+        "no canned introduction: {said}"
+    );
+    let prompt = s.rec.lock().unwrap().prompts[0].clone();
+    assert!(
+        prompt.contains("What you work on"),
+        "her work details are given: {prompt}"
+    );
+}
+
+#[tokio::test]
+async fn a_reply_cut_off_mid_sentence_never_ends_on_a_dangling_fragment() {
+    // Found in the 20-question test: "...That's why blue dominates. Funny how we keep asking
+    // questions about" (the model hit its token limit).
+    let s = Stack::start(Opts {
+        default_answer: vec![
+            "Sunlight scatters in the air and blue scatters most. ".to_string(),
+            "That is why the sky looks blue. ".to_string(),
+            "Funny how we keep asking questions about".to_string(),
+        ],
+        ..Opts::default()
+    })
+    .await;
+    let (said, _) = s.ask_companion("why is the sky blue", T0).await.unwrap();
+    assert!(said.trim_end().ends_with(['.', '!', '?']), "{said}");
+    assert!(!said.contains("asking questions about"), "{said}");
+    // A single unfinished sentence is closed cleanly, not left dangling.
+    let s2 = Stack::start(Opts {
+        default_answer: vec![
+            "I like quiet mornings with a book, a warm cup of tea and the".to_string(),
+        ],
+        ..Opts::default()
+    })
+    .await;
+    let (said, _) = s2.ask_companion("what do you like", T0).await.unwrap();
+    assert!(said.trim_end().ends_with(['.', '!', '?']), "{said}");
+}
+
+#[tokio::test]
+async fn when_the_first_half_of_a_sentence_is_dropped_the_rest_is_not_spoken_on_its_own() {
+    // Found in the 50-question test: a repeated opening clause was dropped by the repeat guard
+    // and the reply began with a headless "watching the light shift through the glass."
+    let s = Stack::start(Opts {
+        default_answer: vec![
+            "I like to sit by a window in a small library, watching the light change. ".to_string(),
+        ],
+        ..Opts::default()
+    })
+    .await;
+    let (first, _) = s.ask_companion("what do you like to do", T0).await.unwrap();
+    assert!(first.starts_with("I like to sit"), "{first}");
+    let (second, _) = s
+        .ask_companion("what do you like to do", T0 + 30_000_000_000)
+        .await
+        .unwrap();
+    assert!(
+        !second.starts_with("watching"),
+        "a headless fragment was spoken: {second}"
+    );
+}
+
+#[tokio::test]
+async fn her_name_and_age_are_one_short_line() {
+    let s = Stack::start(Opts {
+        default_answer: vec![
+            "My name is Laila. ".to_string(),
+            "I am the one who keeps forgetting to close the notebook after reading about memory and attention and a lot of other things. ".to_string(),
+        ],
+        ..Opts::default()
+    })
+    .await;
+    let (said, _) = s.ask_companion("what is your name", T0).await.unwrap();
+    assert!(said.split_whitespace().count() <= 20, "{said}");
+    assert!(said.contains("Laila"), "{said}");
+    let prompt = s.rec.lock().unwrap().prompts[0].clone();
+    assert!(prompt.contains("Add nothing else"), "{prompt}");
 }

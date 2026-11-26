@@ -74,6 +74,29 @@ fn trim_to_sentence_words(s: &str, max_words: usize) -> String {
     out
 }
 
+/// What to do with the last unfinished piece when the model stopped (usually at the token limit)
+/// in the middle of a sentence: drop it when a whole sentence was already said, otherwise close
+/// it at its last clause so the reply never ends on a dangling "...questions about".
+fn close_final_fragment(said_pieces: &[String], s: String) -> Option<String> {
+    if ends_sentence(&s) {
+        return Some(s);
+    }
+    if said_pieces.last().is_some_and(|p| ends_sentence(p)) {
+        return None;
+    }
+    let trimmed = s.trim_end();
+    let cut = trimmed
+        .rfind([',', ';', ':'])
+        .filter(|&i| trimmed[..i].split_whitespace().count() >= 4)
+        .unwrap_or(trimmed.len());
+    let mut out = trimmed[..cut].trim_end().to_string();
+    if out.split_whitespace().count() < 3 {
+        return None;
+    }
+    out.push('.');
+    Some(out)
+}
+
 /// Whether what has been said so far is enough: three finished sentences or about 70 words.
 fn reply_is_long_enough(
     said: &[String],
@@ -171,6 +194,44 @@ fn with_regen_hint(prompt: &Prompt) -> Prompt {
         stable_prefix_chars: prompt.stable_prefix_chars,
         taint: prompt.taint,
         evidence_used: prompt.evidence_used,
+    }
+}
+
+impl KnowledgeHandler {
+    /// Filters `pieces` one by one, in order. When the filter drops the first half of a sentence
+    /// (a clause that does not end it), the rest of that sentence is dropped as well, so no
+    /// headless fragment ("watching the light shift...") is ever spoken.
+    fn filter_in_order(
+        &self,
+        pieces: &[String],
+        goodbye: bool,
+        skip_tail: &mut bool,
+    ) -> Vec<String> {
+        let mut out = Vec::new();
+        for p in pieces {
+            let kept = self.with_state(|state| {
+                state.companion.as_mut().map_or_else(
+                    Vec::new, // fail closed: no engine, nothing unfiltered is spoken
+                    |e| e.filter_pieces(std::slice::from_ref(p), goodbye),
+                )
+            });
+            if kept.is_empty() {
+                if !ends_sentence(p) {
+                    *skip_tail = true;
+                }
+                continue;
+            }
+            for k in kept {
+                if *skip_tail {
+                    if ends_sentence(&k) {
+                        *skip_tail = false;
+                    }
+                    continue;
+                }
+                out.push(k);
+            }
+        }
+        out
     }
 }
 
@@ -476,6 +537,7 @@ impl KnowledgeHandler {
         let mut first = true;
         let mut cut_short = false;
         let mut capped = false;
+        let mut skip_tail = false;
         let (max_sentences, max_words) = if plan_generate.short_factual {
             (2, MAX_FACT_WORDS)
         } else if plan_generate.gentle_line.is_some() {
@@ -493,12 +555,8 @@ impl KnowledgeHandler {
                     }
                     let ready = sentence_stream.feed(&chunk.text);
                     if !ready.is_empty() {
-                        let filtered = self.with_state(|state| {
-                            state.companion.as_mut().map_or_else(
-                                Vec::new, // fail closed: no engine, nothing unfiltered is spoken
-                                |e| e.filter_pieces(&ready, plan_generate.goodbye),
-                            )
-                        });
+                        let filtered =
+                            self.filter_in_order(&ready, plan_generate.goodbye, &mut skip_tail);
                         for s in filtered {
                             let (to_say, hit_cap) = prepare_spoken_piece(
                                 &mut said_pieces,
@@ -545,13 +603,18 @@ impl KnowledgeHandler {
             sentence_stream.flush()
         };
         if !remaining.is_empty() {
-            let filtered = self.with_state(|state| {
-                state.companion.as_mut().map_or_else(
-                    Vec::new, // fail closed: no engine, nothing unfiltered is spoken
-                    |e| e.filter_pieces(&remaining, plan_generate.goodbye),
-                )
-            });
-            for s in filtered {
+            let filtered = self.filter_in_order(&remaining, plan_generate.goodbye, &mut skip_tail);
+            let last = filtered.len().saturating_sub(1);
+            for (i, s) in filtered.into_iter().enumerate() {
+                // Only the very last piece can be an unfinished sentence.
+                let s = if i == last {
+                    match close_final_fragment(&said_pieces, s) {
+                        Some(done) => done,
+                        None => break,
+                    }
+                } else {
+                    s
+                };
                 let (to_say, hit_cap) = prepare_spoken_piece(
                     &mut said_pieces,
                     s,

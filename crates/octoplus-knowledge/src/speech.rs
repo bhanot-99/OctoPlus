@@ -248,8 +248,15 @@ impl SentenceStream {
         self.buf.push_str(piece);
         let (workable, pending) = split_fences(&self.buf);
         let cleaned = clean_for_speech(&workable);
-        // Keep a trailing space so "end. " still confirms the boundary after cleaning.
-        let work = if workable.ends_with(char::is_whitespace) && !cleaned.is_empty() {
+        // Keep a trailing space so "end. " still confirms the boundary after cleaning. A lone
+        // markdown mark at the end ("wrote *" then "Hamlet*") is cleaned away together with the
+        // space before it, so it counts as a space too: otherwise the words join ("wroteHamlet").
+        let ends_in_space = workable.ends_with(char::is_whitespace)
+            || workable.ends_with(['*', '_', '`'])
+                && workable
+                    .trim_end_matches(['*', '_', '`'])
+                    .ends_with(char::is_whitespace);
+        let work = if ends_in_space && !cleaned.is_empty() {
             format!("{cleaned} ")
         } else {
             cleaned
@@ -308,6 +315,23 @@ mod tests {
         }
         out.extend(s.flush());
         out
+    }
+
+    #[test]
+    fn a_markdown_mark_split_from_its_word_never_glues_the_words_together() {
+        // Found by voice and in chat: "wroteHamlet", "isThe Dispossessed", "justsnaps".
+        for text in [
+            "William Shakespeare wrote *Hamlet*. It is a play.",
+            "My favourite book is **The Dispossessed** by Le Guin. It is calm.",
+            "A puzzle that just _snaps_ into place. Nice.",
+            "People `try` to live. Fine.",
+        ] {
+            let expected = clean_for_speech(text);
+            for chunk in 1..=9 {
+                let said = all(text, chunk).join(" ");
+                assert_eq!(said, expected, "chunk size {chunk}: {text}");
+            }
+        }
     }
 
     #[test]

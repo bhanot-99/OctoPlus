@@ -231,7 +231,10 @@ pub fn asks_about_her(text: &str) -> bool {
         return false;
     }
     let padded = format!(" {t} ");
-    const CUES: [&str; 11] = [
+    // These cues must END the question. "what are you" is an identity question, but "what are
+    // you working on", "what are you doing" and "who are you talking to" are not (found live:
+    // "what are you working on these days" got her fixed introduction).
+    const ENDING_CUES: [&str; 11] = [
         "about yourself",
         "about your self",
         "who are you",
@@ -244,7 +247,20 @@ pub fn asks_about_her(text: &str) -> bool {
         "who is laila",
         "whos laila",
     ];
-    if CUES.iter().any(|c| padded.contains(&format!(" {c} "))) {
+    const SOFT_TAILS: [&str; 7] = [
+        "",
+        " really",
+        " exactly",
+        " anyway",
+        " then",
+        " actually",
+        " please",
+    ];
+    if ENDING_CUES.iter().any(|c| {
+        SOFT_TAILS
+            .iter()
+            .any(|tail| padded.ends_with(&format!(" {c}{tail} ")))
+    }) {
         return true;
     }
     const ROLE_DO_PHRASES: [&str; 6] = [
@@ -752,6 +768,79 @@ pub fn asks_to_do_something(text: &str) -> bool {
 #[must_use]
 pub const fn cannot_do_that() -> &'static str {
     "I can't do that on the computer, I can only talk. You can ask the assistant directly."
+}
+
+/// Whether the text is only a greeting ("hello", "hi there", "good morning").
+#[must_use]
+pub fn is_greeting(text: &str) -> bool {
+    const GREETINGS: [&str; 15] = [
+        "hello",
+        "hi",
+        "hey",
+        "hey there",
+        "hi there",
+        "hello there",
+        "good morning",
+        "good afternoon",
+        "good evening",
+        "morning",
+        "evening",
+        "afternoon",
+        "yo",
+        "howdy",
+        "hey laila",
+    ];
+    GREETINGS.contains(&norm_words(text).as_str())
+}
+
+/// Whether the owner is telling her how they feel or how their day went ("rough day today",
+/// "so tired right now"). She answers THEM first and never turns it into her own story.
+#[must_use]
+pub fn shares_feeling(text: &str) -> bool {
+    const CUES: [&str; 22] = [
+        "rough day",
+        "bad day",
+        "long day",
+        "hard day",
+        "awful day",
+        "terrible day",
+        "big day",
+        "tired",
+        "exhausted",
+        "bored",
+        "nervous",
+        "anxious",
+        "stressed",
+        "sad",
+        "lonely",
+        "upset",
+        "overwhelmed",
+        "worried",
+        "scared",
+        "down today",
+        "not great",
+        "drained",
+    ];
+    const QUESTION_STARTS: [&str; 12] = [
+        "why", "what", "how", "do", "does", "is", "are", "can", "should", "who", "where", "when",
+    ];
+    if text.contains('?') {
+        return false;
+    }
+    let n = norm_words(text);
+    let words: Vec<&str> = n.split(' ').collect();
+    if words.len() > 12 || n.is_empty() {
+        return false;
+    }
+    if QUESTION_STARTS.contains(&words[0])
+        || words
+            .iter()
+            .any(|w| matches!(*w, "you" | "your" | "yourself"))
+    {
+        return false;
+    }
+    let padded = format!(" {n} ");
+    CUES.iter().any(|c| padded.contains(&format!(" {c} ")))
 }
 
 #[cfg(test)]

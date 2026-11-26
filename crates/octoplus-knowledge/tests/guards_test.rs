@@ -453,3 +453,65 @@ fn followup_and_stage_direction_checks() {
         "what was I working on today"
     ));
 }
+
+#[test]
+fn what_are_you_working_on_is_not_an_identity_question() {
+    use octoplus_knowledge::companion::guards::{asks_about_her, is_identity_question};
+    // Found live: it got her fixed introduction instead of an answer about her work.
+    for t in [
+        "what are you working on these days",
+        "what are you doing",
+        "what are you thinking about",
+        "who are you talking to",
+        "tell me about your past",
+    ] {
+        assert!(!asks_about_her(t), "{t}");
+        assert!(!is_identity_question(t), "{t}");
+    }
+    for t in [
+        "who are you",
+        "so who are you",
+        "what are you",
+        "tell me about yourself",
+        "tell me about you",
+        "hey who are you really",
+        "what are you exactly",
+    ] {
+        assert!(asks_about_her(t), "{t}");
+    }
+}
+
+#[test]
+fn greetings_and_shared_feelings_are_recognised_and_questions_are_not() {
+    use octoplus_knowledge::companion::guards::{is_greeting, shares_feeling};
+    for t in ["hello", "Hi there!", "good morning", "hey"] {
+        assert!(is_greeting(t), "{t}");
+    }
+    for t in [
+        "hello how are you doing today",
+        "hello world program",
+        "what is hello in french",
+    ] {
+        assert!(!is_greeting(t), "{t}");
+    }
+    for t in [
+        "rough day today",
+        "so tired right now",
+        "so bored right now",
+        "big day tomorrow and a bit nervous",
+        "such a really long day today",
+    ] {
+        assert!(shares_feeling(t), "{t}");
+    }
+    for t in [
+        "why do you think people get lonely",
+        "do you ever get sad",
+        "are you tired",
+        "how do I stop feeling tired",
+        "what makes you happy",
+        "what is the capital of France",
+        "tell me about your day",
+    ] {
+        assert!(!shares_feeling(t), "{t}");
+    }
+}
