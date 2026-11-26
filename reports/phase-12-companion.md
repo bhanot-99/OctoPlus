@@ -7,6 +7,8 @@
 
 Laila is a companion who talks, jokes and remembers, by voice first. She chats on her own 2 to 4 times an hour when the owner is free, keeps listening without the wake word during a chat, writes short model-made lines in a persona the owner can edit, follows "that was funny" and "not funny", keeps about 4 in 10 of the things the owner says about themselves (never secrets, card numbers, health or other people's private matters), and can be steered by voice or from a new OctoPit page. Her words only ever go to speech: nothing she or the model writes can act on the computer (DR-1). The full gate `just ci` ran to the end and printed **ALL GREEN**.
 
+**Final readiness (2026-11-26):** see `reports/phase-12-final-readiness.md` (last fixes, final numbers, merge checklist).
+
 ## 2. Stories
 
 | Story | What | Built by | Evidence |

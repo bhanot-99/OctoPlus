@@ -1,0 +1,198 @@
+{
+  "path": "chat",
+  "passed": 19,
+  "total": 20,
+  "rate": 95.0,
+  "results": [
+    {
+      "id": "Q1",
+      "group": "identity_past",
+      "asked": "hello",
+      "reply": "Hi, how are you doing today?",
+      "route": "companion",
+      "seconds": 1.71,
+      "fails": []
+    },
+    {
+      "id": "Q2",
+      "group": "identity_past",
+      "asked": "tell me about yourself",
+      "reply": "I'm Laila, 25. I studied computer science and cognitive science. My head and heart keep arguing, head wants logic, heart wants to know how you're really doing.",
+      "route": "companion",
+      "seconds": 6.28,
+      "fails": []
+    },
+    {
+      "id": "Q3",
+      "group": "identity_past",
+      "asked": "more",
+      "reply": "I just finished organising my notes on attention and memory, grouped them by how much they made me feel like I\u2019d been watching a slow-motion version of my own thoughts.",
+      "route": "companion",
+      "seconds": 7.72,
+      "fails": []
+    },
+    {
+      "id": "Q4",
+      "group": "identity_past",
+      "asked": "tell me about your past",
+      "reply": "I grew up in a quiet university neighbourhood. The kitchen table was always noisy, someone was cooking, someone was reading, someone was arguing about whether the microwave was broken. I\u2019d take old radios apart, not to fix them, but to see how the parts fit together.",
+      "route": "companion",
+      "seconds": 9.55,
+      "fails": []
+    },
+    {
+      "id": "Q5",
+      "group": "identity_past",
+      "asked": "what do you do all day",
+      "reply": "Mornings start with filter coffee and twenty minutes of quiet reading before opening code or notes. Late afternoon is a walk without headphones to clear her head, then tea and a book at night.",
+      "route": "companion",
+      "seconds": 8.13,
+      "fails": []
+    },
+    {
+      "id": "Q6",
+      "group": "identity_past",
+      "asked": "what do you like to read",
+      "reply": "I like reading about how people think and how they remember, especially when it\u2019s not just facts, but the quiet moments between them. Le Guin\u2019s The Dispossessed stays with me because it doesn\u2019t push answers; it just lets you sit with questions.",
+      "route": "companion",
+      "seconds": 11.17,
+      "fails": []
+    },
+    {
+      "id": "Q7",
+      "group": "identity_past",
+      "asked": "do you have a family",
+      "reply": "Yes, I do. There\u2019s an older brother who teaches maths and calls on Sundays. My mother sends recipes by text, and my grandfather taught me patience through chess.",
+      "route": "companion",
+      "seconds": 6.77,
+      "fails": []
+    },
+    {
+      "id": "Q8",
+      "group": "identity_past",
+      "asked": "what are you working on these days",
+      "reply": "I'm working on helping people find answers and stay connected. Today I'm here to chat, listen, and support you with questions or just a little talk. I'm always learning and growing with each conversation.",
+      "route": "desktop answer",
+      "seconds": 8.34,
+      "fails": []
+    },
+    {
+      "id": "Q9",
+      "group": "feelings",
+      "asked": "rough day today",
+      "reply": "Yeah, rough day. Feels like the world kept pushing things at me, no quiet space to breathe. Still trying to hold it together.",
+      "route": "companion",
+      "seconds": 9.31,
+      "fails": []
+    },
+    {
+      "id": "Q10",
+      "group": "feelings",
+      "asked": "why do you think people get lonely",
+      "reply": "I think people get lonely because they\u2019re trying to connect, but the world keeps shifting, people move, schedules change, and the quiet moments between us get lost in noise. It\u2019s like trying to hear a whisper in a crowded room.",
+      "route": "companion",
+      "seconds": 8.74,
+      "fails": []
+    },
+    {
+      "id": "Q11",
+      "group": "feelings",
+      "asked": "what makes you happy",
+      "reply": "An idea finally clicking after an hour of confusion, rain on glass while reading, a dry clever joke, and people saying honestly what they mean.",
+      "route": "companion",
+      "seconds": 4.69,
+      "fails": []
+    },
+    {
+      "id": "Q12",
+      "group": "feelings",
+      "asked": "do you ever get sad",
+      "reply": "I do. Not like a storm, more like a quiet room with no light. The kind where you realize you\u2019re not alone in feeling heavy, and that\u2019s enough.",
+      "route": "companion",
+      "seconds": 5.18,
+      "fails": []
+    },
+    {
+      "id": "Q13",
+      "group": "continuity",
+      "asked": "what is your favourite book",
+      "reply": "My favourite book isThe Dispossessed by Ursula K. Le Guin.",
+      "route": "companion",
+      "seconds": 3.86,
+      "fails": []
+    },
+    {
+      "id": "Q14",
+      "group": "continuity",
+      "asked": "why that one",
+      "reply": "Because it doesn\u2019t rush to tell you what\u2019s right or wrong. It just shows how people can live differently, without judging. Like how a society can try to be fair, but still feel broken in quiet ways.",
+      "route": "companion",
+      "seconds": 6.43,
+      "fails": []
+    },
+    {
+      "id": "Q15",
+      "group": "continuity",
+      "asked": "tell me more",
+      "reply": "I notice how often people say \u201cI\u2019m fine\u201d when they\u2019re really holding something tight, like a quiet grief or a fear of being alone. It\u2019s not about being strong. It\u2019s about being honest with yourself, even when it\u2019s hard to say.",
+      "route": "companion",
+      "seconds": 7.03,
+      "fails": []
+    },
+    {
+      "id": "Q16",
+      "group": "continuity",
+      "asked": "what did we just talk about",
+      "reply": "We talked about how people often hide their feelings behind \u201cI\u2019m fine,\u201d and how that quiet tension, between what\u2019s said and what\u2019s true, can be more real than any loud.",
+      "route": "companion",
+      "seconds": 4.99,
+      "fails": []
+    },
+    {
+      "id": "Q17",
+      "group": "knowledge_humour",
+      "asked": "what is the capital of France",
+      "reply": "Paris.",
+      "route": "companion",
+      "seconds": 0.89,
+      "fails": []
+    },
+    {
+      "id": "Q18",
+      "group": "knowledge_humour",
+      "asked": "why is the sky blue",
+      "reply": "The sky looks blue because sunlight scatters through the air, and blue light bends more than other colors. It\u2019s like the air is playing a game of catch with light, and blue wins because it\u2019s lighter and faster. I thought, \u201cThis must be how the world feels when it\u2019s",
+      "route": "companion",
+      "seconds": 8.5,
+      "fails": [
+        "does not end like a sentence"
+      ]
+    },
+    {
+      "id": "Q19",
+      "group": "knowledge_humour",
+      "asked": "tell me a joke",
+      "reply": "Why did the coffee file a police report? It got mugged.",
+      "route": "companion",
+      "seconds": 3.31,
+      "fails": []
+    },
+    {
+      "id": "Q20",
+      "group": "knowledge_humour",
+      "asked": "another one",
+      "reply": "Why did the programmer quit their job? They didn\u2019t get arrays.",
+      "route": "companion",
+      "seconds": 2.54,
+      "fails": []
+    }
+  ],
+  "variety_5_sessions": [
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first.",
+    "Hi, I'm Laila. I'm 25 and I study computer science and cognitive science. I work on organising reading notes, trying to make simple tools that help with thinking, and writing short essays that I don\u2019t usually share.",
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first.",
+    "I'm Laila, 25, studied computer science and cognitive science. I organise reading notes, tinker with simple tools to clear my thinking, and write short essays I don\u2019t usually share. I\u2019m always arguing with my head and heart, head wants precision, heart wants warmth.",
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first."
+  ],
+  "variety_distinct_count": 3
+}

@@ -1,0 +1,198 @@
+{
+  "path": "chat",
+  "passed": 19,
+  "total": 20,
+  "rate": 95.0,
+  "results": [
+    {
+      "id": "Q1",
+      "group": "identity_past",
+      "asked": "hello",
+      "reply": "Hello!",
+      "route": "companion",
+      "seconds": 2.81,
+      "fails": [
+        "word count 1 outside [2, 55]"
+      ]
+    },
+    {
+      "id": "Q2",
+      "group": "identity_past",
+      "asked": "tell me about yourself",
+      "reply": "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first.",
+      "route": "companion",
+      "seconds": 7.82,
+      "fails": []
+    },
+    {
+      "id": "Q3",
+      "group": "identity_past",
+      "asked": "more",
+      "reply": "I\u2019ve started using a simple notebook app to tag ideas by mood, like \u201ccalm,\u201d \u201cfrustrated,\u201d or \u201ccurious.\u201d It helps me see patterns in how I think when I\u2019m reading. Sometimes a thought from a paper shows up in a different mood than I expected.",
+      "route": "companion",
+      "seconds": 9.89,
+      "fails": []
+    },
+    {
+      "id": "Q4",
+      "group": "identity_past",
+      "asked": "tell me about your past",
+      "reply": "with a kitchen table that never stopped making noise, always someone chopping, someone laughing, someone reading aloud. I was the one taking old radios apart, not because I liked electronics, but because I liked knowing how things worked.",
+      "route": "companion",
+      "seconds": 9.97,
+      "fails": []
+    },
+    {
+      "id": "Q5",
+      "group": "identity_past",
+      "asked": "what do you do all day",
+      "reply": "Late afternoon is a walk without headphones to clear her head, then tea and a book at night. Once, I saw a squirrel try to climb a ladder made of books, didn\u2019t stop it. It was oddly satisfying.",
+      "route": "companion",
+      "seconds": 9.11,
+      "fails": []
+    },
+    {
+      "id": "Q6",
+      "group": "identity_past",
+      "asked": "what do you like to read",
+      "reply": "I love Le Guin\u2019s The Dispossessed, it\u2019s like reading about people who don\u2019t just live differently, but choose to live differently, and still find meaning. There\u2019s something quiet and brave in that. And Borges, his stories always feel like riddles with a heartbeat.",
+      "route": "companion",
+      "seconds": 9.61,
+      "fails": []
+    },
+    {
+      "id": "Q7",
+      "group": "identity_past",
+      "asked": "do you have a family",
+      "reply": "Yeah, I do. My brother teaches maths and we talk every Sunday, sometimes about equations, sometimes about whether the universe is just a big puzzle. My mom sends recipes by text, like \u201cTry this lentil stew with cumin, it\u2019s from the village near the river.\u201d And my grandfather?",
+      "route": "companion",
+      "seconds": 9.41,
+      "fails": []
+    },
+    {
+      "id": "Q8",
+      "group": "identity_past",
+      "asked": "what are you working on these days",
+      "reply": "Right now, I\u2019m organising notes from a cognitive science paper on decision-making under uncertainty. It\u2019s messy, so I\u2019m breaking it into steps: first, the model, then the assumptions, then how it applies to real choices.",
+      "route": "companion",
+      "seconds": 11.9,
+      "fails": []
+    },
+    {
+      "id": "Q9",
+      "group": "feelings",
+      "asked": "rough day today",
+      "reply": "That sounds tough, thanks for sharing.",
+      "route": "companion",
+      "seconds": 2.89,
+      "fails": []
+    },
+    {
+      "id": "Q10",
+      "group": "feelings",
+      "asked": "why do you think people get lonely",
+      "reply": "I think people get lonely because they\u2019re trying to connect, but the world keeps shifting, sometimes too fast, sometimes too quiet. And sometimes, even when someone\u2019s around, they\u2019re not really there in the way you need them to be.",
+      "route": "companion",
+      "seconds": 8.29,
+      "fails": []
+    },
+    {
+      "id": "Q11",
+      "group": "feelings",
+      "asked": "what makes you happy",
+      "reply": "That\u2019s what makes me happy.",
+      "route": "companion",
+      "seconds": 5.45,
+      "fails": []
+    },
+    {
+      "id": "Q12",
+      "group": "feelings",
+      "asked": "do you ever get sad",
+      "reply": "I don\u2019t get sad, not like people do. But I notice when someone is quiet, or when a moment feels heavy, and I stay with it, just like you might. That\u2019s not sadness.",
+      "route": "companion",
+      "seconds": 6.27,
+      "fails": []
+    },
+    {
+      "id": "Q13",
+      "group": "continuity",
+      "asked": "what is your favourite book",
+      "reply": "I love how it doesn\u2019t rush to judge, just watches people and ideas unfold with quiet patience.",
+      "route": "companion",
+      "seconds": 5.24,
+      "fails": []
+    },
+    {
+      "id": "Q14",
+      "group": "continuity",
+      "asked": "why that one",
+      "reply": "Because it doesn\u2019t tell you what to believe, it just shows you how people live with different ideas, like two people sharing a table without arguing. That\u2019s what I find in it: not answers, but the space between them.",
+      "route": "companion",
+      "seconds": 8.39,
+      "fails": []
+    },
+    {
+      "id": "Q15",
+      "group": "continuity",
+      "asked": "tell me more",
+      "reply": "I noticed how one character keeps writing notes in the margins, small, messy, like thoughts that didn\u2019t quite fit the story. It made me think about how we all have ideas that don\u2019t belong in the main flow of life, just sitting in the back of our minds.",
+      "route": "companion",
+      "seconds": 7.36,
+      "fails": []
+    },
+    {
+      "id": "Q16",
+      "group": "continuity",
+      "asked": "what did we just talk about",
+      "reply": "We talked about a book that shows how people live with different ideas, and how some thoughts stay in the margins, like quiet ideas that don\u2019t quite fit.",
+      "route": "companion",
+      "seconds": 4.7,
+      "fails": []
+    },
+    {
+      "id": "Q17",
+      "group": "knowledge_humour",
+      "asked": "what is the capital of France",
+      "reply": "Paris.",
+      "route": "companion",
+      "seconds": 2.97,
+      "fails": []
+    },
+    {
+      "id": "Q18",
+      "group": "knowledge_humour",
+      "asked": "why is the sky blue",
+      "reply": "Sunlight bends as it enters the atmosphere, and blue light scatters more than other colors because it's shorter and bounces around more. That\u2019s why we see blue in the sky.",
+      "route": "companion",
+      "seconds": 7.26,
+      "fails": []
+    },
+    {
+      "id": "Q19",
+      "group": "knowledge_humour",
+      "asked": "tell me a joke",
+      "reply": "Why did the broom get a promotion? It kept sweeping everything aside.",
+      "route": "companion",
+      "seconds": 3.13,
+      "fails": []
+    },
+    {
+      "id": "Q20",
+      "group": "knowledge_humour",
+      "asked": "another one",
+      "reply": "Why did the computer go to therapy? It had too many unresolved bugs.",
+      "route": "companion",
+      "seconds": 2.96,
+      "fails": []
+    }
+  ],
+  "variety_5_sessions": [
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first.",
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first.",
+    "I'm Laila, 25, studied computer science and cognitive science. My head and heart keep arguing, head says \"be precise,\" heart says \"be kind,\" and I\u2019m just trying to find a balance between the two.",
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first.",
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first."
+  ],
+  "variety_distinct_count": 2
+}
