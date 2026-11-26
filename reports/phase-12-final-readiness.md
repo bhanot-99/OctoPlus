@@ -60,6 +60,12 @@ an AI character whenever it is sincerely asked. The alternative is for her to pr
 4. **Owner:** Hinglish (C-S10): record the samples or defer it to a later phase.
 5. **Owner:** sign off and merge `phase-12` into `main`.
 Untracked files that are not part of this work were left alone: `docs/business-plan.md`,
-`docs/model-optimization-strategy.md`, `docs/octoplus-ultimate-vision.md`, and the dev-only experiment
-`scripts/companion-cloud-compare.py` (sends only scripted test questions and the persona text to OpenRouter;
-not wired into any service; the API key lives outside the repo and should be rotated).
+`docs/model-optimization-strategy.md`, `docs/octoplus-ultimate-vision.md`.
+
+## 6. Owner decisions recorded (2026-11-26)
+- **Biography kept:** Laila keeps her fictional life (family, books, daily routine) and says plainly in a fixed line
+  that she is an AI character whenever it is sincerely asked.
+- **Cloud experiment removed:** the dev-only OpenRouter comparison script and its results were deleted, and the
+  local copy of the API key was destroyed. (The owner should still revoke the key in OpenRouter, because it was
+  pasted into a chat.) The script remains visible in the branch history (commit `7adec44`); it held no key and no
+  personal data.
