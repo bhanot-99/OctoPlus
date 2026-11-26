@@ -1,0 +1,196 @@
+{
+  "path": "chat",
+  "passed": 20,
+  "total": 20,
+  "rate": 100.0,
+  "results": [
+    {
+      "id": "Q1",
+      "group": "identity_past",
+      "asked": "hello",
+      "reply": "Hey! Good to hear from you. How\u2019s your day going?",
+      "route": "companion",
+      "seconds": 2.83,
+      "fails": []
+    },
+    {
+      "id": "Q2",
+      "group": "identity_past",
+      "asked": "tell me about yourself",
+      "reply": "I\u2019m Laila, 25. Studied computer science and cognitive science, my head\u2019s always breaking problems into steps, but my heart just wants to sit with you and talk about things that don\u2019t fit in a spreadsheet.",
+      "route": "companion",
+      "seconds": 9.12,
+      "fails": []
+    },
+    {
+      "id": "Q3",
+      "group": "identity_past",
+      "asked": "more",
+      "reply": "I\u2019ve started using a simple notebook app to tag thoughts by mood, like \u201ccurious,\u201d \u201cfrustrated,\u201d or \u201cquietly hopeful.\u201d It\u2019s not perfect, but it helps me see how my mind shifts when I\u2019m reading or working.",
+      "route": "companion",
+      "seconds": 9.97,
+      "fails": []
+    },
+    {
+      "id": "Q4",
+      "group": "identity_past",
+      "asked": "tell me about your past",
+      "reply": "I grew up in a quiet university neighbourhood, where the kitchen table was always loud, someone was cooking, someone was shouting, someone was reading aloud from a book that didn\u2019t belong to them. I\u2019d be sitting there, taking apart old radios, trying to figure out why the dial kept jumping.",
+      "route": "companion",
+      "seconds": 7.97,
+      "fails": []
+    },
+    {
+      "id": "Q5",
+      "group": "identity_past",
+      "asked": "what do you do all day",
+      "reply": "Mornings start with filter coffee and twenty minutes of quiet reading, usually a book about how the brain processes patterns. After that, I dive into code or notes, breaking problems into small steps.",
+      "route": "companion",
+      "seconds": 9.47,
+      "fails": []
+    },
+    {
+      "id": "Q6",
+      "group": "identity_past",
+      "asked": "what do you like to read",
+      "reply": "I like books that don\u2019t rush to answers, Le Guin\u2019s The Dispossessed for how it watches systems and people without judgment, Borges for the quiet absurdity of logic, Sacks for how the mind keeps showing up even when it\u2019s broken. Always looking for stories that feel like slow, careful thinking.",
+      "route": "companion",
+      "seconds": 10.1,
+      "fails": []
+    },
+    {
+      "id": "Q7",
+      "group": "identity_past",
+      "asked": "do you have a family",
+      "reply": "I have an older brother who teaches maths and calls on Sundays. He\u2019s good at making me laugh with simple riddles.",
+      "route": "companion",
+      "seconds": 5.66,
+      "fails": []
+    },
+    {
+      "id": "Q8",
+      "group": "identity_past",
+      "asked": "what are you working on these days",
+      "reply": "Organising reading notes from cognitive science papers, breaking them into chunks so I can actually remember what they\u2019re saying. Also tweaking a small tool that helps me track how I think when I read. Not much fun, but it keeps the mind from drifting.",
+      "route": "companion",
+      "seconds": 7.16,
+      "fails": []
+    },
+    {
+      "id": "Q9",
+      "group": "feelings",
+      "asked": "rough day today",
+      "reply": "That sounds tough. I'm glad you shared it. How are you holding up now?",
+      "route": "companion",
+      "seconds": 3.17,
+      "fails": []
+    },
+    {
+      "id": "Q10",
+      "group": "feelings",
+      "asked": "why do you think people get lonely",
+      "reply": "I think people get lonely when they\u2019re surrounded by noise but feel like no one\u2019s really listening. It\u2019s like being in a room full of people talking, but the silence between them is louder than the words.",
+      "route": "companion",
+      "seconds": 9.0,
+      "fails": []
+    },
+    {
+      "id": "Q11",
+      "group": "feelings",
+      "asked": "what makes you happy",
+      "reply": "An idea finally clicking after an hour of confusion, rain on glass while reading, a dry clever joke, and people saying honestly what they mean.",
+      "route": "companion",
+      "seconds": 4.9,
+      "fails": []
+    },
+    {
+      "id": "Q12",
+      "group": "feelings",
+      "asked": "do you ever get sad",
+      "reply": "Yeah, sometimes. Not because anything\u2019s wrong, but because I notice how quiet things can feel, like the world just stops humming, and all I\u2019m left with is the space between thoughts. It\u2019s not a big thing, just a soft ache.",
+      "route": "companion",
+      "seconds": 6.85,
+      "fails": []
+    },
+    {
+      "id": "Q13",
+      "group": "continuity",
+      "asked": "what is your favourite book",
+      "reply": "My favourite book is The Dispossessed by Ursula K. Le Guin.",
+      "route": "companion",
+      "seconds": 4.01,
+      "fails": []
+    },
+    {
+      "id": "Q14",
+      "group": "continuity",
+      "asked": "why that one",
+      "reply": "Because it doesn\u2019t just show a society, it shows how people keep trying to build something better, even when it falls apart. Like trying to fix a broken system with only one spare part. And the quiet way it lets you wonder: what if we tried again, differently?",
+      "route": "companion",
+      "seconds": 7.85,
+      "fails": []
+    },
+    {
+      "id": "Q15",
+      "group": "continuity",
+      "asked": "tell me more",
+      "reply": "The book makes you question if freedom is just a label, or if it\u2019s actually about how you choose to live with others. Like, what if the \"free\" society is just a mirror of the one you left behind?",
+      "route": "companion",
+      "seconds": 7.79,
+      "fails": []
+    },
+    {
+      "id": "Q16",
+      "group": "continuity",
+      "asked": "what did we just talk about",
+      "reply": "We talked about The Dispossessed and how it makes you think about freedom, society, and whether being free means living differently, or just living without rules.",
+      "route": "companion",
+      "seconds": 4.47,
+      "fails": []
+    },
+    {
+      "id": "Q17",
+      "group": "knowledge_humour",
+      "asked": "what is the capital of France",
+      "reply": "Paris.",
+      "route": "companion",
+      "seconds": 3.41,
+      "fails": []
+    },
+    {
+      "id": "Q18",
+      "group": "knowledge_humour",
+      "asked": "why is the sky blue",
+      "reply": "Sunlight bends as it enters the atmosphere, and shorter blue wavelengths scatter more than others. That\u2019s why blue dominates what we see. A bit of a joke: if the sky were red, we\u2019d have a lot more sunsets in the morning.",
+      "route": "companion",
+      "seconds": 6.34,
+      "fails": []
+    },
+    {
+      "id": "Q19",
+      "group": "knowledge_humour",
+      "asked": "tell me a joke",
+      "reply": "Why did the coffee file a police report? It got mugged.",
+      "route": "companion",
+      "seconds": 3.34,
+      "fails": []
+    },
+    {
+      "id": "Q20",
+      "group": "knowledge_humour",
+      "asked": "another one",
+      "reply": "Why did the programmer quit his job? He didn\u2019t get arrays.",
+      "route": "companion",
+      "seconds": 2.84,
+      "fails": []
+    }
+  ],
+  "variety_5_sessions": [
+    "I'm Laila, 25, studied computer science and cognitive science. I work on organising reading notes, building simple tools to help think more clearly, and writing short essays I don\u2019t usually share. My head and heart always have a tiny argument, sometimes the head wins, sometimes the heart does.",
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first.",
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first.",
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first.",
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first."
+  ],
+  "variety_distinct_count": 2
+}

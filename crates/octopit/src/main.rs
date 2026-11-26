@@ -64,11 +64,16 @@ fn main() -> ExitCode {
         .iter()
         .position(|a| a == "--screenshots")
         .and_then(|i| args.get(i + 1).cloned());
+    let verify_chat = args
+        .iter()
+        .position(|a| a == "--verify-chat")
+        .and_then(|i| args.get(i + 1).zip(args.get(i + 2)))
+        .map(|(d, s)| (d.clone(), s.clone()));
 
     let application = gtk::Application::builder()
         .application_id("org.octoplus.OctoPit")
         // The screenshot review must not hand over to a window that is already open.
-        .flags(if shots_dir.is_some() {
+        .flags(if shots_dir.is_some() || verify_chat.is_some() {
             gtk::gio::ApplicationFlags::NON_UNIQUE
         } else {
             gtk::gio::ApplicationFlags::default()
@@ -80,6 +85,8 @@ fn main() -> ExitCode {
             win.window.present();
             if let Some(dir) = shots_dir.clone() {
                 shots::run(&win, dir, app);
+            } else if let Some((dir, script)) = verify_chat.clone() {
+                shots::run_verify_chat(&win, dir, script, app);
             }
         } else if let Some(w) = app.active_window() {
             w.present();

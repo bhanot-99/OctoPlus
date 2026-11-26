@@ -6,7 +6,8 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use octopit_core::chat::ChatEvent;
+use octopit_core::chat::{ChatEvent, ChatMode};
+use octopit_core::companion::CompanionCommand;
 use octopit_core::gateway::Gateway;
 use octopit_core::health::PartState;
 use octopit_core::voice::{MicAction, VoiceState};
@@ -15,8 +16,8 @@ use octoplus_ipc::server::{Server, ServerConfig, ensure_private_dir};
 use octoplus_ipc::{Handler, HandlerError, Request, StreamSink};
 use octoplus_proto::v1::envelope::Body;
 use octoplus_proto::v1::{
-    Ack, AnswerChunk, AnswerDone, ErrorCode, HealthResponse, HealthStatus, PartStatus,
-    StatusReport, Taint, TurnPhase, VoiceControlAction, VoiceStatus,
+    Ack, AnswerChunk, AnswerDone, CompanionStatus, CompanionTalk, ErrorCode, HealthResponse,
+    HealthStatus, PartStatus, StatusReport, Taint, TurnPhase, VoiceControlAction, VoiceStatus,
 };
 use tokio::sync::{mpsc, watch};
 
@@ -63,10 +64,49 @@ impl Handler for Mock {
                     ))
                 }
             }
+            Body::CompanionStatusRequest(_) => Ok(Body::CompanionStatus(CompanionStatus {
+                enabled: true,
+                talks_today: 2,
+                chattiness_percent: 100,
+                quiet_start: "23:00".into(),
+                quiet_end: "08:00".into(),
+                humour: "normal".into(),
+                talks: vec![CompanionTalk {
+                    at_ns: 7,
+                    topic: "joke".into(),
+                    reaction: "answered".into(),
+                }],
+                ..CompanionStatus::default()
+            })),
+            Body::CompanionControl(c) => {
+                self.seen
+                    .lock()
+                    .unwrap()
+                    .push(format!("companion:{}:{}:{}", c.action, c.minutes, c.id));
+                if c.id == 99 {
+                    Err(HandlerError::new(
+                        ErrorCode::InvalidRequest,
+                        "that memory could not be forgotten",
+                        false,
+                    ))
+                } else {
+                    Ok(Body::Ack(Ack {}))
+                }
+            }
             Body::AskRequest(a) => {
-                self.seen.lock().unwrap().push(format!("ask:{}", a.text));
+                self.seen
+                    .lock()
+                    .unwrap()
+                    .push(format!("ask:{}:{}", a.companion, a.text));
+                if a.text == "approval-fail" {
+                    return Err(HandlerError::new(
+                        ErrorCode::DeadlineExceeded,
+                        "Approval dialog timed out.",
+                        true,
+                    ));
+                }
                 sink.send(Body::AnswerChunk(AnswerChunk {
-                    text: "Four".into(),
+                    text: if a.companion { "Laila" } else { "Four" }.into(),
                 }))
                 .await
                 .ok();
@@ -77,9 +117,11 @@ impl Handler for Mock {
                     .await
                     .ok();
                 Ok(Body::AnswerDone(AnswerDone {
-                    route: 3,
-                    taint: Some(Taint { flags: 1 }),
-                    used_web: true,
+                    route: if a.companion { 5 } else { 3 },
+                    taint: Some(Taint {
+                        flags: u32::from(!a.companion),
+                    }),
+                    used_web: !a.companion,
                     ..AnswerDone::default()
                 }))
             }
@@ -187,7 +229,7 @@ async fn missing_parts_become_plain_values_never_hangs_or_panics() {
 
     let (tx, mut rx) = mpsc::unbounded_channel();
     let (_c, cancel) = watch::channel(false);
-    gw.ask("hello".into(), tx, cancel).await;
+    gw.ask("hello".into(), ChatMode::Laila, tx, cancel).await;
     assert_eq!(
         rx.recv().await,
         Some(ChatEvent::Failed(
@@ -198,12 +240,13 @@ async fn missing_parts_become_plain_values_never_hangs_or_panics() {
 }
 
 #[tokio::test]
-async fn an_answer_streams_chunks_then_done_with_its_flags() {
+async fn assistant_mode_sends_companion_false_and_keeps_route_label() {
     let r = rig(&[(Part::Knowledge, "knowledge")], false).await;
     let gw = Gateway::new(&r.root);
     let (tx, mut rx) = mpsc::unbounded_channel();
     let (_c, cancel) = watch::channel(false);
-    gw.ask("What is 2+2?".into(), tx, cancel).await;
+    gw.ask("What is 2+2?".into(), ChatMode::Assistant, tx, cancel)
+        .await;
     let mut events = Vec::new();
     while let Some(e) = rx.recv().await {
         events.push(e);
@@ -213,6 +256,7 @@ async fn an_answer_streams_chunks_then_done_with_its_flags() {
     match &events[2] {
         ChatEvent::Done(info) => {
             assert_eq!(info.route, "general chat");
+            assert_eq!(info.mode, ChatMode::Assistant);
             assert!(info.external && info.used_web && !info.status_only);
         }
         other => panic!("expected Done, got {other:?}"),
@@ -220,8 +264,53 @@ async fn an_answer_streams_chunks_then_done_with_its_flags() {
     assert_eq!(events.len(), 3);
     assert_eq!(
         r.mock.seen.lock().unwrap().clone(),
-        vec!["ask:What is 2+2?".to_owned()]
+        vec!["ask:false:What is 2+2?".to_owned()]
     );
+    let _ = r.stop.send(true);
+}
+
+#[tokio::test]
+async fn laila_mode_sends_companion_true_and_labels_reply_laila() {
+    let r = rig(&[(Part::Knowledge, "knowledge")], false).await;
+    let gw = Gateway::new(&r.root);
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    let (_c, cancel) = watch::channel(false);
+    gw.ask("whats your name".into(), ChatMode::Laila, tx, cancel)
+        .await;
+    let mut events = Vec::new();
+    while let Some(e) = rx.recv().await {
+        events.push(e);
+    }
+    assert_eq!(events[0], ChatEvent::Chunk("Laila".into()));
+    assert_eq!(events[1], ChatEvent::Chunk(".".into()));
+    match &events[2] {
+        ChatEvent::Done(info) => {
+            assert_eq!(info.route, "Laila");
+            assert_eq!(info.mode, ChatMode::Laila);
+            assert!(!info.external && !info.used_web);
+        }
+        other => panic!("expected Done, got {other:?}"),
+    }
+    assert_eq!(
+        r.mock.seen.lock().unwrap().clone(),
+        vec!["ask:true:whats your name".to_owned()]
+    );
+    let _ = r.stop.send(true);
+}
+
+#[tokio::test]
+async fn remote_error_surfaces_plain_message() {
+    let r = rig(&[(Part::Knowledge, "knowledge")], false).await;
+    let gw = Gateway::new(&r.root);
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    let (_c, cancel) = watch::channel(false);
+    gw.ask("approval-fail".into(), ChatMode::Assistant, tx, cancel)
+        .await;
+    assert_eq!(
+        rx.recv().await,
+        Some(ChatEvent::Failed("Approval dialog timed out.".to_owned()))
+    );
+    assert_eq!(rx.recv().await, None);
     let _ = r.stop.send(true);
 }
 
@@ -231,7 +320,10 @@ async fn stopping_an_answer_ends_it_with_cancelled_and_nothing_after() {
     let gw = Gateway::new(&r.root);
     let (tx, mut rx) = mpsc::unbounded_channel();
     let (cancel_tx, cancel) = watch::channel(false);
-    let task = tokio::spawn(async move { gw.ask("long one".into(), tx, cancel).await });
+    let task = tokio::spawn(async move {
+        gw.ask("long one".into(), ChatMode::Assistant, tx, cancel)
+            .await
+    });
     assert_eq!(rx.recv().await, Some(ChatEvent::Chunk("Four".into())));
     cancel_tx.send(true).unwrap();
     let last = tokio::time::timeout(Duration::from_secs(5), rx.recv())
@@ -241,4 +333,47 @@ async fn stopping_an_answer_ends_it_with_cancelled_and_nothing_after() {
     task.await.unwrap();
     assert_eq!(rx.recv().await, None);
     let _ = r.stop.send(true);
+}
+
+#[tokio::test]
+async fn the_companion_status_and_buttons_reach_the_knowledge_part() {
+    let r = rig(&[(Part::Knowledge, "knowledge")], false).await;
+    let gw = Gateway::new(&r.root);
+    let v = gw.companion().await;
+    assert!(v.reachable && v.enabled);
+    assert_eq!(v.headline(), "Companion: here, 2 talks today");
+    assert_eq!(v.talks[0].topic, "A joke");
+    assert_eq!(v.talks[0].reaction, "you answered");
+
+    gw.companion_control(CompanionCommand::QuietFor(30))
+        .await
+        .unwrap();
+    gw.companion_control(CompanionCommand::Forget(7))
+        .await
+        .unwrap();
+    let err = gw
+        .companion_control(CompanionCommand::Forget(99))
+        .await
+        .unwrap_err();
+    assert_eq!(err, "that memory could not be forgotten");
+    let seen = r.mock.seen.lock().unwrap().clone();
+    assert!(seen.contains(&"companion:5:30:0".to_owned()), "{seen:?}");
+    assert!(seen.contains(&"companion:8:0:7".to_owned()), "{seen:?}");
+    let _ = r.stop.send(true);
+}
+
+#[tokio::test]
+async fn a_missing_knowledge_part_is_a_plain_value_for_the_companion() {
+    let dir = tempfile::tempdir().unwrap();
+    let gw = Gateway::new(dir.path());
+    let v = tokio::time::timeout(Duration::from_secs(5), gw.companion())
+        .await
+        .unwrap();
+    assert!(!v.reachable);
+    assert_eq!(v.headline(), "Companion: not reachable");
+    let e = gw
+        .companion_control(CompanionCommand::Pause)
+        .await
+        .unwrap_err();
+    assert_eq!(e, "The companion is not reachable.");
 }

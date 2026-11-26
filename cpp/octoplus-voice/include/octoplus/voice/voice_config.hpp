@@ -29,6 +29,18 @@ struct VoiceConfig {
   // back as "speech" and, treated as an interruption, started endless new questions. true: any
   // speech interrupts (fine with headphones). Config key: barge_in = wake | speech.
   bool barge_in_by_speech = false;
+
+  // Open-mic and companion sessions (Phase 12, story C-S02)
+  bool open_mic = true;
+  bool session_on_wake = true;
+  std::uint32_t session_silence_s = 90;
+  std::uint32_t session_max_minutes = 15;
+  std::uint32_t session_end_silence_ms = 400;
+  // After she stops speaking the microphone is ignored for this long: the tail of her own voice
+  // and the room echo must never be heard as the owner (Phase 12, listening-noise fix).
+  std::uint32_t echo_guard_ms = 700;
+  std::uint32_t guest_minutes = 30;
+  bool earcons = true;
 };
 
 // Parses the file text on top of the defaults.

@@ -21,7 +21,7 @@ C3 QueryHealthSignals (every 30 s) ─► signals builder ─► readings ─►
 ```
 
 Rules that shape everything:
-- **A nudge never acts (R0-6, FR-NUD-10).** The engine module tree has no import of the action route, `DispatchRequest` or evidence types; a test greps for it. The offered skill is remembered as a *name* and dispatched only by the turn engine when the user's reply says yes.
+- **A nudge never acts (R0-6, FR-NUD-10).** The engine module tree has no import of the action route, `DispatchRequest` or evidence types; a test greps for it. The offered skill is remembered as a *name* and dispatched only by the turn engine when the user's reply says yes. Update 2026-11-25: R0-6 retired by ADR-0019; the no-action property remains as DR-1.
 - **Lines are templates and numbers (FR-NUD-04, FR-NUD-12).** C5 sends C6 a template id and numbers; C6 renders. No model text, no titles, no file names.
 - **Both decision functions are pure and take time as input (AB-13).** Recorded dumps replay through them at any speed (KPI-10 is proven that way).
 - **State lives in C3's nudge log**, not in a file C5 cannot write: cooldowns, snoozes and on/off switches are rebuilt at start by folding the log (`QueryNudgeLog`). Switches are never deleted by retention.

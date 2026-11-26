@@ -30,7 +30,7 @@ Rules that shape everything:
 - **The model never chooses the route** (Architecture §11). Routing is a pure function of text, session state and the nudge window; one generation per turn.
 - **Taint is the union of everything in the prompt** and is sent to C6 for the generate check and for every dispatch. Nothing clears it (R0-4). A missing taint on C3 evidence is an error and that evidence is dropped, never treated as clean.
 - **Outside text is inert.** Anything that is not our own template (evidence, titles, facts, history, the question itself) passes the control-token neutraliser; tainted evidence is also wrapped in an untrusted-document block that the text itself cannot close.
-- **A skill call is a request, never an order.** The action route only builds a grammar-limited call; C6 decides. Facts are saved only on the user's word (R0-8): a model-proposed fact is a question to the user, not a write.
+- **A skill call is a request, never an order.** The action route only builds a grammar-limited call; C6 decides. Facts are saved only on the user's word (R0-8): a model-proposed fact is a question to the user, not a write. Update 2026-11-25: R0-8 reworded by ADR-0019.
 - **C5's own compute stays under NFR-PERF-05**: the router, deictic parse, assembler and neutraliser are allocation-light pure functions, measured with a benchmark.
 - **Down parts degrade, they do not hang** (R-AB-10, rules §6.6): C4 down → status line within 250 ms; C3 down or slow → answer without evidence, flagged; C6 down → refuse (fail closed).
 

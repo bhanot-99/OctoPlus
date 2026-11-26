@@ -10,6 +10,7 @@ fn main() -> Result<(), ServiceError> {
         std::env::var_os("HOME").as_deref(),
     ) {
         octoplus_knowledge::nudge::boot::preload(&dir);
+        octoplus_knowledge::companion::boot::preload(&dir);
     }
     ServiceBuilder::new(
         Part::Knowledge,

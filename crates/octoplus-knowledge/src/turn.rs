@@ -45,6 +45,10 @@ use crate::session::{Session, SessionConfig};
 use crate::speech::{SentenceStream, strip_pictographs};
 use crate::status::{self, NO_LOOKUP_YET, Need};
 
+mod chance_memory;
+mod companion_admin;
+mod companion_turn;
+
 /// Longest question accepted, in bytes (the prompt cuts it further to its token cap).
 pub const MAX_QUESTION_BYTES: usize = 4096;
 /// Most answer text kept for the session and the stored summary.
@@ -122,6 +126,10 @@ pub struct Metrics {
     pub route_desktop: Arc<AtomicU64>,
     /// General chat answers.
     pub route_general: Arc<AtomicU64>,
+    /// Companion chat answers (Phase 12).
+    pub route_companion: Arc<AtomicU64>,
+    /// Spoken companion turns ignored because they were not directed to her (Phase 12).
+    pub companion_ignored: Arc<AtomicU64>,
     /// Evidence items dropped for a missing taint (R0-4).
     pub evidence_no_taint: Arc<AtomicU64>,
     /// Times the user spoke over a spoken answer (FR-VOI-07).
@@ -133,6 +141,10 @@ pub struct Metrics {
 struct State {
     session: Session,
     pending: Pending,
+    #[allow(dead_code)] // used by task 5b
+    companion: Option<crate::companion::engine::CompanionEngine>,
+    /// The next companion turn came right after the wake phrase (set by the voice route).
+    wake_addressed: bool,
 }
 
 /// An offer the last answer made, waiting for a plain yes or no.
@@ -206,6 +218,14 @@ pub struct KnowledgeHandler {
     metrics: Metrics,
     nudge: NudgeHandle,
     state: Mutex<State>,
+    #[allow(dead_code)] // used by task 5b
+    persona: Option<Arc<crate::companion::persona::Persona>>,
+    #[allow(dead_code)] // used by task 5b
+    companion_cfg: octoplus_common::config::CompanionConfig,
+    /// The scheduler state shared with the runner that starts talks (Phase 12, C-S03).
+    hub: Option<Arc<crate::companion::hub::CompanionHub>>,
+    /// A fact she decided to keep by chance this turn, waiting for its audited save.
+    chance_fact: Mutex<Option<crate::companion::memory::Keep>>,
 }
 
 fn invalid(msg: &'static str) -> HandlerError {
@@ -244,8 +264,35 @@ impl KnowledgeHandler {
             state: Mutex::new(State {
                 session,
                 pending: Pending::None,
+                companion: None,
+                wake_addressed: false,
             }),
+            persona: crate::companion::persona::Persona::default_packaged()
+                .ok()
+                .map(Arc::new),
+            companion_cfg: octoplus_common::config::CompanionConfig::default(),
+            hub: None,
+            chance_fact: Mutex::new(None),
         }
+    }
+
+    /// Shares the Pulse scheduler's state with this handler (Phase 12, C-S03).
+    #[must_use]
+    pub fn with_hub(mut self, hub: Arc<crate::companion::hub::CompanionHub>) -> Self {
+        self.hub = Some(hub);
+        self
+    }
+
+    /// Sets the companion persona and configuration (Phase 12).
+    #[must_use]
+    pub fn with_companion(
+        mut self,
+        persona: Arc<crate::companion::persona::Persona>,
+        cfg: octoplus_common::config::CompanionConfig,
+    ) -> Self {
+        self.persona = Some(persona);
+        self.companion_cfg = cfg;
+        self
     }
 
     fn budgets(&self) -> Budgets {
@@ -318,20 +365,35 @@ impl KnowledgeHandler {
                 retrieval_best_score: None,
                 cutoff,
             });
-            let kind = match first.route {
-                RouteKind::Action => PreambleKind::Acknowledge,
-                RouteKind::Desktop => PreambleKind::Looking,
-                _ => PreambleKind::Thinking,
-            };
-            // Best effort: a preamble that cannot be sent never fails the answer.
-            let _ = sink
-                .send(Body::PreambleRequest(PreambleRequest { kind: kind as i32 }))
-                .await;
+            let will_be_companion = cmd.in_session
+                && !(first.route == RouteKind::Action
+                    && first
+                        .action_hint
+                        .is_some_and(|h| h != crate::router::ActionHint::Unsupported))
+                && !(first.route == RouteKind::Desktop
+                    && crate::companion::guards::is_interrogative(&cmd.text));
+
+            if !will_be_companion {
+                let kind = match first.route {
+                    RouteKind::Action => PreambleKind::Acknowledge,
+                    RouteKind::Desktop => PreambleKind::Looking,
+                    _ => PreambleKind::Thinking,
+                };
+                // Best effort: a preamble that cannot be sent never fails the answer.
+                let _ = sink
+                    .send(Body::PreambleRequest(PreambleRequest { kind: kind as i32 }))
+                    .await;
+            }
+        }
+        // Right after the wake phrase (not a follow-up) the words are for her, whatever they are.
+        if cmd.in_session && !cmd.in_follow_up {
+            self.with_state(|state| state.wake_addressed = true);
         }
         let ask = AskRequest {
             text: cmd.text,
             origin: Origin::Voice as i32,
             at_ns: cmd.t_speech_start_ns,
+            companion: cmd.in_session,
         };
         let (local, mut rx) = StreamSink::channel(16);
         let run = async move {
@@ -352,12 +414,18 @@ impl KnowledgeHandler {
                     .collect::<Vec<_>>()
             };
             while let Some(env) = rx.recv().await {
-                if let Some(Body::AnswerChunk(c)) = env.body {
-                    for frame in speak(stream.feed(&c.text)) {
-                        if sink.send(frame).await.is_err() {
-                            return;
+                match env.body {
+                    Some(Body::AnswerChunk(c)) => {
+                        for frame in speak(stream.feed(&c.text)) {
+                            if sink.send(frame).await.is_err() {
+                                return;
+                            }
                         }
                     }
+                    Some(Body::PreambleRequest(p)) => {
+                        let _ = sink.send(Body::PreambleRequest(p)).await;
+                    }
+                    _ => {}
                 }
             }
             for frame in speak(stream.flush()) {
@@ -432,7 +500,15 @@ impl KnowledgeHandler {
             retrieval_best_score: None,
             cutoff,
         });
-        if let (RouteKind::Action, Some(hint)) = (first.route, first.action_hint) {
+        // In companion chat a rhythm control ("be quiet for an hour", "not now") or an
+        // unsupported computer-task request stays with the companion, who only talks.
+        let companion_control = ask.companion
+            && (crate::companion::pulse::parse_pulse_command(&text).is_some()
+                || crate::companion::humour::parse_feedback(&text).is_some()
+                || first.action_hint == Some(crate::router::ActionHint::Unsupported));
+        if !companion_control
+            && let (RouteKind::Action, Some(hint)) = (first.route, first.action_hint)
+        {
             self.metrics.route_action.fetch_add(1, Ordering::Relaxed);
             return self
                 .action_turn(
@@ -445,6 +521,19 @@ impl KnowledgeHandler {
                     sink,
                 )
                 .await;
+        }
+        if ask.companion
+            && (!(first.route == RouteKind::Desktop
+                && crate::companion::guards::is_interrogative(&text))
+                // "Do you remember what we talked about yesterday" has a time word, but it is
+                // about her chats, not the owner's activity.
+                || crate::companion::guards::asks_about_past_chats(&text)
+                // "What are you working on these days" has "these" + "working", but asks about her.
+                || crate::companion::guards::asks_about_her_work(&text))
+        {
+            let done = self.companion_turn(&text, origin, now, sink).await?;
+            self.flush_chance_memory(&text, origin, now, sink).await;
+            return Ok(done);
         }
         self.question_turn(&text, origin, now, sink).await
     }
@@ -1084,7 +1173,10 @@ impl KnowledgeHandler {
             self.cfg.facts_tokens,
             self.cfg.bytes_per_token,
         );
-        let fact_texts: Vec<String> = picked.iter().map(|i| facts[*i].text.clone()).collect();
+        let fact_texts: Vec<String> = picked
+            .iter()
+            .map(|i| crate::companion::memory::plain_form(&facts[*i].text).to_string())
+            .collect();
         let (history, history_taint) =
             self.with_state(|s| s.session.render(self.cfg.history_tokens));
 
@@ -1525,6 +1617,8 @@ impl Handler for KnowledgeHandler {
             b @ (Body::NudgeListRequest(_) | Body::NudgeSetEnabled(_) | Body::NudgeTest(_)) => {
                 self.nudge_admin(b).await
             }
+            Body::CompanionStatusRequest(_) => self.companion_status().await,
+            Body::CompanionControl(c) => self.companion_control(c).await,
             _ => Err(invalid("expected AskRequest on knowledge socket")),
         }
     }

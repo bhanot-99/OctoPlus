@@ -11,6 +11,7 @@ use octopit_core::state::{AppState, Changed};
 pub mod activity;
 pub mod backends;
 pub mod chat;
+pub mod companion;
 pub mod overview;
 pub mod privacy;
 pub mod settings;
@@ -22,6 +23,8 @@ pub enum PageId {
     Overview,
     /// Talk to OctoPlus.
     Chat,
+    /// Laila: her rhythm, talks and memory.
+    Companion,
     /// Models and GPU.
     Backends,
     /// Speed, load and the audit trail.
@@ -34,9 +37,10 @@ pub enum PageId {
 
 impl PageId {
     /// The pages in the sidebar (settings lives in the header).
-    pub const SIDEBAR: [PageId; 5] = [
+    pub const SIDEBAR: [PageId; 6] = [
         PageId::Overview,
         PageId::Chat,
+        PageId::Companion,
         PageId::Backends,
         PageId::Activity,
         PageId::Privacy,
@@ -48,6 +52,7 @@ impl PageId {
         match self {
             PageId::Overview => "overview",
             PageId::Chat => "chat",
+            PageId::Companion => "companion",
             PageId::Backends => "backends",
             PageId::Activity => "activity",
             PageId::Privacy => "privacy",
@@ -61,6 +66,7 @@ impl PageId {
         match self {
             PageId::Overview => "Overview",
             PageId::Chat => "Chat",
+            PageId::Companion => "Companion",
             PageId::Backends => "Backends",
             PageId::Activity => "Activity",
             PageId::Privacy => "Privacy",
@@ -74,6 +80,7 @@ impl PageId {
         match self {
             PageId::Overview => "octopit-overview-symbolic",
             PageId::Chat => "octopit-chat-symbolic",
+            PageId::Companion => "octopit-companion-symbolic",
             PageId::Backends => "octopit-backends-symbolic",
             PageId::Activity => "octopit-activity-symbolic",
             PageId::Privacy => "octopit-privacy-symbolic",

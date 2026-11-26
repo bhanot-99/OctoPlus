@@ -1,9 +1,11 @@
 # C2 octoplus-voice build
 add_library(octoplus_voice_core STATIC
   src/audio_ring.cpp
+  src/earcons.cpp
   src/knowledge_link.cpp
   src/pipeline.cpp
   src/service.cpp
+  src/session_phrases.cpp
   src/voice_config.cpp
   $<$<NOT:$<BOOL:${OCTOPLUS_WITH_VOICE_ENGINES}>>:src/runtime_stub.cpp>
   src/speech_split.cpp
@@ -29,8 +31,10 @@ endif()
 
 add_executable(octoplus_voice_tests
   tests/audio_ring_test.cpp
+  tests/earcons_test.cpp
   tests/knowledge_link_test.cpp
   tests/pipeline_test.cpp
+  tests/session_phrases_test.cpp
   tests/speech_split_test.cpp
   tests/spoken_lines_test.cpp
   tests/transcript_test.cpp

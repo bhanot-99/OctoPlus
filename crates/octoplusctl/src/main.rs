@@ -36,6 +36,7 @@ async fn main() {
             explain,
             once,
             at_ns,
+            companion,
             ..
         } => {
             use std::io::IsTerminal;
@@ -50,10 +51,42 @@ async fn main() {
                     explain,
                     at_ns,
                     interactive,
+                    companion,
                 },
                 styler,
             )
             .await
+        }
+        Commands::Chat {
+            question,
+            json,
+            explain,
+        } => {
+            use std::io::IsTerminal;
+            if !std::io::stdin().is_terminal() || !std::io::stdout().is_terminal() {
+                eprintln!(
+                    "{}",
+                    styler.error(
+                        "chat requires an interactive terminal; for non-interactive use, try 'octoplusctl ask --companion \"text\"'"
+                    )
+                );
+                1
+            } else {
+                let question_text = question.join(" ");
+                run_ask(
+                    &runtime_root,
+                    question_text,
+                    AskOptions {
+                        json,
+                        explain,
+                        at_ns: 0,
+                        interactive: true,
+                        companion: true,
+                    },
+                    styler,
+                )
+                .await
+            }
         }
         Commands::Run {
             capability,

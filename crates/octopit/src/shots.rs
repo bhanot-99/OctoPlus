@@ -14,9 +14,10 @@ use crate::pages::PageId;
 use crate::theme::Theme;
 
 /// Pages shown in the review, in order.
-const PAGES: [PageId; 6] = [
+const PAGES: [PageId; 7] = [
     PageId::Overview,
     PageId::Chat,
+    PageId::Companion,
     PageId::Backends,
     PageId::Activity,
     PageId::Privacy,
@@ -195,4 +196,100 @@ fn save_other_windows(main: &Rc<Window>, name: &str) {
             Err(e) => eprintln!("screenshot {name}: {e}"),
         }
     }
+}
+
+type VerifySteps = Rc<std::cell::RefCell<std::vec::IntoIter<(String, String, String)>>>;
+
+#[derive(Clone)]
+struct VerifyCtx {
+    steps: VerifySteps,
+    dir: String,
+    app: gtk::Application,
+}
+
+/// Interactive verification runner: drives the real ChatPage and CompanionPage from a script
+/// file (`mode|shot_name|question`, or `companion|shot_name|`), waits for each reply to finish,
+/// prints the exact output, and saves a PNG per step.
+pub fn run_verify_chat(win: &Rc<Window>, dir: String, script_path: String, app: &gtk::Application) {
+    if let Err(e) = std::fs::create_dir_all(&dir) {
+        eprintln!("cannot create {dir}: {e}");
+        app.quit();
+        return;
+    }
+    let Ok(raw) = std::fs::read_to_string(&script_path) else {
+        eprintln!("cannot read {script_path}");
+        app.quit();
+        return;
+    };
+    let steps: Vec<(String, String, String)> = raw
+        .lines()
+        .filter(|l| !l.trim().is_empty() && !l.trim_start().starts_with('#'))
+        .filter_map(|l| {
+            let mut parts = l.splitn(3, '|');
+            Some((
+                parts.next()?.trim().to_owned(),
+                parts.next()?.trim().to_owned(),
+                parts.next().unwrap_or("").trim().to_owned(),
+            ))
+        })
+        .collect();
+    let vctx = VerifyCtx {
+        steps: Rc::new(std::cell::RefCell::new(steps.into_iter())),
+        dir,
+        app: app.clone(),
+    };
+    if std::env::var_os("OCTOPIT_SIZE").is_none() {
+        win.window.maximize();
+    }
+    let w = Rc::clone(win);
+    glib::timeout_add_local_once(Duration::from_millis(2500), move || {
+        verify_next(w, vctx);
+    });
+}
+
+fn verify_next(win: Rc<Window>, vctx: VerifyCtx) {
+    use octopit_core::chat::ChatMode;
+    let Some((kind, name, text)) = vctx.steps.borrow_mut().next() else {
+        // Restore default Laila mode before exiting.
+        win.switch_chat_mode(ChatMode::Laila);
+        vctx.app.quit();
+        return;
+    };
+    if kind == "companion" {
+        win.show_page(PageId::Companion);
+        let path = format!("{}/{name}.png", vctx.dir);
+        let w2 = Rc::clone(&win);
+        glib::timeout_add_local_once(Duration::from_millis(1200), move || {
+            let w3 = Rc::clone(&w2);
+            save_retry(&w2, path, Box::new(move || verify_next(w3, vctx)), 4);
+        });
+        return;
+    }
+    let mode = if kind == "assistant" {
+        ChatMode::Assistant
+    } else {
+        ChatMode::Laila
+    };
+    win.show_page(PageId::Chat);
+    win.switch_chat_mode(mode);
+    win.send_typed_chat(&text);
+    wait_and_capture(win, vctx, name, 100);
+}
+
+fn wait_and_capture(win: Rc<Window>, vctx: VerifyCtx, name: String, tries_left: u32) {
+    if win.chat_busy() && tries_left > 0 {
+        glib::timeout_add_local_once(Duration::from_millis(300), move || {
+            wait_and_capture(win, vctx, name, tries_left - 1);
+        });
+        return;
+    }
+    if let Some((q, a, lbl)) = win.last_chat_turn() {
+        println!("TURN [{name}] label={lbl:?} q={q:?} a={a:?}");
+    }
+    let path = format!("{}/{name}.png", vctx.dir);
+    let w2 = Rc::clone(&win);
+    glib::timeout_add_local_once(Duration::from_millis(400), move || {
+        let w3 = Rc::clone(&w2);
+        save_retry(&w2, path, Box::new(move || verify_next(w3, vctx)), 4);
+    });
 }

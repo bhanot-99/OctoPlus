@@ -11,13 +11,14 @@ use octoplus_common::paths::{self, Part};
 use octoplus_ipc::{Client, IpcError, ReconnectingClient};
 use octoplus_proto::v1::envelope::Body;
 use octoplus_proto::v1::{
-    AskRequest, AuditTailRequest, AuditVerifyRequest, EgressListRequest, Origin, StatusRequest,
-    VoiceControl, VoiceControlAction, VoiceStatusRequest,
+    AskRequest, AuditTailRequest, AuditVerifyRequest, CompanionControl, CompanionStatusRequest,
+    EgressListRequest, Origin, StatusRequest, VoiceControl, VoiceControlAction, VoiceStatusRequest,
 };
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::watch;
 
-use crate::chat::{AnswerInfo, ChatEvent, sanitize_model_text};
+use crate::chat::{AnswerInfo, ChatEvent, ChatMode, sanitize_model_text};
+use crate::companion::{CompanionCommand, CompanionView};
 use crate::health::Snapshot;
 use crate::voice::{MicAction, VoiceView};
 
@@ -83,6 +84,7 @@ pub struct Gateway {
     healthd: std::sync::Arc<ReconnectingClient>,
     voice: std::sync::Arc<ReconnectingClient>,
     kernel: std::sync::Arc<ReconnectingClient>,
+    knowledge: std::sync::Arc<ReconnectingClient>,
 }
 
 impl Gateway {
@@ -100,6 +102,7 @@ impl Gateway {
             healthd: mk(Part::Healthd, "healthd"),
             voice: mk(Part::Voice, "control"),
             kernel: mk(Part::Kernel, "kernel"),
+            knowledge: mk(Part::Knowledge, "knowledge"),
         }
     }
 
@@ -127,6 +130,52 @@ impl Gateway {
         {
             Ok(Body::VoiceStatus(s)) => VoiceView::from_status(&s),
             _ => VoiceView::unavailable(),
+        }
+    }
+
+    /// The companion's rhythm, today's talks and what she remembers, or an unavailable view.
+    pub async fn companion(&self) -> CompanionView {
+        match self
+            .knowledge
+            .call(
+                Body::CompanionStatusRequest(CompanionStatusRequest {}),
+                POLL_DEADLINE,
+            )
+            .await
+        {
+            Ok(Body::CompanionStatus(s)) => CompanionView::from_status(&s),
+            _ => CompanionView::unavailable(),
+        }
+    }
+
+    /// Presses one companion button.
+    ///
+    /// # Errors
+    /// A plain sentence when C5 refuses or cannot be reached.
+    pub async fn companion_control(&self, command: CompanionCommand) -> Result<(), String> {
+        let (action, minutes, id) = command.parts();
+        // Forgetting a fact opens the approval dialog, which waits for the owner: give it as long
+        // as a question gets. The other buttons are quick.
+        let deadline = if matches!(command, CompanionCommand::Forget(_)) {
+            ASK_DEADLINE
+        } else {
+            POLL_DEADLINE
+        };
+        match self
+            .knowledge
+            .call(
+                Body::CompanionControl(CompanionControl {
+                    action: action as i32,
+                    minutes,
+                    id,
+                }),
+                deadline,
+            )
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(IpcError::Remote { message, .. }) => Err(plain(&message, 120)),
+            Err(_) => Err("The companion is not reachable.".to_owned()),
         }
     }
 
@@ -237,21 +286,23 @@ impl Gateway {
         }
     }
 
-    /// Asks one question and streams events until it ends. `cancel` turns `true` to stop it.
-    /// Always sends exactly one final event (`Done`, `Cancelled` or `Failed`).
+    /// Asks one question in the selected [`ChatMode`] and streams events until it ends. `cancel`
+    /// turns `true` to stop it. Always sends exactly one final event (`Done`, `Cancelled` or `Failed`).
     pub async fn ask(
         &self,
         question: String,
+        mode: ChatMode,
         events: UnboundedSender<ChatEvent>,
         mut cancel: watch::Receiver<bool>,
     ) {
-        let final_event = self.ask_inner(question, &events, &mut cancel).await;
+        let final_event = self.ask_inner(question, mode, &events, &mut cancel).await;
         let _ = events.send(final_event);
     }
 
     async fn ask_inner(
         &self,
         question: String,
+        mode: ChatMode,
         events: &UnboundedSender<ChatEvent>,
         cancel: &mut watch::Receiver<bool>,
     ) -> ChatEvent {
@@ -263,6 +314,7 @@ impl Gateway {
             text: question,
             origin: Origin::Cli as i32,
             at_ns: 0,
+            companion: mode.is_companion(),
         };
         let Ok(mut stream) = client.stream(Body::AskRequest(req), ASK_DEADLINE).await else {
             return ChatEvent::Failed("Could not send the question.".to_owned());
@@ -287,12 +339,17 @@ impl Gateway {
                     Some(Ok(Body::AnswerChunk(c))) => {
                         let _ = events.send(ChatEvent::Chunk(c.text));
                     }
-                    Some(Ok(Body::AnswerDone(d))) => return ChatEvent::Done(AnswerInfo::from_done(&d)),
+                    Some(Ok(Body::AnswerDone(d))) => {
+                        return ChatEvent::Done(AnswerInfo::from_done_with_mode(&d, mode));
+                    }
                     Some(Err(IpcError::DeadlineExceeded)) => {
                         return ChatEvent::Failed("The answer took too long.".to_owned());
                     }
                     Some(Err(IpcError::Remote { code: octoplus_proto::v1::ErrorCode::PermissionDenied, .. })) => {
                         return ChatEvent::Failed("The assistant did not accept this window.".to_owned());
+                    }
+                    Some(Err(IpcError::Remote { message, .. })) if !message.trim().is_empty() => {
+                        return ChatEvent::Failed(plain(&message, 160));
                     }
                     Some(Err(_)) => {
                         return ChatEvent::Failed("The connection to the assistant broke.".to_owned());

@@ -6,6 +6,8 @@
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
+use crate::chat::ChatMode;
+
 /// The user's theme choice.
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
@@ -83,6 +85,9 @@ pub struct Settings {
     /// Whether the first-run welcome dialog was completed.
     #[serde(default)]
     pub welcome_done: bool,
+    /// Preferred mode on the Chat page (Laila or Assistant).
+    #[serde(default)]
+    pub chat_mode: ChatMode,
 }
 
 const fn default_text_scale() -> u8 {
@@ -96,6 +101,7 @@ impl Default for Settings {
             reduce_motion: false,
             text_scale: 100,
             welcome_done: false,
+            chat_mode: ChatMode::Laila,
         }
     }
 }
@@ -200,6 +206,7 @@ mod tests {
         assert!(!s.reduce_motion);
         assert_eq!(s.text_scale, 100);
         assert!(!s.welcome_done);
+        assert_eq!(s.chat_mode, ChatMode::Laila);
     }
 
     #[test]
@@ -211,6 +218,7 @@ mod tests {
             reduce_motion: true,
             text_scale: 115,
             welcome_done: true,
+            chat_mode: ChatMode::Assistant,
         };
         original.save(&path).expect("save");
         let loaded = Settings::load(&path);
@@ -261,6 +269,7 @@ mod tests {
                 reduce_motion: false,
                 text_scale: 130,
                 welcome_done: true,
+                chat_mode: ChatMode::Laila,
             }
         );
     }

@@ -576,5 +576,555 @@ TEST(TurnMachineTest, UserCancelEndsTheTurnFromEveryBusyState) {
   }
 }
 
+TEST(TurnMachineTest, SessionsDisabledIgnoresSessionEvents) {
+  TurnConfig cfg;
+  cfg.sessions_enabled = false;
+  TurnMachine tm(cfg);
+
+  EXPECT_FALSE(tm.session_active());
+  EXPECT_EQ(tm.session_started_ns(), 0U);
+  EXPECT_EQ(tm.session_ns_left(1'000'000'000), 0U);
+
+  // kSessionBegin ignored
+  auto acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionBegin, .now_ns = 1'000'000'000});
+  EXPECT_TRUE(acts.empty());
+  EXPECT_EQ(tm.state(), TurnState::kIdle);
+  EXPECT_FALSE(tm.session_active());
+
+  // kSessionEnd ignored
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionEnd, .now_ns = 2'000'000'000});
+  EXPECT_TRUE(acts.empty());
+  EXPECT_EQ(tm.state(), TurnState::kIdle);
+
+  // kSessionEndAfterReply ignored
+  acts =
+      tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionEndAfterReply, .now_ns = 3'000'000'000});
+  EXPECT_TRUE(acts.empty());
+  EXPECT_EQ(tm.state(), TurnState::kIdle);
+
+  // Old behavior works untouched
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kWakeWord, .now_ns = 4'000'000'000});
+  EXPECT_EQ(tm.state(), TurnState::kCapturing);
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kBeginUtterance);
+}
+
+TEST(TurnMachineTest, SessionSixConsecutiveFollowUpsWithoutWakeWord) {
+  TurnConfig cfg;
+  cfg.sessions_enabled = true;
+  TurnMachine tm(cfg);
+  std::uint64_t t = 1'000'000'000;
+
+  // Start session from idle
+  auto acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionBegin, .now_ns = t});
+  EXPECT_EQ(tm.state(), TurnState::kFollowUp);
+  EXPECT_TRUE(tm.session_active());
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kSessionStarted);
+
+  // 6 consecutive follow-up turns without wake word
+  for (std::uint32_t i = 1; i <= 6; ++i) {
+    t += 2'000'000'000;
+    acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechStarted, .now_ns = t});
+    EXPECT_EQ(tm.state(), TurnState::kCapturing);
+    EXPECT_EQ(tm.consecutive_follow_ups(), i);
+    ASSERT_EQ(acts.size(), 1U);
+    EXPECT_TRUE(acts[0].in_follow_up);
+
+    t += 1'000'000'000;
+    acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = t});
+    EXPECT_EQ(tm.state(), TurnState::kTranscribing);
+    ASSERT_EQ(acts.size(), 1U);
+    EXPECT_EQ(acts[0].kind, TurnActionKind::kTranscribe);
+
+    t += 300'000'000;
+    acts = tm.OnEvent(
+        TurnEvent{.kind = TurnEventKind::kTranscribed, .now_ns = t, .text_empty = false});
+    EXPECT_EQ(tm.state(), TurnState::kAwaitingAnswer);
+    ASSERT_EQ(acts.size(), 1U);
+    EXPECT_TRUE(acts[0].in_follow_up);
+
+    t += 400'000'000;
+    tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = t});
+    EXPECT_EQ(tm.state(), TurnState::kSpeaking);
+
+    t += 1'000'000'000;
+    tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyFinished, .now_ns = t});
+
+    t += 500'000'000;
+    acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kPlaybackIdle, .now_ns = t});
+    EXPECT_EQ(tm.state(), TurnState::kFollowUp);
+    EXPECT_TRUE(tm.session_active());
+    EXPECT_TRUE(acts.empty());
+  }
+
+  EXPECT_EQ(tm.consecutive_follow_ups(), 6U);
+  EXPECT_TRUE(tm.session_active());
+}
+
+TEST(TurnMachineTest, SessionSilenceTriggersStillThereThenEnds) {
+  TurnConfig cfg;
+  cfg.sessions_enabled = true;
+  TurnMachine tm(cfg);
+  std::uint64_t const t0 = 1'000'000'000;
+
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionBegin, .now_ns = t0});
+  ASSERT_EQ(tm.state(), TurnState::kFollowUp);
+
+  // Before 90s: nothing happens
+  auto acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = t0 + 89'999'999'999});
+  EXPECT_TRUE(acts.empty());
+  EXPECT_EQ(tm.state(), TurnState::kFollowUp);
+
+  // At 90s silence: exactly one kSayStillThere
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = t0 + 90'000'000'000});
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kSayStillThere);
+  EXPECT_EQ(tm.state(), TurnState::kFollowUp);
+
+  // Repeated ticks during grace period emit nothing more
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = t0 + 95'000'000'000});
+  EXPECT_TRUE(acts.empty());
+  EXPECT_EQ(tm.state(), TurnState::kFollowUp);
+
+  // 20s later (at 110s total): grace period expired -> kSessionEnded and Idle
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = t0 + 110'000'000'000});
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kSessionEnded);
+  EXPECT_EQ(tm.state(), TurnState::kIdle);
+  EXPECT_FALSE(tm.session_active());
+}
+
+TEST(TurnMachineTest, SessionSpeechAfterStillThereResetsSilence) {
+  TurnConfig cfg;
+  cfg.sessions_enabled = true;
+  TurnMachine tm(cfg);
+  std::uint64_t t = 1'000'000'000;
+
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionBegin, .now_ns = t});
+  ASSERT_EQ(tm.state(), TurnState::kFollowUp);
+
+  // 90s silence triggers still there
+  t += 90'000'000'000;
+  auto acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = t});
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kSayStillThere);
+
+  // User speaks 5s into grace period -> resets still_there flag and continues session
+  t += 5'000'000'000;
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechStarted, .now_ns = t});
+  EXPECT_EQ(tm.state(), TurnState::kCapturing);
+
+  t += 1'000'000'000;
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = t});
+  t += 200'000'000;
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTranscribed, .now_ns = t, .text_empty = false});
+  t += 300'000'000;
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = t});
+  t += 1'000'000'000;
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyFinished, .now_ns = t});
+  t += 500'000'000;
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kPlaybackIdle, .now_ns = t});
+  EXPECT_EQ(tm.state(), TurnState::kFollowUp);
+  EXPECT_TRUE(tm.session_active());
+
+  // A later 90s silence asks kSayStillThere again
+  t += 90'000'000'000;
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = t});
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kSayStillThere);
+
+  // Grace expires -> session ends
+  t += 20'000'000'000;
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = t});
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kSessionEnded);
+  EXPECT_EQ(tm.state(), TurnState::kIdle);
+  EXPECT_FALSE(tm.session_active());
+}
+
+TEST(TurnMachineTest, SessionMaxDurationTriggersKeepGoingAndCanContinue) {
+  TurnConfig cfg;
+  cfg.sessions_enabled = true;
+  TurnMachine tm(cfg);
+  std::uint64_t t = 1'000'000'000;
+
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionBegin, .now_ns = t});
+  ASSERT_EQ(tm.state(), TurnState::kFollowUp);
+
+  // Turn at 500s
+  t += 500'000'000'000;
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechStarted, .now_ns = t});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = t + 1'000'000'000});
+  tm.OnEvent(TurnEvent{
+      .kind = TurnEventKind::kTranscribed, .now_ns = t + 1'200'000'000, .text_empty = false});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = t + 1'400'000'000});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyFinished, .now_ns = t + 2'000'000'000});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kPlaybackIdle, .now_ns = t + 3'000'000'000});
+  EXPECT_EQ(tm.state(), TurnState::kFollowUp);
+
+  // At 15 minutes (900s from session begin): max session length reached
+  t = 1'000'000'000 + 900'000'000'000;
+  auto acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = t});
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kSayKeepGoing);
+
+  // Subsequent ticks before grace expires emit nothing (asked once)
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = t + 5'000'000'000});
+  EXPECT_TRUE(acts.empty());
+
+  // User speaks to continue -> new 15 minute window starts
+  t += 10'000'000'000;
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechStarted, .now_ns = t});
+  EXPECT_EQ(tm.state(), TurnState::kCapturing);
+  EXPECT_EQ(tm.session_started_ns(), t);
+
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = t + 1'000'000'000});
+  tm.OnEvent(TurnEvent{
+      .kind = TurnEventKind::kTranscribed, .now_ns = t + 1'200'000'000, .text_empty = false});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = t + 1'400'000'000});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyFinished, .now_ns = t + 2'000'000'000});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kPlaybackIdle, .now_ns = t + 3'000'000'000});
+  EXPECT_EQ(tm.state(), TurnState::kFollowUp);
+
+  // 15 minutes after new start: kSayKeepGoing asked again
+  t += 900'000'000'000;
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = t});
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kSayKeepGoing);
+
+  // 20s grace expires without speech -> session ends
+  t += 20'000'000'000;
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = t});
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kSessionEnded);
+  EXPECT_EQ(tm.state(), TurnState::kIdle);
+  EXPECT_FALSE(tm.session_active());
+}
+
+TEST(TurnMachineTest, SessionEndWhileSpeakingFlushesAndEnds) {
+  TurnConfig cfg;
+  cfg.sessions_enabled = true;
+  TurnMachine tm(cfg);
+  const std::uint64_t t = 1'000'000'000;
+
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionBegin, .now_ns = t});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechStarted, .now_ns = t + 100});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = t + 1000});
+  tm.OnEvent(
+      TurnEvent{.kind = TurnEventKind::kTranscribed, .now_ns = t + 1200, .text_empty = false});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = t + 1400});
+  ASSERT_EQ(tm.state(), TurnState::kSpeaking);
+  ASSERT_TRUE(tm.speaking());
+
+  // kSessionEnd while speaking flushes output, cancels reply, and emits session ended
+  auto acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionEnd, .now_ns = t + 2000});
+  ASSERT_EQ(acts.size(), 3U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kFlushOutput);
+  EXPECT_EQ(acts[1].kind, TurnActionKind::kCancelReply);
+  EXPECT_EQ(acts[2].kind, TurnActionKind::kSessionEnded);
+  EXPECT_EQ(tm.state(), TurnState::kIdle);
+  EXPECT_FALSE(tm.session_active());
+}
+
+TEST(TurnMachineTest, SessionEndAfterReplyWaitsForPlaybackIdle) {
+  TurnConfig cfg;
+  cfg.sessions_enabled = true;
+  TurnMachine tm(cfg);
+  const std::uint64_t t = 1'000'000'000;
+
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionBegin, .now_ns = t});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechStarted, .now_ns = t + 100});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = t + 1000});
+  tm.OnEvent(
+      TurnEvent{.kind = TurnEventKind::kTranscribed, .now_ns = t + 1200, .text_empty = false});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = t + 1400});
+  ASSERT_EQ(tm.state(), TurnState::kSpeaking);
+
+  // kSessionEndAfterReply while speaking: no immediate action, remains in session
+  auto acts =
+      tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionEndAfterReply, .now_ns = t + 2000});
+  EXPECT_TRUE(acts.empty());
+  EXPECT_EQ(tm.state(), TurnState::kSpeaking);
+  EXPECT_TRUE(tm.session_active());
+
+  // Reply finishes, still playing
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyFinished, .now_ns = t + 3000});
+  EXPECT_TRUE(acts.empty());
+  EXPECT_EQ(tm.state(), TurnState::kSpeaking);
+
+  // Playback becomes idle -> session ends instead of follow-up
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kPlaybackIdle, .now_ns = t + 4000});
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kSessionEnded);
+  EXPECT_EQ(tm.state(), TurnState::kIdle);
+  EXPECT_FALSE(tm.session_active());
+
+  // kSessionEndAfterReply when no turn in progress ends at once
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionBegin, .now_ns = t + 5000});
+  ASSERT_EQ(tm.state(), TurnState::kFollowUp);
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionEndAfterReply, .now_ns = t + 6000});
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kSessionEnded);
+  EXPECT_EQ(tm.state(), TurnState::kIdle);
+  EXPECT_FALSE(tm.session_active());
+}
+
+TEST(TurnMachineTest, SessionDeviceLostEndsSession) {
+  TurnConfig cfg;
+  cfg.sessions_enabled = true;
+
+  // In kFollowUp
+  {
+    TurnMachine tm(cfg);
+    tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionBegin, .now_ns = 100});
+    ASSERT_EQ(tm.state(), TurnState::kFollowUp);
+    auto acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kDeviceLost, .now_ns = 200});
+    EXPECT_EQ(tm.state(), TurnState::kIdle);
+    EXPECT_FALSE(tm.session_active());
+    ASSERT_EQ(acts.size(), 1U);
+    EXPECT_EQ(acts[0].kind, TurnActionKind::kSessionEnded);
+  }
+
+  // In kSpeaking
+  {
+    TurnMachine tm(cfg);
+    tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionBegin, .now_ns = 100});
+    tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechStarted, .now_ns = 200});
+    tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = 300});
+    tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTranscribed, .now_ns = 400, .text_empty = false});
+    tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = 500});
+    ASSERT_EQ(tm.state(), TurnState::kSpeaking);
+    auto acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kDeviceLost, .now_ns = 600});
+    EXPECT_EQ(tm.state(), TurnState::kIdle);
+    EXPECT_FALSE(tm.session_active());
+    ASSERT_EQ(acts.size(), 3U);
+    EXPECT_EQ(acts[0].kind, TurnActionKind::kFlushOutput);
+    EXPECT_EQ(acts[1].kind, TurnActionKind::kCancelReply);
+    EXPECT_EQ(acts[2].kind, TurnActionKind::kSessionEnded);
+  }
+
+  // In kCapturing with kUserCancel
+  {
+    TurnMachine tm(cfg);
+    tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionBegin, .now_ns = 100});
+    tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechStarted, .now_ns = 200});
+    ASSERT_EQ(tm.state(), TurnState::kCapturing);
+    auto acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kUserCancel, .now_ns = 300});
+    EXPECT_EQ(tm.state(), TurnState::kIdle);
+    EXPECT_FALSE(tm.session_active());
+    ASSERT_EQ(acts.size(), 2U);
+    EXPECT_EQ(acts[0].kind, TurnActionKind::kDiscardCapture);
+    EXPECT_EQ(acts[1].kind, TurnActionKind::kSessionEnded);
+  }
+}
+
+TEST(TurnMachineTest, SessionBargeInDuringSpeakingKeepsSession) {
+  TurnConfig cfg;
+  cfg.sessions_enabled = true;
+  TurnMachine tm(cfg);
+  std::uint64_t t = 1'000'000'000;
+
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionBegin, .now_ns = t});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechStarted, .now_ns = t + 100});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = t + 1000});
+  tm.OnEvent(
+      TurnEvent{.kind = TurnEventKind::kTranscribed, .now_ns = t + 1200, .text_empty = false});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = t + 1400});
+  ASSERT_EQ(tm.state(), TurnState::kSpeaking);
+
+  // Barge-in: user speaks while assistant is speaking
+  t += 2'000'000'000;
+  auto acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechStarted, .now_ns = t});
+  EXPECT_EQ(tm.state(), TurnState::kCapturing);
+  EXPECT_TRUE(tm.session_active());
+  ASSERT_EQ(acts.size(), 4U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kFlushOutput);
+  EXPECT_EQ(acts[1].kind, TurnActionKind::kCancelReply);
+  EXPECT_EQ(acts[2].kind, TurnActionKind::kSendBargeIn);
+  EXPECT_EQ(acts[3].kind, TurnActionKind::kBeginUtterance);
+  EXPECT_TRUE(acts[3].with_backlog);
+
+  // Complete the barge-in turn
+  t += 1'000'000'000;
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = t});
+  t += 200'000'000;
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTranscribed, .now_ns = t, .text_empty = false});
+  t += 300'000'000;
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = t});
+  t += 1'000'000'000;
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyFinished, .now_ns = t});
+  t += 500'000'000;
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kPlaybackIdle, .now_ns = t});
+  EXPECT_EQ(tm.state(), TurnState::kFollowUp);
+  EXPECT_TRUE(tm.session_active());
+}
+
+TEST(TurnMachineTest, SessionAccessorsAndNsLeft) {
+  TurnConfig cfg;
+  cfg.sessions_enabled = true;
+  TurnMachine tm(cfg);
+
+  EXPECT_FALSE(tm.session_active());
+  EXPECT_EQ(tm.session_started_ns(), 0U);
+  EXPECT_EQ(tm.session_ns_left(1'000'000'000), 0U);
+
+  std::uint64_t const t0 = 100'000'000'000;
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionBegin, .now_ns = t0});
+  EXPECT_TRUE(tm.session_active());
+  EXPECT_EQ(tm.session_started_ns(), t0);
+  EXPECT_EQ(tm.session_ns_left(t0), 900'000'000'000U);
+  EXPECT_EQ(tm.session_ns_left(t0 + 100'000'000'000), 800'000'000'000U);
+  EXPECT_EQ(tm.session_ns_left(t0 + 900'000'000'000), 0U);
+  EXPECT_EQ(tm.session_ns_left(t0 + 1'000'000'000'000), 0U);
+
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionEnd, .now_ns = t0 + 50'000'000'000});
+  EXPECT_FALSE(tm.session_active());
+  EXPECT_EQ(tm.session_started_ns(), 0U);
+  EXPECT_EQ(tm.session_ns_left(t0 + 50'000'000'000), 0U);
+}
+
+TEST(TurnMachineTest, SessionThreeHourSimulatedLoopNeverStalls) {
+  TurnConfig cfg;
+  cfg.sessions_enabled = true;
+  TurnMachine tm(cfg);
+
+  std::mt19937 rng(42);
+  std::uniform_int_distribution<int> interval_dist(20, 180);  // speech burst every 20-180 seconds
+
+  std::uint64_t now_ns = 1'000'000'000ULL;
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionBegin, .now_ns = now_ns});
+  std::uint64_t last_speech_ns = now_ns;
+  int next_burst_sec = interval_dist(rng);
+
+  constexpr int kThreeHoursSec = 3 * 3600;
+  for (int sec = 0; sec < kThreeHoursSec; ++sec) {
+    now_ns += 1'000'000'000ULL;
+    tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = now_ns});
+
+    --next_burst_sec;
+    if (next_burst_sec <= 0) {
+      if (tm.state() == TurnState::kIdle) {
+        tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionBegin, .now_ns = now_ns});
+      }
+      if (tm.state() == TurnState::kFollowUp) {
+        now_ns += 50'000'000ULL;
+        tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechStarted, .now_ns = now_ns});
+        now_ns += 1'500'000'000ULL;
+        tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = now_ns});
+        now_ns += 200'000'000ULL;
+        tm.OnEvent(
+            TurnEvent{.kind = TurnEventKind::kTranscribed, .now_ns = now_ns, .text_empty = false});
+        now_ns += 300'000'000ULL;
+        tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = now_ns});
+        now_ns += 1'000'000'000ULL;
+        tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyFinished, .now_ns = now_ns});
+        now_ns += 500'000'000ULL;
+        tm.OnEvent(TurnEvent{.kind = TurnEventKind::kPlaybackIdle, .now_ns = now_ns});
+        last_speech_ns = now_ns;
+      }
+      next_burst_sec = interval_dist(rng);
+    }
+
+    if (now_ns >= last_speech_ns && (now_ns - last_speech_ns) >= 20ULL * 60ULL * 1'000'000'000ULL) {
+      EXPECT_EQ(tm.state(), TurnState::kIdle);
+      EXPECT_FALSE(tm.session_active());
+    }
+  }
+
+  // After 3 hours, tick for 25 minutes of silence: must return to Idle
+  for (int sec = 0; sec < 25 * 60; ++sec) {
+    now_ns += 1'000'000'000ULL;
+    tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = now_ns});
+  }
+  EXPECT_EQ(tm.state(), TurnState::kIdle);
+  EXPECT_FALSE(tm.session_active());
+  EXPECT_EQ(tm.session_ns_left(now_ns), 0U);
+}
+
+}  // namespace
+}  // namespace octoplus::voice
+
+namespace octoplus::voice {
+namespace {
+
+// The companion starts a talk by itself (Phase 12, C-S03): a quiet session listens for a short
+// while without the wake word and closes silently when nobody answers.
+TurnConfig SessionCfg() {
+  TurnConfig cfg;
+  cfg.sessions_enabled = true;
+  return cfg;
+}
+
+constexpr std::uint64_t kSec = 1'000'000'000ULL;
+
+// Line spoken: kCompanionLine, the first audio (as a nudge), playback ends.
+void SpeakCompanionLineThrough(TurnMachine& tm, std::uint64_t t0, std::uint64_t listen_s) {
+  TurnEvent open{.kind = TurnEventKind::kCompanionLine, .now_ns = t0};
+  open.listen_ns = listen_s * kSec;
+  EXPECT_TRUE(tm.OnEvent(open).empty()) << "no start sound: the line is the cue";
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = t0 + kSec, .nudge = true});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyFinished, .now_ns = t0 + 2 * kSec});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kPlaybackIdle, .now_ns = t0 + 4 * kSec});
+}
+
+TEST(TurnMachineCompanionLine, QuietSessionOpensAfterTheLineAndClosesSilentlyOnNoAnswer) {
+  TurnMachine tm(SessionCfg());
+  SpeakCompanionLineThrough(tm, 100 * kSec, 20);
+  EXPECT_TRUE(tm.session_active());
+  EXPECT_EQ(tm.state(), TurnState::kFollowUp);
+  // Still listening 19 s after playback ended.
+  EXPECT_TRUE(tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = 123 * kSec}).empty());
+  EXPECT_TRUE(tm.session_active());
+  // At 20 s it closes with the quiet action only: no "still there?", no end sound.
+  const auto acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = 125 * kSec});
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kSessionEndedQuiet);
+  EXPECT_FALSE(tm.session_active());
+  EXPECT_EQ(tm.state(), TurnState::kIdle);
+}
+
+TEST(TurnMachineCompanionLine, AnAnswerKeepsTheSessionUnderTheNormalRules) {
+  TurnMachine tm(SessionCfg());
+  SpeakCompanionLineThrough(tm, 100 * kSec, 20);
+  auto acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechStarted, .now_ns = 110 * kSec});
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kBeginUtterance);
+  EXPECT_TRUE(acts[0].in_follow_up);
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kSpeechEnded, .now_ns = 112 * kSec});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTranscribed, .now_ns = 113 * kSec});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyStarted, .now_ns = 114 * kSec});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kReplyFinished, .now_ns = 115 * kSec});
+  tm.OnEvent(TurnEvent{.kind = TurnEventKind::kPlaybackIdle, .now_ns = 118 * kSec});
+  ASSERT_EQ(tm.state(), TurnState::kFollowUp);
+  // Normal 90 s silence rule now, not the 20 s one.
+  EXPECT_TRUE(tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = 150 * kSec}).empty());
+  EXPECT_TRUE(tm.session_active());
+  acts = tm.OnEvent(TurnEvent{.kind = TurnEventKind::kTick, .now_ns = 209 * kSec});
+  ASSERT_EQ(acts.size(), 1U);
+  EXPECT_EQ(acts[0].kind, TurnActionKind::kSayStillThere);
+}
+
+TEST(TurnMachineCompanionLine, IgnoredWhenSessionsAreOffOrABusyMomentOrASessionIsRunning) {
+  TurnMachine off{TurnConfig{}};
+  TurnEvent open{.kind = TurnEventKind::kCompanionLine, .now_ns = kSec};
+  open.listen_ns = 20 * kSec;
+  EXPECT_TRUE(off.OnEvent(open).empty());
+  EXPECT_FALSE(off.session_active());
+
+  TurnMachine busy(SessionCfg());
+  busy.OnEvent(TurnEvent{.kind = TurnEventKind::kWakeWord, .now_ns = kSec});
+  ASSERT_TRUE(busy.turn_in_progress());
+  EXPECT_TRUE(busy.OnEvent(open).empty());
+  EXPECT_FALSE(busy.session_active());
+
+  TurnMachine live(SessionCfg());
+  live.OnEvent(TurnEvent{.kind = TurnEventKind::kSessionBegin, .now_ns = kSec});
+  const auto started = live.session_started_ns();
+  open.now_ns = 50 * kSec;
+  EXPECT_TRUE(live.OnEvent(open).empty());
+  EXPECT_EQ(live.session_started_ns(), started) << "an open session is left alone";
+}
+
 }  // namespace
 }  // namespace octoplus::voice

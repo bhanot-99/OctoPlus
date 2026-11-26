@@ -2,7 +2,7 @@
 
 > **Renumbered 2026-11-24 (roadmap v2, D-63):** this was Phase 13; it is now **Phase 12** and comes right after the OctoPlus rename (Phase 11.5). See `roadmap-v2.md`. The owner's "voice only" answer in §1 still holds for this phase; in Phase 16 OctoPit becomes the one interface, and Laila's text chat and controls are added there. The review file is `phase-12-companion-review.md`.
 
-**Status:** PLANNED, NOT STARTED. The owner answered the decisions in §1 on 2026-11-23 and said: build the whole plan now, then wait for the instruction of what to work on. No code until the owner names a story. **Refined on paper 2026-11-23 (during the second 24 h soak, nothing built, nothing run):** story C-S05 made to match the memory decision in §6, story order fixed, start order and budget notes added (§7a), two risks added (§9). 
+**Status (2026-11-25): BUILT on branch `phase-12` (C-S00 to C-S08 done; the 24 h soak and one-week trial are outside this phase by the owner's decision; C-S10 Hinglish waits for the owner's recordings). Report: `reports/phase-12-companion.md`. Original status line:** PLANNED, NOT STARTED. The owner answered the decisions in §1 on 2026-11-23 and said: build the whole plan now, then wait for the instruction of what to work on. No code until the owner names a story. **Refined on paper 2026-11-23 (during the second 24 h soak, nothing built, nothing run):** story C-S05 made to match the memory decision in §6, story order fixed, start order and budget notes added (§7a), two risks added (§9). 
 **Branch:** `companion-plan` (docs only). **ADR:** 0019 (Proposed).
 **Origin:** owner: "make it more conversational: it should talk more often, not only useful but like a friend: jokes, normal conversation." Personal use only. A MacBook port is planned later (`macbook-future-target` in project memory), so every design below keeps platform specifics behind small interfaces.
 
@@ -16,6 +16,7 @@
 | 4 | Model-written casual lines | **Yes** |
 | 5 | Name and personality | **Given: Laila**, a 25-year-old woman whose logic and heart keep arguing; her past love is a man. Full text and the implementation notes: `docs/design/companion-persona-laila.md` |
 | 6 | Where it talks | **Voice only** (OctoPit only shows status and controls, no chat for this) |
+| 7 | Defaults taken 2026-11-25 (D-77) | Quiet hours 23:00-08:00, no avoided topics yet, crisis text without numbers (owner supplies), one model only, persona defaults per section 5a, DR-1 kept |
 
 Answered later the same day:
 - **Language:** the owner prefers **Hinglish**, and doubts that good fluent options exist. See §9a: the plan is English first, Hinglish as a language pack after a short test (a spike) on the owner's own voice.
@@ -115,7 +116,7 @@ Decides **when** to start a talk. Target 2 to 4 talks an hour while the owner is
 | C-S06 | OctoPit: session indicator, companion card, settings, today's talks, feedback buttons | S02, S03 | Screenshots in both themes; controls work live |
 | C-S07 | Speed work: warm engine, streaming pieces, latency to target | S01 | p50 first sound about 1.5 s on casual replies, measured with the baseline script |
 | C-S08 | Safety verification: actions guard (companion speech cannot dispatch), open-mic privacy checks (no audio written), injection tests, log scan | all | Security report; gate green |
-| C-S09 | Soak and trial: 24 h soak in companion mode, then the owner's one-week "aliveness" trial with daily ratings | all | Report with the measured numbers and the owner's ratings |
+| ~~C-S09~~ | ~~Soak and trial~~ Not part of Phase 12 (owner, 2026-11-25): the 24 h soak and the one-week trial are run only if and when the owner decides; they are not a step or an exit criterion of this phase. | | |
 | C-S10 | Hinglish spike and language pack (see §9a): record, compare speech-to-text and text-to-speech candidates on the owner's voice, decide, then build the pack with transliteration for speech | S01, S02 and the Mac memory budget | Owner-rated comparison on own recordings; a written decision; then a pack the owner can talk to for 10 minutes without repeats |
 
 Rough size: a few weeks of focused work in total; S01 to S03 are the core. The Mac port comes after (or instead of redoing Linux-only parts).

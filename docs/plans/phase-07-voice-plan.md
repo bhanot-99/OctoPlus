@@ -24,7 +24,7 @@ Rules that shape everything:
 - **One voice, one speed (FR-VOI-09).** Kokoro fp32, one voice (`af_heart` until the owner's listening test, OQ-04). If the engine fails, cached status clips play while it restarts; the voice never switches.
 - **Barge-in is local (Architecture §6.3).** The listener keeps running while speaking (separate threads, one consumer of the capture buffer); two consecutive speech frames flush output, then C5 is told.
 - **Block on audio arrival; never poll** (lesson: idle CPU went to a polling loop). Trim the heap after each turn (lesson: glibc kept freed blocks).
-- **The speech text comes from C5 only** (Architecture §10): C2 never talks to C4. Spoken nudges are a template id plus numbers (R0-6, FR-NUD-12); C2 owns the spoken wording and the one place numbers are rounded for speech (design.md §8).
+- **The speech text comes from C5 only** (Architecture §10): C2 never talks to C4. Spoken nudges are a template id plus numbers (R0-6, FR-NUD-12); C2 owns the spoken wording and the one place numbers are rounded for speech (design.md §8). Update 2026-11-25: R0-6 retired by ADR-0019; the no-action property remains as DR-1.
 - **Every part tolerates its peers absent, in either start order** (lesson: start order hid a bug).
 - **Every pure piece is a class behind an interface** (`AudioSource`, `AudioSink`, `Vad`, `WakeWord`, `Stt`, `Tts`), so the whole pipeline runs in tests on fixture audio with fake or real engines.
 

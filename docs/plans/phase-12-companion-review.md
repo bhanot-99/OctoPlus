@@ -8,7 +8,7 @@
 
 ## 1. What this is, in one paragraph
 
-Today NeuroOS answers when you ask and nudges you when something needs attention. The Companion makes it feel like a friend who is around: it talks to you a few times an hour when you are free, jokes, chats about normal things, remembers some of what you tell it, and keeps talking without "hey jarvis" once a conversation has started. The friend is **Laila**. It is **voice only**: OctoPit shows status and controls, not a chat window.
+Today OctoPlus answers when you ask and nudges you when something needs attention. The Companion makes it feel like a friend who is around: it talks to you a few times an hour when you are free, jokes, chats about normal things, remembers some of what you tell it, and keeps talking without "hey jarvis" once a conversation has started. The friend is **Laila**. It is **voice only**: OctoPit shows status and controls, not a chat window.
 
 ## 2. What you will get
 
@@ -66,7 +66,7 @@ A few weeks of focused work. Each story ends with tests, a full gate run, a repo
 | 7 | **C-S05** | Memory of you: "remember", the chance rule, "what do you remember", "forget" |
 | 8 | **C-S06** | OctoPit: session indicator, companion card, settings, today's talks, feedback buttons |
 | 9 | **C-S08** | Safety checks: words-only guard, no audio written, injection tests |
-| 10 | **C-S09** | 24 h soak in companion mode, then your one-week "aliveness" trial with daily ratings |
+| 10 | ~~C-S09~~ | Not part of Phase 12 (owner, 2026-11-25): the 24 h soak and the one-week trial are run only if and when the owner decides; they are not a step or an exit criterion of this phase. |
 | later | **C-S10** | Hinglish test and language pack |
 
 **Start rule:** nothing starts until the current 24 h soak has been judged (it ends about 21:05 IST on 24 Nov), so the companion work is measured against a known good base.
@@ -79,14 +79,14 @@ A few weeks of focused work. Each story ends with tests, a full gate run, a repo
 
 ## 8. What I need from you (the review checklist)
 
-Please read this page and tell me, for each line, **OK** or what to change.
+> **Answered 2026-11-25 (D-77):** The owner answered "use your defaults" on 2026-11-25.
 
-1. **The overall plan and build order** in section 6. OK?
-2. **Her defaults** (details in `companion-persona-laila.md` §5a): heart mode about 40 to 50 percent of turns; Kabir at most once per 3 days; dependence guard at 90 minutes a day; talks 2 to 4 an hour. OK?
-3. **Quiet hours.** I proposed **23:00 to 08:00** as a guess. What do you want?
-4. **Topics Laila should avoid.** None are set yet. Please give me a list, or say "none".
-5. **Crisis behaviour.** Which local helpline numbers or people do you want in the fixed text? (I did not write any numbers.)
-6. **One model only** (limit 2). OK to keep it that way until the Mac, or do you want to approve a second small model and its memory budget?
-7. **Start:** begin C-S00 and C-S01 after the soak result, or wait longer?
+1. **The overall plan and build order** in section 6. OK? — **Answered: OK (use your defaults, 2026-11-25)**
+2. **Her defaults** (details in `companion-persona-laila.md` §5a): heart mode about 40 to 50 percent of turns; Kabir at most once per 3 days; dependence guard at 90 minutes a day; talks 2 to 4 an hour. OK? — **Answered: OK (use your defaults, 2026-11-25)**
+3. **Quiet hours.** I proposed **23:00 to 08:00** as a guess. What do you want? — **Answered: 23:00 to 08:00 (use your defaults, 2026-11-25)**
+4. **Topics Laila should avoid.** None are set yet. Please give me a list, or say "none". — **Answered: none yet (use your defaults, 2026-11-25)**
+5. **Crisis behaviour.** Which local helpline numbers or people do you want in the fixed text? (I did not write any numbers.) — **Answered: crisis text without numbers; owner supplies later (2026-11-25)**
+6. **One model only** (limit 2). OK to keep it that way until the Mac, or do you want to approve a second small model and its memory budget? — **Answered: one model only until the Mac (use your defaults, 2026-11-25)**
+7. **Start:** begin C-S00 and C-S01 after the soak result, or wait longer? — **Answered: start C-S00 now (2026-11-25, D-77)**
 
-When you answer, I update the plan and persona files and record it as a decision (D-61).
+Recorded as decision D-77 in `memory.md`.

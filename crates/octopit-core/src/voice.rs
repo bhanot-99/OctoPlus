@@ -46,6 +46,12 @@ pub struct VoiceView {
     pub level: f32,
     /// Wake phrases heard since the voice part started.
     pub wake_words: u64,
+    /// An open-microphone chat is running (Phase 12).
+    pub session_active: bool,
+    /// Seconds until that chat reaches its longest length (0 when none).
+    pub session_seconds_left: u32,
+    /// Seconds of guest mode left (0 when it is off).
+    pub guest_seconds_left: u32,
 }
 
 impl VoiceView {
@@ -56,6 +62,9 @@ impl VoiceView {
             state: VoiceState::Unavailable,
             level: 0.0,
             wake_words: 0,
+            session_active: false,
+            session_seconds_left: 0,
+            guest_seconds_left: 0,
         }
     }
 
@@ -84,6 +93,9 @@ impl VoiceView {
             state,
             level,
             wake_words: s.wake_words,
+            session_active: s.session_active,
+            session_seconds_left: s.session_seconds_left,
+            guest_seconds_left: s.guest_seconds_left,
         }
     }
 
@@ -111,6 +123,28 @@ impl VoiceView {
             VoiceState::FollowUp => "Listening for a follow-up",
             VoiceState::Busy => "Another app is using the microphone",
         }
+    }
+
+    /// "Chatting, 4:32 left" while an open-microphone chat runs, "Guest mode, 12 min left" while
+    /// she is quiet for company; `None` otherwise.
+    #[must_use]
+    pub fn chat_line(&self) -> Option<String> {
+        if self.state == VoiceState::Unavailable || self.state == VoiceState::Off {
+            return None;
+        }
+        if self.guest_seconds_left > 0 {
+            return Some(format!(
+                "Guest mode, {} min left",
+                self.guest_seconds_left.div_ceil(60)
+            ));
+        }
+        self.session_active.then(|| {
+            format!(
+                "Chatting, {}:{:02} left",
+                self.session_seconds_left / 60,
+                self.session_seconds_left % 60
+            )
+        })
     }
 
     /// The label on the button itself, for screen readers and tooltips.
@@ -194,6 +228,30 @@ mod tests {
         assert_eq!(v.state, VoiceState::Idle);
         s.input_level_permille = 250;
         assert!((VoiceView::from_status(&s).level - 0.25).abs() < 1e-6);
+    }
+
+    #[test]
+    fn a_running_chat_and_guest_mode_are_said_in_words() {
+        let mut s = status(TurnPhase::FollowUp);
+        assert_eq!(VoiceView::from_status(&s).chat_line(), None);
+        s.session_active = true;
+        s.session_seconds_left = 272;
+        assert_eq!(
+            VoiceView::from_status(&s).chat_line().as_deref(),
+            Some("Chatting, 4:32 left")
+        );
+        s.session_seconds_left = 5;
+        assert_eq!(
+            VoiceView::from_status(&s).chat_line().as_deref(),
+            Some("Chatting, 0:05 left")
+        );
+        s.guest_seconds_left = 601;
+        assert_eq!(
+            VoiceView::from_status(&s).chat_line().as_deref(),
+            Some("Guest mode, 11 min left"),
+            "guest mode wins: she is quiet"
+        );
+        assert_eq!(VoiceView::unavailable().chat_line(), None);
     }
 
     #[test]

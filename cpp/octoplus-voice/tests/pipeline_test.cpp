@@ -182,6 +182,24 @@ struct Rig {
     EXPECT_TRUE(p->Start().ok());
   }
 
+  explicit Rig(PipelineConfig cfg) {
+    VoicePipeline::Deps d;
+    d.source = &source;
+    d.sink = &sink;
+    d.vad = &vad;
+    d.wake = &wake;
+    d.stt = &stt;
+    d.tts = &tts;
+    d.link = &link;
+    d.mic_probe = &probe;
+    d.stt_exec = &stt_exec;
+    d.tts_exec = &tts_exec;
+    d.mono_ns = [this] { return now; };
+    d.wall_ns = [this] { return 1'700'000'000'000'000'000ULL + now; };
+    p = std::make_unique<VoicePipeline>(d, cfg);
+    EXPECT_TRUE(p->Start().ok());
+  }
+
   void Frames(std::int16_t marker, int n) {
     for (int i = 0; i < n; ++i) {
       now += kFrameNs;
@@ -258,7 +276,7 @@ TEST(VoicePipeline, TheWakeWordModelRunsOnlyWhileSomeoneIsSpeaking) {
 
 TEST(VoicePipeline, ReplyIsSpokenAsItStreamsInOneVoiceThenAFollowUpOpens) {
   Rig r;
-  EXPECT_EQ(r.p->PreloadClips(), 12U);
+  EXPECT_EQ(r.p->PreloadClips(), 20U);
   r.AskByVoice();
   r.link.receiver->OnPreamble(1);
   r.Settle();
@@ -270,8 +288,8 @@ TEST(VoicePipeline, ReplyIsSpokenAsItStreamsInOneVoiceThenAFollowUpOpens) {
   r.Settle();
   EXPECT_EQ(r.sink.writes.size(), 4U);
   EXPECT_EQ(r.p->stats().sentences_spoken, 3U);
-  // Every sentence went through the one engine (12 cached phrases + 3 sentences).
-  EXPECT_EQ(r.tts.spoken.size(), 12U + 3U);
+  // Every sentence went through the one engine (20 cached phrases + 3 sentences).
+  EXPECT_EQ(r.tts.spoken.size(), 20U + 3U);
   EXPECT_TRUE(r.p->status().speaking) << "audio is still playing";
   r.sink.playing = false;
   r.Frames(0, 2);
@@ -607,7 +625,7 @@ TEST(VoicePipeline, AFailingSpeechEngineSaysSoOnceInTheCachedVoice) {
   r.Settle();
   EXPECT_EQ(r.p->stats().synth_failures, 3U);
   ASSERT_EQ(r.sink.writes.size(), 1U) << "one cached 'my voice is restarting' clip, not three";
-  EXPECT_EQ(r.tts.spoken.size(), 12U + 3U) << "the clip came from the cache, not from synthesis";
+  EXPECT_EQ(r.tts.spoken.size(), 20U + 3U) << "the clip came from the cache, not from synthesis";
 }
 
 TEST(VoicePipeline, ARequestThatFailsBeforeAnyWordPlaysTheStatusLine) {
@@ -857,6 +875,573 @@ TEST(VoicePipeline, TheInputLevelFollowsTheMicrophoneLoudness) {
   EXPECT_EQ(r.p->status().input_level_permille, 1000U) << "clamped";
   r.source.DeliverTone(0);
   EXPECT_EQ(r.p->status().input_level_permille, 0U);
+}
+
+TEST(VoicePipeline, WakeWordStartsSessionPlaysEarconAndSetsInSession) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  cfg.session_on_wake = true;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  EXPECT_FALSE(r.p->status().session_active);
+  r.AskByVoice();
+  ASSERT_EQ(r.link.commands.size(), 1U);
+  EXPECT_TRUE(r.link.commands[0].in_session);
+  EXPECT_TRUE(r.p->status().session_active);
+  EXPECT_EQ(r.p->status().sessions_started, 1U);
+  EXPECT_FALSE(r.sink.writes.empty());
+}
+
+TEST(VoicePipeline, ThreeFollowUpsWithoutWakeWordCarryInSessionAndAreNotCapped) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  cfg.session_on_wake = true;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.AskByVoice();
+  ASSERT_EQ(r.link.commands.size(), 1U);
+  EXPECT_TRUE(r.link.commands[0].in_session);
+
+  for (std::size_t i = 1; i <= 3; ++i) {
+    r.link.Receiver()->OnSpeak("Answer.");
+    r.link.Receiver()->OnFinished(true);
+    r.Settle();
+    r.sink.playing = false;
+    r.Frames(0, 2);
+    r.Settle();
+    EXPECT_TRUE(r.p->status().follow_up_open);
+
+    r.stt.text = "follow up " + std::to_string(i);
+    r.Frames(1000, 30);
+    r.Frames(0, 25);
+    r.Settle();
+    ASSERT_EQ(r.link.commands.size(), i + 1);
+    EXPECT_TRUE(r.link.commands[i].in_session);
+    EXPECT_TRUE(r.link.commands[i].in_follow_up);
+  }
+}
+
+TEST(VoicePipeline, SessionSilenceAsksStillThereThenGraceClosesWithEndEarcon) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  cfg.session_on_wake = true;
+  cfg.turn.session_silence_ns = 90'000'000'000ULL;
+  cfg.turn.session_grace_ns = 20'000'000'000ULL;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.AskByVoice();
+  r.link.Receiver()->OnSpeak("Answer.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  r.Settle();
+  EXPECT_TRUE(r.p->status().session_active);
+  const auto writes_before = r.sink.writes.size();
+
+  r.Frames(0, 2815);
+  r.Settle();
+  EXPECT_TRUE(r.p->status().session_active);
+  EXPECT_GT(r.sink.writes.size(), writes_before) << "Still there? was played";
+
+  r.Frames(0, 630);
+  r.Settle();
+  EXPECT_FALSE(r.p->status().session_active);
+}
+
+TEST(VoicePipeline, StopPhraseSendsCommandAndEndsSessionAfterReply) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  cfg.session_on_wake = true;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.AskByVoice();
+  r.link.Receiver()->OnSpeak("Answer.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  r.Settle();
+  EXPECT_TRUE(r.p->status().session_active);
+
+  r.stt.text = "goodbye";
+  r.Frames(1000, 30);
+  r.Frames(0, 25);
+  r.Settle();
+  ASSERT_EQ(r.link.commands.size(), 2U);
+  EXPECT_EQ(r.link.commands[1].text, "goodbye");
+  EXPECT_TRUE(r.link.commands[1].in_session);
+  EXPECT_TRUE(r.p->status().session_active);
+
+  r.link.Receiver()->OnSpeak("See you later.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  r.Settle();
+  EXPECT_FALSE(r.p->status().session_active);
+}
+
+TEST(VoicePipeline, GuestPhraseEndsSessionPlaysPhrase2AndBlocksSessionOnWake) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  cfg.session_on_wake = true;
+  cfg.guest_minutes = 30;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.AskByVoice();
+  r.link.Receiver()->OnSpeak("Answer.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.Frames(0, 2);
+  r.Settle();
+  EXPECT_TRUE(r.p->status().session_active);
+
+  r.stt.text = "someone is here";
+  r.Frames(1000, 30);
+  r.Frames(0, 25);
+  r.Settle();
+  EXPECT_EQ(r.link.commands.size(), 1U);
+  EXPECT_FALSE(r.p->status().session_active);
+  EXPECT_GT(r.p->status().guest_seconds_left, 0U);
+
+  r.stt.text = "what time is it";
+  r.AskByVoice();
+  ASSERT_EQ(r.link.commands.size(), 2U);
+  EXPECT_FALSE(r.link.commands[1].in_session);
+  EXPECT_FALSE(r.p->status().session_active);
+}
+
+TEST(VoicePipeline, GuestEndPhraseClearsGuestModeAndPlaysPhrase3) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  cfg.session_on_wake = true;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  ASSERT_TRUE(r.p->StartGuestMode().ok());
+  EXPECT_GT(r.p->status().guest_seconds_left, 0U);
+
+  r.stt.text = "they left";
+  r.AskByVoice();
+  EXPECT_EQ(r.link.commands.size(), 0U);
+  EXPECT_EQ(r.p->status().guest_seconds_left, 0U);
+}
+
+TEST(VoicePipeline, MicBusyProbeEndsSessionSilentlyWithoutEndEarcon) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  cfg.session_on_wake = true;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.AskByVoice();
+  r.link.Receiver()->OnSpeak("Answer.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.Frames(0, 2);
+  r.Settle();
+  EXPECT_TRUE(r.p->status().session_active);
+  const auto writes_before = r.sink.writes.size();
+
+  r.probe.busy = true;
+  r.Frames(0, 2);
+  r.Settle();
+  EXPECT_FALSE(r.p->status().session_active);
+  EXPECT_EQ(r.sink.writes.size(), writes_before);
+}
+
+TEST(VoicePipeline, OpenMicOffPreservesOldBehaviourWithSingleFollowUp) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = false;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.AskByVoice();
+  ASSERT_EQ(r.link.commands.size(), 1U);
+  EXPECT_FALSE(r.link.commands[0].in_session);
+
+  r.link.Receiver()->OnSpeak("Answer.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  r.Settle();
+  EXPECT_TRUE(r.p->status().follow_up_open);
+
+  r.stt.text = "first follow up";
+  r.Frames(1000, 30);
+  r.Frames(0, 25);
+  r.Settle();
+  ASSERT_EQ(r.link.commands.size(), 2U);
+  EXPECT_FALSE(r.link.commands[1].in_session);
+  EXPECT_TRUE(r.link.commands[1].in_follow_up);
+
+  r.link.Receiver()->OnSpeak("Second answer.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  r.Settle();
+  EXPECT_FALSE(r.p->status().follow_up_open);
+
+  r.stt.text = "second follow up";
+  r.Frames(1000, 30);
+  r.Frames(0, 25);
+  r.Settle();
+  EXPECT_EQ(r.link.commands.size(), 2U);
+}
+
+TEST(VoicePipeline, EarconSamplesNeverAppearInSttAudio) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  cfg.session_on_wake = true;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.Frames(0, 3);
+  r.Frames(2000, 6);
+  r.Frames(3000, 10);
+  r.Frames(1000, 25);
+  r.Frames(0, 25);
+  r.Settle();
+  ASSERT_EQ(r.link.commands.size(), 1U);
+  EXPECT_GT(r.stt.last_samples, 0U);
+}
+
+TEST(VoicePipeline, VadEndSilenceSwitchesBetweenInSessionAndOutOfSession) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  cfg.session_on_wake = true;
+  cfg.session_end_silence_ns = 400'000'000ULL;
+  cfg.vad.end_silence_ns = 600'000'000ULL;
+  Rig r(cfg);
+  r.p->PreloadClips();
+
+  r.AskByVoice();
+  r.link.Receiver()->OnSpeak("Answer.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.Frames(0, 2);
+  r.Settle();
+  EXPECT_TRUE(r.p->status().session_active);
+
+  r.stt.text = "quick silence";
+  r.Frames(1000, 30);
+  r.Frames(0, 14);
+  r.Settle();
+  ASSERT_EQ(r.link.commands.size(), 2U);
+  EXPECT_EQ(r.link.commands[1].text, "quick silence");
+}
+
+TEST(VoicePipeline, SessionStatusFieldsAreAccurate) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  cfg.session_on_wake = true;
+  cfg.turn.session_max_ns = 60'000'000'000ULL;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  EXPECT_FALSE(r.p->status().session_active);
+  EXPECT_EQ(r.p->status().session_seconds_left, 0U);
+  EXPECT_EQ(r.p->status().sessions_started, 0U);
+
+  r.AskByVoice();
+  EXPECT_TRUE(r.p->status().session_active);
+  EXPECT_GT(r.p->status().session_seconds_left, 50U);
+  EXPECT_EQ(r.p->status().sessions_started, 1U);
+
+  ASSERT_TRUE(r.p->StartGuestMode().ok());
+  EXPECT_FALSE(r.p->status().session_active);
+  EXPECT_GT(r.p->status().guest_seconds_left, 0U);
+
+  ASSERT_TRUE(r.p->EndGuestMode().ok());
+  EXPECT_EQ(r.p->status().guest_seconds_left, 0U);
+}
+
+}  // namespace
+}  // namespace octoplus::voice
+
+namespace octoplus::voice {
+namespace {
+
+// ---- the companion starts a talk by itself (Phase 12, C-S03) --------------------------------
+
+TEST(VoicePipelineCompanionLine, TheLineIsSpokenThenAQuietSessionHearsTheAnswerWithoutTheWakeWord) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  Rig r(cfg);
+  ASSERT_TRUE(r.p->SpeakCompanionLine("Hey, how is your day going?", 30).ok());
+  r.Settle();
+  ASSERT_EQ(r.tts.spoken.size(), 1U);
+  EXPECT_EQ(r.tts.spoken[0], "Hey, how is your day going?");
+  EXPECT_TRUE(r.p->status().session_active);
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  EXPECT_TRUE(r.p->status().follow_up_open);
+  r.stt.text = "pretty good actually";
+  r.Frames(1000, 30);
+  r.Frames(0, 25);
+  r.Settle();
+  ASSERT_EQ(r.link.commands.size(), 1U);
+  EXPECT_TRUE(r.link.commands[0].in_session);
+  EXPECT_TRUE(r.link.commands[0].in_follow_up);
+}
+
+TEST(VoicePipelineCompanionLine, NoAnswerClosesTheSessionWithoutAnyExtraSound) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  ASSERT_TRUE(r.p->SpeakCompanionLine("Hey, how is your day going?", 10).ok());
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  ASSERT_TRUE(r.p->status().session_active);
+  const auto writes_before = r.sink.writes.size();
+  const auto spoken_before = r.tts.spoken.size();
+  r.Frames(0, 330);  // a little over 10 s of silence
+  r.Settle();
+  EXPECT_FALSE(r.p->status().session_active);
+  EXPECT_EQ(r.sink.writes.size(), writes_before) << "no end sound and no still-there question";
+  EXPECT_EQ(r.tts.spoken.size(), spoken_before);
+  EXPECT_TRUE(r.link.commands.empty());
+}
+
+TEST(VoicePipelineCompanionLine, RefusedWhenItShouldNotSpeak) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  {
+    Rig off(PipelineConfig{});
+    EXPECT_FALSE(off.p->SpeakCompanionLine("Hello there", 30).ok()) << "open mic is off";
+  }
+  {
+    Rig r(cfg);
+    r.Frames(2000, 6);  // a turn has begun
+    ASSERT_TRUE(r.p->status().turn_in_progress);
+    const auto s = r.p->SpeakCompanionLine("Hello there", 30);
+    EXPECT_FALSE(s.ok());
+    EXPECT_TRUE(s.error().retryable);
+  }
+  {
+    Rig r(cfg);
+    r.probe.busy = true;
+    EXPECT_FALSE(r.p->SpeakCompanionLine("Hello there", 30).ok());
+    r.Settle();
+    EXPECT_TRUE(r.tts.spoken.empty());
+    r.probe.busy = false;
+    EXPECT_TRUE(r.p->SpeakCompanionLine("Hello there", 30).ok());
+  }
+  {
+    Rig r(cfg);  // a session is already running
+    r.p->PreloadClips();
+    r.AskByVoice();
+    ASSERT_TRUE(r.p->status().session_active);
+    r.link.Receiver()->OnFinished(true);
+    r.Settle();
+    r.sink.playing = false;
+    r.Frames(0, 2);
+    EXPECT_FALSE(r.p->SpeakCompanionLine("Hello there", 30).ok());
+  }
+}
+
+TEST(VoicePipelineCompanionLine, GuestModeBlocksIt) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.stt.text = "someone's here";
+  r.AskByVoice();
+  r.Settle();
+  EXPECT_FALSE(r.p->SpeakCompanionLine("Hello there", 30).ok());
+}
+
+TEST(VoicePipelineCompanionLine, BadTextIsRejectedAndNeverSpoken) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  Rig r(cfg);
+  EXPECT_FALSE(r.p->SpeakCompanionLine("", 30).ok());
+  EXPECT_FALSE(r.p->SpeakCompanionLine(std::string(401, 'a'), 30).ok());
+  EXPECT_FALSE(r.p->SpeakCompanionLine("bad \xC3\x28 bytes", 30).ok());
+  EXPECT_FALSE(r.p->SpeakCompanionLine("lone \xC3", 30).ok());
+  EXPECT_FALSE(r.p->SpeakCompanionLine("overlong \xC0\xAF", 30).ok());
+  EXPECT_FALSE(r.p->SpeakCompanionLine("surrogate \xED\xA0\x80", 30).ok());
+  r.Settle();
+  EXPECT_TRUE(r.tts.spoken.empty());
+  EXPECT_TRUE(r.p->SpeakCompanionLine("caf\xC3\xA9 is open", 30).ok()) << "valid UTF-8 passes";
+}
+
+TEST(VoicePipelineCompanionLine, ASecondLineWithinAMinuteIsRefused) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  Rig r(cfg);
+  ASSERT_TRUE(r.p->SpeakCompanionLine("First line", 10).ok());
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 400);  // the quiet session closes (about 13 s)
+  r.Settle();
+  ASSERT_FALSE(r.p->status().session_active);
+  const auto s = r.p->SpeakCompanionLine("Second line", 10);
+  EXPECT_FALSE(s.ok());
+  EXPECT_TRUE(s.error().retryable);
+  r.Frames(0, 1900);  // another minute
+  r.Settle();
+  EXPECT_TRUE(r.p->SpeakCompanionLine("Second line", 10).ok());
+}
+
+}  // namespace
+}  // namespace octoplus::voice
+
+namespace octoplus::voice {
+namespace {
+
+// The tail of her own voice and the room echo must never be heard as the owner (Phase 12,
+// listening-noise fix): right after playback ends the microphone counts as silent.
+TEST(VoicePipelineEchoGuard, TheTailOfHerOwnVoiceIsNotHeardAsTheOwner) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  cfg.echo_guard_ns = 700'000'000ULL;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.AskByVoice();
+  ASSERT_EQ(r.link.commands.size(), 1U);
+  r.link.Receiver()->OnSpeak("Answer.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  r.Settle();
+  ASSERT_TRUE(r.p->status().follow_up_open);
+
+  // Loud "speech" inside the guard time (10 frames is 320 ms): her own echo. Not a command.
+  r.stt.text = "that is what she just said";
+  r.Frames(1000, 10);
+  r.Frames(0, 25);
+  r.Settle();
+  EXPECT_EQ(r.link.commands.size(), 1U) << "the echo was taken for the owner";
+
+  // After the guard the owner is heard as usual.
+  r.stt.text = "a real follow up";
+  r.Frames(1000, 30);
+  r.Frames(0, 25);
+  r.Settle();
+  ASSERT_EQ(r.link.commands.size(), 2U);
+  EXPECT_TRUE(r.link.commands[1].in_follow_up);
+}
+
+TEST(VoicePipelineEchoGuard, WithTheGuardOffNothingChanges) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  cfg.echo_guard_ns = 0;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.AskByVoice();
+  r.link.Receiver()->OnSpeak("Answer.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  r.stt.text = "immediate follow up";
+  r.Frames(1000, 30);
+  r.Frames(0, 25);
+  r.Settle();
+  EXPECT_EQ(r.link.commands.size(), 2U);
+}
+
+}  // namespace
+}  // namespace octoplus::voice
+
+namespace octoplus::voice {
+namespace {
+
+// In an open chat the capture starts at the first sound and the wake detector fires a moment
+// later, so the wake phrase can end up in the transcript. It must never be sent as the command.
+TEST(VoicePipelineOpenChat, AWakePhraseInTheMiddleOfAChatIsStrippedFromTheCommand) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.AskByVoice();
+  ASSERT_EQ(r.link.commands.size(), 1U);
+  r.link.Receiver()->OnSpeak("Answer.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  r.Settle();
+  ASSERT_TRUE(r.p->status().follow_up_open);
+
+  // Speech without the wake detector firing, but the transcript carries the phrase.
+  r.stt.text = "Hey Jarvis, what is the capital of France?";
+  r.Frames(1000, 30);
+  r.Frames(0, 25);
+  r.Settle();
+  ASSERT_EQ(r.link.commands.size(), 2U);
+  EXPECT_EQ(r.link.commands[1].text, "what is the capital of France?");
+}
+
+TEST(VoicePipelineOpenChat, OnlyTheWakePhraseInAChatKeepsListeningInsteadOfSendingIt) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.AskByVoice();
+  r.link.Receiver()->OnSpeak("Answer.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  r.Settle();
+
+  r.stt.text = "Hey Jarvis.";
+  r.Frames(1000, 20);
+  r.Frames(0, 25);
+  r.Settle();
+  EXPECT_EQ(r.link.commands.size(), 1U) << "the phrase alone is not a command";
+  EXPECT_TRUE(r.p->status().turn_in_progress) << "she keeps listening for the command";
+}
+
+TEST(VoicePipelineOpenChat, AWakePhraseInFollowUpMarksCommandAsWakeOpened) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.AskByVoice();
+  r.link.Receiver()->OnSpeak("Answer.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  r.Settle();
+  ASSERT_TRUE(r.p->status().follow_up_open);
+
+  r.stt.text = "Hey Jarvis, so tired right now.";
+  r.Frames(1000, 30);
+  r.Frames(0, 25);
+  r.Settle();
+  ASSERT_EQ(r.link.commands.size(), 2U);
+  EXPECT_TRUE(r.link.commands[1].in_session);
+  EXPECT_FALSE(r.link.commands[1].in_follow_up);
+  EXPECT_EQ(r.link.commands[1].text, "so tired right now.");
+}
+
+TEST(VoicePipelineOpenChat, PlainSpeechInFollowUpKeepsInFollowUpTrue) {
+  PipelineConfig cfg;
+  cfg.turn.sessions_enabled = true;
+  Rig r(cfg);
+  r.p->PreloadClips();
+  r.AskByVoice();
+  r.link.Receiver()->OnSpeak("Answer.");
+  r.link.Receiver()->OnFinished(true);
+  r.Settle();
+  r.sink.playing = false;
+  r.Frames(0, 2);
+  r.Settle();
+  ASSERT_TRUE(r.p->status().follow_up_open);
+
+  r.stt.text = "tell me more";
+  r.Frames(1000, 30);
+  r.Frames(0, 25);
+  r.Settle();
+  ASSERT_EQ(r.link.commands.size(), 2U);
+  EXPECT_TRUE(r.link.commands[1].in_session);
+  EXPECT_TRUE(r.link.commands[1].in_follow_up);
+  EXPECT_EQ(r.link.commands[1].text, "tell me more");
 }
 
 }  // namespace

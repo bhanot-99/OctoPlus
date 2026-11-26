@@ -1,0 +1,19 @@
+{
+  "label": "speak",
+  "passed": 0,
+  "total": 1,
+  "results": [
+    {
+      "id": "A1",
+      "group": "facts",
+      "asked": "what is the capital of France",
+      "heard": "",
+      "reply": "",
+      "route": null,
+      "seconds": null,
+      "fails": [
+        "no answer was heard from her"
+      ]
+    }
+  ]
+}

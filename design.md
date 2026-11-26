@@ -356,6 +356,18 @@ Every spoken word — answers, preambles, nudges, errors — comes from the same
 
 Two short tones: *listening* (rising two-note) and *cancelled* (single low note). No tone on success.
 
+### 9.6 Companion mode (Phase 12)
+
+- Open-mic sessions: conversation continues without repeating the wake word until natural end, stop phrase or timeout.
+- Visible state and earcons: OctoPit shows session state and time left; short earcons mark session start and end.
+- Guest mode: a phrase ("someone's here") silences the companion for a chosen time.
+- Voice only in this phase: conversation is voice only; OctoPit provides status and controls.
+- Laila persona: logic and heart mode machine defined in [companion-persona-laila.md](docs/design/companion-persona-laila.md).
+- She starts a talk herself 2 to 4 times an hour, only in a free moment (never in a call, a fullscreen app, quiet hours or guest mode); "not now" and "quiet for an hour" always work.
+- Humour follows the owner's "that was funny" and "not funny", and switches itself off late at night and when the owner sounds sad or tired.
+- She keeps some of what the owner tells her about themselves (about 4 in 10), says "got it" now and then, and lists or forgets it on request.
+- OctoPit has a Companion page (rhythm, today's talks, switches, memory list with Forget) and one line under the voice card; it shows and steers, it does not chat.
+
 ---
 
 ## 10. Accessibility Checklist
@@ -391,3 +403,9 @@ Two short tones: *listening* (rising two-note) and *cancelled* (single low note)
 ```
 
 (The full file includes every token in §3 and §5.)
+
+---
+
+## 12. Design requirements
+
+- **DR-1:** Companion and nudge speech produces words only. It has no path to Dispatch. Actions go through the router and the safety kernel's tiers. Approval is given only in the dialog (R0-7).

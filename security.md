@@ -79,6 +79,8 @@ STRIDE letters: **S**poofing, **T**ampering, **R**epudiation, **I**nformation di
 | Injected text plants a "personal fact" | T, E | Facts are saved only on the user's word; under taint, saving needs the dialog. |
 | Injected text triggers a nudge | S | Nudges are templates and numbers from first-party health samples only; the engine never reads evidence text. |
 | Injected text asks the user to approve something | S | The dialog states plainly what will happen and why confirmation is needed, including "this request was influenced by web content". |
+| The companion's chance memory saves something it should not | T, I | The decision (`companion/memory.rs`) never saves secrets, keys, card or account numbers, health details, other people's private matters, topics the owner marked sensitive, crisis talk or ambient speech; only the owner's own sentence is kept (never model text), under `USER_PROVIDED` taint, as one audited `profile.remember` call, never when the session holds web text; kept facts are marked `(noticed)`, listed on request and in OctoPit, and forgotten on request. |
+| Companion text and model-written lines are untrusted output | E, S | DR-1: Companion and nudge speech produces words only. It has no path to Dispatch. Actions go through the router and the safety kernel's tiers. Approval is given only in the dialog (R0-7). |
 
 ### 4.4 Knowledge → kernel (Zone 2 → Zone 3)
 
@@ -107,6 +109,9 @@ STRIDE letters: **S**poofing, **T**ampering, **R**epudiation, **I**nformation di
 | Capture attaches to the wrong device | I | Connect only to the exact configured node; if it cannot be resolved, capture nothing. |
 | Audio from speakers issues commands | S, E | Own playback is ignored; hands-free commands can run SAFE skills only; anything else needs the dialog. |
 | The buddy speaks private details aloud | I | Generic nudge wording by default; hold when the user is away, locked or fullscreen; notify-only mode; answers never read raw paths, hashes or URLs. |
+| Open-microphone sessions: a session starts without the wake word and hears more than before | I | Session indicator, start and end sounds, stop phrases and mic button, 15 minute maximum, guest mode, no audio stored. |
+| A companion line is spoken by anyone who can reach C2 | S, E | `SpeakCompanion` is accepted only on `voice.sock`, which only C5 may open (the socket map); text is at most 400 bytes of valid UTF-8; refused during a turn, a session, guest mode or another app's microphone use; at most one a minute. |
+| Ambient speech: TV, calls or other people start a session or get saved | I, S | Directedness check, other app holding the microphone, ambient speech is never saved without an explicit remember (R0-8), DR-1 limits harm of a false trigger. |
 
 ### 4.7 Same-user parts against each other
 
@@ -178,6 +183,11 @@ A control without a test is a hope. Each row is an exit criterion of the phase n
 
 | Control | How it is proven | Phase |
 | :--- | :--- | :--- |
+| Companion speech has no path to actions (DR-1) | `companion_isolation_test` scans the companion tree for any dispatch, action or fact-store name; `whatever_the_model_writes_the_companion_acts_on_nothing` runs 160 companion turns with hostile model output (skill JSON, role markers, "delete my files", "approve the dialog") and only owner-worded `profile.remember` calls from the memory rule ever reach the kernel | 12 |
+| Chance memory exclusions | `nothing_excluded_is_ever_kept_by_chance` (23 sentences, 2000 tries each, never kept), ambient and question tests, share 0.44 to 0.48 over 6000 statements (`companion_memory_test`) | 12 |
+| No personal content in companion logs (R0-10) | `companion_log_scan_test` reads every `info!`, `warn!` and `error!` in the companion code and rejects any that names text, a line, a fact or a reply | 12 |
+| Hostile stored facts and persona text cannot break a prompt | `a_hostile_stored_fact_cannot_break_the_prompt`, `companion_prompt_test` (role markers and tags are neutralised, the system block never changes) | 12 |
+| Open microphone stores no audio | The voice service has no file-writing code (`cpp/octoplus-voice` opens no file for writing; earcons are made in memory); live proof with `scripts/voice-sc-checks.sh` on the installed stack | 12 |
 | No network in isolated units | Inside each real unit: TCP connect, DNS lookup and raw socket all fail; local sockets still work (`local_sc_proof_1_net`). Every running part has its own network namespace with only `lo` (`scripts/check-egress.sh`; a part in the host namespace is a failure). Every user unit has exactly one exec (generator test), since a second exec drops `PrivateNetwork=` in user scope (ADR-0002 addendum) | 1, re-run in 9 |
 | Socket map enforced | In each part's exact unit, every socket folder outside its row of the map is invisible (ENOENT), every one in it visible; expectations come from `socketmap` (`local_sc_proof_2_socket_map`, negative control: an extra bind is detected). Second layer (server peer-unit check): `octoplus-ipc` peer tests | 1, 9 |
 | Landlock applied before input | Each real part (Rust and C++) reads a canary visible in its unit but outside its policy right after `restrict`; healthd must report `landlock_canary_denied` for all of them, and `cat` of the same file in each unit's exact namespace without Landlock must succeed (`local_sc_proof_3_landlock`). No shipped binary can skip `restrict` (test-only feature, BUG-025) | 1 onward |
@@ -199,7 +209,7 @@ A control without a test is a hope. Each row is an exit criterion of the phase n
 | No audio on disk | File-watch over home and temp during a full voice session. Phase 7: `scripts/voice-sc-checks.sh` on the installed stack: during a spoken exchange no audio file (by extension) appears under home or the temp folders and the live process holds no file descriptor open for writing; the Landlock policy grants write access only to the socket folders and the PipeWire socket (`liboctoplus` `ASingleFileCanBeGrantedAndItsNeighbourStaysClosed`); `octoplus-voice` logs counts only, never text (the optional `OCTOPLUS_VOICE_TRACE` prints event names) | 7 |
 | Capture device strictness | Configured node missing → no capture stream exists. Phase 7: `LocalPipeWire.AMissingMicrophoneMeansNoCaptureAtAll` (adapter) and `scripts/voice-sc-checks.sh` (installed unit with a nonexistent `capture_node`: the service reports it is not listening and `pw-cli` shows no `octoplus-voice-capture` node); an unplugged device is reported (`AnUnpluggedMicrophoneIsReported`) | 7 |
 | No nudge spoken while another app holds the microphone | Phase 7: the microphone probe sees another application's running capture stream (`TheMicrophoneProbeSeesAnotherAppCapturing`); C5 holds or notifies instead of speaking (`another_app_on_the_microphone_or_a_turn_in_progress_means_no_speech`); C2 itself refuses a nudge during a turn (`ANudgeIsRefusedWhileATurnIsInProgress`) | 7 |
-| Voice has no approval path | A transcript is only text to C5; the turn engine treats it like a typed question (same taint and kernel check); dialogs are answered on screen by C6 only (R0-8). `VoiceCommand` carries text, times and a flag, nothing that selects a tier | 7 |
+| Voice has no approval path | A transcript is only text to C5; the turn engine treats it like a typed question (same taint and kernel check); dialogs are answered on screen by C6 only (R0-7). `VoiceCommand` carries text, times and a flag, nothing that selects a tier | 7 |
 | SSRF policy | Corpus: every blocked range, encoded addresses, rebinding resolver, redirects to private targets, odd schemes; URL-parser fuzzing ≥ 1 h | 8 |
 | Fetcher identity | A non-kernel peer and a request without a valid token are rejected | 8 |
 | Request hygiene | Captured request has no cookies, referrer or identifying headers; text equals the approved text | 8 |

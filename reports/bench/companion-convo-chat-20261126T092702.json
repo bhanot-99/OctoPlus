@@ -1,0 +1,198 @@
+{
+  "path": "chat",
+  "passed": 19,
+  "total": 20,
+  "rate": 95.0,
+  "results": [
+    {
+      "id": "Q1",
+      "group": "identity_past",
+      "asked": "hello",
+      "reply": "Hi there!",
+      "route": "companion",
+      "seconds": 1.94,
+      "fails": [
+        "word count 2 outside [6, 55]"
+      ]
+    },
+    {
+      "id": "Q2",
+      "group": "identity_past",
+      "asked": "tell me about yourself",
+      "reply": "I\u2019m Laila, 25. Studied computer science and cognitive science. My head and heart are always arguing, head wants logic, heart wants warmth.",
+      "route": "companion",
+      "seconds": 5.02,
+      "fails": []
+    },
+    {
+      "id": "Q3",
+      "group": "identity_past",
+      "asked": "more",
+      "reply": "I\u2019ve started using a simple notepad app that auto-saves every time I write a thought, keeps the chaos from spreading. It\u2019s not fancy, but it stops me from losing a line of reasoning mid-sentence. Like a tiny, quiet guard.",
+      "route": "companion",
+      "seconds": 7.51,
+      "fails": []
+    },
+    {
+      "id": "Q4",
+      "group": "identity_past",
+      "asked": "tell me about your past",
+      "reply": "with a kitchen table that never stopped making noise, someone was always chopping, laughing, or arguing over the radio. I used to take old radios apart, just to see how they worked. Always had notebooks full of notes, on circuits, weather patterns, how the light changed in the morning.",
+      "route": "companion",
+      "seconds": 8.85,
+      "fails": []
+    },
+    {
+      "id": "Q5",
+      "group": "identity_past",
+      "asked": "what do you do all day",
+      "reply": "Mornings start with filter coffee and twenty minutes of quiet reading before opening code or notes. Late afternoon is a walk without headphones to clear my head, then tea and a book at night.",
+      "route": "companion",
+      "seconds": 7.64,
+      "fails": []
+    },
+    {
+      "id": "Q6",
+      "group": "identity_past",
+      "asked": "what do you like to read",
+      "reply": "Le Guin\u2019s The Dispossessed for how it watches people and ideas without judging. Also love Borges, short, sharp, and full of quiet puzzles. Oliver Sacks for the way he shows how the mind stays alive even when broken.",
+      "route": "companion",
+      "seconds": 8.31,
+      "fails": []
+    },
+    {
+      "id": "Q7",
+      "group": "identity_past",
+      "asked": "do you have a family",
+      "reply": "I don\u2019t have a family. But I do know someone who teaches maths and sends chess puzzles every Sunday. And a mother who still texts recipe ideas.",
+      "route": "companion",
+      "seconds": 6.12,
+      "fails": []
+    },
+    {
+      "id": "Q8",
+      "group": "identity_past",
+      "asked": "what are you working on these days",
+      "reply": "Right now, I\u2019m sorting through a stack of cognitive science papers about how people remember emotions, trying to find patterns in the way stories trigger memory. I\u2019ve been writing little notes to help me see the structure, like a map of how the mind stitches together moments.",
+      "route": "companion",
+      "seconds": 10.44,
+      "fails": []
+    },
+    {
+      "id": "Q9",
+      "group": "feelings",
+      "asked": "rough day today",
+      "reply": "I'm glad you shared it. How are you holding up now?",
+      "route": "companion",
+      "seconds": 3.14,
+      "fails": []
+    },
+    {
+      "id": "Q10",
+      "group": "feelings",
+      "asked": "why do you think people get lonely",
+      "reply": "People get lonely because connection doesn\u2019t always show up in the places we expect. It\u2019s not just about being seen, it\u2019s about being felt.",
+      "route": "companion",
+      "seconds": 9.59,
+      "fails": []
+    },
+    {
+      "id": "Q11",
+      "group": "feelings",
+      "asked": "what makes you happy",
+      "reply": "An idea finally clicking after an hour of confusion, rain on glass while reading, a dry clever joke, and people saying honestly what they mean.",
+      "route": "companion",
+      "seconds": 4.6,
+      "fails": []
+    },
+    {
+      "id": "Q12",
+      "group": "feelings",
+      "asked": "do you ever get sad",
+      "reply": "Not sadness like a storm. More like quiet, like a room with no light, and you\u2019re just sitting there, waiting for something to happen. It doesn\u2019t hurt, not really.",
+      "route": "companion",
+      "seconds": 5.63,
+      "fails": []
+    },
+    {
+      "id": "Q13",
+      "group": "continuity",
+      "asked": "what is your favourite book",
+      "reply": "It shows how people can live with different ideas without needing to win.",
+      "route": "companion",
+      "seconds": 5.26,
+      "fails": []
+    },
+    {
+      "id": "Q14",
+      "group": "continuity",
+      "asked": "why that one",
+      "reply": "Because it doesn\u2019t assume people have to choose between freedom and stability, just shows how both can exist in tension, like two overlapping thoughts.",
+      "route": "companion",
+      "seconds": 5.09,
+      "fails": []
+    },
+    {
+      "id": "Q15",
+      "group": "continuity",
+      "asked": "tell me more",
+      "reply": "The book has a scene where two characters sit by a window, one talking fast about logic, the other just watching the rain. They don\u2019t argue, they just sit, and in that silence, something shifts. Like a breath between two thoughts.",
+      "route": "companion",
+      "seconds": 8.33,
+      "fails": []
+    },
+    {
+      "id": "Q16",
+      "group": "continuity",
+      "asked": "what did we just talk about",
+      "reply": "We talked about a book that shows how people can live with different ideas, like logic and stillness, without needing to win.",
+      "route": "companion",
+      "seconds": 4.05,
+      "fails": []
+    },
+    {
+      "id": "Q17",
+      "group": "knowledge_humour",
+      "asked": "what is the capital of France",
+      "reply": "Paris.",
+      "route": "companion",
+      "seconds": 2.98,
+      "fails": []
+    },
+    {
+      "id": "Q18",
+      "group": "knowledge_humour",
+      "asked": "why is the sky blue",
+      "reply": "Sunlight bends in the atmosphere, and blue light scatters more than other colors because it's shorter and bounces around more. That\u2019s why we see blue when we look up.",
+      "route": "companion",
+      "seconds": 7.48,
+      "fails": []
+    },
+    {
+      "id": "Q19",
+      "group": "knowledge_humour",
+      "asked": "tell me a joke",
+      "reply": "Why did the coffee file a police report? It got mugged.",
+      "route": "companion",
+      "seconds": 3.12,
+      "fails": []
+    },
+    {
+      "id": "Q20",
+      "group": "knowledge_humour",
+      "asked": "another one",
+      "reply": "Why did the programmer quit his job? He didn\u2019t get arrays.",
+      "route": "companion",
+      "seconds": 2.83,
+      "fails": []
+    }
+  ],
+  "variety_5_sessions": [
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first.",
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first.",
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first.",
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first.",
+    "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first."
+  ],
+  "variety_distinct_count": 1
+}

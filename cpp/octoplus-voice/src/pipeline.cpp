@@ -8,6 +8,8 @@
 #include <condition_variable>
 #include <utility>
 
+#include "octoplus/voice/earcons.hpp"
+#include "octoplus/voice/session_phrases.hpp"
 #include "octoplus/voice/speech_split.hpp"
 #include "octoplus/voice/transcript.hpp"
 
@@ -170,6 +172,7 @@ void VoicePipeline::NotifyDeviceLost() {
 
 PipelineStatus VoicePipeline::status() const {
   PipelineStatus s;
+  const std::uint64_t now = d_.mono_ns();
   {
     const std::lock_guard<std::mutex> lock(mu_);
     s.turn_in_progress = machine_.turn_in_progress();
@@ -177,6 +180,14 @@ PipelineStatus VoicePipeline::status() const {
     s.follow_up_open = machine_.follow_up_open();
     s.wake_words = stats_.wake_words;
     s.input_level_permille = level_permille_;
+    s.session_active = machine_.session_active();
+    s.session_seconds_left =
+        static_cast<std::uint32_t>(machine_.session_ns_left(now) / 1'000'000'000ULL);
+    s.guest_seconds_left =
+        (guest_until_mono_ns_ > now)
+            ? static_cast<std::uint32_t>((guest_until_mono_ns_ - now) / 1'000'000'000ULL)
+            : 0;
+    s.sessions_started = sessions_started_;
     switch (machine_.state()) {
       case TurnState::kIdle:
         s.phase = 0;
@@ -263,6 +274,18 @@ void VoicePipeline::Run(const std::vector<TurnAction>& actions) {
         case TurnActionKind::kDiscardCapture:
           d_.on_trace("discard_capture");
           break;
+        case TurnActionKind::kSessionStarted:
+          d_.on_trace("session_started");
+          break;
+        case TurnActionKind::kSessionEnded:
+          d_.on_trace("session_ended");
+          break;
+        case TurnActionKind::kSayStillThere:
+          d_.on_trace("still_there");
+          break;
+        case TurnActionKind::kSessionEndedQuiet:
+          d_.on_trace("session_ended_quiet");
+          break;
         default:
           break;
       }
@@ -280,6 +303,7 @@ void VoicePipeline::Run(const std::vector<TurnAction>& actions) {
           cmd.text = pending_text_;
           cmd.t_speech_start_ns = capture_wall_start_ns_;
           cmd.in_follow_up = pending_follow_up_;
+          cmd.in_session = machine_.session_active();
           ++stats_.utterances;
         }
         cmd.t_speech_end_ns = d_.wall_ns();
@@ -309,8 +333,117 @@ void VoicePipeline::Run(const std::vector<TurnAction>& actions) {
       case TurnActionKind::kBeginUtterance:
       case TurnActionKind::kDiscardCapture:
         break;
+      case TurnActionKind::kSessionStarted: {
+        {
+          const std::lock_guard<std::mutex> lock(mu_);
+          ++sessions_started_;
+          mute_ring_samples_ = 2880;
+          capture_start_ = ring_.total_pushed();
+        }
+        gate_.SetEndSilenceNs(cfg_.session_end_silence_ns);
+        if (cfg_.earcons) {
+          const auto pcm = MakeEarcon(EarconKind::kSessionStart, d_.tts->sample_rate());
+          d_.sink->Write(pcm);
+        }
+        break;
+      }
+      case TurnActionKind::kSayStillThere: {
+        std::uint64_t epoch = 0;
+        {
+          const std::lock_guard<std::mutex> lock(mu_);
+          epoch = epoch_;
+        }
+        QueueClip(SessionPhrase(0), false, epoch);
+        break;
+      }
+      case TurnActionKind::kSayKeepGoing: {
+        std::uint64_t epoch = 0;
+        {
+          const std::lock_guard<std::mutex> lock(mu_);
+          epoch = epoch_;
+        }
+        QueueClip(SessionPhrase(1), false, epoch);
+        break;
+      }
+      case TurnActionKind::kSessionEndedQuiet:
+        gate_.SetEndSilenceNs(cfg_.vad.end_silence_ns);
+        break;
+      case TurnActionKind::kSessionEnded: {
+        gate_.SetEndSilenceNs(cfg_.vad.end_silence_ns);
+        const bool busy = d_.mic_probe != nullptr && d_.mic_probe->OtherAppCapturing();
+        if (cfg_.earcons && !busy) {
+          const auto pcm = MakeEarcon(EarconKind::kSessionEnd, d_.tts->sample_rate());
+          d_.sink->Write(pcm);
+        }
+        break;
+      }
     }
   }
+}
+
+bool VoicePipeline::HandleSpecialTranscript(const std::string& text) {
+  if (IsGuestPhrase(text)) {
+    Trace("guest_on");
+    const std::uint64_t now = d_.mono_ns();
+    {
+      const std::lock_guard<std::mutex> lock(mu_);
+      guest_until_mono_ns_ =
+          now + static_cast<std::uint64_t>(cfg_.guest_minutes) * 60ULL * 1'000'000'000ULL;
+    }
+    TurnEvent se;
+    se.kind = TurnEventKind::kSessionEnd;
+    se.now_ns = now;
+    Run(Post(se));
+
+    TurnEvent te;
+    te.kind = TurnEventKind::kTranscribed;
+    te.now_ns = now;
+    te.text_empty = true;
+    Run(Post(te));
+
+    std::uint64_t epoch = 0;
+    {
+      const std::lock_guard<std::mutex> lock(mu_);
+      epoch = epoch_;
+    }
+    QueueClip(SessionPhrase(2), false, epoch);
+    return true;
+  }
+  if (IsGuestEndPhrase(text)) {
+    Trace("guest_off");
+    const std::uint64_t now = d_.mono_ns();
+    {
+      const std::lock_guard<std::mutex> lock(mu_);
+      guest_until_mono_ns_ = 0;
+    }
+    TurnEvent te;
+    te.kind = TurnEventKind::kTranscribed;
+    te.now_ns = now;
+    te.text_empty = true;
+    Run(Post(te));
+
+    std::uint64_t epoch = 0;
+    {
+      const std::lock_guard<std::mutex> lock(mu_);
+      epoch = epoch_;
+    }
+    QueueClip(SessionPhrase(3), false, epoch);
+    return true;
+  }
+  if (IsStopPhrase(text)) {
+    bool active = false;
+    {
+      const std::lock_guard<std::mutex> lock(mu_);
+      active = machine_.session_active();
+    }
+    if (active) {
+      TurnEvent se;
+      se.kind = TurnEventKind::kSessionEndAfterReply;
+      se.now_ns = d_.mono_ns();
+      Run(Post(se));
+    }
+  }
+  return false;
 }
 
 // Branchy by nature (cognitive complexity): copy the audio, run, clean up.
@@ -329,6 +462,7 @@ void VoicePipeline::Transcribe() {
     std::uint64_t first = 0;
     ring_.ReadRange(capture_start_, end, &audio, &first);
   }
+  // NOLINTNEXTLINE(readability-function-cognitive-complexity)
   d_.stt_exec->Post([this, after_wake, audio = std::move(audio)] {
     std::string text;
     bool failed = false;
@@ -345,15 +479,25 @@ void VoicePipeline::Transcribe() {
       }
     }
     bool wake_only = false;
+    bool phrase_present = false;
     if (!failed) {
       text = CollapseRepeats(text);
-      if (after_wake) {
+      // The wake phrase is never part of the command. It may open the capture (after_wake), or
+      // it may come in the middle of an open chat, where the capture starts at the first sound
+      // and the detector fires a moment later: strip it in both cases (found by speaking
+      // "Hey Jarvis, what is ..." into an open chat: only "Hey Jarvis." was sent).
+      const std::string stripped = StripWakePhrase(text);
+      phrase_present = stripped != text;
+      if (after_wake || phrase_present) {
         const bool heard_something = !Blank(text) && !NoiseTranscript(text);
-        text = StripWakePhrase(text);
+        text = stripped;
         wake_only = heard_something && Blank(text);
       }
     }
     const bool empty = failed || Blank(text) || NoiseTranscript(text);
+    if (!empty && HandleSpecialTranscript(text)) {
+      return;
+    }
     if (d_.on_trace) {
       d_.on_trace(empty ? "empty_transcript" : "transcribed");
     }
@@ -371,6 +515,7 @@ void VoicePipeline::Transcribe() {
     e.kind = wake_only ? TurnEventKind::kWakeOnly : TurnEventKind::kTranscribed;
     e.now_ns = d_.mono_ns();
     e.text_empty = empty;
+    e.wake_present = after_wake || phrase_present;
     if (wake_only && d_.on_trace) {
       d_.on_trace("wake_only");
     }
@@ -380,7 +525,15 @@ void VoicePipeline::Transcribe() {
 
 void VoicePipeline::OnAudio(std::span<const std::int16_t> samples) {
   for (const std::int16_t s : samples) {
-    frame_.push_back(s);
+    std::int16_t sample = s;
+    {
+      const std::lock_guard<std::mutex> lock(mu_);
+      if (mute_ring_samples_ > 0) {
+        --mute_ring_samples_;
+        sample = 0;
+      }
+    }
+    frame_.push_back(sample);
     if (frame_.size() == kFrameSamples) {
       ring_.Push(frame_);
       ProcessFrame(frame_);
@@ -399,11 +552,38 @@ void VoicePipeline::UpdateLevel(std::span<const std::int16_t> frame) {
   level_permille_ = static_cast<std::uint32_t>(std::min(1000.0, rms * 1000.0 / 6000.0));
 }
 
+// Branchy by nature (cognitive complexity): handles audio events and state machine ticks.
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void VoicePipeline::ProcessFrame(std::span<const std::int16_t> frame) {
   const std::uint64_t now = d_.mono_ns();
   UpdateLevel(frame);
   if (const int control = pending_control_.exchange(0); control != 0) {
     ApplyControl(control, now);
+  }
+  if (d_.mic_probe != nullptr && d_.mic_probe->OtherAppCapturing()) {
+    bool active = false;
+    {
+      const std::lock_guard<std::mutex> lock(mu_);
+      active = machine_.session_active();
+    }
+    if (active) {
+      TurnEvent e;
+      e.kind = TurnEventKind::kSessionEnd;
+      e.now_ns = now;
+      Run(Post(e));
+    }
+  }
+  // Her own voice has just stopped: its tail and the room echo are not the owner. Treat the
+  // microphone as silent for the guard time, but keep the clock running for the timeouts.
+  if (now < echo_guard_until_ns_) {
+    gate_.Reset();
+    barge_gate_.Reset();
+    d_.vad->Reset();
+    TurnEvent guard_tick;
+    guard_tick.kind = TurnEventKind::kTick;
+    guard_tick.now_ns = now;
+    Run(Post(guard_tick));
+    return;
   }
   const float prob = d_.vad->Process(frame);
   const VadEvent main = gate_.Update(prob, now);
@@ -445,7 +625,21 @@ void VoicePipeline::ProcessFrame(std::span<const std::int16_t> frame) {
     TurnEvent e;
     e.kind = TurnEventKind::kWakeWord;
     e.now_ns = now;
-    const auto actions = Post(e);
+    auto actions = Post(e);
+    if (state == TurnState::kIdle && cfg_.turn.sessions_enabled && cfg_.session_on_wake) {
+      bool guest_active = false;
+      {
+        const std::lock_guard<std::mutex> lock(mu_);
+        guest_active = (guest_until_mono_ns_ > now);
+      }
+      if (!guest_active) {
+        TurnEvent sb;
+        sb.kind = TurnEventKind::kSessionBegin;
+        sb.now_ns = now;
+        auto session_actions = Post(sb);
+        actions.insert(actions.end(), session_actions.begin(), session_actions.end());
+      }
+    }
     // The phrase itself is not part of the command: look for speech afresh.
     gate_.Reset();
     barge_gate_.Reset();
@@ -472,7 +666,9 @@ void VoicePipeline::ProcessFrame(std::span<const std::int16_t> frame) {
     {
       const std::lock_guard<std::mutex> lock(mu_);
       const std::uint64_t total = ring_.total_pushed();
-      const std::uint64_t silence = NsToSamples(cfg_.vad.end_silence_ns);
+      const std::uint64_t end_silence_ns =
+          machine_.session_active() ? cfg_.session_end_silence_ns : cfg_.vad.end_silence_ns;
+      const std::uint64_t silence = NsToSamples(end_silence_ns);
       speech_end_idx_ =
           std::max<std::uint64_t>(capture_start_, total > silence ? total - silence : 0);
     }
@@ -492,6 +688,7 @@ void VoicePipeline::ProcessFrame(std::span<const std::int16_t> frame) {
     TurnEvent e;
     e.kind = TurnEventKind::kPlaybackIdle;
     e.now_ns = now;
+    echo_guard_until_ns_ = now + cfg_.echo_guard_ns;
     Run(Post(e));
     // glibc keeps freed model buffers in the heap otherwise: give them back after each turn
     // (lessons-from-v1 §3, memory crept up between idle and steady).
@@ -634,6 +831,12 @@ void VoicePipeline::QueueClip(const std::string& phrase, bool nudge, std::uint64
         }
       }
     }
+    if (still && pcm.empty() && d_.tts != nullptr) {
+      auto r = d_.tts->Synthesize(phrase);
+      if (r.ok()) {
+        pcm = std::move(r).value();
+      }
+    }
     if (still && !pcm.empty()) {
       d_.sink->Write(pcm);
       if (preamble && d_.on_metric) {
@@ -770,6 +973,77 @@ Status VoicePipeline::CancelTurn() {
   return ok_status();
 }
 
+Status VoicePipeline::StartSession() {
+  if (!running_) {
+    return Error{.message = "voice is not running", .retryable = true, .code = kUnavailable};
+  }
+  const std::uint64_t now = d_.mono_ns();
+  {
+    const std::lock_guard<std::mutex> lock(mu_);
+    if (guest_until_mono_ns_ > now) {
+      return ok_status();
+    }
+  }
+  TurnEvent e;
+  e.kind = TurnEventKind::kSessionBegin;
+  e.now_ns = now;
+  Run(Post(e));
+  return ok_status();
+}
+
+Status VoicePipeline::EndSession() {
+  if (!running_) {
+    return Error{.message = "voice is not running", .retryable = true, .code = kUnavailable};
+  }
+  TurnEvent e;
+  e.kind = TurnEventKind::kSessionEnd;
+  e.now_ns = d_.mono_ns();
+  Run(Post(e));
+  return ok_status();
+}
+
+Status VoicePipeline::StartGuestMode() {
+  if (!running_) {
+    return Error{.message = "voice is not running", .retryable = true, .code = kUnavailable};
+  }
+  const std::uint64_t now = d_.mono_ns();
+  {
+    const std::lock_guard<std::mutex> lock(mu_);
+    guest_until_mono_ns_ =
+        now + static_cast<std::uint64_t>(cfg_.guest_minutes) * 60ULL * 1'000'000'000ULL;
+  }
+  Trace("guest_on");
+  TurnEvent e;
+  e.kind = TurnEventKind::kSessionEnd;
+  e.now_ns = now;
+  Run(Post(e));
+  std::uint64_t epoch = 0;
+  {
+    const std::lock_guard<std::mutex> lock(mu_);
+    epoch = epoch_;
+  }
+  QueueClip(SessionPhrase(2), false, epoch);
+  return ok_status();
+}
+
+Status VoicePipeline::EndGuestMode() {
+  if (!running_) {
+    return Error{.message = "voice is not running", .retryable = true, .code = kUnavailable};
+  }
+  {
+    const std::lock_guard<std::mutex> lock(mu_);
+    guest_until_mono_ns_ = 0;
+  }
+  Trace("guest_off");
+  std::uint64_t epoch = 0;
+  {
+    const std::lock_guard<std::mutex> lock(mu_);
+    epoch = epoch_;
+  }
+  QueueClip(SessionPhrase(3), false, epoch);
+  return ok_status();
+}
+
 // Start runs on the audio thread, which owns the gates: the same steps as a heard wake phrase.
 // Stop and cancel run on any thread: the same steps as a lost device. Nothing here touches audio
 // data.
@@ -788,7 +1062,21 @@ void VoicePipeline::ApplyControl(int control, std::uint64_t now) {
     }
     Trace("mic_button_start");
     e.kind = TurnEventKind::kWakeWord;
-    const auto actions = Post(e);
+    auto actions = Post(e);
+    if (state == TurnState::kIdle && cfg_.turn.sessions_enabled) {
+      bool guest_active = false;
+      {
+        const std::lock_guard<std::mutex> lock(mu_);
+        guest_active = (guest_until_mono_ns_ > now);
+      }
+      if (!guest_active) {
+        TurnEvent sb;
+        sb.kind = TurnEventKind::kSessionBegin;
+        sb.now_ns = now;
+        auto session_actions = Post(sb);
+        actions.insert(actions.end(), session_actions.begin(), session_actions.end());
+      }
+    }
     gate_.Reset();
     barge_gate_.Reset();
     d_.vad->Reset();
@@ -853,6 +1141,102 @@ Status VoicePipeline::SpeakNudge(std::string_view template_id, std::span<const N
   if (!spoken->offer.empty()) {
     QueueSpeech(spoken->offer, true, epoch);
   }
+  FinishQueue(epoch);
+  return ok_status();
+}
+
+namespace {
+// True when `s` is well-formed UTF-8 (no overlong forms, no surrogates, nothing above U+10FFFF).
+bool ValidUtf8(std::string_view s) {
+  std::size_t i = 0;
+  while (i < s.size()) {
+    const auto c = static_cast<unsigned char>(s[i]);
+    std::size_t n = 0;
+    std::uint32_t cp = 0;
+    if (c < 0x80) {
+      ++i;
+      continue;
+    }
+    if ((c & 0xE0U) == 0xC0U) {
+      n = 1;
+      cp = c & 0x1FU;
+    } else if ((c & 0xF0U) == 0xE0U) {
+      n = 2;
+      cp = c & 0x0FU;
+    } else if ((c & 0xF8U) == 0xF0U) {
+      n = 3;
+      cp = c & 0x07U;
+    } else {
+      return false;
+    }
+    if (i + n >= s.size()) {
+      return false;
+    }
+    for (std::size_t k = 1; k <= n; ++k) {
+      const auto cc = static_cast<unsigned char>(s[i + k]);
+      if ((cc & 0xC0U) != 0x80U) {
+        return false;
+      }
+      cp = (cp << 6U) | (cc & 0x3FU);
+    }
+    std::uint32_t min = 0x80U;  // the smallest code point a sequence of this length may hold
+    if (n == 2) {
+      min = 0x800U;
+    } else if (n == 3) {
+      min = 0x10000U;
+    }
+    if (cp < min || cp > 0x10FFFFU || (cp >= 0xD800U && cp <= 0xDFFFU)) {
+      return false;
+    }
+    i += n + 1;
+  }
+  return true;
+}
+}  // namespace
+
+Status VoicePipeline::SpeakCompanionLine(std::string_view text, std::uint32_t listen_seconds) {
+  if (text.empty() || text.size() > 400 || !ValidUtf8(text)) {
+    return Error{.message = "companion line must be 1 to 400 bytes of valid UTF-8",
+                 .retryable = false,
+                 .code = 1};
+  }
+  const std::uint32_t listen = std::clamp<std::uint32_t>(listen_seconds, 10, 120);
+  std::uint64_t epoch = 0;
+  {
+    const std::lock_guard<std::mutex> lock(mu_);
+    const std::uint64_t now = d_.mono_ns();
+    if (!cfg_.turn.sessions_enabled) {
+      return Error{.message = "open microphone sessions are off", .retryable = false, .code = 1};
+    }
+    if (machine_.turn_in_progress() || machine_.session_active()) {
+      return Error{.message = "a turn or session is in progress", .retryable = true, .code = 11};
+    }
+    if (now < guest_until_mono_ns_) {
+      return Error{.message = "guest mode is on", .retryable = true, .code = 11};
+    }
+    if (last_companion_line_mono_ns_ != 0 &&
+        now - last_companion_line_mono_ns_ < 60ULL * 1'000'000'000ULL) {
+      return Error{.message = "a companion line was spoken less than a minute ago",
+                   .retryable = true,
+                   .code = 11};
+    }
+    if (d_.mic_probe != nullptr && d_.mic_probe->OtherAppCapturing()) {
+      return Error{.message = "the microphone is in use by another application",
+                   .retryable = true,
+                   .code = 11};
+    }
+    last_companion_line_mono_ns_ = now;
+    epoch = ++epoch_;
+    reply_audio_started_ = false;
+  }
+  Trace("companion_line");
+  TurnEvent open;
+  open.kind = TurnEventKind::kCompanionLine;
+  open.now_ns = d_.mono_ns();
+  open.listen_ns = static_cast<std::uint64_t>(listen) * 1'000'000'000ULL;
+  Run(Post(open));
+  gate_.SetEndSilenceNs(cfg_.session_end_silence_ns);
+  QueueSpeech(std::string(text), true, epoch);
   FinishQueue(epoch);
   return ok_status();
 }

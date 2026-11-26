@@ -40,14 +40,18 @@ std::string SpokenHours(double h);
 // few minutes"); 60..89 -> "an hour"; >= 90 -> "about N hours" with N = round(m/60)
 std::string SpokenMinutes(double m);
 
-// 1 thinking, 2 looking, 3 acknowledge (same numbers as proto PreambleKind); anything else ->
-// thinking
+// 1 thinking, 2 looking, 3 acknowledge, 4 backchannel (same numbers as proto PreambleKind);
+// anything else -> thinking
 const std::vector<std::string>& PreamblePhrases(int kind);
 
 // 1 part unavailable, 2 not sure, 3 error (proto StatusLine); anything else -> error line
 const std::string& StatusPhrase(int line);
 
-// Every preamble and status phrase, each once, for pre-rendering at startup (12 distinct entries)
+// 0 still there, 1 keep going, 2 stay quiet, 3 listening again; anything else -> 0
+const std::string& SessionPhrase(int which);
+
+// Every preamble, status phrase, and session phrase, each once, for pre-rendering at startup
+// (20 distinct entries)
 std::vector<std::string> AllCachedPhrases();
 
 }  // namespace octoplus::voice

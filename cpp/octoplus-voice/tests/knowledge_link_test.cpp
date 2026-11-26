@@ -72,6 +72,7 @@ struct FakeC5 {
                         }
                         last_text = r.envelope.voice_command().text();
                         last_follow_up = r.envelope.voice_command().in_follow_up();
+                        last_in_session = r.envelope.voice_command().in_session();
                         v1::Envelope p;
                         p.mutable_preamble_request()->set_kind(v1::PREAMBLE_KIND_LOOKING);
                         sink.Send(std::move(p));
@@ -97,6 +98,7 @@ struct FakeC5 {
   std::atomic<int> delay_ms{0};
   std::string last_text;
   bool last_follow_up = false;
+  bool last_in_session = false;
   std::atomic<int> cancelled{0};
   std::atomic<int> barge_ins{0};
 };
@@ -124,6 +126,22 @@ TEST(KnowledgeLink, FramesArriveInOrderThenDone) {
                                                       "speak:Sentence 2.", "done"}));
   EXPECT_EQ(c5.last_text, "what time is it");
   EXPECT_TRUE(c5.last_follow_up);
+  EXPECT_FALSE(c5.last_in_session);
+  c5.server->Stop();
+  std::filesystem::remove_all(dir);
+}
+
+TEST(KnowledgeLink, InSessionFlagIsCopiedToVoiceCommand) {
+  const auto dir = TempDir();
+  FakeC5 c5(dir);
+  KnowledgeLink link(std::make_shared<ipc::ReconnectingClient>(c5.path, 1 << 20));
+  Heard heard;
+  CommandMsg cmd;
+  cmd.text = "hello";
+  cmd.in_session = true;
+  link.SendCommand(cmd, &heard);
+  ASSERT_TRUE(heard.WaitFor("done", 3000ms));
+  EXPECT_TRUE(c5.last_in_session);
   c5.server->Stop();
   std::filesystem::remove_all(dir);
 }

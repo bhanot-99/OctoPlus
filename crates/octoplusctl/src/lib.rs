@@ -79,6 +79,25 @@ pub enum Commands {
         /// Suppress non-essential output.
         #[arg(long, short)]
         quiet: bool,
+
+        /// Companion chat mode (Phase 12).
+        #[arg(long)]
+        companion: bool,
+    },
+
+    /// Start an interactive companion chat session.
+    Chat {
+        /// Optional starting query text.
+        #[arg(num_args = 0..)]
+        question: Vec<String>,
+
+        /// Emit stream events as JSON lines.
+        #[arg(long)]
+        json: bool,
+
+        /// After the answer, print which route it took and its taint.
+        #[arg(long)]
+        explain: bool,
     },
 
     /// Storage: run a lifecycle job (gc, backup, rollup) or search what C3 remembers.

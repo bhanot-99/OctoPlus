@@ -1,6 +1,6 @@
 //! The Chat page: conversation view and composer (docs/design/octopit-ux.md §4.2).
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use gtk::gdk;
@@ -8,7 +8,7 @@ use gtk::glib;
 use gtk::prelude::*;
 use gtk4 as gtk;
 
-use octopit_core::chat::{AnswerInfo, Turn, TurnState};
+use octopit_core::chat::{AnswerInfo, ChatMode, Turn, TurnState};
 use octopit_core::controller::Command;
 use octopit_core::state::{AppState, Changed};
 
@@ -47,7 +47,63 @@ pub fn chip_tooltip(name: &str) -> &'static str {
 /// Returns a human-readable tooltip describing the pipeline route.
 #[must_use]
 pub fn route_tooltip(route: &str) -> String {
-    format!("Answer routed through the {route} pipeline.")
+    if route == "Laila" {
+        "Answered by Laila (companion mode; she only talks).".to_owned()
+    } else {
+        format!("Answer routed through the {route} pipeline.")
+    }
+}
+
+/// Explanatory line under the Chat title for `mode`.
+#[must_use]
+pub const fn mode_subtitle(mode: ChatMode) -> &'static str {
+    match mode {
+        ChatMode::Laila => {
+            "Chatting with Laila. She only talks: she can't change anything on your computer. Switch to Assistant for that."
+        }
+        ChatMode::Assistant => {
+            "Asking the Assistant. Typed questions only; it can search, check your day, and ask to run tasks."
+        }
+    }
+}
+
+/// Empty-state heading for `mode`.
+#[must_use]
+pub const fn empty_heading(mode: ChatMode) -> &'static str {
+    match mode {
+        ChatMode::Laila => "Talk with Laila",
+        ChatMode::Assistant => "Ask OctoPlus anything",
+    }
+}
+
+/// Empty-state subheading for `mode`.
+#[must_use]
+pub const fn empty_subheading(mode: ChatMode) -> &'static str {
+    match mode {
+        ChatMode::Laila => {
+            "Everything runs locally on this machine. Spoken conversations are not shown here yet."
+        }
+        ChatMode::Assistant => {
+            "Everything is answered on this machine. Spoken conversations are not shown here yet."
+        }
+    }
+}
+
+/// Starter prompts shown when the conversation is empty.
+#[must_use]
+pub const fn example_prompts(mode: ChatMode) -> [&'static str; 3] {
+    match mode {
+        ChatMode::Laila => [
+            "What is your name?",
+            "Tell me about yourself",
+            "Tell me a joke",
+        ],
+        ChatMode::Assistant => [
+            "What can you do?",
+            "How much battery is left?",
+            "What was I working on today?",
+        ],
+    }
 }
 
 struct TurnWidgets {
@@ -81,10 +137,16 @@ impl TurnWidgets {
             }
             TurnState::Done(info) => {
                 self.thinking_label.set_visible(false);
-                self.status_label.set_visible(false);
-                self.answer_label.set_visible(true);
-                if self.answer_label.text() != answer_text {
-                    self.answer_label.set_text(&answer_text);
+                if answer_text.is_empty() {
+                    self.answer_label.set_visible(false);
+                    self.status_label.set_text("No reply was received.");
+                    self.status_label.set_visible(true);
+                } else {
+                    self.status_label.set_visible(false);
+                    self.answer_label.set_visible(true);
+                    if self.answer_label.text() != answer_text {
+                        self.answer_label.set_text(&answer_text);
+                    }
                 }
                 if !self.chips_built {
                     self.build_chips(info);
@@ -180,11 +242,24 @@ fn update_send_button(button: &gtk::Button, is_busy: bool, has_text: bool) {
     }
 }
 
+/// Callback invoked when the user switches between Laila and Assistant.
+pub type ModeCallback = Box<dyn Fn(ChatMode)>;
+
 struct ChatPageInner {
     root: gtk::Box,
     vadjustment: gtk::Adjustment,
+    want_bottom: Cell<bool>,
+    auto_scrolling: Rc<Cell<bool>>,
     conv_box: gtk::Box,
     empty_state: gtk::Box,
+    empty_heading: gtk::Label,
+    empty_sub: gtk::Label,
+    prompts_box: gtk::Box,
+    subtitle_label: gtk::Label,
+    btn_laila: gtk::ToggleButton,
+    btn_assistant: gtk::ToggleButton,
+    updating_mode: Cell<bool>,
+    mode_callbacks: RefCell<Vec<ModeCallback>>,
     text_view: gtk::TextView,
     send_button: gtk::Button,
     turns_widgets: RefCell<Vec<TurnWidgets>>,
@@ -193,15 +268,61 @@ struct ChatPageInner {
 
 impl ChatPageInner {
     fn send(&self, text: &str) {
-        let q = {
+        let (mode, q) = {
             let mut st = self.ctx.state.borrow_mut();
-            st.conversation.begin(text)
+            let mode = st.chat_mode;
+            let q = st.conversation.begin_in_mode(text, mode);
+            (mode, q)
         };
         if let Some(q) = q {
             self.text_view.buffer().set_text("");
             self.sync_turns(&self.ctx.state.borrow());
-            if !self.ctx.controller.send(Command::Ask(q)) {
+            if !self.ctx.controller.send(Command::Ask { text: q, mode }) {
                 (self.ctx.toast)("The background service stopped. Restart OctoPit.");
+            }
+        }
+    }
+
+    fn apply_mode_ui(self: &Rc<Self>, mode: ChatMode) {
+        self.updating_mode.set(true);
+        match mode {
+            ChatMode::Laila => self.btn_laila.set_active(true),
+            ChatMode::Assistant => self.btn_assistant.set_active(true),
+        }
+        self.updating_mode.set(false);
+        if self.subtitle_label.text() != mode_subtitle(mode) {
+            self.subtitle_label.set_text(mode_subtitle(mode));
+            self.empty_heading.set_text(empty_heading(mode));
+            self.empty_sub.set_text(empty_subheading(mode));
+            self.rebuild_prompts(mode);
+        }
+    }
+
+    fn rebuild_prompts(self: &Rc<Self>, mode: ChatMode) {
+        while let Some(child) = self.prompts_box.first_child() {
+            self.prompts_box.remove(&child);
+        }
+        for text in example_prompts(mode) {
+            let btn = gtk::Button::with_label(text);
+            btn.add_css_class("example-prompt");
+            btn.update_property(&[gtk::accessible::Property::Label(text)]);
+            let inner_weak = Rc::downgrade(self);
+            let prompt_text = text.to_owned();
+            btn.connect_clicked(move |_| {
+                if let Some(inner) = inner_weak.upgrade() {
+                    inner.send(&prompt_text);
+                }
+            });
+            self.prompts_box.append(&btn);
+        }
+    }
+
+    fn set_mode(self: &Rc<Self>, mode: ChatMode, notify: bool) {
+        let changed = self.ctx.state.borrow_mut().set_chat_mode(mode);
+        self.apply_mode_ui(mode);
+        if notify && changed {
+            for cb in self.mode_callbacks.borrow().iter() {
+                cb(mode);
             }
         }
     }
@@ -228,14 +349,18 @@ impl ChatPageInner {
 
         self.empty_state.set_visible(false);
 
-        let stick = should_stick_to_bottom(
-            self.vadjustment.value(),
-            self.vadjustment.page_size(),
-            self.vadjustment.upper(),
-        );
-
         let mut widgets = self.turns_widgets.borrow_mut();
         let current_len = widgets.len();
+        let added_turn = turns.len() > current_len;
+        if added_turn {
+            self.want_bottom.set(true);
+        }
+        let stick = self.want_bottom.get()
+            || should_stick_to_bottom(
+                self.vadjustment.value(),
+                self.vadjustment.page_size(),
+                self.vadjustment.upper(),
+            );
 
         for turn in turns.iter().skip(current_len) {
             let tw = Self::create_turn_widgets(turn);
@@ -251,9 +376,12 @@ impl ChatPageInner {
 
         if stick {
             let vadj = self.vadjustment.clone();
+            let auto = Rc::clone(&self.auto_scrolling);
             glib::idle_add_local_once(move || {
+                auto.set(true);
                 let target = (vadj.upper() - vadj.page_size()).max(0.0);
                 vadj.set_value(target);
+                auto.set(false);
             });
         }
 
@@ -331,6 +459,7 @@ impl ChatPageInner {
 }
 
 /// The Chat page.
+#[derive(Clone)]
 pub struct ChatPage {
     inner: Rc<ChatPageInner>,
 }
@@ -342,15 +471,40 @@ impl ChatPage {
         let root = gtk::Box::new(gtk::Orientation::Vertical, 12);
         root.set_margin_top(16);
 
+        let initial_mode = ctx.state.borrow().chat_mode;
+
         // Header
-        let header_box = gtk::Box::new(gtk::Orientation::Vertical, 4);
+        let header_box = gtk::Box::new(gtk::Orientation::Vertical, 6);
         header_box.set_margin_start(24);
         header_box.set_margin_end(24);
-        header_box.append(&label("Chat", &["title-page"]));
-        header_box.append(&label(
-            "Typed questions only. Spoken conversations are not shown here yet.",
-            &["caption"],
-        ));
+
+        let title_row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+        title_row.set_valign(gtk::Align::Center);
+        let page_title = label("Chat", &["title-page"]);
+        page_title.set_hexpand(true);
+        title_row.append(&page_title);
+
+        let mode_box = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        mode_box.add_css_class("seg");
+        mode_box.set_valign(gtk::Align::Center);
+
+        let btn_laila = gtk::ToggleButton::with_label("Laila");
+        btn_laila.add_css_class("btn");
+        btn_laila.update_property(&[gtk::accessible::Property::Label("Chat with Laila")]);
+
+        let btn_assistant = gtk::ToggleButton::with_label("Assistant");
+        btn_assistant.add_css_class("btn");
+        btn_assistant.update_property(&[gtk::accessible::Property::Label("Chat with Assistant")]);
+        btn_assistant.set_group(Some(&btn_laila));
+
+        mode_box.append(&btn_laila);
+        mode_box.append(&btn_assistant);
+        title_row.append(&mode_box);
+        header_box.append(&title_row);
+
+        let subtitle_label = label(mode_subtitle(initial_mode), &["caption"]);
+        subtitle_label.set_wrap(true);
+        header_box.append(&subtitle_label);
         root.append(&header_box);
         crate::widgets::clamp_width(&root, &header_box, 820, 24, 24);
 
@@ -380,19 +534,21 @@ impl ChatPage {
         empty_state.set_valign(gtk::Align::Center);
         empty_state.set_vexpand(true);
 
-        let heading = label("Ask OctoPlus anything", &["title-section"]);
-        heading.set_halign(gtk::Align::Center);
-        heading.set_xalign(0.5);
-        empty_state.append(&heading);
+        let empty_heading_label = label(empty_heading(initial_mode), &["title-section"]);
+        empty_heading_label.set_halign(gtk::Align::Center);
+        empty_heading_label.set_xalign(0.5);
+        empty_heading_label.set_wrap(true);
+        empty_state.append(&empty_heading_label);
 
-        let sub = label("Everything is answered on this machine.", &["caption"]);
-        sub.set_halign(gtk::Align::Center);
-        sub.set_xalign(0.5);
-        empty_state.append(&sub);
+        let empty_sub_label = label(empty_subheading(initial_mode), &["caption"]);
+        empty_sub_label.set_halign(gtk::Align::Center);
+        empty_sub_label.set_xalign(0.5);
+        empty_sub_label.set_wrap(true);
+        empty_state.append(&empty_sub_label);
 
-        let prompts = gtk::Box::new(gtk::Orientation::Vertical, 8);
-        prompts.add_css_class("chat-example-box");
-        empty_state.append(&prompts);
+        let prompts_box = gtk::Box::new(gtk::Orientation::Vertical, 8);
+        prompts_box.add_css_class("chat-example-box");
+        empty_state.append(&prompts_box);
         conv_box.append(&empty_state);
 
         // Composer
@@ -435,32 +591,76 @@ impl ChatPage {
 
         let inner = Rc::new(ChatPageInner {
             root,
-            vadjustment,
+            vadjustment: vadjustment.clone(),
+            want_bottom: Cell::new(true),
+            auto_scrolling: Rc::new(Cell::new(false)),
             conv_box,
             empty_state,
+            empty_heading: empty_heading_label,
+            empty_sub: empty_sub_label,
+            prompts_box,
+            subtitle_label,
+            btn_laila: btn_laila.clone(),
+            btn_assistant: btn_assistant.clone(),
+            updating_mode: Cell::new(false),
+            mode_callbacks: RefCell::new(Vec::new()),
             text_view: text_view.clone(),
             send_button: send_button.clone(),
             turns_widgets: RefCell::new(Vec::new()),
             ctx: ctx.clone(),
         });
+        inner.apply_mode_ui(initial_mode);
 
-        // Setup example prompt buttons
-        for text in [
-            "What can you do?",
-            "How much battery is left?",
-            "What was I working on today?",
-        ] {
-            let btn = gtk::Button::with_label(text);
-            btn.add_css_class("example-prompt");
-            btn.update_property(&[gtk::accessible::Property::Label(text)]);
+        // Keep scrolled to bottom when new content grows the list after GTK lays out the frame.
+        {
             let inner_weak = Rc::downgrade(&inner);
-            let prompt_text = text.to_owned();
-            btn.connect_clicked(move |_| {
-                if let Some(inner) = inner_weak.upgrade() {
-                    inner.send(&prompt_text);
+            vadjustment.connect_notify_local(Some("upper"), move |adj, _| {
+                if let Some(inner) = inner_weak.upgrade()
+                    && inner.want_bottom.get()
+                {
+                    inner.auto_scrolling.set(true);
+                    adj.set_value((adj.upper() - adj.page_size()).max(0.0));
+                    inner.auto_scrolling.set(false);
                 }
             });
-            prompts.append(&btn);
+        }
+        {
+            let inner_weak = Rc::downgrade(&inner);
+            vadjustment.connect_value_changed(move |adj| {
+                if let Some(inner) = inner_weak.upgrade()
+                    && !inner.auto_scrolling.get()
+                {
+                    inner.want_bottom.set(should_stick_to_bottom(
+                        adj.value(),
+                        adj.page_size(),
+                        adj.upper(),
+                    ));
+                }
+            });
+        }
+
+        // Mode switch handlers
+        {
+            let inner_weak = Rc::downgrade(&inner);
+            btn_laila.connect_toggled(move |btn| {
+                if btn.is_active()
+                    && let Some(inner) = inner_weak.upgrade()
+                    && !inner.updating_mode.get()
+                {
+                    inner.set_mode(ChatMode::Laila, true);
+                }
+            });
+        }
+        {
+            let inner_weak = Rc::downgrade(&inner);
+            btn_assistant.connect_toggled(move |btn| {
+                if btn.is_active()
+                    && let Some(inner) = inner_weak.upgrade()
+                    && !inner.updating_mode.get()
+                {
+                    inner.set_mode(ChatMode::Assistant, true);
+                }
+            });
         }
 
         // Setup key controller on TextView
@@ -524,6 +724,25 @@ impl ChatPage {
 
         Self { inner }
     }
+
+    /// Registers a callback invoked whenever the user switches the chat mode.
+    pub fn on_mode_change(&self, cb: ModeCallback) {
+        self.inner.mode_callbacks.borrow_mut().push(cb);
+    }
+
+    /// Switches the Laila/Assistant toggle in the real UI.
+    pub fn switch_mode(&self, mode: ChatMode) {
+        match mode {
+            ChatMode::Laila => self.inner.btn_laila.set_active(true),
+            ChatMode::Assistant => self.inner.btn_assistant.set_active(true),
+        }
+    }
+
+    /// Types `text` into the composer and clicks the Send button.
+    pub fn send_typed(&self, text: &str) {
+        self.inner.text_view.buffer().set_text(text);
+        self.inner.send_button.emit_clicked();
+    }
 }
 
 impl Page for ChatPage {
@@ -533,6 +752,7 @@ impl Page for ChatPage {
 
     fn refresh(&self, state: &AppState, changed: Changed) {
         if changed.chat {
+            self.inner.apply_mode_ui(state.chat_mode);
             self.inner.sync_turns(state);
         }
     }
@@ -581,5 +801,20 @@ mod tests {
 
         let route_tip = route_tooltip("action");
         assert!(route_tip.contains("action"));
+        let laila_tip = route_tooltip("Laila");
+        assert!(laila_tip.contains("Laila"));
+    }
+
+    #[test]
+    fn test_mode_copy_and_prompts() {
+        assert!(mode_subtitle(ChatMode::Laila).contains("Laila"));
+        assert!(mode_subtitle(ChatMode::Assistant).contains("Assistant"));
+        assert_ne!(
+            empty_heading(ChatMode::Laila),
+            empty_heading(ChatMode::Assistant)
+        );
+        assert!(!empty_subheading(ChatMode::Laila).is_empty());
+        assert_eq!(example_prompts(ChatMode::Laila)[0], "What is your name?");
+        assert_eq!(example_prompts(ChatMode::Assistant)[0], "What can you do?");
     }
 }

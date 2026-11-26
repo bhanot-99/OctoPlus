@@ -1,8 +1,8 @@
 # ADR-0019 — Companion mode: model-written talk, open-microphone sessions, proactive chat
 
-**Status:** Proposed 2026-11-23 (owner decisions recorded in `docs/plans/phase-12-companion-plan.md` §1; work has NOT started and waits for the owner to name a story)
+**Status:** Accepted 2026-11-25 (owner took Claude's defaults, memory.md D-77; C-S00 owner sign-off pending)
 **Date:** 2026-11-23
-**Changes (when work starts):** `rules.md` (R0-6 retired as ordered; the "speech has no path to actions" property kept as a design requirement unless the owner overrules), `phases.md`, ADR-0015, Phase 6 and 7 plans (references to R0-6), `PRD.md` (companion mode in scope), `design.md` (voice section), `security.md` (open microphone, ambient speech).
+**Changes (applied in C-S00 part A):** `rules.md` (R0-6 retired, R0-8 reworded), `design.md` (§9.6 companion mode, §12 DR-1), `security.md` (§4.3 untrusted companion text and DR-1, §4.6 open mic and ambient speech, line 202 R0-7 fix), `phases.md` (§2 Phase 12 roadmap entry, §15 model-written nudges under ADR-0019 and DR-1), `PRD.md` (§5.14 FR-COM-01–08), ADR-0015 and Phase 5/6/7 plans annotated with dated update.
 **Evidence:** the voice reports (first sound about 4.0 s median today), the nudge engine (templates, caps, quiet rules), the voice turn machine (wake word, an 8 s follow-up window, barge-in).
 
 ## Context
@@ -32,3 +32,21 @@ Good: a more alive assistant, fewer wake-word repeats, a measurable way to tune 
 | Keep the wake word every time | Not conversational |
 | Drop the "no path to actions" property too | An open microphone plus model text makes accidental commands possible: advised against, owner may overrule |
 | Voice-print identification of the speaker | Biometric data; not needed |
+
+## Defaults chosen 2026-11-25
+
+- Quiet hours 23:00-08:00
+- No avoided topics yet
+- Crisis text without phone numbers (owner supplies later)
+- One model only until the Mac
+- Persona defaults per `docs/design/companion-persona-laila.md` section 5a
+- DR-1 kept
+
+## How it was built (2026-11-25, branch `phase-12`)
+
+- **DR-1 in code.** Everything under `crates/octoplus-knowledge/src/companion/` and `src/turn/companion_turn.rs` is scanned by `tests/companion_isolation_test.rs`: none of it may name a dispatch, the action module, a fact store or the remember skill. The model's words go only to speech.
+- **Two places act, both outside that tree, both on the owner's own words and both audited:** `src/turn/chance_memory.rs` keeps a fact by the chance rule (the owner's sentence only, taint `USER_PROVIDED`, one `profile.remember` call to the safety kernel, never when the session holds web text) and `src/turn/companion_admin.rs` forgets a fact when the owner clicks Forget in OctoPit (one `profile.forget` call). Hostile model output across 160 turns never reached either (`whatever_the_model_writes_the_companion_acts_on_nothing`).
+- **Memory marker.** A fact kept by chance is stored with the text prefix `(noticed) `, so OctoPit and "what do you remember" can tell it from a fact the owner asked for, with no database change. The marker is stripped before the model sees the fact.
+- **Companion lines on C2.** One new message, `SpeakCompanion` (C5 to C2 on `voice.sock`, the same door and trust as `SpeakNudge`), speaks one line of at most 400 bytes and opens a quiet session that listens for `listen_seconds` (default 30) and closes without a sound if nobody answers. C2 refuses it during a turn, a session, guest mode, another app's microphone use, when open mic is off, and within 60 s of the previous one.
+- **Pulse defaults** (all in `deploy/persona/laila.toml`): 2 to 4 talks an hour, at most 40 a day, 10 minutes between talks, a talk forced after 90 minutes of free time (stretching to 180 and 270 after unwelcome talks), 20 minutes of quiet after an ignored talk, 60 after "not now". Measured over 200 simulated days: 2.03 talks per free hour, no gap longer than 155 minutes, no rule broken.
+- **Changes from the plan.** `per_day_cap` is 40, not 24 (24 contradicted "2 to 4 an hour"). Directedness is a word-list check only: the plan's extra "ask the model" step was not built (one model, and the cost). The OctoPit persona editor is not built: the page shows the rhythm and says where the file is.

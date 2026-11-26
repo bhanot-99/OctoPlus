@@ -60,6 +60,7 @@ void KnowledgeLink::Read(std::uint64_t gen, CommandMsg cmd, ReplyReceiver* recei
   vc->set_t_speech_start_ns(cmd.t_speech_start_ns);
   vc->set_t_speech_end_ns(cmd.t_speech_end_ns);
   vc->set_in_follow_up(cmd.in_follow_up);
+  vc->set_in_session(cmd.in_session);
   auto stream = client.value()->Open(std::move(req), deadline_);
   if (!stream.ok()) {
     if (trace_) {

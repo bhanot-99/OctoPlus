@@ -178,6 +178,8 @@ pub struct VoiceCard {
     state_label: gtk::Label,
     hint: gtk::Label,
     level: gtk::ProgressBar,
+    chat_line: gtk::Label,
+    companion_line: gtk::Label,
 }
 
 impl VoiceCard {
@@ -211,12 +213,23 @@ impl VoiceCard {
         hint.set_xalign(0.5);
         hint.set_justify(gtk::Justification::Center);
         root.append(&hint);
+        let chat_line = label("", &["caption"]);
+        chat_line.set_xalign(0.5);
+        chat_line.set_visible(false);
+        root.append(&chat_line);
+        let companion_line = label("", &["caption"]);
+        companion_line.set_wrap(true);
+        companion_line.set_xalign(0.5);
+        companion_line.set_justify(gtk::Justification::Center);
+        root.append(&companion_line);
         let card = Self {
             root,
             mic,
             state_label,
             hint,
             level,
+            chat_line,
+            companion_line,
         };
         card.refresh(&VoiceView::unavailable());
         card
@@ -228,8 +241,20 @@ impl VoiceCard {
         self.root.clone().upcast()
     }
 
+    /// Redraws the companion's one-line state under the voice card.
+    pub fn refresh_companion(&self, c: &octopit_core::companion::CompanionView) {
+        self.companion_line.set_text(&c.headline());
+    }
+
     /// Redraws from the voice state.
     pub fn refresh(&self, v: &VoiceView) {
+        match v.chat_line() {
+            Some(t) => {
+                self.chat_line.set_text(&t);
+                self.chat_line.set_visible(true);
+            }
+            None => self.chat_line.set_visible(false),
+        }
         self.mic.refresh(v);
         self.state_label.set_text(v.label());
         set_bar(&self.level, f64::from(v.level));

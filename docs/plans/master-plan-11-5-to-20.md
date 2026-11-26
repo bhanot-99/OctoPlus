@@ -302,7 +302,7 @@ you told it; one "not now" quiets it; you can always see when it is listening an
 | C-S05 | Memory of you as decided | Chance average 40 to 50 % over many events; exclusions never saved; forget works at once |
 | C-S06 | OctoPit: session indicator, companion card, settings, today's talks, feedback buttons | Screenshots both themes (this is reworked in Phase 16 for the Mac) |
 | C-S08 | Safety verification: companion speech cannot dispatch, no audio written, injection tests, log scan | Security report; gate green |
-| C-S09 | 24 h soak in companion mode, then a one-week "aliveness" trial with daily ratings | Report with numbers and ratings |
+| ~~C-S09~~ | Not part of Phase 12 (owner, 2026-11-25): the 24 h soak and the one-week trial are run only if and when the owner decides; they are not a step or an exit criterion of this phase. | |
 | C-S10 | Hinglish spike and pack | Owner-rated comparison; a written decision; a pack the owner can talk to for 10 minutes |
 
 **Budget notes the steps must respect.** One model only (the language-model budget was at its limit); the voice part
@@ -321,7 +321,7 @@ voice-print identification (it would be biometric data).
 **Owner does.** Gives quiet hours and topics to avoid, rates jokes and the aliveness trial, records speech for the
 Hinglish spike, signs off.
 
-**Estimate.** 3 to 4 weeks (steps S01 to S03 are the core), plus the trial week.
+**Estimate.** 3 to 4 weeks (steps S01 to S03 are the core). No trial week: the owner decided on 2026-11-25 that the soak and trial are not part of this phase.
 
 ---
 
@@ -1075,7 +1075,7 @@ security, restarts or runs code is D.
 | Close soak, merges | 1 day |
 | 11.5 part 1, rename | 1 to 2 days |
 | 11.5 part 2, Mac readiness | about 1 week |
-| 12 Companion | 3 to 4 weeks (+1 trial week) |
+| 12 Companion | 3 to 4 weeks |
 | 13A cloud, portable part | 2 to 3 weeks |
 | 14A skills, portable part | 3 to 4 weeks |
 | 15 Mac conversion | 4 to 5 weeks |

@@ -104,11 +104,11 @@ std::string SpokenMinutes(double m) {
 }
 
 const std::vector<std::string>& PreamblePhrases(int kind) {
-  static const std::vector<std::string> kThinking = {"One moment.", "Let me think.",
-                                                     "Hmm, let me see."};
+  static const std::vector<std::string> kThinking = {"One moment.", "Let me think.", "Let me see."};
   static const std::vector<std::string> kLooking = {"Let me look.", "Checking.",
                                                     "Looking at that now."};
   static const std::vector<std::string> kAcknowledge = {"Okay.", "Got it.", "Sure."};
+  static const std::vector<std::string> kBackchannel = {"Oh.", "I see.", "Right.", "Yeah."};
 
   switch (kind) {
     case 1:
@@ -117,6 +117,8 @@ const std::vector<std::string>& PreamblePhrases(int kind) {
       return kLooking;
     case 3:
       return kAcknowledge;
+    case 4:
+      return kBackchannel;
     default:
       return kThinking;
   }
@@ -137,10 +139,30 @@ const std::string& StatusPhrase(int line) {
   }
 }
 
+const std::string& SessionPhrase(int which) {
+  static const std::string kStillThere = "Still there?";
+  static const std::string kKeepGoing = "We have been chatting a while. Want to keep going?";
+  static const std::string kStayQuiet = "Okay, I will stay quiet for a while.";
+  static const std::string kListeningAgain = "Okay, I am listening again.";
+
+  switch (which) {
+    case 0:
+      return kStillThere;
+    case 1:
+      return kKeepGoing;
+    case 2:
+      return kStayQuiet;
+    case 3:
+      return kListeningAgain;
+    default:
+      return kStillThere;
+  }
+}
+
 std::vector<std::string> AllCachedPhrases() {
   std::vector<std::string> phrases;
-  phrases.reserve(12);
-  for (int kind = 1; kind <= 3; ++kind) {
+  phrases.reserve(20);
+  for (int kind = 1; kind <= 4; ++kind) {
     const auto& group = PreamblePhrases(kind);
     for (const auto& p : group) {
       phrases.push_back(p);
@@ -148,6 +170,9 @@ std::vector<std::string> AllCachedPhrases() {
   }
   for (int line = 1; line <= 3; ++line) {
     phrases.push_back(StatusPhrase(line));
+  }
+  for (int which = 0; which <= 3; ++which) {
+    phrases.push_back(SessionPhrase(which));
   }
   return phrases;
 }

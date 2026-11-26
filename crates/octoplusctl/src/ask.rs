@@ -41,6 +41,8 @@ pub struct AskOptions {
     pub at_ns: u64,
     /// Whether to enter continuous interactive conversation mode after the question.
     pub interactive: bool,
+    /// This turn is companion chat (Phase 12).
+    pub companion: bool,
 }
 
 /// Plain name of an answer route (`octoplusctl ask --explain`, P5-S03).
@@ -51,6 +53,7 @@ pub fn route_name(route: i32) -> &'static str {
         Ok(Route::DesktopAnswer) => "desktop answer",
         Ok(Route::GeneralChat) => "general chat",
         Ok(Route::NudgeReply) => "nudge reply",
+        Ok(Route::Companion) => "companion",
         _ => "unknown",
     }
 }
@@ -251,6 +254,7 @@ where
         text: question,
         origin: Origin::Cli as i32,
         at_ns,
+        companion: opts.companion,
     };
 
     let deadline = Duration::from_secs(60);
@@ -372,6 +376,8 @@ mod tests {
         assert_eq!(route_name(Route::Action as i32), "action");
         assert_eq!(route_name(Route::DesktopAnswer as i32), "desktop answer");
         assert_eq!(route_name(Route::GeneralChat as i32), "general chat");
+        assert_eq!(route_name(Route::NudgeReply as i32), "nudge reply");
+        assert_eq!(route_name(Route::Companion as i32), "companion");
         assert_eq!(route_name(99), "unknown");
         assert_eq!(taint_names(0), "none");
         assert_eq!(taint_names(0b0110), "user_provided | model_generated");

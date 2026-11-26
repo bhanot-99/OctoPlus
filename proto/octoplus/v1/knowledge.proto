@@ -9,6 +9,7 @@ message AskRequest {
   string text = 1;
   Origin origin = 2;
   uint64 at_ns = 3;   // when the user spoke or typed; 0 means now (FR-KNO-01, ADR-0013)
+  bool companion = 4; // this turn is companion chat (Phase 12)
 }
 
 message AnswerChunk {
@@ -21,6 +22,7 @@ enum Route {
   ROUTE_DESKTOP_ANSWER = 2;
   ROUTE_GENERAL_CHAT = 3;
   ROUTE_NUDGE_REPLY = 4;
+  ROUTE_COMPANION = 5;
 }
 
 message AnswerDone {
@@ -55,4 +57,61 @@ message NudgeTest {
   // Say the line aloud instead of showing it (the owner asked for it: `nudges test --voice`).
   // Still only the rule's own template and numbers; C2 refuses while a turn is in progress.
   bool speak = 2;
+}
+
+// ---- Laila's status and controls for OctoPit (Phase 12, story C-S06) ----------------------------
+// Status and switches only. There is no chat here, no text to speak, and nothing that acts on
+// the computer: DR-1 holds. OctoPit asks, C5 answers from its own state and C3's remembered facts.
+
+message CompanionStatusRequest {}
+
+// One talk she started herself today.
+message CompanionTalk {
+  uint64 at_ns = 1;
+  string topic = 2;      // check_in, joke, follow_up, observation, fun_fact, break_reminder, morning, lunch, evening
+  string reaction = 3;   // "" (waiting), answered, ignored, not_now
+}
+
+// One thing she remembers about the owner.
+message CompanionMemory {
+  uint64 id = 1;
+  string text = 2;       // without the "noticed" marker
+  bool noticed = 3;      // kept by chance (true) or because the owner asked (false)
+  uint64 saved_at_ns = 4;
+}
+
+message CompanionStatus {
+  bool enabled = 1;
+  bool paused = 2;
+  uint32 quiet_minutes_left = 3;   // "not now" or "quiet for an hour" still holding her back
+  uint32 talks_today = 4;
+  uint32 talks_last_hour = 5;
+  uint32 per_day_cap = 6;
+  uint32 per_hour_max = 7;
+  string quiet_start = 8;          // "23:00"
+  string quiet_end = 9;            // "08:00"
+  string humour = 10;              // off, low, normal, high
+  uint32 chattiness_percent = 11;  // 100 is the default rhythm
+  repeated CompanionTalk talks = 12;       // newest first
+  repeated CompanionMemory memories = 13;  // newest first
+  uint32 memories_by_chance = 14;          // kept by chance since the service started
+  bool memory_available = 15;              // C3 could be asked
+}
+
+enum CompanionAction {
+  COMPANION_ACTION_UNSPECIFIED = 0;
+  COMPANION_ACTION_PAUSE = 1;
+  COMPANION_ACTION_RESUME = 2;
+  COMPANION_ACTION_CHAT_MORE = 3;
+  COMPANION_ACTION_CHAT_LESS = 4;
+  COMPANION_ACTION_QUIET_FOR = 5;     // `minutes`
+  COMPANION_ACTION_FUNNY = 6;
+  COMPANION_ACTION_NOT_FUNNY = 7;
+  COMPANION_ACTION_FORGET = 8;        // `id` of a remembered fact
+}
+
+message CompanionControl {
+  CompanionAction action = 1;
+  uint32 minutes = 2;
+  uint64 id = 3;
 }

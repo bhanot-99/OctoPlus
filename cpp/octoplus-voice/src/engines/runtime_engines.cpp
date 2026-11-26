@@ -227,6 +227,18 @@ Result<std::unique_ptr<VoiceRuntime>> BuildVoiceRuntime(const RuntimeOptions& o)
   pc.turn.follow_up_ns = static_cast<std::uint64_t>(o.config.follow_up_s) * 1'000'000'000ULL;
   pc.turn.max_consecutive_follow_ups = o.config.max_consecutive_follow_ups;
   pc.barge_in_by_speech = o.config.barge_in_by_speech;
+  pc.turn.sessions_enabled = o.config.open_mic;
+  pc.turn.session_silence_ns =
+      static_cast<std::uint64_t>(o.config.session_silence_s) * 1'000'000'000ULL;
+  pc.turn.session_max_ns =
+      static_cast<std::uint64_t>(o.config.session_max_minutes) * 60ULL * 1'000'000'000ULL;
+  pc.turn.session_grace_ns = 20'000'000'000ULL;
+  pc.session_on_wake = o.config.session_on_wake;
+  pc.session_end_silence_ns =
+      static_cast<std::uint64_t>(o.config.session_end_silence_ms) * 1'000'000ULL;
+  pc.echo_guard_ns = static_cast<std::uint64_t>(o.config.echo_guard_ms) * 1'000'000ULL;
+  pc.guest_minutes = o.config.guest_minutes;
+  pc.earcons = o.config.earcons;
   rt->pipeline_ = std::make_unique<VoicePipeline>(d, pc);
   rt->pipeline_->PreloadClips();
   return std::unique_ptr<VoiceRuntime>(std::move(rt));

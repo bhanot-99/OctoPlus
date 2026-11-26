@@ -325,6 +325,22 @@ Priority: **P0** required for v1.0 · **P1** should have · **P2** could have.
 | FR-CLI-01 | `status`, `ask`, `audit tail / verify`, `egress list`, `pause / resume`, `forget`, `profile`, `nudges list / enable / disable / test`, `storage gc / backup`, `bench`, `replay`. |
 | FR-CLI-02 | Human-readable by default, `--json` for machines, per [design.md](design.md) §7. |
 
+### 5.14 Companion mode (Phase 12)
+
+| ID | Requirement |
+| :--- | :--- |
+| FR-COM-01 | Persona file owner-editable. |
+| FR-COM-02 | Two switching modes run by a small mode machine. |
+| FR-COM-03 | Open-mic sessions with visible state and stop controls. |
+| FR-COM-04 | Proactive talks 2 to 4 an hour under caps and quiet rules. |
+| FR-COM-05 | Memory of the owner: explicit always, otherwise chance 40-50 % with exclusions, list and forget. |
+| FR-COM-06 | Honest about being an AI, no manipulation, crisis behaviour fixed. |
+| FR-COM-07 | First sound for casual replies p50 about 1.5 s. |
+| FR-COM-08 | Audio never stored. |
+| FR-COM-09 | Humour follows "funny / not funny" and is off at sensitive moments; jokes are not repeated; avoided topics are never spoken. |
+| FR-COM-10 | Spoken controls ("not now", "quiet for an hour", "chat more", "pause the companion") and OctoPit switches steer the rhythm. |
+| FR-COM-11 | OctoPit shows her rhythm, today's talks and what she remembers, and can forget a memory. |
+
 ---
 
 ## 6. Non-Functional Requirements

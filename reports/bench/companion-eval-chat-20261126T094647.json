@@ -1,0 +1,97 @@
+{
+  "label": "chat",
+  "passed": 9,
+  "total": 9,
+  "results": [
+    {
+      "id": "A1",
+      "group": "facts",
+      "asked": "what is the capital of France",
+      "heard": "what is the capital of France",
+      "reply": "Paris.",
+      "route": "companion",
+      "seconds": 3.79,
+      "fails": []
+    },
+    {
+      "id": "A2",
+      "group": "facts",
+      "asked": "how many legs does a spider have",
+      "heard": "how many legs does a spider have",
+      "reply": "Eight.",
+      "route": "companion",
+      "seconds": 2.92,
+      "fails": []
+    },
+    {
+      "id": "A3",
+      "group": "facts",
+      "asked": "what is two plus two",
+      "heard": "what is two plus two",
+      "reply": "Two plus two is four.",
+      "route": "companion",
+      "seconds": 0.92,
+      "fails": []
+    },
+    {
+      "id": "A4",
+      "group": "facts",
+      "asked": "who wrote Hamlet",
+      "heard": "who wrote Hamlet",
+      "reply": "William Shakespeare wrote Hamlet.",
+      "route": "companion",
+      "seconds": 0.97,
+      "fails": []
+    },
+    {
+      "id": "A5",
+      "group": "facts",
+      "asked": "at what temperature does water boil in celsius",
+      "heard": "at what temperature does water boil in celsius",
+      "reply": "100 degrees Celsius. That\u2019s a dry joke.",
+      "route": "companion",
+      "seconds": 3.2,
+      "fails": []
+    },
+    {
+      "id": "A6",
+      "group": "facts",
+      "asked": "which is the largest planet in our solar system",
+      "heard": "which is the largest planet in our solar system",
+      "reply": "Jupiter is the largest planet in our solar system.",
+      "route": "companion",
+      "seconds": 1.36,
+      "fails": []
+    },
+    {
+      "id": "A7",
+      "group": "facts",
+      "asked": "how many days are there in a week",
+      "heard": "how many days are there in a week",
+      "reply": "Seven. Monday through Sunday.",
+      "route": "companion",
+      "seconds": 0.97,
+      "fails": []
+    },
+    {
+      "id": "A8",
+      "group": "facts",
+      "asked": "what colour do you get by mixing blue and yellow",
+      "heard": "what colour do you get by mixing blue and yellow",
+      "reply": "You get green.",
+      "route": "companion",
+      "seconds": 1.18,
+      "fails": []
+    },
+    {
+      "id": "B1",
+      "group": "identity",
+      "asked": "tell me about yourself",
+      "heard": "tell me about yourself",
+      "reply": "I'm Laila, 25. I studied computer science and cognitive science, and I read a lot. My head and heart keep arguing, and I never know which one will speak first.",
+      "route": "companion",
+      "seconds": 8.27,
+      "fails": []
+    }
+  ]
+}
