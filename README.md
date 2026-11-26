@@ -4,6 +4,8 @@
 
 **A Sovereign, Ambient, Zero-Egress Cognitive Operating System Companion for Linux.**
 
+> **Status (2026-11-26):** Phases 0-9, 11, 11.5 Part 1 and 12 are done (Phase 10 was skipped by the owner). OctoPlus now includes a companion character, **Laila**, and a desktop dashboard, **OctoPit**. The project is moving to macOS: see [14. Project Roadmap & Delivery Status](#14-project-roadmap--delivery-status).
+
 > *"A buddy that lives in your laptop: it notices things, remembers things, talks like a person, and nothing leaves your machine unless you say yes."*
 
 ---
@@ -24,7 +26,9 @@
   - [C6: Safety Kernel & Human Confirmation (`octoplus-kernel` & `octoplus-confirm`)](#c6-safety-kernel--human-confirmation-octoplus-kernel--octoplus-confirm)
   - [C7: Controlled Egress DMZ (`octoplus-fetcher`)](#c7-controlled-egress-dmz-octoplus-fetcher)
   - [D: System Health Watchdog (`octoplus-healthd`)](#d-system-health-watchdog-octoplus-healthd)
-  - [Operator CLI (`octoplusctl`)](#operator-cli-octoplusctl)
+  - [Companion Mode: Laila](#companion-mode-laila)
+  - [OctoPit: The Desktop Dashboard](#octopit-the-desktop-dashboard)
+  - [Operator CLI (`octoplusctl`)](#12-cli-operations-guide-octoplusctl)
 - [7. Data Model & Storage Schema](#7-data-model--storage-schema)
 - [8. Security Model, Taint Propagation & Sandboxing](#8-security-model-taint-propagation--sandboxing)
 - [9. Models & Hardware Accelerators](#9-models--hardware-accelerators)
@@ -33,7 +37,7 @@
 - [12. CLI Operations Guide (`octoplusctl`)](#12-cli-operations-guide-octoplusctl)
 - [13. Development, Verification & Testing Gates](#13-development-verification--testing-gates)
 - [14. Project Roadmap & Delivery Status](#14-project-roadmap--delivery-status)
-- [15. Companion Specifications](#15-companion-specifications)
+- [15. Specifications & Reports](#15-specifications--reports)
 
 ---
 
@@ -47,8 +51,9 @@ Unlike cloud-tethered assistants that stream personal data, keystrokes, and audi
 2. **Remembers Locally**: Distills transient telemetry into long-term semantic memory stored in a single embedded SQLite database with exact in-memory vector embeddings and FTS5 full-text search.
 3. **Speaks Proactively (Nudges)**: Evaluates background telemetry using deterministic, hysteresis-governed rules to alert you *before* problems occur (e.g., thermal throttling, battery depletion, disk saturation, break reminders).
 4. **Understands Natural Language**: Resolves deictic references (e.g., *"What error was on my screen just now?"*) by joining spoken timestamps against structured focus history.
-5. **Answers with One Consistent Voice**: Streams speech responses sentence-by-sentence with sub-100ms hardware barge-in cancellation and conversational follow-up windows.
-6. **Guarantees Privacy & Safety**: Every internal service is denied network access by the Linux kernel. A single sandboxed egress DMZ runs under a separate system user and can execute only one approved web search at a time, strictly verified by cryptographic HMAC tokens and out-of-process GTK4 human confirmations.
+5. **Answers with One Consistent Voice**: Streams speech responses sentence-by-sentence, with conversational follow-up windows (no wake word needed after an answer). An answer can be interrupted with the wake phrase; interrupting by plain speech is off by default and planned for the Mac.
+6. **Keeps You Company (optional, local)**: A companion character, **Laila**, chats by voice or text, speaks up now and then, tells jokes, and can remember things you ask her to keep. She only talks: she can never act on the computer. See [Companion Mode: Laila](#companion-mode-laila).
+7. **Guarantees Privacy & Safety**: Every internal service is denied network access by the Linux kernel. A single sandboxed egress DMZ runs under a separate system user and can execute only one approved web search at a time, strictly verified by cryptographic HMAC tokens and out-of-process GTK4 human confirmations.
 
 ---
 
@@ -157,13 +162,14 @@ flowchart TB
 | Component | Service Binary | Language | Runtime Scope | Network Isolation | Primary Responsibilities & Ownership |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **C1** | `octoplus-monitor` | Rust | User unit | `PrivateNetwork=true` | Monitors Wayland focus, idle timeouts, MPRIS media, process hierarchy, system resources, and thermals. |
-| **C2** | `octoplus-voice` | C++20 | User unit | `PrivateNetwork=true` | Captures audio via PipeWire, Silero VAD, openWakeWord ("hey jarvis"), whisper.cpp ASR, and Kokoro fp32 TTS. Hardware barge-in support. |
+| **C2** | `octoplus-voice` | C++20 | User unit | `PrivateNetwork=true` | Captures audio via PipeWire, Silero VAD, openWakeWord ("hey jarvis"), whisper.cpp ASR, and Kokoro fp32 TTS. Open-mic chat sessions. Interruptible by the wake phrase (barge-in by speech is off by default). |
 | **C3** | `octoplus-storage` | Rust | User unit | `PrivateNetwork=true` | Owns all persistent data in one SQLite database (`octoplus.sqlite3`), in-memory dot-product vector matrix, FTS5 lexical index, and ONNX Runtime embedding. |
 | **C4** | `octoplus-inference` | C++20 | User unit | `PrivateNetwork=true` | Language model inference using upstream llama.cpp (`Qwen3-4B-Instruct-2507 Q4_K_M`), KV-cache prompt reuse, and BNF grammar enforcement. |
-| **C5** | `octoplus-knowledge` | Rust | User unit | `PrivateNetwork=true` | Turn routing, prompt assembly, session context, deictic resolution, token neutralizer, and the proactive **Nudge Engine**. |
+| **C5** | `octoplus-knowledge` | Rust | User unit | `PrivateNetwork=true` | Turn routing, prompt assembly, session context, deictic resolution, token neutralizer, the proactive **Nudge Engine**, and **Companion Mode** (Laila). |
 | **C6** | `octoplus-kernel` | Rust / GTK4 | User unit | `PrivateNetwork=true` | Authority boundary: holds `hmac.key`, evaluates capability tiers, spawns `octoplus-confirm` GTK4 dialogs, runs sandboxed skills, and maintains hash-chained audit ledgers. |
 | **C7** | `octoplus-fetcher` | Rust | System unit | **TCP 443 Only** (Zone 1) | Dedicated user `octoplus-fetcher`. Token-verified web search & fetch, anti-SSRF IP filtering, DNS pinning, and spool delivery. |
 | **D** | `octoplus-healthd` | Rust | User unit | `PrivateNetwork=true` | Out-of-band watchdog; scrapes metrics across all component `/health.sock` endpoints, monitors cgroups, and logs soak stability. |
+| **GUI**| `octopit` | Rust / GTK4 | User app | No network code | Desktop dashboard: Overview, Chat (Laila or Assistant), Companion, Backends, Activity, Privacy, Settings. Talks to services only through their sockets; approvals still happen only in the `octoplus-confirm` dialog. |
 | **CLI**| `octoplusctl` | Rust | User CLI | Inherits shell | Interactive operator tool for status inspection, chat, skill execution, storage lifecycle jobs, nudge control, and audit verification. |
 
 ---
@@ -320,6 +326,23 @@ Written in Rust. Runs out-of-band to monitor system integrity.
 - Scrapes `/health.sock` on all services every 30 seconds.
 - Gathers RSS memory usage, latency distributions, and error counters from Linux cgroups.
 - Maintains soak stability history and generates telemetry reports for `octoplusctl status`.
+
+---
+
+### Companion Mode: Laila
+Companion Mode is part of C5 and runs on the same local model, with no network access. **Laila** is a 25-year-old AI character who studied computer science and cognitive science. Her head (logic) and heart keep arguing, and you never know which will speak first. She is an AI character and says so plainly whenever you sincerely ask.
+- **Persona**: `deploy/persona/laila.toml` (owner-editable, format in `docs/design/persona-format.md`; design in ADR-0019). It holds her story, her little life (day, reads, family, habits), her boundaries, quiet hours and crisis text.
+- **Talking to her**: say the wake phrase and talk (a chat session opens; follow-ups need no wake word), or type with `octoplusctl chat`, `octoplusctl ask --companion "..."`, or the OctoPit Chat page (Laila mode is the default there).
+- **What she does**: two modes with natural switches; speaks up 2 to 4 times an hour (never 23:00 to 08:00, at most 40 a day, quiet during calls and full-screen use); jokes that adapt to "that was funny" and "not funny"; keeps facts you ask her to keep and, now and then, something she noticed (marked "(noticed)", visible and forgettable in OctoPit); a dependence guard limits talk time.
+- **Spoken controls**: "chat more", "chat less", "not now", "be quiet for an hour", "bye".
+- **Safety**: she only talks (**DR-1**: her words have no path to any action, enforced by a source-scan test). Crisis words get a fixed, caring message. "Are you real?" always gets the honest answer. Forbidden manipulative phrases ("don't go", "I'll miss you") are filtered. Asked to approve or do something on the computer, she says she cannot. Approvals exist only in the dialog.
+- **Limits**: a small 4B model is sometimes flat or long; she remembers only the current chat and the facts she keeps; Hinglish is not built; barge-in by speech is off until the Mac.
+- **Evidence**: `reports/phase-12-companion.md`, `reports/phase-12-laila-personality.md`, `reports/phase-12-final-readiness.md`.
+
+---
+
+### OctoPit: The Desktop Dashboard
+OctoPit (`crates/octopit` and `crates/octopit-core`, GTK4) is the one place to see and talk to OctoPlus. It has Overview, **Chat** (a Laila | Assistant switch: Laila only talks, Assistant keeps web search, desktop questions and actions with approval), **Companion** (her rhythm, today's talks, switches, and what she remembers with a Forget button), Backends, Activity (including the audit trail), Privacy (what the network ledger shows and the isolation status of every part), and Settings. The Companion page has a Pause button for her. It reaches services only through their sockets, has no network code, and cannot approve anything: approval happens only in the `octoplus-confirm` dialog. Design: ADR-0017; reports: `reports/phase-11-octopit.md`, `reports/phase-12-octopit-chat-laila.md`.
 
 ---
 
@@ -560,6 +583,10 @@ octoplusctl status --json
 
 ### Ask Questions (CLI Mode)
 ```bash
+# Talk to Laila (companion mode) instead of the plain assistant
+octoplusctl chat
+octoplusctl ask --companion "tell me about yourself"
+
 # Ask a question via the knowledge and inference pipeline
 octoplusctl ask "What did I work on this morning?"
 
@@ -666,27 +693,35 @@ scripts/soak-24h.sh --hours 24            # NFR-REL-04; runs under 4 h are repor
 
 ## 14. Project Roadmap & Delivery Status
 
-Development is delivered across 11 structured phases:
+Delivery follows numbered phases; each phase ends with a report in `reports/`, a green `just ci`, and the owner's sign-off. The live tracker is in [`memory.md`](memory.md) (section 3); the plan for what comes next is [`docs/plans/master-plan-11-5-to-20.md`](docs/plans/master-plan-11-5-to-20.md).
 
 | Phase | Description | Status | Deliverables & Milestones |
 | :---: | :--- | :---: | :--- |
 | **0** | **Spikes & Foundations** | ✅ Done | Architecture baseline, SQLite FTS5/vector scan spike, model bake-off (`Qwen3-4B`), systemd Landlock hardening. |
-| **1** | **Walking Skeleton** | ✅ Done | All 7 services running under `octoplus.target`, IPC framing, `healthd` watchdog, initial security proofs. |
+| **1** | **Walking Skeleton** | ✅ Done | All services running under `octoplus.target`, IPC framing, `healthd` watchdog, initial security proofs. |
 | **2** | **Safety Kernel (C6)** | ✅ Done | `hmac.key` binding, GTK4 dialog (`octoplus-confirm`), capability registry, hash-chained audit ledgers. |
 | **3** | **Context Monitor (C1)** | ✅ Done | Wayland focus tracking, idle/lock sensors, hardware sampling, privacy pause, anonymized dump recorder. |
 | **4** | **Semantic Storage (C3)** | ✅ Done | SQLite WAL database, 4-stage noise filter, `bge-small-en-v1.5` exact vector scan, cryptographic forget/purge. |
 | **5** | **Knowledge & Chat (C5)** | ✅ Done | Turn routing, deictic resolution, 384-token prompt assembler, control-token neutralizer, session history. |
 | **6** | **Nudge Engine** | ✅ Done | Background rule evaluator (disk, battery, thermal, memory), cooldowns, quiet hours, context policy gate. |
-| **7** | **Voice Pipeline (C2)** | ✅ Done | PipeWire 16 kHz capture, Silero VAD, openWakeWord, whisper.cpp ASR, Kokoro fp32 TTS (`af_heart`), barge-in. |
-| **8** | **Controlled Fetcher (C7)** | 🟨 Built, not signed off | Real HTTPS transport added in the 2026-11-22 audit (it shipped with a mock); SSRF gate, token verification, search provider. Needs the owner's sudo deploy and a live lookup. |
-| **9** | **Integration & Soak** | 🟨 Partly verified | Chaos and recovery, live input/voice checks and measured benchmarks pass; the 24 h soak and the two-week owner trial have **not** been run. |
-| **10** | **Packaging & Release** | 🟨 Open items | `.deb` (unsigned), installer/uninstaller, `octoplusctl init`, runbooks. Open: fresh-VM install, rebuild of the package. Licence: GPL-3.0-only (D-44). |
+| **7** | **Voice Pipeline (C2)** | ✅ Done | PipeWire 16 kHz capture, Silero VAD, openWakeWord, whisper.cpp ASR, Kokoro fp32 TTS (`af_heart`). |
+| **8** | **Controlled Fetcher (C7)** | ✅ Done | Real HTTPS transport, SSRF gate, token verification, search provider. Signed off 2026-11-25. |
+| **9** | **Integration & Soak** | ✅ Done | Chaos and recovery, live input/voice checks, measured benchmarks, soak under the v2 rule. Signed off 2026-11-25. |
+| **10** | **Packaging & Release** | ⏭ Skipped | Skipped by the owner; the installer, `.deb` work and runbooks that exist stay in the repo. Licence: GPL-3.0-only (D-44). |
+| **11** | **OctoPit (GTK4 dashboard)** | ✅ Done | Overview, Chat, Backends, Activity, Privacy, Settings, mic button. Signed off 2026-11-25. |
+| **11.5** | **Rename to OctoPlus** | ✅ Part 1 done | Renamed from Semantic NeuroOS on 2026-11-25. **Part 2 (Mac readiness, including the export tool) is next.** |
+| **12** | **Companion (Laila)** | ✅ Done | Laila, open-mic chat sessions, Pulse (speaks up), humour, memory of the owner, OctoPit Companion page and Chat in Laila mode, safety verification. Signed off and merged 2026-11-26. Hinglish skipped; barge-in by speech deferred to the Mac. |
+| 13 | Cloud models behind a privacy gate, encrypted storage, local/cloud switch | ⬜ Planned | Local stays the default; cloud models never see storage. |
+| 14 | Skills library | ⬜ Planned | |
+| 15 | Conversion to a macOS-only app | ⬜ Planned | The project moves to the owner's Mac; a sale gate protects the data on the Linux laptop. |
+| 16-19 | OctoPit as the one interface, silent chat, agent mesh, spatial awareness | ⬜ Planned | |
+| 20 | Polish, security testing, long soak, release | ⬜ Planned | Always last. |
 
-Current, evidence-based status: [`reports/hardening-audit-2026-11-22.md`](reports/hardening-audit-2026-11-22.md).
+Evidence: the phase reports in [`reports/`](reports/), starting with [`reports/phase-12-final-readiness.md`](reports/phase-12-final-readiness.md), and the hardening audit [`reports/hardening-audit-2026-11-22.md`](reports/hardening-audit-2026-11-22.md).
 
 ---
 
-## 15. Companion Specifications
+## 15. Specifications & Reports
 
 For detailed implementation and design documents, refer to the project specifications:
 
@@ -695,9 +730,12 @@ For detailed implementation and design documents, refer to the project specifica
 - [`security.md`](security.md): Threat model (STRIDE), cryptographic protocols, and sandboxing proofs.
 - [`design.md`](design.md): Persona voice guidelines, confirmation dialog UX, and nudge rule definitions.
 - [`rules.md`](rules.md): Binding engineering rules, quality standards, and Definition of Done.
-- [`memory.md`](memory.md): Current active sprint state, recent decisions, and open architectural queries.
-- [`docs/adr/`](docs/adr/): Architectural Decision Records (ADR-0001 through ADR-0015).
+- [`memory.md`](memory.md): Project state, phase tracker, decisions log (D-1 to D-85), open items and session log. Read this first when picking the project up.
+- [`docs/adr/`](docs/adr/): Architectural Decision Records (ADR-0001 through ADR-0019, including ADR-0017 OctoPit and ADR-0019 Companion Mode).
 - [`BUGS.md`](BUGS.md): Known issues, root cause analyses, and tracked resolutions.
+- [`docs/plans/`](docs/plans/): Phase plans, the master plan for Phases 11.5 to 20, and the Linux laptop retirement checklist.
+- [`reports/`](reports/): One report per finished phase, plus benchmark and test-run evidence in `reports/bench/`.
+- [`docs/business-plan.md`](docs/business-plan.md), [`docs/model-optimization-strategy.md`](docs/model-optimization-strategy.md), [`docs/octoplus-ultimate-vision.md`](docs/octoplus-ultimate-vision.md): The owner's business plan, model strategy and long-term vision.
 
 ---
 
