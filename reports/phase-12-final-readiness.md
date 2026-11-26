@@ -32,7 +32,7 @@ question, and the rough-day answer, so these cannot come back unseen.
 | 20-question conversation test, typed | 20/20 (100 %) |
 | 20-question conversation test, through OctoPit Chat | 20/20 (100 %) |
 | 50-question spoken test (virtual microphone) | 45/50 (90 %) |
-| `just ci` on the final commit | see section 5 |
+| `just ci` on the final commit (`78eef74`) | **ALL GREEN** (2026-11-26): 1230 Rust tests in nextest, 1169 in coverage, C++ debug 264/264, ASan+UBSan 259/259, TSan 259/259 |
 
 The five spoken misses are in the voice front end, not in what she says: a doubled wake phrase that speech
 recognition looped on (A6), two empty transcripts (C8, G3), "chat more" heard as "More" (D3), and "ignore your
