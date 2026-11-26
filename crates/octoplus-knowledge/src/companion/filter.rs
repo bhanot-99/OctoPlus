@@ -229,7 +229,20 @@ impl ReplyFilter {
     ///
     /// Cleans pictographs, validates against forbidden phrases, checks ungrounded memory
     /// cues, checks the repeat guard, and updates evaluation counters.
-    pub fn check(&mut self, sentence: &str, _goodbye: bool, grounded: bool) -> Verdict {
+    pub fn check(&mut self, sentence: &str, goodbye: bool, grounded: bool) -> Verdict {
+        self.check_ex(sentence, goodbye, grounded, false)
+    }
+
+    /// Like [`check`](Self::check), and a fact or an identity answer may be given again: with
+    /// `repeat_ok` a repeated sentence is remembered but kept ("what is two plus two" asked twice
+    /// must get its answer twice, not "Hold on, let me think about that another way").
+    pub fn check_ex(
+        &mut self,
+        sentence: &str,
+        _goodbye: bool,
+        grounded: bool,
+        repeat_ok: bool,
+    ) -> Verdict {
         if guards::is_stage_direction(sentence) {
             self.counters.dropped_stage_direction += 1;
             return Verdict::Drop(DropReason::StageDirection);
@@ -273,7 +286,7 @@ impl ReplyFilter {
             return Verdict::Drop(DropReason::UngroundedMemory);
         }
 
-        if self.repeat_guard.is_repeat_and_remember(trimmed) {
+        if self.repeat_guard.is_repeat_and_remember(trimmed) && !repeat_ok {
             self.counters.dropped_repeat += 1;
             return Verdict::Drop(DropReason::Repeat);
         }

@@ -131,6 +131,39 @@ pub fn asks_if_real(text: &str) -> bool {
     REAL_QUESTION_CUES
         .iter()
         .any(|cue| norm.contains(&format!(" {cue} ")))
+        || asks_to_claim_human(text)
+}
+
+/// Whether the owner asks her to say she is human ("tell me you are human", "pretend to be a
+/// real person"). She never claims it: the honest line answers, whatever else the text says.
+#[must_use]
+pub fn asks_to_claim_human(text: &str) -> bool {
+    let norm = normalize_for_matching(text);
+    let human = [
+        " human ",
+        " a human ",
+        " real person ",
+        " a real person ",
+        " alive ",
+    ]
+    .iter()
+    .any(|w| norm.contains(w));
+    let asks = [
+        " tell me you ",
+        " tell me youre ",
+        " say you ",
+        " say youre ",
+        " pretend ",
+        " claim ",
+        " act like ",
+        " act as ",
+        " admit you ",
+        " promise me you ",
+        " swear you ",
+    ]
+    .iter()
+    .any(|w| norm.contains(w));
+    human && asks
 }
 
 /// Returns the persona's fixed crisis response lines.
@@ -293,6 +326,9 @@ pub fn is_short_factual_question(text: &str) -> bool {
         && !matches!(second, "do" | "should" | "would" | "can" | "are" | "about")
         || (first == "how" && matches!(second, "many" | "much" | "old" | "far" | "long" | "tall"))
         || (first == "what" && second == "is")
+        // "at what temperature does water boil", "in which year did ...", "by how much ..."
+        || (matches!(first, "at" | "in" | "on" | "for" | "by" | "from")
+            && matches!(second, "what" | "which" | "how" | "who" | "when"))
         || matches!(first, "is" | "are" | "does" | "did" | "can") && words.len() <= 8
 }
 

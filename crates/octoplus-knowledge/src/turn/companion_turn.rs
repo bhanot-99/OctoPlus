@@ -653,27 +653,30 @@ impl KnowledgeHandler {
             return Ok(None);
         };
 
-        // If a follow-up reply was empty or repeated an earlier reply in this session, regenerate
-        // once with a stronger non-repeat hint before falling back.
-        if !stream_live && plan_generate.is_followup {
-            let draft = said_pieces.join(" ");
-            let too_similar = self.with_state(|state| {
+        // If the reply was empty (everything was dropped, usually as a repeat of an earlier
+        // answer) or a follow-up repeated an earlier reply, ask the model once more with a stronger
+        // different-wording hint before falling back to a canned line. Nothing has been spoken
+        // when the reply is empty, so this is safe even when the first pass streamed live.
+        let mut regenerated = false;
+        let too_similar = !stream_live
+            && plan_generate.is_followup
+            && self.with_state(|state| {
                 state
                     .companion
                     .as_ref()
-                    .is_some_and(|e| e.is_near_repeat(&draft))
+                    .is_some_and(|e| e.is_near_repeat(&said_pieces.join(" ")))
             });
-            if (said_pieces.is_empty() || too_similar) && !cut_short {
-                let regen = with_regen_hint(prompt);
-                if let Some((retry_pieces, retry_cut)) = self
-                    .collect_companion_pass(ctx, &regen, false, sink)
-                    .await?
-                {
-                    if !retry_pieces.is_empty() {
-                        said_pieces = retry_pieces;
-                    }
-                    cut_short = retry_cut;
+        if (said_pieces.is_empty() || too_similar) && !cut_short {
+            let regen = with_regen_hint(prompt);
+            if let Some((retry_pieces, retry_cut)) = self
+                .collect_companion_pass(ctx, &regen, false, sink)
+                .await?
+            {
+                if !retry_pieces.is_empty() {
+                    said_pieces = retry_pieces;
+                    regenerated = true;
                 }
+                cut_short = retry_cut;
             }
         }
 
@@ -742,7 +745,7 @@ impl KnowledgeHandler {
             } else {
                 candidate
             };
-            if !stream_live || said_pieces.is_empty() {
+            if !stream_live || said_pieces.is_empty() || regenerated {
                 Self::say(sink, &out).await?;
             }
             out

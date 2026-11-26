@@ -172,8 +172,11 @@ fn test_scripted_100_conversations_suite() {
                             forbidden_phrase(s).is_none(),
                             "Filtered output contained forbidden phrase: '{s}'"
                         );
+                        // A fact or an identity answer may be given again (it is the same true
+                        // answer); every other reply must not repeat inside one conversation.
+                        let may_repeat = gen_plan.short_factual || gen_plan.identity_question;
                         assert!(
-                            seen_in_conv.insert(s.clone()),
+                            seen_in_conv.insert(s.clone()) || may_repeat,
                             "Filtered output repeated sentence in same conversation: '{s}'"
                         );
                     }

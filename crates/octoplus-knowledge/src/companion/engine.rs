@@ -210,6 +210,8 @@ pub struct CompanionEngine {
     humour_taste: HumourLevel,
     /// Jokes told on request in this chat, to pick the next one from the list.
     jokes_told: usize,
+    /// The current reply is a fact or an identity answer, which may repeat an earlier answer.
+    repeat_ok: bool,
     /// Random starting offset inside `JOKES` for this engine instance.
     joke_start: usize,
     /// Whether the most recent completed turn was a joke.
@@ -254,6 +256,7 @@ impl CompanionEngine {
             last_spoken: String::new(),
             humour_taste: HumourLevel::Normal,
             jokes_told: 0,
+            repeat_ok: false,
             joke_start,
             last_was_joke: false,
             session_replies: Vec::new(),
@@ -426,6 +429,7 @@ impl CompanionEngine {
             && self.session.turn_count() > 0
             && guards::is_followup(text);
 
+        self.repeat_ok = false;
         if self.careful_turns > 0 {
             self.careful_turns -= 1;
             self.counters.careful_turns += 1;
@@ -463,6 +467,7 @@ impl CompanionEngine {
                     && !joke_requested
                     && !is_followup
                     && guards::is_short_factual_question(text));
+            self.repeat_ok = short_factual || identity_question;
             let style_angle = STYLE_ANGLES[self.rng.pick(STYLE_ANGLES.len())];
 
             let instruction = if joke_requested {
@@ -664,7 +669,7 @@ impl CompanionEngine {
             } else {
                 false
             };
-            match self.filter.check(p, goodbye, grounded) {
+            match self.filter.check_ex(p, goodbye, grounded, self.repeat_ok) {
                 Verdict::Keep(clean) => kept.push(clean),
                 Verdict::Drop(reason) => {
                     // The reason only, never the words (R0-10).
